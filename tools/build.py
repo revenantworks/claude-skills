@@ -853,11 +853,52 @@ def parity(packs: dict[str, str]) -> int:
                     continue
                 drifted += _compare_tree(PACKS / pack, root, "loaded copy", is_cache=True)
 
+    # junction — ~/.claude/skills/<member>, the rig's load path since 2026-08-17:
+    # members junction straight into this working tree and the plugin clone and
+    # cache above are absent by design there, so without this surface the command
+    # reported "nothing installed here — skipped" on the one machine that loads
+    # every member (sweep finding 2026-08-23: the gate had gone vacuous). A
+    # junction that resolves into this tree cannot drift; what CAN go stale is a
+    # member present as a real copy, or a link that resolves somewhere else —
+    # those get the full tree compare. Skips cleanly where ~/.claude/skills is
+    # absent or holds no member (CI, other clones).
+    skills_root = Path.home() / ".claude" / "skills"
+    if skills_root.is_dir():
+        for pack in packs:
+            pack_skills = PACKS / pack / "skills"
+            if not pack_skills.is_dir():
+                continue
+            members = [d for d in sorted(pack_skills.iterdir()) if d.is_dir()]
+            present = [m for m in members if (skills_root / m.name).exists()]
+            if not present:
+                continue
+            checked += 1
+            print(f"junction — ~/.claude/skills ({pack}: {len(present)}/{len(members)} members present)")
+            linked = 0
+            for m in members:
+                inst = skills_root / m.name
+                if not inst.exists():
+                    print(f"  ✗ {m.name}: not installed"); drifted += 1
+                    continue
+                try:
+                    resolved = inst.resolve()
+                except OSError:
+                    print(f"  ✗ {m.name}: junction does not resolve"); drifted += 1
+                    continue
+                if resolved == m.resolve():
+                    linked += 1
+                    continue
+                drifted += _compare_tree(m, inst, f"copy:{m.name}")
+            if linked:
+                print(f"  ✓ {linked}/{len(members)} members junction into this tree")
+
     if not checked:
         print("parity: nothing installed here — skipped")
         return 0
-    print("parity:", f"DRIFT ({drifted}) — refresh the clone (/plugin marketplace update revenantworks), "
-          f"THEN the loaded copy (claude plugin update <pack>@revenantworks); both, in that order"
+    print("parity:", f"DRIFT ({drifted}) — for plugin surfaces refresh the clone "
+          f"(/plugin marketplace update revenantworks) THEN the loaded copy "
+          f"(claude plugin update <pack>@revenantworks); for a junction surface, re-link "
+          f"the member or fold the stale copy back into this tree"
           if drifted else "clean")
     return 1 if drifted else 0
 
