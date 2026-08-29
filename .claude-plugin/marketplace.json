@@ -23,6 +23,23 @@
         "pack"
       ],
       "repository": "https://github.com/revenantworks/claude-skills"
+    },
+    {
+      "name": "gamedev",
+      "source": "./packs/gamedev",
+      "description": "Game-development skills on the -smith motif. First member: pixelsmith — art direction for pixel art that must read at several zoom scales at once (per-band rules, terrain-versus-unit contrast, a one-scene look test, artist and generator briefs). Each routes on its own description and works alone.",
+      "version": "1.0.0",
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": [
+        "agent-skills",
+        "skills",
+        "game-development",
+        "pixel-art",
+        "art-direction",
+        "pack"
+      ],
+      "repository": "https://github.com/revenantworks/claude-skills"
     }
   ]
 }

@@ -4,7 +4,7 @@
 
 - Build defaults
 - The pack registry
-- Per pack: members, budgets, seams (foundation), capstone, canonical repo
+- Per pack: members, budgets, seams (foundation), capstone, canonical repo — foundation, then gamedev
 
 > The canonical roster and pack structure `tools/build.py` derives every
 > `references/pack.md` from. **Event-driven** — updated on roster or pack
@@ -29,6 +29,7 @@
 | Pack | Profile | Notes |
 |---|---|---|
 | `foundation` | standalone | Lean, no tools beyond web search, low overhead; self-updating stamps. Conformance checks (2026-07-13): C-1 drift-audit verb · C-2 neutral default. Integrate policy: restamp: lazy (2026-07-13) |
+| `gamedev` | standard | Game-development skills on the `-smith` motif (registered 2026-08-29, first member pixelsmith). Standard profile because image viewing is an optional, declared capability with a stated text path; no scripts, no packages, no network at runtime. Conformance checks (2026-08-29): C-1 drift-audit verb · C-2 neutral default. Integrate policy: restamp: lazy (2026-08-29) |
 
 **foundation members** *(canonical roster — pack manifests are generated from this table)*
 
@@ -111,3 +112,21 @@ Declared here rather than in each member's frontmatter, changed 2026-07-27. The 
 **foundation capstone:** Forge Run — one orchestration prompt driving all ten members end-to-end (stored 2026-07-12 · roster updated to eight 2026-07-13 · roster reconfirmed 2026-07-14, pack self-audit, no change · re-run after any member's major version bump). Live runs: brandwright build, 2026-07-13 · **Forge Run 3, 2026-07-23** — the 1.1.0 rebuild as build proof, all eight doctrines exercised in anger (skillwright build/integrate conventions, evalwright diff-scoped suite refresh, tokenwright measurement + C-1 audit, lorewright-grade source verification on four baselines, brandwright centralization, commwright-shaped release comms, agentwright platform research, promptwright model snapshot + Entry — Model); roster reconfirmed at 1.1.x, no change. **Roster 8 → 9 on 2026-07-30** with the addition of `revenantworks-foundation-rigwright`; capstone roster line updated, capstone run not re-triggered (a member add updates the line only). **Roster 9 → 10 on 2026-08-18** with the addition of `revenantworks-foundation-dispatchwright`; capstone roster line updated, capstone run not re-triggered (a member add updates the line only); the routing-seam table was not extended for the new member this pass — recorded as owed in the member's own README rather than left silent.
 
 **foundation canonical repo:** `github.com/revenantworks/claude-skills` — source of truth for member drift audits (registered 2026-07-13; repository renamed from `citadel` 2026-08-17, GitHub redirects the old name). Relocated from the personal account 2026-07-14; the prior copy is a private archive. Nothing else carries the URL: manifests are generated from here, and every other file says "the registered canonical repo."
+
+**gamedev members** *(canonical roster — pack manifests are generated from this table)*
+
+| Member | Job | Route there when |
+|---|---|---|
+| `revenantworks-gamedev-pixelsmith` | Directs pixel art that must read at several zoom scales — per-band rules, terrain-versus-unit contrast, a one-scene look test, artist and generator briefs | The deliverable is a multi-scale pixel-art rule set, a look-test scorecard, an artist or generator brief, or an audit of existing art against those rules |
+
+**gamedev budgets** *(body-footprint table — one row per member; `build.py` validates each member's measured SKILL.md body against its row)*
+
+| Member | Budget (tokens) | Why |
+|---|---|---|
+| `revenantworks-gamedev-pixelsmith` | 3500 | measured ≈2360 at 1.0.0 build; the band model and the five laws are body-resident because a run must not open a file to know what it is enforcing; the references hold numbers, procedure, and templates |
+
+**gamedev seams:** none — a one-member pack has no boundary pair. The brandwright handoff (a brand palette is an input, never defined here) crosses packs and is carried by pixelsmith's own description; a seam row is owed when a second gamedev member lands.
+
+**gamedev capstone:** none — a one-member pack (2026-08-29); revisit when the roster reaches three.
+
+**gamedev canonical repo:** `github.com/revenantworks/claude-skills` — source of truth for member drift audits (registered 2026-08-29). Nothing else carries the URL: manifests are generated from here, and every other file says "the registered canonical repo."
