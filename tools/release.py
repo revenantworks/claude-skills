@@ -178,7 +178,7 @@ def main() -> int:
         i = clog.find(head)
         if i < 0:
             raise SystemExit(f"✗ CHANGELOG.md has no heading {head}")
-        section = clog[i:].split("\n## ", 2)[1] if clog[i:].count("\n## ") else clog[i:]
+        section = clog[i:].split("\n## ", 1)[0]  # the released heading's own section, up to the next heading
         if "(fill in)" in section:
             raise SystemExit(f"✗ CHANGELOG.md: write the entry under {head} (the scaffold still says '(fill in)'), "
                              f"then re-run — bump-pack is idempotent")

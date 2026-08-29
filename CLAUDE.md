@@ -1,9 +1,10 @@
 # CLAUDE.md — claude-skills
 
 The canonical home of every Revenantworks Agent Skill (repository
-`revenantworks/claude-skills`, renamed from `citadel` 2026-08-17). One pack lives under
-`packs/`: **foundation** (ten `-wright` members). The pack has its own router
-`CLAUDE.md` that loads when you work under it. This root file exists because the repo's top level,
+`revenantworks/claude-skills`, renamed from `citadel` 2026-08-17). Two packs live under
+`packs/`: **foundation** (ten `-wright` members, standalone profile) and **gamedev**
+(since 2026-08-29; `-smith` motif, standard profile; first member pixelsmith). The
+foundation pack has its own router `CLAUDE.md` that loads when you work under it. This root file exists because the repo's top level,
 `tools/`, and `audit/` previously loaded no standing context at all (audit
 finding `citadel-no-root-claude-md`, 2026-08-15).
 

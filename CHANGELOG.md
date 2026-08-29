@@ -76,6 +76,15 @@ members, unchanged by this pass.
   below never had a body written and no `ossuary-v2.4.1` tag exists — the newest ossuary tag is
   `ossuary-v2.4.0`. It is left as found rather than back-filled.
 
+## [gamedev-v1.0.0] - 2026-08-29
+
+First release of the **gamedev** pack (profile standard, `-smith` motif, restamp lazy).
+
+- **pixelsmith 1.0.0** — art direction for pixel art that must read at several zoom scales at once: per-band palette and silhouette rules, a per-band "reads" checklist, terrain-versus-unit contrast (Case 1 recorded), a one-scene look-test procedure with a scorecard, and artist and generator briefs. Entries: direct, `pixelsmith test`, `pixelsmith brief`, `pixelsmith audit`. Image viewing optional with a text-described path. 20 trigger evals, 12 assertion cases.
+- Registry: `gamedev` pack row, one-member roster, 3500-token budget row; `packs/gamedev/.claude-plugin/plugin.json` and the marketplace entry at 1.0.0.
+- Root README pack table and CLAUDE.md updated to two packs.
+- `tools/release.py`: the changelog gate read the section *after* the released heading (`split(...)[1]`), so a stale stub two entries down blocked an unrelated release; it now reads the released heading's own section.
+
 ## [ossuary-v2.4.1] - 2026-08-18
 
 - (fill in)
