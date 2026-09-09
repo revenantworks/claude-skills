@@ -8,11 +8,17 @@
 release the same day. Raising a sibling's declared body budget in this file is a change to
 skillwright's own shipped reference, the same class of miss `1.3.2`'s entry below already
 names for this exact file — it happened again rather than being caught by that precedent.
-Two passes landed here: the VER-01 batch (agentwright, lorewright, brandwright budget raises
-for their Fetch-scope/escaping-rule additions) and the rigwright/agentwright inventory-mode
-split (both raised again for their new Entry — Audit paragraphs). No prose rule changed, no
-entry point moved, no description touched — bookkeeping for a reference-file edit history
-was already supposed to record.
+**Three** passes landed here, not two. The VER-01 batch (agentwright, lorewright,
+brandwright budget raises for their Fetch-scope/escaping-rule additions); the
+rigwright/agentwright inventory-mode split (both raised again for their new Entry — Audit
+paragraphs); and **`foundation-v2.6.4` itself**, which edited this file three ways — the
+`localops` pack row with its roster, budget, seam and capstone entries, promptwright's Job
+column for the grill, and a correction of the localops motif from `-hand` to `-runner` — and
+shipped without bumping skillwright for any of it. That third pass was made by the session
+writing this line, which is the reason it is named here rather than left for a fourth
+discovery: this entry was authored to record two misses and found a live one while checking
+its own count. No prose rule changed, no entry point moved, no description touched —
+bookkeeping for a reference-file edit history was already supposed to record.
 
 ## [1.3.3] — 2026-08-20
 
