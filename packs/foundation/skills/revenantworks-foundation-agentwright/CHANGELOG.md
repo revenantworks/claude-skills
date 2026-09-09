@@ -2,6 +2,16 @@
 
 > Renamed from `revenant-foundation-agentwright` on 2026-08-07 (pack 2.0.0 — the `revenant` → `revenantworks` marketplace migration). Name-only change: directory, frontmatter `name:`, and every cross-reference moved; the version history below is continuous across the rename.
 
+## [1.2.5] — 2026-09-09
+
+**Inventory mode** added to Entry — Audit: when asked to audit the rig's whole unattended
+surface rather than one named agent, a new question joins the checklist areas — does every
+installed scheduled task under `~/.claude/scheduled-tasks` correspond to a documented task_id,
+or is one running that nothing wrote down. Mirrors the estate-sweep's own INV-01 check
+(`local_checks.py`'s `check_scheduled_task_inventory`) for an on-demand session run. Installed
+skills and hooks stay rigwright's by the pack's existing boundary; that half landed in rigwright
+1.1.3 the same day. Description byte-identical.
+
 ## [1.2.4] — 2026-09-09
 
 **Fetch scope** named in Entry — Refresh (estate finding

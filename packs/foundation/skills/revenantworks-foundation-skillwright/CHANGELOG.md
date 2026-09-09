@@ -2,6 +2,18 @@
 
 > Renamed from `revenant-foundation-skillwright` on 2026-08-07 (pack 2.0.0 — the `revenant` → `revenantworks` marketplace migration). Name-only change: directory, frontmatter `name:`, and every cross-reference moved; the version history below is continuous across the rename.
 
+## [1.3.4] — 2026-09-09
+
+`references/pack-registry.md` budget-row updates, carried forward unbumped from an earlier
+release the same day. Raising a sibling's declared body budget in this file is a change to
+skillwright's own shipped reference, the same class of miss `1.3.2`'s entry below already
+names for this exact file — it happened again rather than being caught by that precedent.
+Two passes landed here: the VER-01 batch (agentwright, lorewright, brandwright budget raises
+for their Fetch-scope/escaping-rule additions) and the rigwright/agentwright inventory-mode
+split (both raised again for their new Entry — Audit paragraphs). No prose rule changed, no
+entry point moved, no description touched — bookkeeping for a reference-file edit history
+was already supposed to record.
+
 ## [1.3.3] — 2026-08-20
 
 Pack-wide audit findings against this member, applied. Both were already

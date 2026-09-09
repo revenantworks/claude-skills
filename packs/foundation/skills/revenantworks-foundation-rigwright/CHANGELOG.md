@@ -2,6 +2,16 @@
 
 > Renamed from `revenant-foundation-rigwright` on 2026-08-07 (pack 2.0.0 — the `revenant` → `revenantworks` marketplace migration). Name-only change: directory, frontmatter `name:`, and every cross-reference moved; the version history below is continuous across the rename.
 
+## [1.1.3] — 2026-09-09
+
+**Inventory mode** added to Entry — Audit: when the target is the rig as a whole rather than
+one named file, a sixth question joins the five scoring dimensions — is every installed skill
+and hook under `~/.claude/skills` / `~/.claude/hooks` traceable to a repo, or unaccounted.
+Mirrors the estate-sweep's own INV-01 check (`local_checks.py`'s `check_skill_inventory` /
+`check_hook_inventory`) for an on-demand session run. Scheduled/unattended surfaces stay
+agentwright's by the pack's existing boundary; that half landed in agentwright 1.2.5 the same
+day. Description byte-identical.
+
 ## [1.1.2] — 2026-09-09
 
 **Fetch scope** named in Entry — Refresh (estate finding
