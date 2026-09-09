@@ -2,6 +2,60 @@
 
 > Renamed from `revenant-foundation-promptwright` on 2026-08-07 (pack 2.0.0 — the `revenant` → `revenantworks` marketplace migration). Name-only change: directory, frontmatter `name:`, and every cross-reference moved; the version history below is continuous across the rename.
 
+## [1.5.0] — 2026-09-09
+
+**Added — Entry — Grill.** A relentless interview that runs before the build,
+until no essential freedom of choice is left for it to guess at. Ported from the
+`ase-task-grill` pattern (rse/ase, Apache-2.0) and re-aimed from code plans at
+prompt and task requests; the framework it ships in was not adopted, only the
+pattern. Credit in `SOURCES.md`.
+
+- **`references/grill.md`** (new) — four focus areas outside-in with severity
+  fixed by area (JOB/CONTRACT MUST · STRUCTURE SHOULD · WORDING MAY), six
+  indicators for finding questions, and the round procedure: sort by area then
+  dependency, truncate at 10, ask one at a time with two to four grounded
+  answers (the implied one marked `⚑`) plus a `SKIP GRILLING` exit; further
+  rounds restart from the updated request. Explicitly **outside the standard
+  load budget** — it loads on the grill and nowhere else.
+- **SKILL.md — Entry — Grill** (new section) with both shapes: inside a build it
+  replaces Phase 4 and resumes at Phase 5 (`Clarify (grilled — N aspects, N
+  rounds)`, footer `grilled: N aspects`); standalone it reports settled
+  decisions and any open MUST area and produces no prompt. The agentwright seam
+  is stated — grilling a running agent's guardrails is not this entry.
+- **SKILL.md — Phase 4** gained the escalation paragraph, with the restraint
+  that matters: never escalate unasked, because interrogating a clear request is
+  padding.
+- **Description** gained `promptwright grill` in the subcommand parenthetical,
+  and the clause was then scoped to `interview a **prompt request**` — see the
+  re-judge below, which is what motivated the scoping. 918 → 1002 chars by
+  `build.py`'s measure, under the 1024 ceiling. **The routing surface moved**,
+  so a full cold re-judge of the trigger suite was owed.
+  - **Correction, same pass:** this line first read `918 → 1002` for a text that
+    measured **995**. The figure was wrong when written and is stated here
+    rather than quietly left correct by the later +7. The seven characters the
+    scoping cost are what closed the gap.
+  - **Cost, stated:** at 1002 the member now trips `build.py`'s ceiling-riding
+    advisory (≥ 1000, zero edit headroom). Paid deliberately: buying the seven
+    back would mean trimming a load-bearing clause, which moves the routing
+    surface again and owes a third re-judge — a worse trade than carrying a
+    non-fatal warning. The next content edit here must slim before it adds.
+- **Trigger evals** 34 → 38 rows, split 17/17 → 19/19 (#35–#38 for the new
+  entry). **The re-judge was performed** — two column-isolated cold runs via
+  `tools/blind_queries.py`, a fresh judge each, ledgered in `evals/RESULTS.md`.
+  Run 1 against the as-authored text scored **37/38**; the one miss, #38, came
+  back AMBIGUOUS because the grill clause bound no object. That defect was
+  fixed (the scoping above) and run 2 against the amended text scored
+  **36/38**, with #38 closed on the new qualifier. No row flipped its expected
+  direction in either run. **#37 held both times** — the watch row routed to
+  agentwright on the object over the shared verb, and run 2's judge named it
+  the set's one live risk without being able to see the note that flagged it.
+  Run 2 returned two new AMBIGUOUS on should-not rows, **#34** and **#29**,
+  both clean in run 1; they are recorded as findings and **join #37 as
+  standing watch rows**, not remediated. AMBIGUOUS was scored as a miss
+  throughout.
+- **Assertion suite** 42 → 43. **Case 43 remains authored, not run** — the
+  re-judge above covers routing only. Disclosed, not folded into a green claim.
+
 ## [1.4.1] — 2026-08-17
 
 Estate member audit + security scan (2026-08-17; rubric A, S-1..S-4, C-1/C-2,

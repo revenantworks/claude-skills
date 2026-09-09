@@ -21,7 +21,7 @@ loop.
 | Wright | What it makes |
 |---|---|
 | **skillwright** | Builds, audits, and ports Agent Skills and whole packs (neutral by default) |
-| **promptwright** | Builds, scores, and hardens prompts, with model-tier routing |
+| **promptwright** | Builds, scores, and hardens prompts, with model-tier routing and a pre-build grill |
 | **commwright** | Shapes messages per channel and audience; neutral-voice default; audits message drift |
 | **agentwright** | Designs and audits autonomous-agent systems — guardrails, trust tiers, kill switches |
 | **lorewright** | Research-verified verdicts and versioned playbook reference docs, every claim evidence-tagged |

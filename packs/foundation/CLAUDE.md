@@ -11,6 +11,7 @@ The always-on companion to the **foundation** pack's ten wrights. Each skill rou
 | Build, audit, port, or pack a skill, or a register pass on a skill's or pack's own files | **skillwright** | "build / audit a skill", "humanize / tighten this README", `skillwright` |
 | Write, fix, or score a prompt | **promptwright** | "write / improve a prompt", `promptwright` |
 | Which model or tier to run a task on — or a per-subtask target table for a whole plan | **promptwright** | `promptwright model`, "tier my plan" |
+| Stress-test a request before anything is built | **promptwright** | `promptwright grill`, "grill me" |
 | Shape a message to a channel | **commwright** | "rewrite this for &lt;channel&gt;", `commwright` |
 | Design or audit an autonomous agent | **agentwright** | "guardrails / kill switch for my agent", `agentwright` |
 | Turn an agent spec into the thing that actually runs it | **agentwright** | "make this a weekly Cowork task", "set this up as a routine", `agentwright emit` |

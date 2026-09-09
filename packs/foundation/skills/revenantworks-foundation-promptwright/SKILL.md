@@ -1,9 +1,9 @@
 ---
 name: revenantworks-foundation-promptwright
-description: Builds, scores, hardens, and red-teams LLM prompts — from a rough idea to a copy-paste-ready artifact — and picks which model tier to run a prompt or task on. Trigger to write, fix, improve, debug, red-team, or rewrite a prompt, meta-prompt, template, or system prompt; to assemble task parameters into a working prompt; for agent or bot instructions; when asked which model or tier a prompt, a live task, or each subtask of a plan should run on — a plan gets a per-subtask target table that also binds subtasks added mid-session; or say `promptwright` (`promptwright model` for a standalone tier and model pick or a plan's target table, `promptwright refresh` to update model data). For building or auditing skill packages rather than prompts, skillwright; for pure token or cost trims that keep behavior unchanged, tokenwright; a sourced multi-model product comparison is lorewright's verdict, not a run-target pick.
+description: Builds, scores, hardens, and red-teams LLM prompts — from a rough idea to a copy-paste-ready artifact — and picks which model tier to run a prompt or task on. Trigger to write, fix, improve, debug, red-team, or rewrite a prompt, meta-prompt, template, or system prompt; to assemble task parameters into a working prompt; for agent or bot instructions; when asked which model or tier a prompt, a live task, or each subtask of a plan should run on — a plan gets a per-subtask target table that also binds subtasks added mid-session; or say `promptwright` (`promptwright model` for a standalone tier and model pick or a plan's target table, `promptwright refresh` to update model data, `promptwright grill` to interview a prompt request until nothing essential is open). For building or auditing skill packages rather than prompts, skillwright; for pure token or cost trims that keep behavior unchanged, tokenwright; a sourced multi-model product comparison is lorewright's verdict, not a run-target pick.
 license: MIT
 metadata:
-  version: "1.4.1"
+  version: "1.5.0"
   profile: standalone
   pack: foundation
   brand: revenantworks
@@ -45,6 +45,7 @@ Loads cost time and context. A standard build touches **at most two** reference 
 - `hostile-interpreter.md` — **not** a per-build load (the Hostile read runs from Phase 6 in the body): reach for it when a flagged line resists the body's repairs, on a by-name red-team or adversarial read, or when a production pass must be shown as work
 - `evaluation.md` — high-stakes prompt or eval rubric requested
 - `worked-examples.md` — unsure what good finished output looks like
+- `grill.md` — **not** a standard-build load: only on `promptwright grill`, "grill me", or a Phase 4 escalated to a grill by name (outside the standard budget)
 - `prompt-card.md` — **only when the user requests the card**
 - `pack.md` — boundary doubt only: the live request may belong to a pack sibling (outside the standard budget)
 - `evals/` — maintenance archive for promptwright itself; never loaded at runtime
@@ -133,6 +134,8 @@ When two fit, pick the simpler. Read the matching section of `frameworks.md` bef
 Open any question round with the **just-build-it out**: *"Or say 'just build it' and I'll go with smart assumptions right now."* Ask only the ambiguous questions, one batch, 1–3 max, with an open-ended out ("or tell me what you actually need"); tappable options where the UI has them. Respect that out — never loop. It skips the questions, not the phases; skipping phases is the Fast path's job and a question round rules that route out. **Interview mode** *(opt-in, for fuzzy requirements)*: short targeted question batches that build the spec; exit any time on "just build it."
 
 When nothing was genuinely ambiguous, still show `── Phase 4 / 7 — Clarify (skipped — all gaps inferable) ──` on full builds so the 7-phase count stays coherent.
+
+**Escalating to a grill.** A question round is not an interview. Where the cost of building the wrong thing exceeds the cost of the interview — and the user asks for it by name — Phase 4 escalates to **Entry — Grill**, which keeps asking until no essential choice is left for the build to guess at. It replaces this phase rather than adding one; the header then reads `── Phase 4 / 7 — Clarify (grilled — N aspects, N rounds) ──`. Never escalate unasked: an unrequested interrogation of a clear request is padding.
 
 ## Phase 5 — Build
 
@@ -273,6 +276,14 @@ The four choices are fixed by spec — labels that differ are wrong however rele
 Decomposition is the caller's: promptwright targets the subtasks it is handed and never re-plans the project — a "break this down" with no targets ask is not this entry.
 
 The Model line *attached to a built prompt* is Phase 5's job — Entry — Model is the standalone answer when no prompt is in play. A sourced comparison across several models for a decision is lorewright's verdict, not this.
+
+## Entry — Grill
+
+**"promptwright grill"** (or "grill me", "grill this plan", "stress-test this before you build it"). Interview the request relentlessly until no **essential freedom of choice** is left for the build to guess at. The focus areas, indicators and round procedure are `grill.md`'s and are stated only there; load it here and nowhere else.
+
+Two shapes. **Inside a build**, the grill replaces Phase 4 and the ladder resumes at Phase 5; the header reads `── Phase 4 / 7 — Clarify (grilled — N aspects, N rounds) ──` and Phase 7's footer carries `grilled: N aspects`. **Standalone** — a grill on a plan or task with no prompt in play — reports the settled decisions and any still-open MUST area, and produces no prompt; it ends on the ordinary Keep going selection with the build offered.
+
+A grill is never entered unasked, and never run over a request that is already unambiguous — name the one or two assumptions and offer the ordinary build instead. Grilling an *agent's* guardrails, cadence, or blast radius is agentwright's; this entry grills the request a prompt is about to be built from.
 
 ## Behavior notes
 

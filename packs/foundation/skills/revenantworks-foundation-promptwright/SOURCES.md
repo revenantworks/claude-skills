@@ -100,3 +100,17 @@ Cross-check registries (community-maintained, machine-readable; may lag brand-ne
 - OpenRouter live model list — https://openrouter.ai/api/v1/models
 
 The single-update-surface pattern (isolating volatile facts in one stamped file) and the fetch-first / verify-against-canonical-source approach follow Anthropic's own `product-self-knowledge` skill, which handles the same drift problem by keeping stable pointer URLs instead of baked-in facts.
+
+---
+
+## The grill
+
+*Applies to: `references/grill.md`, SKILL.md — Entry — Grill (added 1.5.0, 2026-09-09).*
+
+The pattern is ported from **`ase-task-grill`** in the ASE agentic-engineering framework by Ralf S. Engelschall — https://github.com/rse/ase (Apache-2.0), read at `plugin/meta/ase-common-grill.md` and `plugin/skills/ase-task-grill/SKILL.md`.
+
+What was taken: the outside-in focus areas with severity fixed by area rather than judged per question, the indicator list for finding questions, the sort-then-truncate round shape, one-question-at-a-time with a small set of grounded answers and the current plan's option flagged, the explicit skip exit, and the round-restarts-from-scratch rule.
+
+What was changed: the four areas were re-aimed from code plans (DOMAIN / INTERFACE / ARCHITECTURE / IMPLEMENTATION) at prompt and task requests (JOB / CONTRACT / STRUCTURE / WORDING); the framework's task-file, session-id, and hand-off machinery was left behind, since promptwright has its own phase ladder to resume into; and the dialog rendering defers to this skill's own tool-list test rather than ASE's custom-dialog definition.
+
+The framework itself was evaluated and **not** adopted — it carries a CLI, config system and MCP server, and the estate's own rig covers what those do. Only the pattern was ported.
