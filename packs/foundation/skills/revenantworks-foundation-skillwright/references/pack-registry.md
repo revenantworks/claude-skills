@@ -30,6 +30,7 @@
 |---|---|---|
 | `foundation` | standalone | Lean, no tools beyond web search, low overhead; self-updating stamps. Conformance checks (2026-07-13): C-1 drift-audit verb · C-2 neutral default. Integrate policy: restamp: lazy (2026-07-13) |
 | `gamedev` | standard | Game-development skills on the `-smith` motif (registered 2026-08-29, first member pixelsmith). Standard profile because image viewing is an optional, declared capability with a stated text path; no scripts, no packages, no network at runtime. Conformance checks (2026-08-29): C-1 drift-audit verb · C-2 neutral default. Integrate policy: restamp: lazy (2026-08-29) |
+| `localops` | standard | Skills for running work on local models, on the `-runner` motif (registered 2026-09-09, first member lmstudiorunner). Standard profile because it calls a local HTTP API at runtime — a declared, local-only dependency with a stated no-shell fallback; no scripts, no packages, no cloud network. Conformance checks (2026-09-09): C-1 drift-audit verb · C-2 neutral default. Integrate policy: restamp: lazy (2026-09-09) |
 
 **foundation members** *(canonical roster — pack manifests are generated from this table)*
 
@@ -112,6 +113,24 @@ Declared here rather than in each member's frontmatter, changed 2026-07-27. The 
 **foundation capstone:** Forge Run — one orchestration prompt driving all ten members end-to-end (stored 2026-07-12 · roster updated to eight 2026-07-13 · roster reconfirmed 2026-07-14, pack self-audit, no change · re-run after any member's major version bump). Live runs: brandwright build, 2026-07-13 · **Forge Run 3, 2026-07-23** — the 1.1.0 rebuild as build proof, all eight doctrines exercised in anger (skillwright build/integrate conventions, evalwright diff-scoped suite refresh, tokenwright measurement + C-1 audit, lorewright-grade source verification on four baselines, brandwright centralization, commwright-shaped release comms, agentwright platform research, promptwright model snapshot + Entry — Model); roster reconfirmed at 1.1.x, no change. **Roster 8 → 9 on 2026-07-30** with the addition of `revenantworks-foundation-rigwright`; capstone roster line updated, capstone run not re-triggered (a member add updates the line only). **Roster 9 → 10 on 2026-08-18** with the addition of `revenantworks-foundation-dispatchwright`; capstone roster line updated, capstone run not re-triggered (a member add updates the line only); the routing-seam table was not extended for the new member this pass — recorded as owed in the member's own README rather than left silent.
 
 **foundation canonical repo:** `github.com/revenantworks/claude-skills` — source of truth for member drift audits (registered 2026-07-13; repository renamed from `citadel` 2026-08-17, GitHub redirects the old name). Relocated from the personal account 2026-07-14; the prior copy is a private archive. Nothing else carries the URL: manifests are generated from here, and every other file says "the registered canonical repo."
+
+**localops members** *(canonical roster — pack manifests are generated from this table)*
+
+| Member | Job | Route there when |
+|---|---|---|
+| `revenantworks-localops-lmstudiorunner` | Hands work to a local LM Studio model and verifies what comes back — work-class scoring, live model audit, two verification modes | The deliverable is work delegated to a local or offline model, a model-fit or switch answer, or an unattended local run that keeps only checked results |
+
+**localops budgets** *(body-footprint table)*
+
+| Member | Budget (tokens) | Why |
+|---|---|---|
+| `revenantworks-localops-lmstudiorunner` | 3000 | measured ≈2140 at 1.0.0 build; the two-mode rule and its reason are body-resident because a run must decide the mode before it opens anything, and the discovery and diagnosis steps state their own thresholds; references hold the class tables, the API fields and the card shape |
+
+**localops seams:** none — a one-member pack has no boundary pair. The three cross-pack handoffs (promptwright for cloud tiers and prompt text, agentwright for the machinery around a scheduled run) are carried by lmstudiorunner's own description; a seam row is owed when a second localops member lands.
+
+**localops capstone:** none — a one-member pack (2026-09-09); revisit when the roster reaches three.
+
+**localops canonical repo:** `github.com/revenantworks/claude-skills` — source of truth for member drift audits (registered 2026-09-09).
 
 **gamedev members** *(canonical roster — pack manifests are generated from this table)*
 

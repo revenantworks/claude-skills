@@ -1,0 +1,72 @@
+# Trigger evals — revenantworks-localops-lmstudiorunner 1.0.0
+
+Provenance: authored against SKILL.md at the 1.0.0 build (2026-09-09).
+Judged from **name + description only**, as a cold router would.
+
+Balance: 18 should-fire · 12 should-not · 6 boundary pairs.
+
+## Should fire
+
+| # | Request | Why it lands here |
+|---|---|---|
+| 1 | "offload this to my local model" | `offload` + local model, the core claim |
+| 2 | "can Gemma do this instead of you?" | Delegation to a named local model |
+| 3 | "run this on LM Studio" | Names the server the skill drives |
+| 4 | "hand this batch to the local LLM overnight" | Batch + unattended, both claimed |
+| 5 | "which of my installed models should do this?" | Model-fit question, claimed by name |
+| 6 | "is there a better model installed for this?" | The switch question |
+| 7 | "should I switch models for this job?" | Same, phrased as the user would |
+| 8 | "queue this up for the local model tonight" | Queue + unattended |
+| 9 | "is this task worth delegating?" | `size or score a task before delegating` |
+| 10 | "score this before I hand it over" | The size entry |
+| 11 | "my local model returned nothing" | Empty output — a named failure symptom |
+| 12 | "the local model keeps repeating itself" | Repetition — named symptom |
+| 13 | "it drifts after about fifty items" | Drift on a long list — named symptom |
+| 14 | "lmstudiorunner audit" | Named subcommand |
+| 15 | "lmstudiorunner status" | Named subcommand |
+| 16 | "set up an unattended run that keeps only what passes" | The gate claim |
+| 17 | "delegate this to an on-device model" | `on-device`, a phrasing users reach for |
+| 18 | "run this offline, nothing to the cloud" | `offline` + the privacy motive |
+
+## Should not fire
+
+| # | Request | Where it belongs | Why not here |
+|---|---|---|---|
+| 19 | "which Claude model should I use?" | promptwright | Cloud tier pick, ceded by name |
+| 20 | "should this run on Opus or Sonnet?" | promptwright | Same |
+| 21 | "write the prompt for this agent" | promptwright | Prompt text, ceded by name |
+| 22 | "improve this system prompt" | promptwright | Prompt quality |
+| 23 | "add a kill switch to my scheduled job" | agentwright | Guardrails around a scheduled run, ceded |
+| 24 | "how often should this cron run?" | agentwright | Cadence, ceded |
+| 25 | "build me a skill for X" | skillwright | Skill package |
+| 26 | "audit this skill" | skillwright | Skill package |
+| 27 | "make my README read better" | skillwright | Prose on repo files |
+| 28 | "write the release announcement" | commwright | A message to an audience |
+| 29 | "compare Llama and Mistral as products" | lorewright | Sourced product comparison, not a run-target pick |
+| 30 | "my GPU is running hot" | none | Hardware support, not delegation |
+
+## Boundary pairs
+
+Each pair shares vocabulary and splits on the deciding key.
+
+| # | A (fires) | B (does not) | The key |
+|---|---|---|---|
+| B1 | "which installed model fits this job?" | "which Claude model fits this job?" | Local vs cloud. The description claims installed/local and cedes cloud tiers to promptwright by name |
+| B2 | "the local model returns empty output" | "Claude returned an empty response" | Whose model. Only local failure shapes are claimed |
+| B3 | "queue this for an unattended local run" | "schedule this job to run nightly with retries" | Delegating work vs designing the schedule around it. Cadence and retries are ceded to agentwright |
+| B4 | "score this task before delegating" | "score this prompt" | The object. A task's fit for a local model here; prompt quality is promptwright's |
+| B5 | "hand this to the local model" | "hand this to a subagent" | Local model vs in-session agent fan-out. Nothing here claims subagents |
+| B6 | "is a better model installed for this?" | "is a better model available to buy?" | Installed vs market. The skill reads what is installed; a product comparison is lorewright's |
+
+## Known soft edges
+
+- **#29 vs B6-A** — "compare Llama and Mistral" against "is a better model
+  installed". Both mention models by capability. The split is whether anything
+  is installed and in play; a cold router seeing only vocabulary could go
+  either way, and lorewright's description claims comparisons generally. This
+  is the pair most likely to misroute and is recorded rather than claimed
+  closed.
+- **#25 vs the whole skill** — a request to *build a skill that delegates to a
+  local model* is skillwright's build, not this skill's job. The description
+  does not claim skill-building, but both sets of vocabulary appear in the same
+  sentence when a user asks for it.
