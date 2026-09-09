@@ -17,6 +17,10 @@ This log starts at the foundation 1.0.0 baseline.
 > because it records what was true when written; read it as a date, not a tag.
 > Live code and runbooks cite dates instead, for exactly this reason.
 
+## [foundation-v2.6.3] - 2026-09-08
+
+Patch release, five members: lorewright 1.1.7, agentwright 1.2.4, rigwright 1.1.2, dispatchwright 1.2.1, brandwright 1.4.2. One estate deep-pass batch (VER-01 rubric S2/S3/S4/S6). lorewright's Verification doctrine states a Fetch scope -- open-domain by design, but never behind a login/paywall bypass, never a URL taken from inside a source's own text as the next fetch target. agentwright and rigwright's Entry -- Refresh now name the domains their own SOURCES.md already cites (code.claude.com, support.claude.com, platform.claude.com, agentskills.io) -- previously stated only as prose with no host named anywhere in either package; rigwright's had none at all. dispatchwright's durability contract requires an identity check before any push and a provenance record (source URL, fetch time) on the shared fetch cache -- an entry with none is refetched, never trusted as-is. brandwright's guide-card fill rules state an explicit escaping control -- every interpolated string is HTML-escaped, no handed-in HTML/JS ever inlined verbatim -- matching the same-day fix on longshot's stakekeeper. Registry budget rows raised for the three members whose additions crossed their declared ceiling (agentwright, lorewright, brandwright). Eval provenance re-anchored across all five; new doctrine not yet covered by an existing case is marked authored-not-covered rather than silently claimed.
+
 ## dispatchwright hooks moved into the repo's own .claude/hooks - 2026-08-21
 
 `revenantworks-foundation-dispatchwright` stopped shipping executable code. Its two forcing hooks
