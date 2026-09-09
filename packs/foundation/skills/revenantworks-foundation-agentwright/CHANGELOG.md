@@ -2,6 +2,15 @@
 
 > Renamed from `revenant-foundation-agentwright` on 2026-08-07 (pack 2.0.0 — the `revenant` → `revenantworks` marketplace migration). Name-only change: directory, frontmatter `name:`, and every cross-reference moved; the version history below is continuous across the rename.
 
+## [1.2.4] — 2026-09-09
+
+**Fetch scope** named in Entry — Refresh (estate finding
+`foundation-fetch-members-name-no-domain-allow-list`, VER-01 rubric S2): the Anthropic-platform
+rows verify against `code.claude.com`/`docs.claude.com`, `support.claude.com`,
+`platform.claude.com`, `agentskills.io` — the domains SOURCES.md already cites; a non-Anthropic
+platform row verifies only against that platform's own documentation, named inline. Description
+byte-identical.
+
 ## [1.2.3] — 2026-08-20
 
 Pack-wide audit finding SEC-1 (S-4 · P1), applied.

@@ -2,6 +2,16 @@
 
 > Renamed from `revenant-foundation-lorewright` on 2026-08-07 (pack 2.0.0 — the `revenant` → `revenantworks` marketplace migration). Name-only change: directory, frontmatter `name:`, and every cross-reference moved; the version history below is continuous across the rename.
 
+## [1.1.7] — 2026-09-09
+
+**Fetch scope** stated in Verification doctrine (estate finding
+`foundation-fetch-members-name-no-domain-allow-list`, VER-01 rubric S2). Verdict and Playbook
+fetch open-domain by design, so a fixed allow list would break the job; what's fixed instead:
+never fetch behind a login/paywall bypass, never fetch a URL taken from inside a source's own
+text as the next target, and an unreadable (scrape-walled) page is graded per the existing
+"Primary source exists but cannot be read" rule rather than routed around. Description
+byte-identical.
+
 ## [1.1.6] — 2026-08-20
 
 Pack-wide audit finding P1-1 (S-3 / invocation control), applied.

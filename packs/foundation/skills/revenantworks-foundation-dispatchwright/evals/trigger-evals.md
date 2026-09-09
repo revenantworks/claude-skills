@@ -7,6 +7,12 @@ restated `git` and subagent tools as optional with their degradation named, and 
 `profile: standalone` as a result. The `description` is byte-for-byte unchanged, so the routing
 surface every row below is judged against did not move: no query, expected value, boundary pair,
 or injection probe was added, removed, or rewritten. Still 22 rows (10 / 10 / 2).
+**Re-anchored to v1.2.1, 2026-09-09 — provenance only, nothing executed here:** §5's durability
+contract gained an identity-check-before-push rule and a fetch-cache provenance requirement
+(body-only; estate finding
+`dispatchwright-pushes-to-main-with-no-identity-check-and-caches-fetches-without-provenance`).
+The `description` is byte-identical, so the routing surface these rows judge did not move; no
+query, expected value, or count touched. Still 22 rows (10 / 10 / 2).
 Not yet run — see `RESULTS.md`.
 
 Ten queries that should fire dispatchwright, ten that should not (including the four named

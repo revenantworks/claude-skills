@@ -44,4 +44,12 @@ P0's triggers are stated in Entry — Audit and bind whether or not this file is
 
 The one export that opens this file: Entry — Export states the card's envelope, this section states what goes inside it. One self-contained HTML file, fully offline — no external scripts, fonts, CDNs, network calls, or browser storage. **Exactly 12 sections, in this order:** header lockup (skill wordmark + guide title + definition-version chip) · essence · architecture (one card per identity with primary tagline) · palette (core, functional, identity accents — swatches with name + hex, tap/click-to-copy) · typography table (rendered in fallback stacks, noting brand faces install separately) · tag registry · naming quick rules · voice cards with sign-offs · wordmark + logo rules · motion/imagery/application/accessibility digest · firewall · footer echoing the lockup, definition version, and date. Styled from the active definition's own tokens; with none stored, the neutral dark theme. Respect reduced-motion.
 
+**Every interpolated string is HTML-escaped before it reaches the card, and no handed-in HTML or
+JS is ever inlined verbatim** (added 2026-09-09,
+`brandwright-and-stakekeeper-render-handed-in-content-with-no-escaping-rule`). A definition can be
+handed in for the run (Entry — Export's own opening line) or otherwise ingested rather than pulled
+from the stored file, so every field this section renders — name, tagline, voice text, tag
+registry entries — is content, not markup, by the time it reaches the page: the same rule the
+estate's own dashboard generator already follows.
+
 **Every section renders from a definition section — the card collects nothing of its own.** Each of the twelve draws on the definition group of the same name; the two that do not map by name are stated here. **Tag registry** renders from the **identity map** — its handles/orgs and community terms rows, each listed with the identity that owns it and the surfaces it is allowed on, taglines and sign-offs included by their allowed-surface rule. It is a *view* of already-collected fields, not a group of its own: Entry — Build's fourteen groups collect no tags, and adding a fifteenth is not the fix. **Architecture** renders from the identity map's parent brand and sub-brands, one card each, carrying that identity's primary tagline. Where a source field is empty the section renders an explicit "none registered" row and is never omitted, never a stub, and never invented — the section count is fixed at twelve whatever the definition holds.

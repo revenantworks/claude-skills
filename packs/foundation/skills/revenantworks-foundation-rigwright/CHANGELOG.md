@@ -2,6 +2,15 @@
 
 > Renamed from `revenant-foundation-rigwright` on 2026-08-07 (pack 2.0.0 — the `revenant` → `revenantworks` marketplace migration). Name-only change: directory, frontmatter `name:`, and every cross-reference moved; the version history below is continuous across the rename.
 
+## [1.1.2] — 2026-09-09
+
+**Fetch scope** named in Entry — Refresh (estate finding
+`foundation-fetch-members-name-no-domain-allow-list`, VER-01 rubric S2): `code.claude.com`
+(redirects from `docs.claude.com`), `support.claude.com`, `platform.claude.com`, `agentskills.io`
+— the domains SOURCES.md already names as this file's provenance, previously stated only as
+prose ("Claude Code docs") with no host named anywhere in the package. Description
+byte-identical.
+
 ## [1.1.1] — 2026-08-17
 
 Member audit + security scan (2026-08-17), plus the `surface-notes.md`

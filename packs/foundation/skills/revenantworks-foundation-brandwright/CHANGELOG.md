@@ -2,6 +2,15 @@
 
 > Renamed from `revenant-foundation-brandwright` on 2026-08-07 (pack 2.0.0 — the `revenant` → `revenantworks` marketplace migration). Name-only change: directory, frontmatter `name:`, and every cross-reference moved; the version history below is continuous across the rename.
 
+## [1.4.2] — 2026-09-09
+
+**An explicit escaping rule for the brand-guide card** (estate finding
+`brandwright-and-stakekeeper-render-handed-in-content-with-no-escaping-rule`, VER-01 rubric S6).
+`audit-doctrine.md`'s fill rules now state that every interpolated string is HTML-escaped before
+it reaches the card and no handed-in HTML/JS is ever inlined verbatim — a definition can be
+handed in for the run or otherwise ingested, and nothing previously stated an escaping control
+for it. Description byte-identical.
+
 ## [1.4.1] — 2026-08-21
 
 **Two new palette-derivation rules, D-8 and D-9, in `audit-doctrine.md`.**

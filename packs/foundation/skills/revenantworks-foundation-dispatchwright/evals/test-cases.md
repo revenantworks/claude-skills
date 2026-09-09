@@ -1,6 +1,6 @@
 # Assertion Suite — revenantworks-foundation-dispatchwright
 
-> **Provenance:** target `revenantworks-foundation-dispatchwright` v1.2.0 · suite authored
+> **Provenance:** target `revenantworks-foundation-dispatchwright` v1.2.0, re-anchored to v1.2.1 the same day (below) · suite authored
 > 2026-09-09, closing the debt `evals/RESULTS.md` has carried since the member's 1.0.0 build:
 > "No assertion suite (`test-cases.md`) exists yet for this member — dispatchwright ships with
 > trigger evals only at 1.0.0." **16 cases**, assertion-only — each is an Input plus mechanical
@@ -15,6 +15,15 @@
 > specifically to retire that caveat: from this suite's first execution onward, rows 21–22
 > are asserted, not merely judged. `trigger-evals.md` is unchanged and still owns the
 > should-fire / should-not-fire routing rows — this file does not duplicate those.
+>
+> **Re-anchored to v1.2.1, 2026-09-09 — provenance only, nothing executed here:** §5's
+> durability contract gained the identity-check-before-push rule and the shared fetch
+> cache's provenance requirement (estate finding
+> `dispatchwright-pushes-to-main-with-no-identity-check-and-caches-fetches-without-provenance`).
+> Case 7 asserts the atomic commit-and-push and push-before-report rules, and Case 8 the
+> three-point ledger row; neither asserts the new identity check or the cache provenance
+> record. Both are **authored-not-covered** — recorded as owed rather than claimed. No case
+> added, dropped, or rewritten; still **16**.
 
 ## Contents
 

@@ -3,7 +3,7 @@ name: revenantworks-foundation-brandwright
 description: Defines a brand and its voice — identity, naming, palette, taglines, firewall — and applies them on request across skills, packs, artifacts, docs, and repos. Ships neutral — no brand exists until one is built or handed in; outputs spec-clean. Trigger to create, define, rebuild, or consolidate a brand, voice, or style guide; to apply a brand or voice to a built skill, artifact, repo, or doc; to audit a repo, tree, or skill set for drift — wrong names, off-palette colors, off-voice copy, stale handles or taglines; to export a voice profile or HTML brand-guide card; or say brandwright build / apply / audit / export. Applying a voice to one message is commwright's via the exported profile; a whole skill set's rebrand is a handoff — brandwright defines the identity, skillwright port propagates it.
 license: MIT
 metadata:
-  version: "1.4.1"
+  version: "1.4.2"
   profile: standalone
   pack: foundation
   brand: revenantworks
@@ -80,7 +80,7 @@ The `metadata.volatile` block declares this so `skillwright upkeep` can include 
 - **Voice profile — exactly 6 fields**, in order: name · register · cadence · lexicon do/don't *(one field carrying both lists)* · sign-off · allowed surfaces. Cut from the definition's voice section without reshaping it; this is the profile commwright consumes to apply a voice to one message.
 - **skillwright structural payload — exactly 3 fields**, in order: brand token · naming template · license default. These are the label-level fields a neutral build stamps, and they are the *whole* payload: a palette role, wordmark rule, voice line, or identity-map row appearing here is a **defect, not a bonus** — skillwright builds neutral, and styling lands later, on invoke, via Entry — Apply.
 - **Style one-pager** for humans — one page, in order: identity map · naming templates, one rendered example each · palette table · voice attributes · tagline surfaces. Human-readable; no doctrine text.
-- **Brand-guide card** — one self-contained, fully offline HTML file rendering the whole active definition, brand-styled from it and neutral-themed when none is stored. This is the one payload that opens a reference: its complete section order and fill rules live in `audit-doctrine.md`, which the Load budget routes here and nowhere else on an export run. Emit as an artifact where the surface renders HTML, else a saveable single-file code block — never a Markdown substitute.
+- **Brand-guide card** — one self-contained, fully offline HTML file rendering the whole active definition, brand-styled from it and neutral-themed when none is stored. This is the one payload that opens a reference: its complete section order, fill rules, and escaping rule live in `audit-doctrine.md`, which the Load budget routes here and nowhere else on an export run. Emit as an artifact where the surface renders HTML, else a saveable single-file code block — never a Markdown substitute.
 
 Exports are handoffs, not links — consumers stay independent, and an absent consumer never blocks the export.
 

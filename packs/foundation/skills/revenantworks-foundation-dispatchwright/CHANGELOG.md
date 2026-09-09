@@ -1,5 +1,17 @@
 # Changelog — revenantworks-foundation-dispatchwright
 
+## [1.2.1] — 2026-09-09
+
+**Identity check before push, and provenance on the shared fetch cache** (estate finding
+`dispatchwright-pushes-to-main-with-no-identity-check-and-caches-fetches-without-provenance`,
+VER-01 rubric S3/S4). §5's durability contract now requires a unit to check the expected push
+account before pushing (`gh auth status` where available; structurally satisfied by pushing only
+to `origin` where it is not) — the same rule longshot's own hard rules state for themselves, on
+a skill whose whole job is fanning pushes out across repositories. The shared fetched-document
+cache is now named in the Load budget's data list alongside plans, ledgers and status reports,
+and every cache entry must carry a provenance record (source URL, fetch time) or it is refetched
+rather than trusted by a later unit. Description byte-identical.
+
 ## [1.2.0] — 2026-08-21
 
 Earned the standalone profile back by removing what disqualified it, not by
