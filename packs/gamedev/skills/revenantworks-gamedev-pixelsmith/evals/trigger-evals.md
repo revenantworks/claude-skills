@@ -1,6 +1,6 @@
 # Trigger Evals — 20 queries (10 should / 10 shouldn't)
 
-Read each cold against name + description only. Provenance: derived from revenantworks-gamedev-pixelsmith v1.0.0, 2026-08-29. Authored, not run.
+Read each cold against name + description only. Provenance: derived from revenantworks-gamedev-pixelsmith v1.0.0, 2026-08-29. **Re-anchored to v1.0.1, 2026-09-09 — provenance only, nothing executed here.** The 1.0.1 bump is bookkeeping for a run record added at the same member version; the `description` field is byte-identical to 1.0.0's, so the routing surface these queries judge did not move — no row, expectation or count touched, and no re-judge is owed by this bump. Authored, not run.
 
 | # | Query | Expected |
 |---|---|---|
