@@ -1,10 +1,10 @@
 # Pack — foundation *(standalone profile)*
 
-> Advisory only — consulted on boundary doubt; initial routing stays at the name + description level. **Last stamped: 2026-08-18** (ten-member roster + canonical repo; generated from the registry in skillwright's `pack-registry.md`).
+> Advisory only — consulted on boundary doubt; initial routing stays at the name + description level. **Last stamped: 2026-09-09** (ten-member roster + canonical repo; generated from the registry in skillwright's `pack-registry.md`).
 
 | Member | Job | Route there when |
 |---|---|---|
-| `revenantworks-foundation-promptwright` | Builds, scores, and hardens prompts with model-tier routing | The deliverable is a prompt, meta-prompt, or system prompt |
+| `revenantworks-foundation-promptwright` | Builds, scores, and hardens prompts with model-tier routing, and grills a request before the build until nothing essential is left to guess at | The deliverable is a prompt, meta-prompt, or system prompt — or a request that must be pinned down before one is written |
 | `revenantworks-foundation-skillwright` | Builds, audits, and ports Agent Skills and packs | The deliverable is a skill, SKILL.md, or pack — new, audited, or ported |
 | `revenantworks-foundation-commwright` | Shapes messages per channel, audience, and applied voice; audits message drift | The deliverable is a message, announcement, comms plan, or message audit |
 | `revenantworks-foundation-agentwright` | Designs and audits autonomous agent systems — guardrails, trust tiers, kill switches | The deliverable is an agent's operating spec or an audit of one |
