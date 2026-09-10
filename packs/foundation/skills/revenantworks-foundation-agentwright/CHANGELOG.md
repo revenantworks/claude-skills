@@ -2,6 +2,16 @@
 
 > Renamed from `revenant-foundation-agentwright` on 2026-08-07 (pack 2.0.0 — the `revenant` → `revenantworks` marketplace migration). Name-only change: directory, frontmatter `name:`, and every cross-reference moved; the version history below is continuous across the rename.
 
+## [1.2.7] — 2026-09-10
+
+**Estate-audit finding `agentwright-inventory-mode-private-pointer`.** Inventory mode's
+Entry — Audit paragraph cited a private-repo path (`estate/scripts/local_checks.py`,
+`check_scheduled_task_inventory`) a public installer cannot resolve and that disclosed a
+private tooling layout. The parenthetical is cut; the rule it illustrated (walk
+`~/.claude/scheduled-tasks/*`, an undocumented task_id is P1, never P0) is unchanged and
+stands on its own. `description` byte-identical; no entry point, section numbering, or
+scoring anchor moved. Evals re-anchor accordingly.
+
 ## [1.2.6] — 2026-09-10
 
 **Two additions from the estate's first task-observer weekly review** (observations #0003
