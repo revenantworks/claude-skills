@@ -17,6 +17,97 @@ This log starts at the foundation 1.0.0 baseline.
 > because it records what was true when written; read it as a date, not a tag.
 > Live code and runbooks cite dates instead, for exactly this reason.
 
+## [localops-v1.0.1] - 2026-09-10
+
+- **lmstudiorunner 1.0.0 → 1.0.1.** Seven estate-audit findings, first patch since the
+  member's 2026-09-09 debut. `loaded_context_length` is only present when `state` is
+  `loaded`; SKILL.md, `api-surface.md`, and `work-classes.md`'s Long-input row now all
+  state the not-loaded fallback (judge fit against `max_context_length` provisionally,
+  flag resident context as unconfirmed) — the field is absent from every entry on this
+  rig's just-in-time setup at rest, and nothing said what to do about it. `evals/SUITE.md`
+  cases A4 and C3 now name their precondition (a resident model) explicitly; paired cases
+  A4b and C3b cover the not-loaded state so the suite stays runnable at rest instead of
+  marking correct behaviour a failure. The posture clause now names the queue file, task
+  cards (including a card's own `check` field), and the raw API response as data, never
+  instructions; `task-cards.md` adds that a `check` is shown to the owner and confirmed
+  before its first execution, and a card whose `check` was not authored by the owner is
+  refused rather than run. `evals/RESULTS.md` created — Case E5 (the injection probe)
+  executed as a traced run, 1/1, this member's first run record of any kind. The discovery
+  probe in `api-surface.md` now covers all four host/port combinations with a 2-second
+  connect timeout each (the old three-line block both omitted the address that actually
+  answers on this rig and had no timeout, so a closed port hung instead of failing fast).
+  SKILL.md gains a Load budget section naming all four reference files, closing with the
+  `pack.md` boundary-doubt line. `capabilities` may be absent entirely on an `embeddings`
+  entry; `publisher` and `compatibility_type` added to SKILL.md's field list to match
+  `api-surface.md`.
+
+## [foundation-v2.6.9] - 2026-09-10
+
+- **dispatchwright 1.2.2 → 1.2.3.** Load budget now closes with the sibling-standard
+  `references/pack.md` line (boundary doubt about a sibling's territory only) — the one
+  member whose Load budget never named the manifest it ships. Behavior notes gains an
+  Invocation control paragraph naming why model invocation is required (recognizing and
+  dispatching a fan-out is the job) and what bounds its pushes (the identity check, the
+  named remote, the stop-and-ask on any unnamed irreversible action) — no
+  `disable-model-invocation` flag, since that key hard-errors on claude.ai and the Skills
+  API, surfaces this member also ships to. `evals/trigger-evals.md`'s header restated to
+  the sibling row-count form.
+- **agentwright 1.2.6 → 1.2.7.** Inventory mode's Entry — Audit paragraph cited a private
+  repo's script path, unresolvable and disclosing to a public installer; cut, the rule it
+  illustrated (walk `~/.claude/scheduled-tasks/*`, an undocumented task_id is P1) stands
+  on its own.
+- **rigwright 1.1.4 → 1.1.5.** Two behaviour changes (1.1.3's inventory-mode paragraph,
+  1.1.4's live/tracked-pair rot fold) had shipped with no case asserting either, across
+  two releases. `evals/test-cases.md` gains Case 17 (inventory mode: an unaccounted real
+  directory files at P1) and Case 18 (a diverged live/tracked pair files under `rot`, both
+  paths named); both executed as traced runs, 2/2. Also corrected a standing
+  self-contradiction in `evals/trigger-evals.md`: the cold re-judge owed since v1.0.2 was
+  discharged 2026-08-20 per `RESULTS.md`, but the line kept reading "remains owed" for
+  three more re-anchors after the close.
+- **lorewright 1.1.7 → 1.1.8, promptwright 1.5.5 → 1.5.6, skillwright 1.3.5 → 1.3.6.**
+  Injection probes (lorewright Cases 40-42, promptwright Cases 40-42, skillwright Cases
+  41-45) all ran and passed 2026-09-08 per each member's own `evals/RESULTS.md`, but the
+  case headings still read "not run" — an audit reading only the suite files would have
+  filed a false coverage gap or re-run work already done. Corrected all eleven headings to
+  name the execution date and result; no case content, input, assert, or count changed.
+  tokenwright carries the same stale-marker defect and is deliberately left untouched —
+  tokenwright is a frozen member (owner decision 2026-08-17, no bumps unless something is
+  actually broken), and whether a documentation-only correction counts as "broken" is an
+  open owner decision recorded in `pack-registry.md`, not settled by this release.
+- **promptwright, additionally: `model-snapshot.md`'s S-frontier Claude slot corrected
+  from "Fable 5" to "Fable 5.1"** across five lines — a lineup move inside the 60-day
+  calendar window, which a pure calendar cadence cannot catch on its own. Spot-verified
+  live against `platform.claude.com/docs/en/about-claude/models/overview` (the Claude
+  column only); naming-only, no price, context, or output change ($10/$50, 1M, 128K
+  unchanged from Fable 5). A launch-triggered refresh cue was added beside the calendar
+  one.
+- **brandwright 1.4.2 → 1.4.3.** Case 28 added to `evals/test-cases.md`, closing the
+  authored-not-covered debt the 1.4.2 release recorded: the guide-card HTML-escaping rule
+  shipped with no case asserting it. Case 28 feeds the render path a tagline and a
+  sign-off carrying `<script>`/`<img onerror=>` markup and asserts both come back
+  HTML-escaped, never inlined verbatim. Authored, not run, per this pass's own
+  instruction — `evals/RESULTS.md` records the case with no pass rate claimed.
+- **skillwright, additionally: Load budget and standalone-profile reconciliation.** The
+  Load budget paragraph said a standard build touches four reference files "in practice"
+  with `description-crafting.md` conditional on fixing a description — false, since Build
+  step 5 drafts a description with a char count against it on every build. Restated as
+  five, always. `references/rubrics.md`'s standalone profile gained the shell/interpreter
+  carve-out Packaging already declares (`zip`, a stdlib-only `python3`, both skip-clean)
+  and a clarification that the ≤3-reference-load cap bounds undeclared reach, not a
+  build's own doctrine-mandated file count. `references/pack-registry.md` (skillwright's
+  own shipped reference) gains a tokenwright freeze note recording the 2026-08-17 owner
+  decision where upkeep and integrate actually read policy, with the calendar-refresh
+  exemption question left explicitly open.
+- **Hooks (`.claude/hooks/`, not a pack member):** `dispatch_patterns.txt` gains five
+  shape-based patterns (observation 0016) — a real estate-audit prompt asking for a
+  "complete estate sweep" naming many surfaces missed every existing pattern, because the
+  list matched the author's vocabulary rather than the request's shape.
+  `dispatch_gate.py`'s `--selftest` gains a second positive control built from that real
+  prompt fragment, alongside the existing synthetic one, so a vocabulary gap like this one
+  cannot pass silently again. Two of the four originally-missed phrasings still miss
+  (they need the surface-count rule observation 0016 also recommended, a logic change
+  beyond this pass's scope) and are left for a future pass.
+
 ## [foundation-v2.6.8] - 2026-09-10
 
 - **promptwright 1.5.2 → 1.5.5.** Adopted a four-way convergence (ase-code-edit's

@@ -1,6 +1,6 @@
 {
   "name": "localops",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "revenantworks-localops — skills for running work on local models on the -runner motif. First member: lmstudiorunner, which hands work to an LM Studio model and verifies what comes back.",
   "author": {
     "name": "Revenantworks"
