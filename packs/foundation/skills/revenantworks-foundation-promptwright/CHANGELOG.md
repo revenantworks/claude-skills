@@ -2,6 +2,22 @@
 
 > Renamed from `revenant-foundation-promptwright` on 2026-08-07 (pack 2.0.0 — the `revenant` → `revenantworks` marketplace migration). Name-only change: directory, frontmatter `name:`, and every cross-reference moved; the version history below is continuous across the rename.
 
+## [1.5.6] — 2026-09-10
+
+**Two estate-audit findings.** `eval-ledgers-underreport-executed-probes`: Cases 40-42's
+headings still read "authored, not run" though `evals/RESULTS.md`'s 2026-09-08 entry had
+already recorded all three executed and passing — corrected the three headings to name the
+result; no case content, input, assert, or count changed.
+`promptwright-model-snapshot-stale-frontier-string`: `references/model-snapshot.md`'s
+S-frontier Claude slot read "Fable 5" on five lines while this session's own lineup is
+Claude Fable 5.1 — a lineup move inside the 60-day calendar window, which a pure calendar
+cadence cannot catch. Spot-verified live against
+`platform.claude.com/docs/en/about-claude/models/overview` (Claude column only — the other
+four vendor columns were not re-verified and keep their 2026-08-17 stamp): Fable 5.1 is
+unchanged in price ($10/$50), context (1M), and output (128K) from Fable 5, so this is a
+naming correction, not a pricing or capability change. Added a launch-triggered refresh cue
+beside the calendar one. Evals re-anchor accordingly.
+
 ## [1.5.5] - 2026-09-10
 
 Closes the doctrine finding 1.5.4 filed, same day. No case, count, or

@@ -2,6 +2,13 @@
 
 > Renamed from `revenant-foundation-skillwright` on 2026-08-07 (pack 2.0.0 — the `revenant` → `revenantworks` marketplace migration). Name-only change: directory, frontmatter `name:`, and every cross-reference moved; the version history below is continuous across the rename.
 
+## [1.3.6] — 2026-09-10
+
+**Estate finding `eval-ledgers-underreport-executed-probes`.** Cases 41-45's headings all
+still read "authored 2026-08-17, not run" though `evals/RESULTS.md`'s 2026-09-08 entry had
+already recorded all five executed and passing. Corrected all five headings to name the
+result; no case content, input, assert, or count changed. Evals re-anchor accordingly.
+
 ## [1.3.5] — 2026-09-10
 
 **Three estate-audit findings.** `skillwright-load-budget-statement-false-and-over-profile`:

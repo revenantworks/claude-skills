@@ -3,7 +3,7 @@ name: revenantworks-foundation-promptwright
 description: Builds, scores, hardens, and red-teams LLM prompts — from a rough idea to a copy-paste-ready artifact — and picks which model tier to run a prompt or task on. Trigger to write, fix, improve, debug, red-team, or rewrite a prompt, meta-prompt, template, or system prompt; to assemble task parameters into a working prompt; for agent or bot instructions; when asked which model or tier a prompt, a live task, or each subtask of a plan should run on — a plan gets a per-subtask target table that also binds subtasks added mid-session; or say `promptwright` (`promptwright model` for a standalone tier and model pick or a plan's target table, `promptwright refresh` to update model data, `promptwright grill` to interview a prompt request until nothing essential is open). For building or auditing skill packages rather than prompts, skillwright; for pure token or cost trims that keep behavior unchanged, tokenwright; a sourced multi-model product comparison is lorewright's verdict, not a run-target pick.
 license: MIT
 metadata:
-  version: "1.5.5"
+  version: "1.5.6"
   profile: standalone
   pack: foundation
   brand: revenantworks

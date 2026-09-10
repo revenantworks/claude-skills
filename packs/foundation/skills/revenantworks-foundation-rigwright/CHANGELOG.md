@@ -2,6 +2,15 @@
 
 > Renamed from `revenant-foundation-rigwright` on 2026-08-07 (pack 2.0.0 — the `revenant` → `revenantworks` marketplace migration). Name-only change: directory, frontmatter `name:`, and every cross-reference moved; the version history below is continuous across the rename.
 
+## [1.1.5] — 2026-09-10
+
+**Estate finding `rigwright-two-authored-not-covered-eval-gaps`.** Two behaviour changes
+(1.1.3's inventory-mode paragraph, 1.1.4's live/tracked-pair rot fold) had shipped with no
+case asserting either, honestly recorded as authored-not-covered across two releases.
+`evals/test-cases.md` gains **Case 17** (inventory mode: an unaccounted real directory files
+at P1, never P0) and **Case 18** (a diverged live/tracked pair files under `rot` with both
+paths named); both executed as traced runs, 2/2 (`evals/RESULTS.md`). 16 → **18**.
+
 ## [1.1.4] — 2026-09-10
 
 **Live/tracked pair rule** added to Placement — the layer stack (task-observer observation

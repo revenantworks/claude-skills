@@ -3,7 +3,7 @@ name: revenantworks-foundation-rigwright
 description: Builds the standing config Claude reads before work — a Claude Project's instructions and knowledge-file plan, a CLAUDE.md, a repo's .claude layout, hooks, and .mcp.json — emitted paste-ready in each surface's native form, checked against its limits. Trigger to set up, write, fix, or trim a Claude Project, project instructions, a CLAUDE.md, or a repo's Claude config; to decide which layer a rule belongs in — profile preferences, project instructions, CLAUDE.md, a skill, a hook, or auto-memory; or to score a setup for bloat and drift without rewriting it. Answers to "rigwright" ("rigwright audit", "rigwright refresh"). For an Agent Skill or a SKILL.md package, skillwright; for anything unattended — a Cowork task, a routine, a scheduled task, plus its cadence and guardrails — agentwright; for the wording of an instruction block once its home is settled, promptwright; for a pure token or cost cut on a config whose layout is already right, tokenwright.
 license: MIT
 metadata:
-  version: "1.1.4"
+  version: "1.1.5"
   profile: standalone
   pack: foundation
   brand: revenantworks

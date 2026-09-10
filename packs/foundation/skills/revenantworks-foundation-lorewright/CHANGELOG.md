@@ -2,6 +2,15 @@
 
 > Renamed from `revenant-foundation-lorewright` on 2026-08-07 (pack 2.0.0 — the `revenant` → `revenantworks` marketplace migration). Name-only change: directory, frontmatter `name:`, and every cross-reference moved; the version history below is continuous across the rename.
 
+## [1.1.8] — 2026-09-10
+
+**Estate finding `eval-ledgers-underreport-executed-probes`.** Cases 40–42's headings
+still read "authored 2026-08-17, not run" though `evals/RESULTS.md`'s 2026-09-08 entry
+had already recorded all three executed and passing (alongside Case 23, whose own
+heading never carried a stale marker). Corrected the three headings to name the
+execution date and result; no case content, input, assert, or count changed. Evals
+re-anchor accordingly.
+
 ## [1.1.7] — 2026-09-09
 
 **Fetch scope** stated in Verification doctrine (estate finding
