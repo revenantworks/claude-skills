@@ -2,6 +2,26 @@
 
 > Renamed from `revenant-foundation-skillwright` on 2026-08-07 (pack 2.0.0 — the `revenant` → `revenantworks` marketplace migration). Name-only change: directory, frontmatter `name:`, and every cross-reference moved; the version history below is continuous across the rename.
 
+## [1.3.5] — 2026-09-10
+
+**Three estate-audit findings.** `skillwright-load-budget-statement-false-and-over-profile`:
+the Load budget paragraph said a standard build touches four reference files "in
+practice" with `description-crafting.md` conditional on writing or fixing a description —
+false, since Build step 5 drafts a description with a char count against it on **every**
+build. Restated as five files, always. `skillwright-shell-dependency-beyond-standalone-list`:
+`references/rubrics.md`'s standalone-profile dependency list did not mention the shell
+reach Packaging already declares (`zip`, a stdlib-only `python3`, both skip-clean,
+neither required) — added to the profile's own text rather than left as a
+letter-vs-practice gap every future self-audit would re-raise. Both findings converged on
+one amendment to `rubrics.md`'s standalone profile: the ≤3-reference-load cap is stated to
+bound *undeclared* reach (the universal rule), not a build's own doctrine-mandated file
+count, and the shell/interpreter carve-out is named alongside it.
+`tokenwright-freeze-policy-single-homed-in-changelog`: `references/pack-registry.md` gains
+a **tokenwright freeze note** recording the 2026-08-17 owner decision (no bumps unless
+broken) where upkeep and integrate actually read policy, not only in tokenwright's own
+frozen CHANGELOG; whether a calendar refresh is exempt from the freeze is named as an open
+owner decision, not settled here. Evals re-anchor accordingly.
+
 ## [1.3.4] — 2026-09-09
 
 `references/pack-registry.md` budget-row updates, carried forward unbumped from an earlier

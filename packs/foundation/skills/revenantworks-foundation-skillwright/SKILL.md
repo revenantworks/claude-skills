@@ -3,7 +3,7 @@ name: revenantworks-foundation-skillwright
 description: Builds, audits, ports, and integrates install-ready Agent Skills passing best practices. Trigger to build, audit, score, or package a skill or SKILL.md; to design a pack; when asked if a skill fills a real niche; for a prose pass on a skill's or pack's own files (README, CLAUDE.md); when a skill set needs porting, renaming, rebranding, or sanitizing for a new owner; when a member change must propagate across a pack; or on skillwright (refresh, port, pack, integrate, upkeep). Every build ships trigger evals. Audit covers security — injection surface, secrets, undeclared tools, unsafe defaults. For prompts not skills, promptwright; to define, apply, or audit a brand or voice, brandwright; for a token or cost cut on a SKILL.md that already conforms, tokenwright; for authoring or scoring an eval suite as its own job, evalwright; audits cover the skill package as built — what an autonomous agent may do at runtime is agentwright's.
 license: MIT
 metadata:
-  version: "1.3.4"
+  version: "1.3.5"
   profile: standalone
   pack: foundation
   brand: revenantworks
@@ -33,7 +33,7 @@ Ships no executable code of its own. Uses web search for research and baseline v
 
 ## Load budget
 
-A standard build touches four reference files in practice — `rubrics.md`, `build-templates.md`, `pack-registry.md` (every build reads it for the structural source), and `eval-authoring.md` (every build ships evals, step 6) — plus `description-crafting.md` when writing or fixing a description; a standard audit touches one — `rubrics.md` — plus whatever its findings require; a port touches the build set plus `pack-registry.md` for the destination roster. The security pass adds no load of its own: its classes sit in `rubrics.md`, already open on every audit. Reach further only as listed; never load the whole folder.
+A standard build touches five reference files in practice — `rubrics.md`, `build-templates.md`, `pack-registry.md` (every build reads it for the structural source), `eval-authoring.md` (every build ships evals, step 6), and `description-crafting.md` (every design catalog drafts a description with a char count against it, Build step 5 — not conditional on the description needing a fix) — a standard audit touches one — `rubrics.md` — plus whatever its findings require; a port touches the build set plus `pack-registry.md` for the destination roster. The security pass adds no load of its own: its classes sit in `rubrics.md`, already open on every audit. Reach further only as listed; never load the whole folder. Five is above `rubrics.md`'s own standalone-profile guidance of ≤3 (see its Profiles section, amended 2026-09-10 to make clear the cap bounds undeclared reach, not a build's own doctrine-mandated file count).
 
 - `rubrics.md` — every build and audit, the security pass included (Security classes S-1 to S-4, Generator classes G-1 to G-3 and naming-class coverage live there); refresh regenerates its baseline stamp
 - `build-templates.md` — every build; skeletons, naming render, suites & composition
@@ -42,7 +42,7 @@ A standard build touches four reference files in practice — `rubrics.md`, `bui
 - `release-doctrine.md` — **release-only, never a per-build load**: read when the deliverable *is* a pack release or the close of a versioned pass (version arithmetic, eval ledger, count integrity, install parity, release assets, deferral register); no build, audit, port, or integrate run touches it
 - `upkeep-doctrine.md` — every upkeep run: the pack-wide staleness sweep, cadence math, calendar-surface → refresh-verb map, degradation by environment
 - `pack-design.md` — every pack run: capability-map tiers, the roster catalog, the pack-spec baton, session staging
-- `description-crafting.md` — writing or fixing a description / trigger boundary
+- `description-crafting.md` — every build (Design catalog step 5 always drafts a description against it); also any later fix to a description / trigger boundary
 - `eval-authoring.md` — generating a built skill's trigger evals and test suite
 - `pack.md` — boundary doubt about a sibling's territory, or stamping a pack member's manifest
 - `evals/` — maintenance of skillwright itself only *(maintenance archive — never loaded at runtime)*
