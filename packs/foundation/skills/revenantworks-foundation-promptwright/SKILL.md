@@ -3,7 +3,7 @@ name: revenantworks-foundation-promptwright
 description: Builds, scores, hardens, and red-teams LLM prompts — from a rough idea to a copy-paste-ready artifact — and picks which model tier to run a prompt or task on. Trigger to write, fix, improve, debug, red-team, or rewrite a prompt, meta-prompt, template, or system prompt; to assemble task parameters into a working prompt; for agent or bot instructions; when asked which model or tier a prompt, a live task, or each subtask of a plan should run on — a plan gets a per-subtask target table that also binds subtasks added mid-session; or say `promptwright` (`promptwright model` for a standalone tier and model pick or a plan's target table, `promptwright refresh` to update model data, `promptwright grill` to interview a prompt request until nothing essential is open). For building or auditing skill packages rather than prompts, skillwright; for pure token or cost trims that keep behavior unchanged, tokenwright; a sourced multi-model product comparison is lorewright's verdict, not a run-target pick.
 license: MIT
 metadata:
-  version: "1.5.4"
+  version: "1.5.5"
   profile: standalone
   pack: foundation
   brand: revenantworks
@@ -143,7 +143,7 @@ Assemble with the chosen structure; include only sections the task needs. **Phas
 
 Section order when applicable: role/task → tone (if it matters) → background data (long inputs near the top, question after; critical instructions at start or end, never the middle) → numbered rules → 3–5 diverse examples in `<example>` tags (models imitate them precisely — no stray patterns) → `{{variables}}` → the immediate task restated → reasoning instruction *(chat-tier targets only)* → output format (say what to do; exact schema, no preamble/fences for structured data) → self-check line for high-stakes prompts.
 
-Throughout: prefer the leanest prompt that scores well; be specific about the desired output; give the reason behind rules so the model generalizes; frame positively ("respond in flowing prose" beats "no bullets"); XML tags to separate instructions/context/examples/input on Claude; match prompt style to desired output; skip CRITICAL/MUST shouting — current models over-trigger on it. Agentic/system prompts: read the Agent/System section of `frameworks.md` — role + tools, act-vs-ask, confirm shared understanding before non-trivial or hard-to-undo changes, tool discipline, parallel calls, stop conditions, output contract.
+Throughout: prefer the leanest prompt that scores well; be specific about the desired output; give the reason behind rules so the model generalizes; frame positively ("respond in flowing prose" beats "no bullets"); XML tags to separate instructions/context/examples/input on Claude; match prompt style to desired output; skip CRITICAL/MUST shouting — current models over-trigger on it. Agentic/system prompts: read the Agent/System section of `frameworks.md` — role + tools, act-vs-ask, confirm shared understanding before non-trivial or hard-to-undo changes (hold / assume / state-then-proceed, by who answers), tool discipline, parallel calls, stop conditions, output contract.
 
 ### Tier routing *(every full build — feeds the Model line)*
 

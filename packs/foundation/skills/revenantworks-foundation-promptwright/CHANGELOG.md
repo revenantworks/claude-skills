@@ -2,6 +2,31 @@
 
 > Renamed from `revenant-foundation-promptwright` on 2026-08-07 (pack 2.0.0 — the `revenant` → `revenantworks` marketplace migration). Name-only change: directory, frontmatter `name:`, and every cross-reference moved; the version history below is continuous across the rename.
 
+## [1.5.5] - 2026-09-10
+
+Closes the doctrine finding 1.5.4 filed, same day. No case, count, or
+`description` moved outside what's named below.
+
+- **`frameworks.md`'s Confirm-shared-understanding note now names three
+  forms** and the test for picking one: **Hold** (a person answers in real
+  time), **Assume** (nobody's there now, but a reader acts on it later — say
+  the assumption and proceed), **State, then proceed** (no synchronous
+  party and no later reader positioned to intervene before the effect
+  lands — make the read visible, since there's nothing to hold for). A
+  short paragraph names the failure of picking the wrong one in either
+  direction: Hold on an unattended agent blocks forever; State-then-proceed
+  on an interactive one lets a wrong read commit unseen.
+- `SKILL.md`'s Phase 5 pointer line now names the three forms in passing,
+  trimmed to land exactly at the registry's 9470-token body budget (`tools/build.py --footprint`) rather than raising the ceiling for it.
+- **Case 44 gained a seventh assert** (`evals/test-cases.md`), under T1:
+  the checkpoint must pick State-then-proceed for a ticket-driven pipeline
+  agent and never phrase itself as a Hold that isn't happening.
+- **Graded against the retained T1 transcript from 1.5.4's execution, not
+  a new blind build** — the doctrine changed, the artifact didn't, and the
+  same evidence answers the new assert directly. Pass, recorded in
+  `evals/RESULTS.md`. Case 44 now stands at 7/7.
+- `evals/trigger-evals.md` re-anchored, provenance-only.
+
 ## [1.5.4] - 2026-09-10
 
 Run-record patch. No `SKILL.md` rule, `frameworks.md` content, phase, entry
