@@ -2,6 +2,30 @@
 
 > Renamed from `revenant-foundation-promptwright` on 2026-08-07 (pack 2.0.0 — the `revenant` → `revenantworks` marketplace migration). Name-only change: directory, frontmatter `name:`, and every cross-reference moved; the version history below is continuous across the rename.
 
+## [1.5.4] - 2026-09-10
+
+Run-record patch. No `SKILL.md` rule, `frameworks.md` content, phase, entry
+point, or `description` moved; the routing surface is untouched.
+
+- **Case 44 executed, T1 and T2, 6/6** (`evals/RESULTS.md`) — a harder split
+  than any prior execution here: T1 and T2 were each built by an
+  independent agent given only `SKILL.md`, `frameworks.md`, and the bare
+  request, with no visibility into the case or its asserts; grading against
+  the six asserts happened afterward, cold, against the two transcripts.
+  1.5.3 shipped it `(authored, not run)`; that is now closed.
+- **One doctrine finding, filed not patched.** `frameworks.md`'s
+  Confirm-shared-understanding row says the built agent "holds for a
+  correction (or proceeds under a named assumption)". The blind T1 build
+  did neither by name: it stated its read of the ticket and proceeded
+  immediately, reasoning (correctly, for an unattended pipeline agent with
+  no synchronous party to hold for) that the checkpoint's job is visibility,
+  not permission. That is a third, legitimate form the doctrine sentence
+  doesn't name, and no assert in Case 44 currently distinguishes it from
+  the other two — the case tests that the checkpoint exists, not which form
+  it takes, the same shape as the grill `⚑` gap filed at 1.5.1.
+- `evals/test-cases.md` and `evals/trigger-evals.md` re-anchored to 1.5.4,
+  provenance-only.
+
 ## [1.5.3] - 2026-09-10
 
 Pays the debt 1.5.2 filed. No phase, entry point, or `description` moved.
