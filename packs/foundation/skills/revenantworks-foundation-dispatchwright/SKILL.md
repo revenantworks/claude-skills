@@ -3,7 +3,7 @@ name: revenantworks-foundation-dispatchwright
 description: Runs a session's fan-out — turns one large request into tiered, budgeted, recoverable units and dispatches them. Trigger when a request will take more than a few agents or spans many repos, skills, or files at once — rebuild, re-architect, overhaul, consolidate, sweep, migrate, or 'do all of this'; when subagents or a workflow are about to be launched and nothing has assigned each one a model, effort, and surface; when a fan-out is already running and a unit died, stalled, hit a usage limit, or must be resumed without redoing landed work; when concurrent units would write the same repo; or say dispatchwright (plan, dispatch, resume, audit). Model and tier per unit come from promptwright's target table, never invented here; the hook or config that makes this fire is rigwright's placement; anything unattended on a schedule is agentwright's.
 license: MIT
 metadata:
-  version: "1.2.2"
+  version: "1.2.3"
   profile: standalone
   pack: foundation
   brand: revenantworks
@@ -57,7 +57,8 @@ The two forcing hooks cost a run no load, because this skill no longer carries t
 with no populated ledger row) are rig infrastructure, kept in the `claude-skills` repo under
 `.claude/hooks/` and installed from there into `~/.claude/hooks/`, which is where a session
 actually executes them. They act on the session around a run, never on anything a run reads, so a
-rig with them installed and a surface without them load the same skill.
+rig with them installed and a surface without them load the same skill. Reach for
+`references/pack.md` only on boundary doubt about a sibling's territory.
 
 ## Entry points
 
@@ -263,3 +264,10 @@ does not decide where its own trigger lives (rigwright), and does not run anythi
 thorough. The nine sections above are the doctrine's ceiling, not a quota every run exercises —
 a small fan-out uses Shape check, Decompose, and Tier and skips straight to Dispatch, because
 Wave execution's caps and Escalation's ladder simply do not fire below their own thresholds.
+
+**Invocation control.** dispatchwright is model-invocable on purpose, with no
+`disable-model-invocation` flag: recognizing a fan-out request and dispatching it is the whole
+job, and the flag is a Claude Code-only key that hard-errors on claude.ai and the Skills API,
+surfaces this skill also ships to. The pushes that follow are bounded, not unchecked — §5's
+identity check runs before every push, every push names `origin` and never another remote, and
+§7 makes any irreversible action a unit's brief did not already name a stop-and-ask.

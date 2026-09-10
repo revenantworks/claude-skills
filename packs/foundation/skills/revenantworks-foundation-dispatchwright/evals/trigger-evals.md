@@ -1,25 +1,6 @@
-# Trigger evals — description tuning
+# Trigger evals — 22 queries (10 should / 10 shouldn't / 2 injection probes)
 
-Provenance: authored at member version 1.0.0, 2026-08-18, alongside the member's first build.
-**Re-anchored to v1.2.0, 2026-08-21 — provenance only, nothing was executed here:** 1.2.0 moved
-the two forcing hooks out of the package into the `claude-skills` repo's `.claude/hooks/`,
-restated `git` and subagent tools as optional with their degradation named, and restored
-`profile: standalone` as a result. The `description` is byte-for-byte unchanged, so the routing
-surface every row below is judged against did not move: no query, expected value, boundary pair,
-or injection probe was added, removed, or rewritten. Still 22 rows (10 / 10 / 2).
-**Re-anchored to v1.2.1, 2026-09-09 — provenance only, nothing executed here:** §5's durability
-contract gained an identity-check-before-push rule and a fetch-cache provenance requirement
-(body-only; estate finding
-`dispatchwright-pushes-to-main-with-no-identity-check-and-caches-fetches-without-provenance`).
-The `description` is byte-identical, so the routing surface these rows judge did not move; no
-query, expected value, or count touched. Still 22 rows (10 / 10 / 2).
-**Re-anchored to v1.2.2, 2026-09-10 — provenance only, nothing executed here:** §6 Wave
-execution gained a silence-is-not-a-liveness-signal bullet, §8 Reconcile gained gate-figure
-and test-total re-derivation bullets, and `unit-brief-template.md` gained an Expected test
-total field (body and reference only; task-observer observations #0006, #0007, #0008). The
-`description` is byte-identical, so the routing surface these rows judge did not move; no
-query, expected value, or count touched. Still 22 rows (10 / 10 / 2).
-Not yet run — see `RESULTS.md`.
+Provenance: authored at member version 1.0.0, 2026-08-18, alongside the member's first build. **Re-anchored to v1.2.0, 2026-08-21 — provenance only, nothing was executed here:** 1.2.0 moved the two forcing hooks out of the package into the `claude-skills` repo's `.claude/hooks/`, restated `git` and subagent tools as optional with their degradation named, and restored `profile: standalone` as a result. The `description` is byte-for-byte unchanged, so the routing surface every row below is judged against did not move: no query, expected value, boundary pair, or injection probe was added, removed, or rewritten. Still 22 rows (10 / 10 / 2). **Re-anchored to v1.2.1, 2026-09-09 — provenance only, nothing executed here:** §5's durability contract gained an identity-check-before-push rule and a fetch-cache provenance requirement (body-only; estate finding `dispatchwright-pushes-to-main-with-no-identity-check-and-caches-fetches-without-provenance`). The `description` is byte-identical, so the routing surface these rows judge did not move; no query, expected value, or count touched. Still 22 rows (10 / 10 / 2). **Re-anchored to v1.2.2, 2026-09-10 — provenance only, nothing executed here:** §6 Wave execution gained a silence-is-not-a-liveness-signal bullet, §8 Reconcile gained gate-figure and test-total re-derivation bullets, and `unit-brief-template.md` gained an Expected test total field (body and reference only; task-observer observations #0006, #0007, #0008). The `description` is byte-identical, so the routing surface these rows judge did not move; no query, expected value, or count touched. Still 22 rows (10 / 10 / 2). **Re-anchored to v1.2.3, 2026-09-10 — provenance only, nothing executed here:** Load budget gained the sibling-standard `pack.md` closing line, Behavior notes gained an Invocation control paragraph, and this file's own header was restated from "description tuning" to the row-count form every sibling uses (estate findings `dispatchwright-packmd-orphan`, `dispatchwright-push-without-invocation-control`, `dispatchwright-trigger-evals-header-format`). The `description` is byte-identical, so the routing surface these rows judge did not move; no query, expected value, or count touched. Still 22 rows (10 / 10 / 2). Not yet run — see `RESULTS.md`.
 
 Ten queries that should fire dispatchwright, ten that should not (including the four named
 boundary pairs against promptwright, agentwright, and rigwright), and two injection probes

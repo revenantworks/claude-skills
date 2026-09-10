@@ -1,6 +1,6 @@
 # Assertion Suite — revenantworks-foundation-dispatchwright
 
-> **Provenance:** target `revenantworks-foundation-dispatchwright` v1.2.0, re-anchored to v1.2.2 (below) · suite authored
+> **Provenance:** target `revenantworks-foundation-dispatchwright` v1.2.0, re-anchored to v1.2.3 (below) · suite authored
 > 2026-09-09, closing the debt `evals/RESULTS.md` has carried since the member's 1.0.0 build:
 > "No assertion suite (`test-cases.md`) exists yet for this member — dispatchwright ships with
 > trigger evals only at 1.0.0." **16 cases**, assertion-only — each is an Input plus mechanical
@@ -34,6 +34,14 @@
 > Case 13 asserts that reconcile trusts origin over an agent's word; it does not assert a
 > gate-figure or test-total check. All three additions are **authored-not-covered** —
 > recorded as owed rather than claimed. No case added, dropped, or rewritten; still **16**.
+>
+> **Re-anchored to v1.2.3, 2026-09-10 — provenance only, nothing executed here:** Load budget
+> gained the sibling-standard `pack.md` closing line and Behavior notes gained an Invocation
+> control paragraph (estate findings `dispatchwright-packmd-orphan` and
+> `dispatchwright-push-without-invocation-control`); `evals/trigger-evals.md`'s header was also
+> restated. None of the three is a case-bearing behavior change — the first two are
+> reference-loading and compliance prose, the third is cosmetic — so no case is owed. No case
+> added, dropped, or rewritten; still **16**.
 
 ## Contents
 

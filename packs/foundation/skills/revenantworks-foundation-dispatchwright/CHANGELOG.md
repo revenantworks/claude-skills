@@ -1,5 +1,21 @@
 # Changelog — revenantworks-foundation-dispatchwright
 
+## [1.2.3] — 2026-09-10
+
+**Three estate-audit findings, one patch** (`dispatchwright-packmd-orphan`,
+`dispatchwright-push-without-invocation-control`, `dispatchwright-trigger-evals-header-format`).
+Load budget gains the sibling-standard closing line — `references/pack.md`, boundary doubt about
+a sibling's territory only — closing the one member whose Load budget never named the manifest
+it ships. Behavior notes gains an **Invocation control** paragraph: this member is
+model-invocable on purpose (recognizing and dispatching a fan-out is the job), carries no
+`disable-model-invocation` flag (a Claude Code-only key that hard-errors on claude.ai and the
+Skills API, surfaces this skill also ships to), and names what already bounds its pushes — §5's
+identity check, `origin`-only pushes, §7's stop-and-ask on any unnamed irreversible action.
+`evals/trigger-evals.md`'s header restated as `# Trigger evals — 22 queries (10 should / 10
+shouldn't / 2 injection probes)`, matching the sibling header form; the row count and split were
+already correct, only the header text was uninformative. No entry point, section numbering, or
+scoring anchor moved; `evals/test-cases.md` and `evals/trigger-evals.md` re-anchor accordingly.
+
 ## [1.2.2] — 2026-09-10
 
 **Three additions from the estate's first task-observer weekly review** (observations
