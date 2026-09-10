@@ -3,6 +3,44 @@
 All notable changes to this skill. Format follows Keep a Changelog; this skill
 uses semantic versioning.
 
+## [1.0.1] — 2026-09-10
+
+**Seven estate-audit findings, first patch.** All body/reference; `description`
+byte-identical.
+
+- `lmstudio-loaded-context-field-absent-when-nothing-loaded`: `loaded_context_length`
+  is only returned when `state` is `loaded`. SKILL.md, `api-surface.md`, and
+  `work-classes.md`'s Long-input row now all state the fallback — on a
+  just-in-time rig with nothing loaded, judge fit against `max_context_length`
+  provisionally and flag resident context as unconfirmed.
+- `lmstudio-eval-cases-unrunnable-in-default-state`: `evals/SUITE.md` cases A4
+  and C3 now name their precondition (a resident model) explicitly; A4b and
+  C3b are new paired cases for the not-loaded state, so the case set stays
+  runnable in this rig's default state instead of marking correct behaviour
+  as a failure.
+- `lmstudio-check-command-executed-from-queue-file-ungated`: the posture
+  clause now names the queue file, task cards (including a card's own
+  `check` field), and the raw API response as data, never instructions.
+  `references/task-cards.md` adds: a `check` is shown to the owner and
+  confirmed before its first execution, and a card whose `check` was not
+  authored by the owner is refused rather than run.
+- `lmstudio-no-results-ledger`: `evals/RESULTS.md` created; Case E5 (the
+  injection probe) executed as a traced run, 1/1.
+- `lmstudio-probe-list-omits-the-working-address-and-has-no-timeout`:
+  `api-surface.md`'s discovery probe now covers all four host/port
+  combinations (127.0.0.1 and localhost, on both 1234 and 1235) with a
+  2-second connect timeout on each, so a closed port fails fast instead of
+  hanging.
+- `lmstudio-pack-md-orphan`: SKILL.md gains a Load budget section naming all
+  four reference files, closing with `references/pack.md` — boundary doubt
+  about a sibling's territory only.
+- `lmstudio-capabilities-key-absent-on-embeddings`: `capabilities` may be
+  absent entirely on an `embeddings` entry — read a missing key as no
+  advertised capability, never an error. `publisher` and `compatibility_type`
+  added to SKILL.md's field enumeration to match `api-surface.md`.
+
+Evals re-anchored in the same commit (`evals/SUITE.md`, `evals/TRIGGERS.md`).
+
 ## [1.0.0] — 2026-09-09
 
 First release. First member of the `localops` pack.

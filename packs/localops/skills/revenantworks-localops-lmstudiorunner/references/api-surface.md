@@ -22,12 +22,14 @@ LM Studio serves an OpenAI-compatible API and a native API from the same port.
 **The default is 1234, but never assume it** — a user who changed it in the
 Server tab will otherwise be told their server is down.
 
-Probe in this order, taking the first that answers:
+Probe in this order, taking the first that answers, with a short connect
+timeout on every probe so a closed port fails fast instead of hanging:
 
 ```
-curl -s http://localhost:1234/api/v0/models
-curl -s http://127.0.0.1:1234/api/v0/models
-curl -s http://localhost:1235/api/v0/models
+curl -s --connect-timeout 2 http://127.0.0.1:1234/api/v0/models
+curl -s --connect-timeout 2 http://localhost:1234/api/v0/models
+curl -s --connect-timeout 2 http://127.0.0.1:1235/api/v0/models
+curl -s --connect-timeout 2 http://localhost:1235/api/v0/models
 ```
 
 **Try the literal address as well as the name.** On Windows `localhost` may
@@ -69,14 +71,19 @@ A live response, one entry:
 | `quantization` | Accuracy/memory trade. A tiebreak between similar models, not a ranking |
 | `state` | `loaded` or `not-loaded`. A loaded model answers immediately; another may need loading first |
 | `max_context_length` | The ceiling the model supports |
-| `loaded_context_length` | **What it is actually loaded with, and the one people miss** |
-| `capabilities` | Advertised abilities, e.g. `tool_use`. The only honest way to know |
+| `loaded_context_length` | **What it is actually loaded with, and the one people miss.** Present only when `state` is `loaded` — absent from a not-loaded entry, never `0` or `null` |
+| `capabilities` | Advertised abilities, e.g. `tool_use`. The only honest way to know. **May be absent entirely** on a non-chat entry such as `embeddings` — read a missing key as no advertised capability, never as an error |
+| `publisher` | Who ships the model. Informational, not a ranking signal |
+| `compatibility_type` | The runtime format, e.g. `gguf`. Informational |
 
 **Always compare `loaded_context_length` against `max_context_length` and
 report a divergence.** A model loaded far below its ceiling silently truncates
 long inputs, and nothing in the OpenAI-compatible endpoint reveals it. In the
 run that motivated this note the gap was 12,288 against 262,144 — a twenty-fold
-shortfall on a machine with memory to spare.
+shortfall on a machine with memory to spare. **On a just-in-time rig with
+nothing loaded, every entry omits `loaded_context_length`** — that state is
+routine, not an error: judge fit against `max_context_length` instead and say
+the resident context is unknown until something actually loads.
 
 ## Chat completions
 

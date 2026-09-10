@@ -1,8 +1,17 @@
-# Assertion suite — revenantworks-localops-lmstudiorunner 1.0.0
+# Assertion suite — revenantworks-localops-lmstudiorunner 1.0.1
 
 Provenance: authored against SKILL.md at the 1.0.0 build (2026-09-09).
 Each case states its input, what must be true of the response, and what would
 falsify it. Run by reading; no runtime dependency.
+**Re-anchored to v1.0.1, 2026-09-10 — estate-audit findings
+`lmstudio-eval-cases-unrunnable-in-default-state`,
+`lmstudio-loaded-context-field-absent-when-nothing-loaded`,
+`lmstudio-capabilities-key-absent-on-embeddings`:** A4 and C3 named an
+explicit precondition (a resident model) they were silently missing on this
+rig's default just-in-time state; A4b and C3b are new paired cases for the
+not-loaded state, and A6 covers a `capabilities`-absent `embeddings` entry.
+30 → **33 cases**; none of the three new cases has been run yet (see
+`RESULTS.md`).
 
 ## A — Discovery
 
@@ -11,8 +20,10 @@ falsify it. Run by reading; no runtime dependency.
 | A1 | "lmstudiorunner audit" with a server on a non-default port | Probes beyond 1234 before reporting down | Reports the server down having tried one port |
 | A2 | Same, with the server bound IPv4-only | Tries `127.0.0.1` as well as `localhost` | Reports down without trying the literal address |
 | A3 | "lmstudiorunner audit" with no server anywhere | Says so plainly and gives `lms server start`; names no model | Guesses at installed models |
-| A4 | A model reporting `loaded_context_length` far below `max_context_length` | Reports the divergence unprompted | Reports only the maximum, hiding the shortfall |
+| A4 | A model reporting `loaded_context_length` far below `max_context_length` (**requires a resident model** — on a JIT rig, load one first, or mark this case not-run and use A4b instead) | Reports the divergence unprompted | Reports only the maximum, hiding the shortfall |
+| A4b | No model loaded anywhere (JIT rig at rest, every entry omits `loaded_context_length`) | Says nothing is loaded, judges fit against `max_context_length`, and flags resident context as unconfirmed | Treats the missing field as an error, or silently judges against `max_context_length` with no caveat |
 | A5 | Any model-fit answer | Sources every capability claim from the live listing | States a capability the metadata does not show |
+| A6 | An `embeddings` entry with no `capabilities` key at all | Reads the missing key as no advertised capability | Reports it as malformed or errors on the missing key |
 
 ## B — The two modes
 
@@ -30,7 +41,8 @@ falsify it. Run by reading; no runtime dependency.
 |---|---|---|---|
 | C1 | Work needing tool use, nothing installed advertising it | Describes the shape needed | Names a specific model to install |
 | C2 | Vision work | Requires `type` = `vlm` | Offers a text model |
-| C3 | Long input | Judges against `loaded_context_length` | Judges against `max_context_length` |
+| C3 | Long input, a resident model reporting `loaded_context_length` (**requires a resident model**; on a JIT rig at rest use C3b) | Judges against `loaded_context_length` | Judges against `max_context_length` |
+| C3b | Long input, nothing loaded (`loaded_context_length` absent from every entry) | Judges against `max_context_length` provisionally and flags fit as unconfirmed until load | Fails the case for judging against `max_context_length` — with nothing loaded that is the only thing a run *can* do |
 | C4 | Two similar models installed | Uses quantization as a tiebreak, not a ranking | Ranks a shortlist by quantization alone |
 | C5 | Any run | Carries no model name in the skill's own files | A model name is written into the skill |
 

@@ -64,7 +64,7 @@ class needs, in the fields the API actually returns:
 | Capability class | Needs | Read from |
 |---|---|---|
 | **Bulk text** | Any instruction-following model; parameter count and quantization as a rough quality proxy | `id`, `quantization`, `arch` |
-| **Long input** | A loaded context comfortably larger than the input, with room for the answer | `loaded_context_length` — **not** `max_context_length` |
+| **Long input** | A loaded context comfortably larger than the input, with room for the answer | `loaded_context_length` — **not** `max_context_length`. When the field is absent (nothing loaded), judge against `max_context_length` provisionally and flag fit as unconfirmed until the model actually loads |
 | **Structured output** | Schema-constrained generation support on the server | Server capability, see `api-surface.md` |
 | **Tool use** | A model advertising it | `capabilities` contains `tool_use` |
 | **Vision** | A vision-capable model | `type` is `vlm` |

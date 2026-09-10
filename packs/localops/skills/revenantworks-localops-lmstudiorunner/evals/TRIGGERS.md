@@ -1,6 +1,6 @@
-# Trigger evals — revenantworks-localops-lmstudiorunner 1.0.0
+# Trigger evals — revenantworks-localops-lmstudiorunner 1.0.1
 
-Provenance: authored against SKILL.md at the 1.0.0 build (2026-09-09).
+Provenance: authored against SKILL.md at the 1.0.0 build (2026-09-09). **Re-anchored to v1.0.1, 2026-09-10 — provenance only, nothing executed here:** the 1.0.1 patch closed seven estate-audit findings (loaded-context field handling, eval preconditions, the check-command gate, a results ledger, the discovery probe list, a Load budget section, and the `capabilities`/`publisher`/`compatibility_type` field list) — all body and reference changes. The `description` is byte-identical, so the routing surface these rows judge did not move; no query, expectation, or count touched.
 Judged from **name + description only**, as a cold router would.
 
 Balance: 18 should-fire · 12 should-not · 6 boundary pairs.
