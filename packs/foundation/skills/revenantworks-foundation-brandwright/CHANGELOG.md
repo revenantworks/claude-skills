@@ -2,6 +2,16 @@
 
 > Renamed from `revenant-foundation-brandwright` on 2026-08-07 (pack 2.0.0 — the `revenant` → `revenantworks` marketplace migration). Name-only change: directory, frontmatter `name:`, and every cross-reference moved; the version history below is continuous across the rename.
 
+## [1.4.3] — 2026-09-10
+
+**Case 28** added to `evals/test-cases.md`, closing the authored-not-covered debt the
+1.4.2 provenance re-anchor recorded: the guide-card escaping rule
+(`brandwright-and-stakekeeper-render-handed-in-content-with-no-escaping-rule`) shipped with
+no case asserting it. Case 28 feeds the render path a tagline and a sign-off carrying
+`<script>`/`<img onerror=>` markup and asserts both come back HTML-escaped, never inlined
+verbatim. **Authored, not run** — `evals/RESULTS.md` records the case with no pass rate
+claimed. Description byte-identical.
+
 ## [1.4.2] — 2026-09-09
 
 **An explicit escaping rule for the brand-guide card** (estate finding

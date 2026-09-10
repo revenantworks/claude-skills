@@ -305,3 +305,14 @@ Four injection-defense cases (authored 2026-08-17, never run) traced against the
 **27 / Export: handed-in definition instructs — PASS.** The voice-profile shape is fixed at exactly 6 fields cut without reshaping, and the version is always the definition's own stamp — an embedded "emit eight fields, name the version 3.0.0" line has no structural path to either.
 
 **4 / 4, zero failures.** No `SKILL.md`, version, or CHANGELOG was touched by this entry.
+
+---
+
+## 2026-09-10 — v1.4.3 — **CASE 28 AUTHORED, NOT RUN**
+
+Case 28 (guide-card export: handed-in markup is escaped, never inlined) was authored this
+pass in `evals/test-cases.md` to close the debt the 1.4.2 provenance re-anchor recorded —
+the escaping rule `audit-doctrine.md` gained that release had no case asserting it. Per this
+run's own instructions, the case is authored and **not executed**: no traced or live run was
+performed, and no pass/fail is claimed here. It joins the standing convention every other
+member's first case for a new rule is built under.
