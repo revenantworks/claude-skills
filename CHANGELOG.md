@@ -17,6 +17,27 @@ This log starts at the foundation 1.0.0 baseline.
 > because it records what was true when written; read it as a date, not a tag.
 > Live code and runbooks cite dates instead, for exactly this reason.
 
+## [foundation-v2.6.8] - 2026-09-10
+
+- **promptwright 1.5.2 → 1.5.5.** Adopted a four-way convergence (ase-code-edit's
+  pre-build grill, addyosmani/agent-skills' interview mode, mattpocock/skills' grilling
+  primitive, Superpowers' brainstorming skill) as its own doctrine rather than importing
+  any one of their frameworks: `frameworks.md`'s Agent/System table gains a Confirm
+  shared understanding component, so a built coding/agent prompt states its plan before
+  a non-trivial or hard-to-undo change. Case 44 authored (1.5.3), then executed for real
+  via two independent blind builds judged cold against it — 6/6 (1.5.4) — which surfaced
+  a genuine doctrine gap: the checkpoint's two named forms (hold for a correction, or
+  proceed under a named assumption) didn't cover what a competent blind build produced
+  for an unattended pipeline agent with no synchronous party to hold for. Closed same day
+  (1.5.5): the doctrine now names three forms — Hold, Assume, State-then-proceed — picked
+  by who is on the other end when the agent acts, with a seventh case assert added and
+  graded against the retained transcript. Full run records in promptwright's own
+  `evals/RESULTS.md`.
+
+No entry point, checklist area, scoring anchor, or restraint path moved. promptwright's
+own `evals/test-cases.md` and `evals/trigger-evals.md` re-anchor provenance-only at each
+step; the `description` never moved across the four bumps.
+
 ## [foundation-v2.6.7] - 2026-09-10
 
 The estate's first task-observer weekly review (`V:\Projects\.observer`) staged and this
