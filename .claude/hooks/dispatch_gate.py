@@ -158,6 +158,26 @@ def selftest() -> int:
     if miss:
         problems.append(f"ordinary sample matched {miss!r} and should not have: {ordinary_sample!r}")
 
+    # Second positive control, added 2026-09-10 (estate findings
+    # dispatch-patterns-miss-reproduced / selftests-pass-but-do-not-cover-the-known-miss /
+    # dispatch-gate-patterns-have-no-positive-control-against-a-real-prompt). The
+    # ONLY positive control above is a sentence the author wrote to contain the
+    # patterns, which can never catch a vocabulary gap -- it is exactly how this
+    # gate missed the largest fan-out request this rig has seen (observation 0016).
+    # This is that real, verbatim prompt fragment, kept as a standing regression
+    # fixture rather than a synthetic example, per the rule that a trigger's test
+    # set must sample the requester's distribution, not the author's.
+    real_fan_out_sample = (
+        "I want to do a complete estate sweep, run that routine but also lets "
+        "analyze every skill, project, routine"
+    )
+    hit2 = first_match(real_fan_out_sample, patterns) if patterns else None
+    if not hit2:
+        problems.append(
+            f"real observed fan-out prompt did not match any pattern (observation 0016 "
+            f"regression): {real_fan_out_sample!r}"
+        )
+
     with tempfile.TemporaryDirectory() as td:
         tmp = Path(td)
 
@@ -273,9 +293,10 @@ def selftest() -> int:
             print(f"DISPATCH_GATE SELFTEST FAIL: {p}")
         return 2
     print(f"dispatch_gate selftest: OK ({len(patterns)} pattern(s) armed; fan-out sample matched "
-          f"{hit!r}, ordinary sample matched nothing; flag readable by the guard, session-less "
-          f"prompts write the sentinel; exits 0 on all {broken_input_cases} broken-input cases and "
-          f"still fires past an uncompilable pattern)")
+          f"{hit!r}, real observed fan-out prompt (observation 0016) matched {hit2!r}, ordinary "
+          f"sample matched nothing; flag readable by the guard, session-less prompts write the "
+          f"sentinel; exits 0 on all {broken_input_cases} broken-input cases and still fires past "
+          f"an uncompilable pattern)")
     return 0
 
 

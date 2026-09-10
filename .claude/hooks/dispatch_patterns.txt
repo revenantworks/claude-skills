@@ -15,3 +15,15 @@ sweep all
 migrate everything
 set up everything
 \b(?:build|test|deploy|ship|release|refactor|migrate|document|package|integrate|configure|design|audit|write)\b(?:\s*,\s*(?:and\s+)?|\s+and\s+)\b(?:build|test|deploy|ship|release|refactor|migrate|document|package|integrate|configure|design|audit|write)\b(?:\s*,\s*(?:and\s+)?|\s+and\s+)\b(?:build|test|deploy|ship|release|refactor|migrate|document|package|integrate|configure|design|audit|write)\b
+# Shape-based patterns added 2026-09-10 (observation 0016, estate findings
+# dispatch-patterns-miss-reproduced / selftests-pass-but-do-not-cover-the-known-miss /
+# dispatch-gate-patterns-have-no-positive-control-against-a-real-prompt): the list
+# above matched the author's vocabulary, not a real estate-audit request that named
+# many surfaces without using any of those exact words. These match the SHAPE
+# (a completeness claim, a named surface enumerated with "every") rather than one
+# author's phrasing.
+complete (audit|review|sweep)
+every (skill|plugin|routine|task|hook|project|repo)
+everything
+audit .{0,40} completely
+clean (everything|it all) up
