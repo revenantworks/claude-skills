@@ -2,6 +2,19 @@
 
 > Renamed from `revenant-foundation-promptwright` on 2026-08-07 (pack 2.0.0 — the `revenant` → `revenantworks` marketplace migration). Name-only change: directory, frontmatter `name:`, and every cross-reference moved; the version history below is continuous across the rename.
 
+## [1.5.3] - 2026-09-10
+
+Pays the debt 1.5.2 filed. No phase, entry point, or `description` moved.
+
+- **Case 44** (`evals/test-cases.md`): a two-turn case asserting the
+  Confirm-shared-understanding checkpoint in both directions — present,
+  one or two lines, distinct from act-vs-ask, for a multi-file refactor
+  build; correctly absent for a single-tool, fully-specified log-append
+  build. Not executed this pass (authored, not run — `evals/RESULTS.md`
+  carries no row for it).
+- `evals/test-cases.md` and `evals/trigger-evals.md` re-anchored to
+  1.5.3; both provenance-only, since the `description` did not move.
+
 ## [1.5.2] - 2026-09-10
 
 Adopted a convergence: four independent lineages (ase-code-edit's pre-build
