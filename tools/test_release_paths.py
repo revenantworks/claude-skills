@@ -48,10 +48,19 @@ class TestUnsetPathVars(unittest.TestCase):
         self.assertIn("not configured on this machine", r.stdout)
 
     def test_no_absolute_local_path_in_tracked_files(self):
-        """This repo is public. A drive path in a tracked file publishes the owner's
-        layout and the existence of private repos. Dated CHANGELOGs are frozen history."""
-        out = subprocess.run(["git", "grep", "-n", "-I", "-E", r"V:[\/]Projects", "--",
-                              ".", ":(exclude)*CHANGELOG*"],
+        """This repo is public. A local path in a tracked file publishes the owner's
+        layout and the existence of private repos. Dated CHANGELOGs are frozen history.
+
+        Widened 2026-09-10 (estate finding `path-leak-test-scoped-to-one-drive-string`):
+        the pattern used to match only the literal `V:[\\/]Projects` string, so a
+        different drive letter, a UNC path, or a Unix-style home directory would leak
+        clean. Now any drive-letter-colon-slash path (any letter, either slash) plus
+        `/home/` and `/Users/` are all caught; the CHANGELOG exemption is unchanged.
+        """
+        out = subprocess.run(["git", "grep", "-n", "-I", "-E",
+                              r"\b[A-Za-z]:[\\/][A-Za-z]|/home/[^ )\n]|/Users/[^ )\n]", "--",
+                              ".", ":(exclude)*CHANGELOG*",
+                              ":(exclude)tools/test_release_paths.py"],
                              capture_output=True, text=True, cwd=ROOT).stdout.strip()
         self.assertEqual(out, "", f"absolute local path in tracked file(s):\n{out}")
 
