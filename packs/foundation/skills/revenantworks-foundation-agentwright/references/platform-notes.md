@@ -74,3 +74,13 @@ Prompt injection remains **unsolved** — current best practice is blast-radius 
 The seven rows above cover areas 1–6 and 9 — guardrail tiers (2) spans two rows, and output contracts (6) shares one with handoff schemas (5).
 
 Three areas have no row. **Zero-signal (7)** and **failure & retry (8)** are decided by `design-checklist.md` and the SKILL body; no platform mechanism implements them. **Trust tiers (10)** has no row of its own because its enforcement is the mechanisms already listed above — read-only permission modes, tool allow/deny rules, approved-server allowlists (*Enforcement surfaces*), and schema validation at the boundary (*Output contracts / handoffs*) — and the injection-hygiene row names trust tiers outright. Blast radius is the pre-checklist sizing step (SKILL.md *Turn shape 3*), not one of the ten areas.
+
+**An ask-rule is not a guardrail on a surface nobody watches.** The Soft guardrails / HITL
+row is correct for an attended session — a human is there to answer the prompt. On an
+unattended surface (a routine, a scheduled task, `claude -p` with no one watching) the same
+rule is not soft, it is a stall: nothing answers, the call is denied or the run hangs on
+the prompt, and either way the task does not complete as written. Emit must not render an
+`ask` rule into any field that will fire unattended — render `allow` with a tightened scope,
+or `deny` with an escalation path, and say in the enforcement-gap table that this is why.
+Audit treats a committed `ask` rule reachable by an unattended surface as a P0 finding, the
+same tier as a rule in a layer that cannot enforce it — because on that surface it can't.

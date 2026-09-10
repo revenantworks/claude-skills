@@ -2,6 +2,16 @@
 
 > Renamed from `revenant-foundation-rigwright` on 2026-08-07 (pack 2.0.0 — the `revenant` → `revenantworks` marketplace migration). Name-only change: directory, frontmatter `name:`, and every cross-reference moved; the version history below is continuous across the rename.
 
+## [1.1.4] — 2026-09-10
+
+**Live/tracked pair rule** added to Placement — the layer stack (task-observer observation
+#0003, `V:\Projects\.observer`): a config that exists as both a live path a session reads
+and a tracked copy kept for history or staging drifts the moment either is edited alone.
+Before any edit, diff the pair; build on whichever is actually live; after editing, sync the
+other side and self-test from the path that fires. Folded into the Audit dimension's `rot`
+check rather than added as a sixth dimension. No entry point, layer-stack row, or scoring
+anchor moved; `evals/test-cases.md` re-anchors accordingly.
+
 ## [1.1.3] — 2026-09-09
 
 **Inventory mode** added to Entry — Audit: when the target is the rig as a whole rather than

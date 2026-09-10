@@ -1,6 +1,6 @@
 # Assertion Suite — revenantworks-foundation-dispatchwright
 
-> **Provenance:** target `revenantworks-foundation-dispatchwright` v1.2.0, re-anchored to v1.2.1 the same day (below) · suite authored
+> **Provenance:** target `revenantworks-foundation-dispatchwright` v1.2.0, re-anchored to v1.2.2 (below) · suite authored
 > 2026-09-09, closing the debt `evals/RESULTS.md` has carried since the member's 1.0.0 build:
 > "No assertion suite (`test-cases.md`) exists yet for this member — dispatchwright ships with
 > trigger evals only at 1.0.0." **16 cases**, assertion-only — each is an Input plus mechanical
@@ -24,6 +24,16 @@
 > three-point ledger row; neither asserts the new identity check or the cache provenance
 > record. Both are **authored-not-covered** — recorded as owed rather than claimed. No case
 > added, dropped, or rewritten; still **16**.
+>
+> **Re-anchored to v1.2.2, 2026-09-10 — provenance only, nothing executed here:** §6 Wave
+> execution gained the silence-is-not-a-liveness-signal bullet, §8 Reconcile gained the
+> gate-figure and test-total re-derivation bullets, and `references/unit-brief-template.md`
+> gained the Expected test total field (task-observer observations #0006, #0007, #0008).
+> Case 9 asserts the wave concurrency cap and Case 10 the
+> over-12-wave naming rule; neither asserts what happens after a parent-level interrupt.
+> Case 13 asserts that reconcile trusts origin over an agent's word; it does not assert a
+> gate-figure or test-total check. All three additions are **authored-not-covered** —
+> recorded as owed rather than claimed. No case added, dropped, or rewritten; still **16**.
 
 ## Contents
 

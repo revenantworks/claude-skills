@@ -1,5 +1,21 @@
 # Changelog — revenantworks-foundation-dispatchwright
 
+## [1.2.2] — 2026-09-10
+
+**Three additions from the estate's first task-observer weekly review** (observations
+#0006, #0007, #0008, `V:\Projects\.observer`). §6 Wave execution gains a bullet: an
+interrupt or rejected tool call in the parent session ends every unit running under it, and
+nothing announces the stop — after any such event, re-read the ledger and each unit's own
+journal before assuming a wave is still running; absence of output is unknown state, never
+progress. §8 Reconcile gains two bullets: a reported gate figure (a frame rate, a test
+count, any number a decision hangs on) is re-derived from the raw counts and stated
+conditions the unit reports, not read off its summary line; a reported test total is
+checked against the total the unit's brief stated before the run, not merely against
+pass/fail colour — a runner that silently drops an unparseable file still reports green on
+what it did run. `references/unit-brief-template.md` gains an "Expected test total" field
+beside Expected artifacts to carry that number. No entry point, section numbering, or
+scoring anchor moved; `evals/test-cases.md` re-anchors accordingly.
+
 ## [1.2.1] — 2026-09-09
 
 **Identity check before push, and provenance on the shared fetch cache** (estate finding

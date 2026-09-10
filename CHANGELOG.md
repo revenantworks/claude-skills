@@ -17,6 +17,26 @@ This log starts at the foundation 1.0.0 baseline.
 > because it records what was true when written; read it as a date, not a tag.
 > Live code and runbooks cite dates instead, for exactly this reason.
 
+## [foundation-v2.6.7] - 2026-09-10
+
+The estate's first task-observer weekly review (`V:\Projects\.observer`) staged and this
+session installed nine observations against three foundation members — see PENDING.md and
+observations #0001-#0011 in the estate repo for the full disposition.
+
+- **agentwright 1.2.6** — Entry — Emit's render step (rule 2) prefers a pointer into a repo
+  file over duplicating instruction text in a scheduler's own field; `platform-notes.md`'s
+  guardrail table gains the unattended-ask-rule caveat (#0003, #0004).
+- **rigwright 1.1.4** — Placement — the layer stack gains the live/tracked-pair diff rule,
+  folded into the Audit `rot` check (#0003).
+- **dispatchwright 1.2.2** — §6 Wave execution gains the silence-is-not-a-liveness-signal
+  bullet; §8 Reconcile gains gate-figure and test-total re-derivation bullets;
+  `unit-brief-template.md` gains an Expected test total field (#0006, #0007, #0008).
+
+No entry point, checklist area, scoring anchor, or restraint path moved in any of the three;
+each member's own `evals/test-cases.md` re-anchors provenance-only. Three observations
+(#0002, #0005, #0009) were promoted to the estate's `cross-cutting-principles.md` instead of
+a skill edit, so they carry no member bump here.
+
 ## [foundation-v2.6.6] - 2026-09-09
 
 Patch release, one member: promptwright 1.5.1. A run record and the version it owes, nothing else. **Case 43 was executed** — the grill's behaviour case, shipped `(authored, not run)` at 1.5.0 — T1 and T2, **9 / 9**, traced against the written procedure and disclosed as traced rather than as a live product-surface run, matching the 2026-09-08 precedent for Cases 40–42. No rule, phase, entry point or `description` moved, so the routing surface is untouched and the two cold trigger runs ledgered under 2.6.4 still describe the shipped text.

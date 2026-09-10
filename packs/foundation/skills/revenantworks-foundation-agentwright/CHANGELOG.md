@@ -2,6 +2,20 @@
 
 > Renamed from `revenant-foundation-agentwright` on 2026-08-07 (pack 2.0.0 — the `revenant` → `revenantworks` marketplace migration). Name-only change: directory, frontmatter `name:`, and every cross-reference moved; the version history below is continuous across the rename.
 
+## [1.2.6] — 2026-09-10
+
+**Two additions from the estate's first task-observer weekly review** (observations #0003
+and #0004, `V:\Projects\.observer`). Entry — Emit's render step (rule 2) now says to prefer
+a short pointer into a repo file over duplicating the full instruction text in a scheduler's
+own field, since a duplicated live/tracked pair drifts the first time only one side is
+edited; where the target platform requires the full text inline, the emit names which copy
+is authoritative. `references/platform-notes.md`'s Soft guardrails / HITL row gains a
+caveat: an `ask` rule on a surface nobody watches is a stall, not a guardrail — Emit must
+not render one there, and Audit treats a committed `ask` rule reachable by an unattended
+surface as P0, the same tier as a rule in a layer that cannot enforce it. Neither change
+touches an entry point, checklist area, or scoring anchor; `evals/test-cases.md`
+re-anchors accordingly.
+
 ## [1.2.5] — 2026-09-09
 
 **Inventory mode** added to Entry — Audit: when asked to audit the rig's whole unattended

@@ -3,7 +3,7 @@ name: revenantworks-foundation-dispatchwright
 description: Runs a session's fan-out — turns one large request into tiered, budgeted, recoverable units and dispatches them. Trigger when a request will take more than a few agents or spans many repos, skills, or files at once — rebuild, re-architect, overhaul, consolidate, sweep, migrate, or 'do all of this'; when subagents or a workflow are about to be launched and nothing has assigned each one a model, effort, and surface; when a fan-out is already running and a unit died, stalled, hit a usage limit, or must be resumed without redoing landed work; when concurrent units would write the same repo; or say dispatchwright (plan, dispatch, resume, audit). Model and tier per unit come from promptwright's target table, never invented here; the hook or config that makes this fire is rigwright's placement; anything unattended on a schedule is agentwright's.
 license: MIT
 metadata:
-  version: "1.2.1"
+  version: "1.2.2"
   profile: standalone
   pack: foundation
   brand: revenantworks
@@ -195,6 +195,11 @@ one rule: **a unit is done when it is on the remote, not when it is written.**
 - **Check the remaining rolling usage window before launching a top-tier wave.** A wave of
   frontier-tier units started against a nearly spent window is how a unit dies mid-write with
   nothing pushed yet — the durability contract limits the damage, but the check avoids it.
+- **Silence is not a liveness signal.** A rejected tool call or an interrupt in the parent session
+  ends every unit running under it, and nothing announces the stop — the units simply go quiet,
+  and quiet reads exactly like "still working" until someone checks. After any interrupt or
+  rejected call, re-read the ledger and each unit's own journal before assuming a wave is still
+  running; absence of output is unknown state, never progress.
 
 ## 7 · Escalation
 
@@ -222,6 +227,16 @@ equivalent for the unit's own repo and branch) and report, per run:
 - **Duplicated work** — two units that touched the same file or claim the same result.
 - **Actual vs. estimated spend, per tier** — so the next plan's estimates get better, not just
   the units this one dispatched.
+- **A reported gate figure is re-derived, not read off a summary line.** A unit that reports a
+  pass — a frame rate, a test count, any number a decision hangs on — restates the raw counts and
+  the conditions they were measured under; the reconcile step re-derives the figure from those raw
+  counts before crediting the row. A printed summary is the unit's claim about its own work, not
+  independent evidence of it.
+- **A reported test total is checked against the brief's stated expectation.** A test runner that
+  silently drops a file that failed to parse still reports green on what it did run, and a total
+  that is merely lower than expected passes every check that only looks at the pass/fail column.
+  Every unit brief that ends in a test run states the expected total; a reconciled row whose actual
+  total falls short of it is unverified regardless of colour.
 
 A row that cannot be verified is reported as unverified, never rounded up to done.
 

@@ -16,6 +16,9 @@ touches this repo in this window."] No other unit writes here while you run.
 
 **Expected artifacts:** [what "done" looks like — a file, a commit, a specific report shape]
 
+**Expected test total (if this unit ends in a test run):** [the count before the run starts —
+a reconciled total that falls short of this, even while green, is unverified, not done]
+
 **Stop condition:** [what tells you the unit is finished, stated before you start]
 
 ---

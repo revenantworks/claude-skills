@@ -13,6 +13,12 @@ contract gained an identity-check-before-push rule and a fetch-cache provenance 
 `dispatchwright-pushes-to-main-with-no-identity-check-and-caches-fetches-without-provenance`).
 The `description` is byte-identical, so the routing surface these rows judge did not move; no
 query, expected value, or count touched. Still 22 rows (10 / 10 / 2).
+**Re-anchored to v1.2.2, 2026-09-10 — provenance only, nothing executed here:** §6 Wave
+execution gained a silence-is-not-a-liveness-signal bullet, §8 Reconcile gained gate-figure
+and test-total re-derivation bullets, and `unit-brief-template.md` gained an Expected test
+total field (body and reference only; task-observer observations #0006, #0007, #0008). The
+`description` is byte-identical, so the routing surface these rows judge did not move; no
+query, expected value, or count touched. Still 22 rows (10 / 10 / 2).
 Not yet run — see `RESULTS.md`.
 
 Ten queries that should fire dispatchwright, ten that should not (including the four named

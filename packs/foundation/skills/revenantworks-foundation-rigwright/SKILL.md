@@ -3,7 +3,7 @@ name: revenantworks-foundation-rigwright
 description: Builds the standing config Claude reads before work — a Claude Project's instructions and knowledge-file plan, a CLAUDE.md, a repo's .claude layout, hooks, and .mcp.json — emitted paste-ready in each surface's native form, checked against its limits. Trigger to set up, write, fix, or trim a Claude Project, project instructions, a CLAUDE.md, or a repo's Claude config; to decide which layer a rule belongs in — profile preferences, project instructions, CLAUDE.md, a skill, a hook, or auto-memory; or to score a setup for bloat and drift without rewriting it. Answers to "rigwright" ("rigwright audit", "rigwright refresh"). For an Agent Skill or a SKILL.md package, skillwright; for anything unattended — a Cowork task, a routine, a scheduled task, plus its cadence and guardrails — agentwright; for the wording of an instruction block once its home is settled, promptwright; for a pure token or cost cut on a config whose layout is already right, tokenwright.
 license: MIT
 metadata:
-  version: "1.1.3"
+  version: "1.1.4"
   profile: standalone
   pack: foundation
   brand: revenantworks
@@ -70,6 +70,19 @@ Three rules do most of the work:
 - **A reference is not a rule.** Material Claude should consult when relevant is a knowledge file or a linked doc. Pasting it into the instruction block converts an occasional lookup into a permanent tax.
 
 State the layer, the one-line why, and what would move it. Where two layers both work, say so and recommend rather than hedging.
+
+**A live/tracked pair is diffed before either is touched.** Some config exists in two
+places at once: a live path a session actually reads (`~/.claude/settings.json`, a live
+skill directory) and a tracked copy kept for history or staging (a repo's config folder,
+a `skill-updates/` staging path). The two drift the moment either is edited alone, and the
+drift is invisible until an emit or audit builds on the stale one and silently reintroduces
+what the other side already fixed. Before any edit, `diff` the pair; build on whichever is
+actually live, never on the tracked copy's assumed state; after editing, sync the other
+side and self-test from the path that fires. Name the pair in the placement output — which
+path loads, which path is tracked — so an audit that finds only one of them knows to ask
+about the other. Fold this into the Audit dimension's **rot** check: a live/tracked pair
+that has silently diverged is rot the five-dimension scoreline should catch, not a separate
+question.
 
 ## Restraint — when not to build
 
