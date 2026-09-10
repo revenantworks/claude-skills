@@ -413,3 +413,30 @@ The one miss is **#38** ("Interview me about my product and then write the launc
 **Debt discharged and debt remaining.** The 1.5.0 cold re-judge is **performed**, and `trigger-evals.md`'s provenance line is corrected from owed to performed in the same pass. **Case 43 of the assertion suite remains authored, not run** — unchanged by this entry, which judges routing only, and disclosed rather than folded into a green claim.
 
 **Nothing was changed to make a row pass.** The one file edited is `SKILL.md`'s description, edited because run 1 found a defect in it, before run 2 was commissioned — not after a verdict was seen and disliked.
+
+---
+
+## 2026-09-09 — v1.5.0 — **CASE 43 EXECUTED (T1 + T2), 9 / 9, with one doctrine gap found** — runner: one fresh traced execution per turn
+
+Case 43 was authored in the 1.5.0 build and shipped `(authored, not run)`. It is now run. **Traced execution against the written procedure** — the Input constructed as the case states it, `grill.md` and Entry — Grill followed as written, output compared to each Assert — not a live product-surface run with a real user answering the questions. Same methodology and the same disclosure as the 2026-09-08 entry for Cases 40–42; that precedent is why this says so rather than claiming more.
+
+**T1 — "Grill me before you write it. I need a prompt that reviews our support macros." 8 / 8 asserts hold.**
+
+The restraint gate is the first thing the route hits and it correctly does *not* fire: `reviews` is fuzzy language (indicator 1), and the deliverable, its consumer and the output shape are all unnamed, so the request is not "already unambiguous" and the grill proceeds rather than taking the name-two-assumptions exit.
+
+- **`grill.md` loaded, standard-budget files not opened in its place** — Entry — Grill names exactly one file and says "load it here and nowhere else"; `frameworks.md`, `hostile-interpreter.md` and `model-snapshot.md` have no route into a grill.
+- **`── Grilling ──`, questions one at a time** — procedure steps 1 and 4. Phase 4's 1–3 batch contract is on the phase this route *replaces*, so it cannot apply.
+- **Sorted JOB → CONTRACT → STRUCTURE → WORDING, truncated at 10, area-correct forms, literals in backticks** — steps 2 and 3 plus the focus table. The traced round found five aspects (`Deliverable`, `Consumer`, `Done` in JOB; `Output-Shape`, `Edge-Case` in CONTRACT), all `Shall…?` per the table, below the truncation limit. STRUCTURE stayed empty, which is what the case's own framing predicts.
+- **Two to four grounded answers, implied one marked `⚑`, `SKIP GRILLING` last, rendered per Turn shape rule 2** — step 4. On Claude Code the Surface-awareness note takes the plain-text fallback; there is no tappable selection here.
+- **`SKIP GRILLING` mid-round ends questions, folds in what was gathered, drops remaining rounds, does not cancel** — step 5, stated in those terms.
+- **Ladder resumes at Phase 5, header reads `Clarify (grilled — N aspects, N rounds)`, never shown as skipped** — stated twice, in Entry — Grill and in grill.md's "After the grill".
+- **Phase 7 footer carries `grilled: N aspects`; prompt block, Model line and Keep going selection unchanged** — Entry — Grill states the footer, and no step on this route touches Phase 7's other elements.
+- **A MUST area still open is reported, not built over** — grill.md's closing line and Entry — Grill's standalone shape both say it.
+
+**T2 — "Grill my nightly backup agent on what it's allowed to delete." Seam holds.** Entry — Grill's last sentence is verbatim: "Grilling an *agent's* guardrails, cadence, or blast radius is agentwright's; this entry grills the request a prompt is about to be built from." The object is an agent's delete permissions — blast radius — so promptwright names agentwright and runs no grill. This is the same object-over-verb rule trigger row #37 tests from the routing side, holding here from the behavior side.
+
+**One gap found, recorded not patched.** Step 4 requires the first offered answer to be "what the current request or draft already implies, marked `⚑`". For at least two of the five traced aspects — `Output-Shape` and `Edge-Case` — the request implies **nothing**: "a prompt that reviews our support macros" carries no hint of JSON versus prose, or of what to do with an unparseable macro. The procedure does not say what `⚑` does when nothing is implied, and the three readings available (mark nothing, mark the most common practice, or mark a house default) are materially different — the second and third would present an invented default as though the user had already chosen it, which is the exact failure the `⚑` convention exists to prevent. **This is a real doctrine gap in `grill.md` step 4, filed as a finding for a human to act on.** It did not fail an assert: no assertion in Case 43 covers the no-implied-answer case, which is itself worth noting — the suite tests that `⚑` is applied, never what happens when it cannot be.
+
+**Nothing was changed to make an assert pass.** No `SKILL.md`, `grill.md`, case, version or CHANGELOG was touched by this entry — a run record must never edit the thing it grades, which is the rule skillwright 1.3.4 exists to pay for. The gap above is reported, not fixed.
+
+**Debt now standing for this member:** the grill's `⚑` gap; trigger rows #37, #34 and #29 as watch rows; and the description at 1002/1024 with no edit headroom.

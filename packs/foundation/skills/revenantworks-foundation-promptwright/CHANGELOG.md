@@ -2,6 +2,30 @@
 
 > Renamed from `revenant-foundation-promptwright` on 2026-08-07 (pack 2.0.0 — the `revenant` → `revenantworks` marketplace migration). Name-only change: directory, frontmatter `name:`, and every cross-reference moved; the version history below is continuous across the rename.
 
+## [1.5.1] - 2026-09-09
+
+Run-record patch. No rule, phase, entry point, reference or `description`
+moved; the routing surface is untouched and no re-judge is owed.
+
+- **Case 43 executed**, T1 and T2, **9 / 9** - traced against the written
+  procedure, disclosed as traced rather than as a live product-surface run.
+  1.5.0 shipped it `(authored, not run)`; that is now closed.
+- **One doctrine gap found and filed, not patched.** `grill.md` step 4 requires
+  the first offered answer to be the one the request already implies, marked
+  `⚑`. When the request implies nothing - and for two of the five traced
+  aspects it implied nothing at all - the procedure does not say what `⚑`
+  does, and the readings available differ materially: marking a house default
+  would present an invented choice as the user's own, which is the exact
+  failure the convention exists to prevent. No assert covers the case, which
+  is itself the finding: the suite tests that `⚑` is applied, never what
+  happens when it cannot be.
+- **Why this is a version at all.** Editing `evals/` changes a shipped file, and
+  a shipped file that moves at the same member version is the bookkeeping debt
+  skillwright 1.3.4 was cut to pay - three passes deep by then. The run record
+  itself correctly touched no version, because a record must never edit the
+  thing it grades; the bump is paid here instead, in the same pass rather than
+  one later, which is the whole point of having learned it.
+
 ## [1.5.0] — 2026-09-09
 
 **Added — Entry — Grill.** A relentless interview that runs before the build,
