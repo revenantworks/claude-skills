@@ -2,6 +2,35 @@
 
 > Renamed from `revenant-foundation-promptwright` on 2026-08-07 (pack 2.0.0 — the `revenant` → `revenantworks` marketplace migration). Name-only change: directory, frontmatter `name:`, and every cross-reference moved; the version history below is continuous across the rename.
 
+## [1.5.2] - 2026-09-10
+
+Adopted a convergence: four independent lineages (ase-code-edit's pre-build
+"grill", addyosmani/agent-skills' interview mode, mattpocock/skills' grilling
+primitive, Superpowers' brainstorming skill) landed on the same fix for the
+same failure — an implementation agent guesses intent and gets corrected
+after the fact. The fix belongs in the doctrine this skill writes into
+*built* prompts, not as an imported framework: four builders converging
+independently is a signal the pattern is right, not a reason to import any
+one of their frameworks for it.
+
+- **New Agent/System component: Confirm shared understanding**
+  (`frameworks.md`). Sits beside Act vs. ask: before a non-trivial or
+  hard-to-undo change, the built agent states its plan or read of the task
+  in one or two lines and holds for a correction (or proceeds under a named
+  assumption); a single-file fix or fully-specified task skips it. Distinct
+  from Phase 4 and `grill.md`, both of which clarify the request *this
+  skill* is building from — this is a rule written into the artifact so the
+  agent it drives does the same before it acts.
+- `SKILL.md` Phase 5's Agentic/system-prompt line now names the component
+  alongside act-vs-ask, tool discipline, parallel calls, stop conditions,
+  and the output contract, so it surfaces without opening `frameworks.md`.
+- No phase, entry point, or `description` moved; routing is untouched.
+  `evals/` re-anchored provenance-only — none of the 43 cases exercise a
+  full Agent/System build, so none moved. **A case is owed**, not shipped
+  here: a built coding/agent prompt should assert the checkpoint appears
+  before a non-trivial change and is correctly absent from a single-file,
+  fully-specified task.
+
 ## [1.5.1] - 2026-09-09
 
 Run-record patch. No rule, phase, entry point, reference or `description`

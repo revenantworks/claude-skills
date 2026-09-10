@@ -202,10 +202,13 @@ Cover these components; drop the ones a given task doesn't need:
 |---|---|
 | Role + available tools | Who the agent is and exactly what tools it has, each with a one-line "use it when…" trigger |
 | Act vs. ask | The default: proactive ("infer the most useful action and proceed") or conservative ("gather information and recommend rather than act") |
+| Confirm shared understanding | For non-trivial implementation work: state the plan or the read of the task in one or two lines and pause for a correction (or proceed under a named assumption) before changes that are costly to undo — see note below |
 | Tool-use discipline | Prefer small, targeted calls over one broad call; define what to do on a tool error (retry once with a narrower input, then report) |
 | Parallel tool calls | When multiple calls are independent, run them simultaneously — significant latency win |
 | Stop / exit conditions | What "done" looks like; what to do if it cannot finish (report blockers, don't loop) |
 | Output contract | What the agent returns at the end, in exactly what shape |
+
+**Confirm shared understanding, before building it in.** An implementation agent that starts changing things before its read of the task matches the caller's is the single most common source of thrown-away work — cheap to prevent, expensive to discover after the fact. Bake in an explicit checkpoint rather than relying on the model to volunteer one: name what "done" looks like and any assumption being made, and hold for a correction before a change that is slow or costly to undo (a multi-file edit, a schema change, anything touching production or another person's work); a single-file fix or a fully-specified task can skip straight to acting. Keep the checkpoint itself cheap — one or two lines, not a question list — so it earns its place against the Act vs. ask row rather than reintroducing the padding that row exists to avoid. This is a different layer from Phase 4: Phase 4 clarifies the request *promptwright* is building from; this component, once written into the prompt, makes the *built agent* do the same before it acts.
 
 **Skeleton:**
 
@@ -218,6 +221,10 @@ By default, take the next release step rather than asking; if a step is ambiguou
 infer the most useful action and proceed, using read_file to confirm rather than
 guessing. Make small, targeted tool calls. If a tool errors, retry once with a
 narrower input, then report and stop.
+
+Before any change touching more than one file, state in one line what you're
+about to do and why, then proceed — don't wait for a reply unless something is
+genuinely ambiguous.
 
 Stop when the changelog is updated and tests pass, OR report the blocker if tests
 fail. Return a two-line summary: what changed and the test result.
