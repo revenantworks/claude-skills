@@ -1,0 +1,20 @@
+{
+  "positive": [
+    {
+      "name": "real fan-out prompt \u2014 observation 0016 regression fixture, verbatim from dispatch_gate.py's own selftest (the actual real prompt this rig submitted on 2026-09-10 that the gate originally missed before the shape-based patterns were added). session_id is the flag's real live session id at the time this fixture was captured (2026-09-11), reused so the write is idempotent on the correlation (only its timestamp refreshes).",
+      "argv": [],
+      "stdin": "{\"session_id\": \"c383d83c-5af0-4a61-98ee-c4b6376d6fca\", \"prompt\": \"I want to do a complete estate sweep, run that routine but also lets analyze every skill, project, routine\", \"cwd\": \"V:/Projects\"}",
+      "expect_exit_in": [0],
+      "expect_contains": "additionalContext"
+    }
+  ],
+  "negative": [
+    {
+      "name": "ordinary prompt \u2014 real fragment of this session's own actual task instructions (the HOOK-02 controls-file work order this fixture file was written to close), carries no fan-out language",
+      "argv": [],
+      "stdin": "{\"session_id\": \"c383d83c-5af0-4a61-98ee-c4b6376d6fca\", \"prompt\": \"Read the full _run_hook_control and check_hook_controls functions to get the exact JSON schema and invocation contract.\", \"cwd\": \"V:/Projects\"}",
+      "expect_exit_in": [0],
+      "expect_not_contains": "additionalContext"
+    }
+  ]
+}
