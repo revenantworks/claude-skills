@@ -2,6 +2,48 @@
 
 > Renamed from `revenant-foundation-promptwright` on 2026-08-07 (pack 2.0.0 — the `revenant` → `revenantworks` marketplace migration). Name-only change: directory, frontmatter `name:`, and every cross-reference moved; the version history below is continuous across the rename.
 
+## [1.5.7] — 2026-09-10
+
+**U2b/promptwright-zero-headroom-both-budgets.** Description sat at 1002/1024 chars (22 left)
+and the body at its full 9470-token registry budget (0 left) — both ceiling-riding with no
+room for the next doctrine addition. Slimmed with tokenwright's lossless ladder only
+(dedupe, tighten, prune-to-contrastive-minimum — rungs 1-6; no rung-9 semantic compression,
+no rule, threshold, number, or exact-reply string touched): description → 938/1024 chars
+(**86 headroom, 8.4%**), body → ≈9319/9470 tokens (**151 headroom, 1.6%**).
+
+The description slim: deduped the repeated `promptwright` prefix inside the subcommand
+parenthetical (`promptwright model` → `model`, etc. — `promptwright` is already stated
+immediately before the parenthesis), dropped "task" and "product" as non-differentiating
+modifiers, "and" → "/" twice. No trigger word, verb, or boundary clause removed.
+
+The body slim: cut the Phase 3 framework menu's decorative asides ("(the shape)"/"(the
+feel)" etc.) while keeping every framework's acronym, use-case, and its named comparative
+differentiator; pruned one of three illustrative examples in the Hostile-read "Letter beats
+spirit" shape and its paired repair example (contrastive minimum — the shape is fully
+carried by the remaining two); cut two small redundant restatements (Turn shape rule 1's
+"Nothing else collapses it.", rule 2's "so nothing *can* follow") that repeated the same
+sentence's own prior clause; tightened four short connective phrases (Phase 1 cross-ref,
+quiet-build clause, knowledge-vacuum clause, sibling-handoff clause, restraint clause).
+
+**Honest shortfall, not silently crossed (tokenwright's own Budget rule):** the body did
+not reach the 5% (≈473-token) target. This member's body is dense, previously slimmed at
+several past releases, and carries exact-reply-text (`Bare invocation`) and heavily
+eval-anchored passages (Turn shape, Phase 3/5/6, the four Entry points, Keep going
+rendering) this pass could not safely cut further without the full `test-cases.md`
+assertion suite run to verify — the pack's own doctrine treats that as required before a
+larger structural or de-specify pass on rule-bearing text, not something to gamble past
+without it. Reaching 5% from here needs either a dedicated tokenwright Slim pass run
+against the live suite, or a small declared-budget adjustment (this member's registry row
+already records several such raises for genuine content additions); flagged for the owner.
+
+**Blind trigger re-judge performed** against the slimmed description, all 38
+`evals/trigger-evals.md` queries via `tools/blind_queries.py`: **38/38 hold their recorded
+direction**, no row flipped. Before: 38 queries, 19/19 split, last full re-judge at 1.5.0
+returned 36/38 with #29/#34/#37 as standing watch rows (unremediated, pre-existing). After
+this slim: same 38/38 match against the established key; the three standing watch rows are
+unaffected (none of the removed text touched the red-team/grill object wording those rows
+turn on). `evals/trigger-evals.md` and `evals/test-cases.md` re-anchored to 1.5.7 below.
+
 ## [1.5.6] — 2026-09-10
 
 **Two estate-audit findings.** `eval-ledgers-underreport-executed-probes`: Cases 40-42's
