@@ -2,15 +2,15 @@
 
 > Renamed from `revenant-foundation-evalwright` on 2026-08-07 (pack 2.0.0 — the `revenant` → `revenantworks` marketplace migration). Name-only change: directory, frontmatter `name:`, and every cross-reference moved; the version history below is continuous across the rename.
 
-## [Unreleased] — applied by unit L1b, 2026-09-11, no version bump (member frozen)
+## [1.1.2] — 2026-09-11
 
 Reference only; the `description` is byte-identical. Content applied from the task-observer
-weekly review staged 2026-09-11 — `evalwright` is frozen (`CLAUDE.md`: "no bumps unless
-broken; a security finding counts as broken"), and none of #0021/#0025/#0042 is a security
-finding, so `frontmatter.metadata.version` stays `1.1.1` and this section stays `[Unreleased]`
-rather than becoming a dated release. `references/eval-doctrine.md` carries the content below
-regardless — the freeze blocks a version bump, not a documentation fix. Owner note: revisit
-if a future release wants this doctrine formally versioned.
+weekly review staged 2026-09-11, citing observations #0021, #0025, #0042.
+`references/eval-doctrine.md` carries the content below. The content landed under unit L1b
+while the 2026-08-17 freeze was still in force, so it shipped with no version bump and the
+section stayed `[Unreleased]`; the owner lifted the freeze later the same day (2026-09-11,
+`CLAUDE.md` and `packs/foundation/CLAUDE.md`), and this entry converts the section to a dated
+release and bumps `frontmatter.metadata.version` `1.1.1` → `1.1.2` under unit P1d.
 
 - **`references/eval-doctrine.md` states the provenance block's LAYOUT as an authoring rule
   (#0025).** One continuous paragraph, or newest re-anchor first, because a freshness gate reads

@@ -61,5 +61,5 @@ Each works alone. Initial routing is at the description level — this table is 
 - **Audits report; they don't rewrite.** A finding catalog lands fixes only on approval.
 - **Declared dependencies.** Any tool or sibling a skill needs is named, with its absence behavior stated — the pack degrades gracefully, never fails silently.
 - **Volatile surfaces are stamped and swept.** Calendar baselines carry a date and a 60-day cadence; `skillwright upkeep` is the pack-wide check.
-- **Three members are frozen (2026-08-17): tokenwright, commwright, evalwright** — no bumps unless broken; a security finding counts as broken. They stay installed and routed to; they take no eval re-anchor and no refresh restamp until a real defect moves them.
+- **Freeze lifted (2026-09-11): tokenwright, commwright, evalwright** were frozen 2026-08-17 (no bumps unless broken); owner decision 2026-09-11 lifts it. All three are ordinary members again — bumps follow the two-clock rule like any other member.
 - **On the owner's rig this pack loads by junction** (`~/.claude/skills/<member>` → the member folder in the claude-skills working tree), so an edit in the repo is live next session; the marketplace plugin is for the public.

@@ -52,8 +52,11 @@ name), then verify: `python .claude/hooks/firewall.py --selftest`.
   tree. Edit here — it is live next session. `claude plugin update` is not
   part of the rig loop; the pack is uninstalled here. claude.ai copies still
   move by delete-and-re-upload; `release.py` prints which zips changed.
-- **Frozen (2026-08-17):** tokenwright, commwright, evalwright — no bumps
-  unless broken (a security finding counts as broken).
+- **Freeze lifted (2026-09-11):** tokenwright, commwright, evalwright were
+  frozen 2026-08-17; owner decision 2026-09-11 lifts it. All three are
+  ordinary members again — bumps follow the two-clock rule like any other
+  member (member clock vs. pack clock; see
+  `packs/foundation/skills/revenantworks-foundation-skillwright/references/release-doctrine.md`).
 - **No `ask` rules** in any tracked `.claude/settings.json`; a committed `ask`
   freezes an unattended run. Hooks wired here: the brand firewall (PreToolUse)
   and the post-commit pack-bump nudge (PostToolUse on `git commit`).
