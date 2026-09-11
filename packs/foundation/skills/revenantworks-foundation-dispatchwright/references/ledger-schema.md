@@ -34,7 +34,7 @@ override, so the two must agree.
 | `class` | `mechanical` \| `structured` \| `judgment` — the same three classes the 2026-08-17 rebuild's lesson names, and the input to Tier (§4). |
 | `model` | Copied verbatim from promptwright's target table — never chosen here. |
 | `effort` | Copied verbatim from the same table. |
-| `surface` | `inline` \| `subagent (background)` \| `subagent (foreground)` \| `remote worktree`. |
+| `surface` | `inline` \| `subagent (background)` \| `subagent (foreground)` \| `remote worktree`. **A row for a Workflow or Task call that itself fans out to more than one agent states the count as an `x<N>` token in this cell** — `subagent (workflow) x245`, not three rows for 245 agents (task-observer observation #0022: three rows once hid 245 refuter agents from the wave cap and the usage-window check). `dispatch_ledger_guard.py`'s `open_unit_count()` parses the token and counts the row as N units against the 6-unit wave cap, not 1; a missing or malformed token (no digits, `x0`, `xN`) defaults to 1, the same weight a row with no token carries. Two tokens in one cell: the last one wins. |
 | `repo` | The repo this unit writes, or `—` for a read-only unit. |
 | `worktree` / `branch` | The path and branch a writer unit runs in, per §6's one-writer-per-repo rule. `—` for a unit that shares the main tree. |
 | `expected_artifacts` | What the unit should produce — a file, a commit, a report — stated before dispatch, not inferred after. |

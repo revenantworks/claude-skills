@@ -3,7 +3,7 @@ name: revenantworks-foundation-dispatchwright
 description: Runs a session's fan-out — turns one large request into tiered, budgeted, recoverable units and dispatches them. Trigger when a request will take more than a few agents or spans many repos, skills, or files at once — rebuild, re-architect, overhaul, consolidate, sweep, migrate, or 'do all of this'; when subagents or a workflow are about to be launched and nothing has assigned each one a model, effort, and surface; when a fan-out is already running and a unit died, stalled, hit a usage limit, or must be resumed without redoing landed work; when concurrent units would write the same repo; or say dispatchwright (plan, dispatch, resume, audit). Model and tier per unit come from promptwright's target table, never invented here; the hook or config that makes this fire is rigwright's placement; anything unattended on a schedule is agentwright's.
 license: MIT
 metadata:
-  version: "1.2.4"
+  version: "1.2.5"
   profile: standalone
   pack: foundation
   brand: revenantworks
@@ -83,7 +83,9 @@ per Wave execution. Never launch a unit with no row.
 someone else's): first action, always — `git log --oneline origin/main -5` and a read of the
 ledger's rows for this run. Reconcile before touching anything (section 8): a row an agent
 claimed but origin does not show is not done. Re-dispatch only the unfinished or unproven rows;
-never restart a row whose commit is already on origin.
+never restart a row whose commit is already on origin. This entry covers only a run already
+tracked in this ledger — a general session handoff written on demand or before a pause, inside a
+dispatch run or out of one, is resumewright's (section 1).
 
 **`dispatchwright audit`** (a running or finished fan-out, checked mid-flight or at the end): run
 Reconcile (section 8) and report. Read-only; it never re-dispatches on its own.
@@ -107,6 +109,12 @@ quoted from the sibling that owns the other half:
   reading the result is not — per the pack's own line: *"Anything firing on a schedule or an
   event with nobody reading the result — a Cowork task, a routine, a desktop scheduled task, and
   the cadence, blast radius and kill switch around it — is agentwright's."*
+- **A general session handoff is resumewright's.** Inside an active fan-out this skill's own
+  ledger and `dispatchwright resume` already carry the resume state; resumewright covers
+  everything that entry does not reach — an ordinary session, one repo or several, dispatch or
+  not. Declared here because resumewright's own boundary line points back the same way: *"A
+  dispatchwright fan-out already carries its own resume state in its ledger — resumewright covers
+  the ordinary session dispatchwright's contract does not reach."*
 
 ## 2 · Shape check
 

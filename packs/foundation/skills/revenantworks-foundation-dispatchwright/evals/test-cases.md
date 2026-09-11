@@ -1,6 +1,6 @@
 # Assertion Suite — revenantworks-foundation-dispatchwright
 
-> **Provenance:** target `revenantworks-foundation-dispatchwright` v1.2.0, re-anchored to v1.2.4 (below) · suite authored
+> **Provenance:** target `revenantworks-foundation-dispatchwright` v1.2.0, re-anchored to v1.2.5 (below) · suite authored
 > 2026-09-09, closing the debt `evals/RESULTS.md` has carried since the member's 1.0.0 build:
 > "No assertion suite (`test-cases.md`) exists yet for this member — dispatchwright ships with
 > trigger evals only at 1.0.0." **16 cases**, assertion-only — each is an Input plus mechanical
@@ -56,6 +56,16 @@
 > the wave cap) are owed before the next release claims this ground, joining the standing
 > debt convention this suite already carries for prior additions. No case added, dropped,
 > or rewritten; still **16**.
+>
+> **Re-anchored to v1.2.5, 2026-09-11 — provenance only, nothing executed here:**
+> `references/ledger-schema.md` gained the `x<N>` agent-count token documentation (the guard
+> code that now enforces it lives outside this package, in `.claude/hooks/`, and closes one of
+> the two cases the 1.2.4 re-anchor above left owed), and §1 gained a fourth seam bullet plus a
+> `dispatchwright resume` pointer naming the new sibling `revenantworks-foundation-resumewright`.
+> Neither is a case-bearing behavior change to this skill itself — the schema line documents
+> code that lives elsewhere, and the seam bullet is a cross-reference — so no case is owed for
+> this bump specifically; the stash/agent-count debt from 1.2.4 stands as recorded. No case
+> added, dropped, or rewritten; still **16**.
 
 ## Contents
 

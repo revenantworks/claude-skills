@@ -1,6 +1,6 @@
 # Foundation Pack — router & conventions
 
-The always-on companion to the **foundation** pack's ten wrights. Each skill routes on its own description when invoked. This file is the standing context that makes them work *together*, so the right wright gets reached for without being named, and the pack's conventions hold across a session.
+The always-on companion to the **foundation** pack's eleven wrights. Each skill routes on its own description when invoked. This file is the standing context that makes them work *together*, so the right wright gets reached for without being named, and the pack's conventions hold across a session.
 
 **Using it:** APPEND into your project root's `CLAUDE.md` (or into `~/.claude/CLAUDE.md` to cover every project) so Claude Code loads it automatically — both packs' routers can coexist in one file, and a copy would overwrite whichever router landed first. It also loads on its own when you work under `packs/foundation/` in the claude-skills repo. It is not a skill: nothing here is invoked; it is context.
 
@@ -24,6 +24,7 @@ The always-on companion to the **foundation** pack's ten wrights. Each skill rou
 | Author or audit an eval suite | **evalwright** | "write trigger evals for &lt;target&gt;" |
 | Slim, budget, or audit token footprint | **tokenwright** | "slim this / what does it cost" |
 | A request that will fan out into many agents or repos | **dispatchwright** | "rebuild / re-architect all of this", "resume that stalled run", `dispatchwright` |
+| Write a committed session handoff, on demand or before a pause | **resumewright** | "write the handoff", "pause here", "holding position", `resumewright` |
 
 Each works alone. Initial routing is at the description level — this table is the proactive cue, not a dependency. An uninstalled wright is named, never a blocker.
 
@@ -44,6 +45,13 @@ Each works alone. Initial routing is at the description level — this table is 
   promptwright's target table, dispatches with a durability contract, and reconciles against
   origin. It never picks a model itself, never places its own trigger hook (rigwright), and never
   runs anything unattended (agentwright).
+- **dispatchwright's ledger owns an active fan-out's resume state; resumewright owns everything
+  else.** Inside a running dispatch, its own ledger and `dispatchwright resume` already cover
+  which units landed and what remains. resumewright is for the session-level handoff outside
+  that — before a fan-out starts, between fan-outs, or a session that never dispatches at all —
+  and it commits what it writes in the same call so a stash or reset can never take it silently.
+  Where the session has no filesystem to commit into, that is task-observer's handoff-doc mode,
+  not resumewright — the two never compete for the same case.
 - **rigwright places; promptwright words.** Which layer a rule belongs in, and what budget binds it there, is rigwright's; the wording of the instruction block once its home is settled is promptwright's. A named surface carrying a layer question is rigwright; a block in hand with a quality cue is promptwright. Watched edge: a Project instruction block sits close to a system prompt, and it is rigwright's named-surface claim that beats promptwright's generic one.
 
 ## Conventions

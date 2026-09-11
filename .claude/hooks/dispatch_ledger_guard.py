@@ -53,6 +53,18 @@ do. Given the ledger row for a unit is written before its dispatch call fires
 hook is already in the ledger by the time these run, so "already violated"
 correctly includes that unit.
 
+Extended 2026-09-11 (task-observer observation #0022): open_unit_count()
+counted ROWS, and a Workflow call is one row however many agents its own
+script spawns -- three rows once hid 245 refuter agents from the 6-unit cap
+and the usage-window check in the same run. A row whose `surface` cell states
+an agent-count token -- written as the literal text `x<N>` somewhere in the
+cell, e.g. `subagent (workflow) x245` (SKILL.md section 6's own worked form)
+-- now counts as N units against the cap, not 1. `agent_multiplier()` parses
+the token; a missing or malformed one (no digits, a non-positive count, `x`
+with nothing after it) defaults to 1, the same as a row with no token at all,
+so a normal single-agent row is never penalized and a broken token never
+silently zeroes a row out of the count.
+
 FAILS CLOSED whenever it is armed and cannot prove the dispatch is tiered --
 that is the point of this hook. dispatch_gate.py is the opposite and must stay
 that way: it runs on every prompt, and a gate that can block is how the
@@ -433,21 +445,48 @@ def _table_rows(text: str, suffix: str, wanted: tuple) -> list:
     return rows
 
 
+AGENT_COUNT_RE = re.compile(r"(?<![A-Za-z0-9])[xX](\d+)(?![A-Za-z0-9])")
+
+
+def agent_multiplier(surface: str) -> int:
+    """How many units a single ledger row is worth against the wave cap
+    (observation #0022). A `surface` cell may carry an agent-count token --
+    `x<N>` set off from the rest of the text by anything but a letter or
+    digit, e.g. `subagent (workflow) x245` -- naming how many agents the one
+    Workflow/Task call behind this row actually spawned. The LAST such token
+    wins if more than one appears. Anything that is not a positive integer --
+    no token, `x` with no digits after it, `x0` -- defaults to 1, the same
+    weight a row with no token at all carries: a missing or broken count must
+    never make a row cheaper than a plain single-agent row, only a real
+    number ever makes it more expensive."""
+    matches = AGENT_COUNT_RE.findall(str(surface or ""))
+    if not matches:
+        return 1
+    try:
+        n = int(matches[-1])
+    except ValueError:
+        return 1
+    return n if n > 0 else 1
+
+
 def open_unit_count(path: Path) -> int:
-    """How many rows in this ledger are still open per OPEN_STATUSES. A row
-    with no status column, or a placeholder status, counts as open -- an
-    unlabeled row is exactly the case a cap exists to catch, not a reason to
-    exempt it."""
+    """Sum of agent weight across rows still open per OPEN_STATUSES, not a
+    row count. A row with no status column, or a placeholder status, counts
+    as open -- an unlabeled row is exactly the case a cap exists to catch,
+    not a reason to exempt it. Each open row is worth `agent_multiplier()` of
+    its `surface` cell (observation #0022) so a single Workflow row that fans
+    out to N agents costs N against the cap, matching what SKILL.md section 6
+    already says in prose."""
     try:
         text = path.read_text(encoding="utf-8", errors="replace")
     except Exception:
         return 0
-    rows = _table_rows(text, path.suffix.lower(), ("status",))
+    rows = _table_rows(text, path.suffix.lower(), ("status", "surface"))
     count = 0
     for row in rows:
         status = _norm(row.get("status", ""))
         if not status or status in PLACEHOLDER_CELLS or status in OPEN_STATUSES:
-            count += 1
+            count += agent_multiplier(row.get("surface", ""))
     return count
 
 
@@ -699,6 +738,42 @@ def selftest() -> int:
         if repo_collision(different_repos) is not None:
             problems.append("repo_collision flagged two bare-tree writers on DIFFERENT repos")
 
+        # --- agent-count token in the surface cell, observation #0022 -------
+        for good, want in (
+            ("subagent (workflow) x245", 245),
+            ("subagent (workflow) x1", 1),
+            ("subagent (background) X12", 12),
+            ("x9 subagent (workflow)", 9),
+        ):
+            if agent_multiplier(good) != want:
+                problems.append(f"0022: agent_multiplier({good!r}) should be {want}, "
+                                 f"got {agent_multiplier(good)}")
+        for plain in ("subagent (background)", "main conversation", "worktree wt-1", "cloud routine"):
+            if agent_multiplier(plain) != 1:
+                problems.append(f"0022: a surface cell with no token should default to 1: {plain!r}")
+        for malformed in ("subagent (workflow) x", "subagent (workflow) x0", "subagent (workflow) xN",
+                           "subagent (workflow) x-5", "boxed245", ""):
+            if agent_multiplier(malformed) != 1:
+                problems.append(f"0022: a malformed/absent token should default to 1, not zero out "
+                                 f"the row: {malformed!r} -> {agent_multiplier(malformed)}")
+        if agent_multiplier("subagent (workflow) x3 then x245") != 245:
+            problems.append("0022: two tokens in one cell should take the LAST one")
+
+        workflow_row = (
+            "| unit_id | task | class | model | effort | surface | repo | worktree | "
+            "expected_artifacts | estimated_tokens | dispatch_ts | commit_sha | commit_ts | "
+            "push_ts | remote_sha | status |\n"
+            "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|\n"
+            "| V-A | verify findings | judgment | Claude Opus 5 | high | "
+            "subagent (workflow) x245 | — | — | x | 1 | t | | | | | dispatched |"
+        )
+        one_workflow_row = tmp / "one_workflow_row.md"
+        one_workflow_row.write_text(workflow_row, encoding="utf-8")
+        if open_unit_count(one_workflow_row) != 245:
+            problems.append(f"0022: a single ledger row of 'x245' agents should count as 245 open "
+                             f"units, got {open_unit_count(one_workflow_row)} -- the exact failure "
+                             f"mode that hid 245 refuters from the wave cap")
+
         # --- real exit codes ---------------------------------------------
         fresh_flag = {"session_id": "abc", "ts": now}
         no_ledger_dir = tmp / "bare"
@@ -746,6 +821,9 @@ def selftest() -> int:
              {"tool_name": "Task", "session_id": "abc", "cwd": str(tmp / "collisionrun")}, fresh_flag, 2),
             ("P1-2: two writers on the same repo each in their own worktree allow",
              {"tool_name": "Task", "session_id": "abc", "cwd": str(tmp / "isolatedrun")}, fresh_flag, 0),
+            # observation #0022 -- agent-count token
+            ("0022: one 'x245' Workflow row blocks over the cap by itself",
+             {"tool_name": "Task", "session_id": "abc", "cwd": str(tmp / "agentcountrun")}, fresh_flag, 2),
         ]
 
         # D2 fixture: ledger.md is a directory, so read_text throws.
@@ -773,6 +851,11 @@ def selftest() -> int:
         isolated_run.mkdir(parents=True)
         (isolated_run / "ledger.md").write_text(no_collision.read_text(encoding="utf-8"), encoding="utf-8")
 
+        # observation #0022 fixture.
+        agentcount_run = tmp / "agentcountrun" / ".dispatch" / "runs" / "r1"
+        agentcount_run.mkdir(parents=True)
+        (agentcount_run / "ledger.md").write_text(workflow_row, encoding="utf-8")
+
         for label, payload, flag, expected in cases:
             code = _run_guard(payload, flag, tmp)
             if code != expected:
@@ -786,8 +869,9 @@ def selftest() -> int:
         return 2
     print(
         "dispatch_ledger_guard selftest: OK (flag states incl. uncorrelated, "
-        "ledger currency, cell validators, and 17 real exit-code cases covering "
-        "all four 2026-08-18 defects plus the 2026-08-20 wave-cap enforcement)"
+        "ledger currency, cell validators, agent-count token parsing, and 18 real "
+        "exit-code cases covering all four 2026-08-18 defects, the 2026-08-20 "
+        "wave-cap enforcement, and the 2026-09-11 observation #0022 fix)"
     )
     return 0
 

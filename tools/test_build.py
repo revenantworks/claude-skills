@@ -115,7 +115,8 @@ class LiveRegistry(unittest.TestCase):
         members = {m[0] for m in build.pack_members(self.text, "foundation")}
         budgets = set(build.pack_budgets(self.text, "foundation"))
         self.assertEqual(members, budgets)
-        self.assertEqual(len(members), 10)
+        # 10 -> 11 at resumewright's 1.0.0 build (2026-09-11, estate-audit unit H2).
+        self.assertEqual(len(members), 11)
 
     def test_seams_reference_roster_members(self):
         members = {m[0].split("-")[-1] for m in build.pack_members(self.text, "foundation")}

@@ -1,5 +1,25 @@
 # Changelog — revenantworks-foundation-dispatchwright
 
+## [1.2.5] — 2026-09-11
+
+Reference and body-only pass; the `description` is byte-identical, so the routing surface is
+unchanged.
+
+- **`references/ledger-schema.md` documents the agent-count token (task-observer observation
+  #0022).** The `surface` field's row now states that a Workflow/Task row fanning out to more
+  than one agent carries an `x<N>` token (`subagent (workflow) x245`) instead of one row per
+  agent, and that `dispatch_ledger_guard.py`'s `open_unit_count()` weighs the row by N against
+  the 6-unit wave cap. The guard fix itself lives in `.claude/hooks/dispatch_ledger_guard.py`
+  (rig infrastructure, not part of this package — see SKILL.md's Load budget); this bump covers
+  only the schema doc that now matches the guard's real behavior.
+- **§1 Scope and seams gains a fourth bullet, and the `dispatchwright resume` entry gains a
+  pointer.** The new sibling `revenantworks-foundation-resumewright` (built this pass) writes a
+  committed, general-purpose session handoff — the shape `RESUME.md`/`HANDOFF-PROMPT.md` already
+  used by hand. Inside an active fan-out, this skill's own ledger and `dispatchwright resume`
+  still own the resume state; resumewright covers the session-level handoff outside that —
+  before a fan-out starts, between fan-outs, or in a session that never dispatches at all. No
+  entry point, gate, or threshold moved; no eval re-anchor is owed.
+
 ## [1.2.4] — 2026-09-10
 
 **Two task-observer observations from the second review pass, #0022 and #0032.**

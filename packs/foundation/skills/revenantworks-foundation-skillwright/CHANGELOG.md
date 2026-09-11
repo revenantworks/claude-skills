@@ -2,6 +2,16 @@
 
 > Renamed from `revenant-foundation-skillwright` on 2026-08-07 (pack 2.0.0 — the `revenant` → `revenantworks` marketplace migration). Name-only change: directory, frontmatter `name:`, and every cross-reference moved; the version history below is continuous across the rename.
 
+## [1.3.8] — 2026-09-11
+
+`references/pack-registry.md` roster update: the new foundation member
+`revenantworks-foundation-resumewright` (1.0.0) gains its roster row, budget row (2600 tokens),
+and a new `dispatchwright ↔ resumewright` seam row (both descriptions — resumewright's own
+description names the boundary and dispatchwright 1.2.5 names it back). dispatchwright's own
+budget row is raised 4700 → 4900 at 1.2.5 for the new §1 seam bullet (landed at ≈4820).
+Registry roster count moves 10 → 11; this is a change to skillwright's
+own shipped reference, so the patch bump lands here per the same rule 1.3.7 states for itself.
+
 ## [1.3.7] — 2026-09-10
 
 `references/pack-registry.md` budget-row update: dispatchwright's declared body budget

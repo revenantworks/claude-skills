@@ -9,8 +9,8 @@
     {
       "name": "foundation",
       "source": "./packs/foundation",
-      "description": "Ten standalone wrights: skillwright (skills & packs), promptwright (prompts), commwright (messages), agentwright (agent specs), rigwright (standing Claude config), lorewright (research verdicts & playbooks), evalwright (eval suites), brandwright (brand & voice), tokenwright (token footprint), dispatchwright (fan-out dispatch). Each routes on its own description and works alone; together they cover the full build-audit-ship loop.",
-      "version": "2.6.10",
+      "description": "Eleven standalone wrights: skillwright (skills & packs), promptwright (prompts), commwright (messages), agentwright (agent specs), rigwright (standing Claude config), lorewright (research verdicts & playbooks), evalwright (eval suites), brandwright (brand & voice), tokenwright (token footprint), dispatchwright (fan-out dispatch), resumewright (committed session handoffs). Each routes on its own description and works alone; together they cover the full build-audit-ship loop.",
+      "version": "2.7.0",
       "license": "MIT",
       "category": "productivity",
       "keywords": [

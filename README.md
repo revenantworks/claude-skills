@@ -8,13 +8,13 @@ This is the Revenantworks packs marketplace — the canonical home of every **Re
 
 | Pack | Members | What it covers |
 |---|---|---|
-| [`foundation`](packs/foundation/) | 10 | The build-time wrights — skills, prompts, messages, agent specs, standing Claude config, research, eval suites, brand identity, token budgets, session fan-out |
+| [`foundation`](packs/foundation/) | 11 | The build-time wrights — skills, prompts, messages, agent specs, standing Claude config, research, eval suites, brand identity, token budgets, session fan-out, committed session handoffs |
 | [`gamedev`](packs/gamedev/) | 1 | The game-development smiths — pixelsmith: art direction for pixel art that must read at several zoom scales (per-band rules, terrain-versus-unit contrast, a one-scene look test, artist and generator briefs) |
 | [`localops`](packs/localops/) | 1 | The local-model runners — lmstudiorunner: hands work to a local LM Studio model and verifies what comes back (work-class scoring, a live model audit from real metadata, two verification modes) |
 
 Further packs slot in as new folders under `packs/` and new rows in the marketplace catalog — one repo, one marketplace, one registry.
 
-### foundation — the ten wrights
+### foundation — the eleven wrights
 
 Each routes on its own description and works alone. Together they cover the build → audit → ship
 loop.
@@ -31,6 +31,7 @@ loop.
 | **tokenwright** | Measures, budgets, and slims the token footprint of LLM-facing artifacts |
 | **rigwright** | Builds the standing configuration Claude reads before work — Project instructions, CLAUDE.md, repo Claude config |
 | **dispatchwright** | Runs a session's fan-out — decomposes, tiers via promptwright, dispatches with a durability contract, reconciles against origin |
+| **resumewright** | Writes a committed session handoff on demand or before a pause — state verified against origin, decisions, the ordered remainder, the resume procedure |
 
 Installed together, foundation ships an always-on router, [`packs/foundation/CLAUDE.md`](packs/foundation/CLAUDE.md). Copy it into your project (or `~/.claude/`) so Claude reaches for the right wright and holds the pack's conventions without being asked.
 

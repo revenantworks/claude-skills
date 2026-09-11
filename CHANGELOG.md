@@ -17,6 +17,40 @@ This log starts at the foundation 1.0.0 baseline.
 > because it records what was true when written; read it as a date, not a tag.
 > Live code and runbooks cite dates instead, for exactly this reason.
 
+## [foundation-v2.7.0] - 2026-09-10
+
+**Estate-audit unit H2.** A new foundation member, `revenantworks-foundation-resumewright`
+(1.0.0) — a committed session handoff, built to close the gap H1's research pass found: five
+existing session-handoff skills were surveyed and none satisfied task-observer observation
+#0032's commit requirement. Plus the ledger-guard agent-count fix from observation #0022 and the
+registry updates that follow from adding an eleventh member. See each member's own
+`CHANGELOG.md` for the full account.
+
+- **New member: resumewright 1.0.0.** Write (Gather against `git`, never a report → write the
+  `RESUME.md`-shaped handoff → commit in the same call, pushing to `origin` only where the repo
+  has a remote) and Resume (`git stash list` + `git reflog -5` before trusting the file, matching
+  `dispatchwright resume`'s own first action). 16 trigger evals (7/7/2), 10 assertion-suite
+  cases, both authored and cold-judged this pass: 14/14 on the routing rows, 2/2 on the traced
+  injection probes (`evals/RESULTS.md`).
+- **dispatchwright 1.2.4 → 1.2.5.** `references/ledger-schema.md` documents the `x<N>`
+  agent-count token (observation #0022 — see the hook fix below); §1 gains a fourth seam bullet
+  and the `resume` entry a pointer, both naming resumewright. Declared body budget raised
+  4700 → 4900 for the new seam bullet. `description` unchanged — no eval re-anchor owed beyond
+  the provenance-line restatement already in the suite.
+- **skillwright 1.3.7 → 1.3.8.** `references/pack-registry.md` roster update: resumewright's
+  roster row, budget row (2600 tokens), and the new `dispatchwright ↔ resumewright` seam row
+  (both descriptions). Registry roster count moves 10 → 11.
+- **`.claude/hooks/dispatch_ledger_guard.py` — task-observer observation #0022.**
+  `open_unit_count()` counted ledger ROWS, and one Workflow row can fan out to hundreds of
+  agents — three rows once hid 245 refuters from the 6-unit wave cap and the usage-window check
+  in the same run. A row's `surface` cell may now carry an `x<N>` agent-count token
+  (`subagent (workflow) x245`); the guard weighs that row as N units against the cap. A missing
+  or malformed token defaults to 1, the same weight a row with no token carries. This hook is rig
+  infrastructure (not shipped inside the dispatchwright package — see its SKILL.md Load budget);
+  its own selftest gains four new cases and stays green end to end (18 exit-code cases total).
+- `tools/test_build.py`'s hardcoded foundation roster count moves 10 → 11 to match the real
+  registry (`test_roster_budgets_agree`).
+
 ## [localops-v1.1.0] - 2026-09-10
 
 - **lmstudiorunner 1.0.1 → 1.1.0.** Reasoning-budget enhancements from a live LM Studio
