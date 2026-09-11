@@ -1,5 +1,41 @@
 # Changelog — revenantworks-foundation-dispatchwright
 
+## [1.2.4] — 2026-09-10
+
+**Two task-observer observations from the second review pass, #0022 and #0032.**
+
+§5 Durability contract: the "ledger row at three points" bullet gains a sentence — the
+ledger file itself, and any `RESUME.md`/`OWNER-STEPS.md` beside it, is committed at every
+one of the three writes, not held untracked to a final snapshot; the durability contract
+covers the run's own record, not only the units'. The Resume bullet gains a sentence — if
+the ledger path is missing or the tree reads unexpectedly clean, run `git stash list`
+before concluding the run has no state, since a handover or worktree switch can stash the
+whole run directory silently (#0032, `session-teleport-stashed-the-untracked-run-ledger`).
+
+§6 Wave execution gains a bullet: count agents, not ledger rows, against the wave cap and
+the usage-window check. A single Workflow/Task call that fans out to N agents costs N
+units of both, whatever number of ledger rows records the call — three rows once hid 245
+agents from both checks, and a wave costing more than the finding wave it verifies is the
+same failure the estate audit's own Phase 2 hit the same day (#0022,
+`a-workflow-row-hid-245-agents-from-the-wave-cap`).
+
+`references/ledger-schema.md`: "Where it lives" reversed from gitignored to committed
+(same reasoning as #0032 above, stated in full there — untracked state is one stash away
+from gone); a new "Resuming a run" section carries the `git stash list`/`git reflog`
+check; "Writing the ledger" names the commit-at-every-write requirement.
+
+All three are decision rules a unit must not open a file to know, body-resident for the
+same reason the other eight sections' caps are. Registry body budget raised 4500 → 4700
+(`references/pack-registry.md`, skillwright 1.3.7) — landed at ≈4638/4700. `.claude/hooks/`
+untouched here: `dispatch_gate.py` matches prompt text before a fan-out is even decomposed,
+not agent counts inside an already-dispatched call, so no pattern change applies there; the
+real enforcement point is `dispatch_ledger_guard.py`'s `open_unit_count()`, which counts
+ledger ROWS the same way the incident did — flagged as a follow-up needing its own fix and
+test coverage, not attempted in this pass. **The live installed copy in `~/.claude/hooks/`
+is owner-installed and untouched by this repo change; the owner re-installs to pick up
+`ledger-schema.md`'s doctrine change** (no hook code moved, so there is nothing to
+re-install for the two SKILL.md/reference edits themselves — noted per house convention).
+
 ## [1.2.3] — 2026-09-10
 
 **Three estate-audit findings, one patch** (`dispatchwright-packmd-orphan`,

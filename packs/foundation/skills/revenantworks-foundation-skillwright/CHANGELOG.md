@@ -2,6 +2,15 @@
 
 > Renamed from `revenant-foundation-skillwright` on 2026-08-07 (pack 2.0.0 — the `revenant` → `revenantworks` marketplace migration). Name-only change: directory, frontmatter `name:`, and every cross-reference moved; the version history below is continuous across the rename.
 
+## [1.3.7] — 2026-09-10
+
+`references/pack-registry.md` budget-row update: dispatchwright's declared body budget
+raised 4500 → 4700 for its two new observation-anchored durability/wave-execution rules
+(task-observer observations #0022, #0032). Raising a sibling's declared body budget in
+this file is a change to skillwright's own shipped reference — the exact miss `1.3.2` and
+`1.3.4`'s entries already name for this file, caught here rather than repeated. No
+doctrine, entry point, or description moved.
+
 ## [1.3.6] — 2026-09-10
 
 **Estate finding `eval-ledgers-underreport-executed-probes`.** Cases 41-45's headings all

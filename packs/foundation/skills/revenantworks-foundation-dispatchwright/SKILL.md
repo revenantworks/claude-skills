@@ -3,7 +3,7 @@ name: revenantworks-foundation-dispatchwright
 description: Runs a session's fan-out — turns one large request into tiered, budgeted, recoverable units and dispatches them. Trigger when a request will take more than a few agents or spans many repos, skills, or files at once — rebuild, re-architect, overhaul, consolidate, sweep, migrate, or 'do all of this'; when subagents or a workflow are about to be launched and nothing has assigned each one a model, effort, and surface; when a fan-out is already running and a unit died, stalled, hit a usage limit, or must be resumed without redoing landed work; when concurrent units would write the same repo; or say dispatchwright (plan, dispatch, resume, audit). Model and tier per unit come from promptwright's target table, never invented here; the hook or config that makes this fire is rigwright's placement; anything unattended on a schedule is agentwright's.
 license: MIT
 metadata:
-  version: "1.2.3"
+  version: "1.2.4"
   profile: standalone
   pack: foundation
   brand: revenantworks
@@ -169,9 +169,14 @@ one rule: **a unit is done when it is on the remote, not when it is written.**
   the least useful thing to protect first.
 - A ledger row at three points: dispatch (before launch), commit (the sha), and push (confirmed
   against `origin/main`). A row missing any of the three is an unfinished unit, whatever the
-  unit's own report claims.
+  unit's own report claims. **The ledger file itself — and any RESUME/owner-steps file beside
+  it — is committed at every one of those writes, not held untracked to a final snapshot: the
+  durability contract covers the run's own record, not only the units' (observation #0032).**
 - Resume's first action is always `git log --oneline origin/main -5` plus a read of the ledger
   row for that unit — before anything else runs, including before deciding what is left to do.
+  **If the ledger path is missing or the tree reads unexpectedly clean, run `git stash list`
+  before concluding the run has no state — a handover or worktree switch can stash it silently
+  (observation #0032).**
 - Any large fetched document (a spec, a long page, an API dump) is written once to a shared cache
   path the ledger records, so a second unit that needs the same document reads the cache instead
   of fetching it again — the same waste the estate rebuild hit when a listing call alone returned
@@ -185,6 +190,11 @@ one rule: **a unit is done when it is on the remote, not when it is written.**
 
 - **Cap 6 concurrent units per wave.** More than that is not parallelism, it is noise no one is
   reading.
+- **Count agents, not ledger rows, against the cap and the usage window.** A single
+  Workflow/Task call that fans out to N agents costs N units of the wave cap and N ×
+  per-agent budget of the usage window, whatever number of ledger rows records the call —
+  three rows once hid 245 agents from both checks (observation #0022). A verification wave
+  costs less than the finding wave it verifies.
 - **Max 2 nesting levels** — a dispatched unit may itself dispatch, once; a sub-unit that wants to
   fan out further is a sign the decomposition (section 3) was too coarse.
 - **A wave over 12 units is split and named to the owner first** — the owner sees the split

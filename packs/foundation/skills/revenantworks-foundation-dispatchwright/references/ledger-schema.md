@@ -6,12 +6,19 @@ reconstructed from memory after the fact.
 
 ## Where it lives
 
-A gitignored run directory inside the repo being worked, not this skill's own folder and not a
-path outside the repo: `<repo>/.dispatch/runs/<run-id>/ledger.md` (or `.csv` — either is fine, a
-run picks one and states it in the plan). `<run-id>` is a short date-plus-slug the plan names
-once, e.g. `2026-08-18-estate-sweep`. Gitignoring it is deliberate: a ledger is working state for
-one session's fan-out, not a durable artifact the repo should carry forward, and a stale ledger
-left behind after a run reads as a second source of truth for what happened.
+A run directory inside the repo being worked, not this skill's own folder and not a path outside
+the repo: `<repo>/.dispatch/runs/<run-id>/ledger.md` (or `.csv` — either is fine, a run picks one
+and states it in the plan). `<run-id>` is a short date-plus-slug the plan names once, e.g.
+`2026-08-18-estate-sweep`.
+
+**Committed, not gitignored (reversed 2026-09-10, task-observer observation #0032).** The ledger,
+any `RESUME.md`, and any `OWNER-STEPS.md` beside it are committed to the run's own repo at every
+one of the three write points below — SKILL.md §5's durability contract applies to the run's own
+record, not only to the units it dispatches. Untracked state is one `git stash` (a session
+handover, a teleport, a worktree switch) away from vanishing, and a session that finds a clean
+tree reads that as "nothing to recover" rather than "something got stashed" — see Resuming a run,
+below. If the run directory lives in a repo with no remote, say so in the ledger's own header so
+a reader knows a local commit there is the only copy that exists anywhere.
 
 An override path may be set via `CLAUDE_DISPATCH_LEDGER` when a run's units span more than one
 repo and need to write to a shared location; `dispatch_ledger_guard.py` (the PreToolUse hook, an
@@ -54,4 +61,18 @@ unit's own report marks "done" stays at `pushed` until that check runs.
 
 Every unit's brief (`references/unit-brief-template.md`) includes the exact row it must keep
 current — the unit updates its own row at commit and at push, and the dispatcher (or the next
-resumed session) writes the `dispatch` row before launch. No unit is launched without one.
+resumed session) writes the `dispatch` row before launch. No unit is launched without one. Each
+of those three writes is followed by a commit of the ledger file itself (`git add` the ledger
+path, `RESUME.md`, `OWNER-STEPS.md` — `git commit`), per "Where it lives" above; a row updated in
+the working tree but never committed is exactly as recoverable as a row never written.
+
+## Resuming a run
+
+Before reading the ledger as ground truth, confirm it is still there in the shape it was left.
+When the ledger path is missing, or the tree reads unexpectedly clean where the plan says a run
+was mid-flight, run `git stash list` and `git reflog -5` on the run's own repo before concluding
+the run has no state — a handover, a teleport, or a worktree switch can stash the whole
+untracked-or-uncommitted run directory silently, and a clean `git status` after that reads as
+"nothing to recover" rather than "something is stashed" (task-observer observation #0032). One
+`git stash pop` on the right stash restores it; nothing about a plain read of the working tree
+tells a resuming session to look there.

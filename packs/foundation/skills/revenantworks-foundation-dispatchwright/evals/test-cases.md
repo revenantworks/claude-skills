@@ -1,6 +1,6 @@
 # Assertion Suite — revenantworks-foundation-dispatchwright
 
-> **Provenance:** target `revenantworks-foundation-dispatchwright` v1.2.0, re-anchored to v1.2.3 (below) · suite authored
+> **Provenance:** target `revenantworks-foundation-dispatchwright` v1.2.0, re-anchored to v1.2.4 (below) · suite authored
 > 2026-09-09, closing the debt `evals/RESULTS.md` has carried since the member's 1.0.0 build:
 > "No assertion suite (`test-cases.md`) exists yet for this member — dispatchwright ships with
 > trigger evals only at 1.0.0." **16 cases**, assertion-only — each is an Input plus mechanical
@@ -42,6 +42,20 @@
 > restated. None of the three is a case-bearing behavior change — the first two are
 > reference-loading and compliance prose, the third is cosmetic — so no case is owed. No case
 > added, dropped, or rewritten; still **16**.
+>
+> **Re-anchored to v1.2.4, 2026-09-10 — provenance only, nothing executed here:** §5's
+> durability contract gained a ledger/RESUME-committed-at-every-write sentence and a
+> resume-time `git stash list` check; §6 Wave execution gained a count-agents-not-rows
+> bullet for the wave cap and usage window (task-observer observations #0022, #0032);
+> `references/ledger-schema.md` reversed "Where it lives" from gitignored to committed and
+> gained a "Resuming a run" section. Case 7 asserts the durability contract's existing
+> shape, Case 8 the reconcile-checks-origin rule, Case 9 the 6-unit wave cap, and Case 14
+> the resume-reads-the-ledger-first behavior — none of the four asserts the new
+> stash-check or the agent-vs-row counting unit specifically. Authored-not-covered: two
+> cases (a resume against a stashed-but-clean tree; a single Workflow row fanning out past
+> the wave cap) are owed before the next release claims this ground, joining the standing
+> debt convention this suite already carries for prior additions. No case added, dropped,
+> or rewritten; still **16**.
 
 ## Contents
 
