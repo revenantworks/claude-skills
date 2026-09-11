@@ -17,6 +17,66 @@ This log starts at the foundation 1.0.0 baseline.
 > because it records what was true when written; read it as a date, not a tag.
 > Live code and runbooks cite dates instead, for exactly this reason.
 
+## [foundation-v2.7.2] - 2026-09-11
+
+**Unit L1b, dispatch run `2026-09-10-estate-audit`.** Applies the eight members staged by the
+task-observer weekly review (`workshop/estate/observer/skill-updates/2026-09-11/`, PENDING.md)
+covering observations #0011, #0016 through #0042 — patch releases across seven members, plus a
+new reference file on brandwright. Every `description` is byte-identical to its predecessor, so
+no member's routing surface moved and no trigger re-judge was owed by this pass. See each
+member's own `CHANGELOG.md` for the full account.
+
+- **dispatchwright 1.2.5 → 1.2.6.** §2's shape check counts surfaces, not verbs; §3 Decompose
+  gains three rules (a unit's tool list, a cross-repo finding split before dispatch, the packet
+  id/brief join); `references/ledger-schema.md` gains a Closing a row section;
+  `references/unit-brief-template.md` gains a Tools line, a boundaries section, and an
+  observations section; the durability contract now runs a unit's gate against the staged tree
+  (#0016, #0019, #0020, #0023, #0026, #0028, #0033, #0034, #0035, #0036). Declared body budget
+  raised 4900 → 5700.
+- **agentwright 1.2.7 → 1.2.8.** Entry — Audit gains three questions the checklist areas do not
+  ask (a structurally unreachable fallback logs a failure; the session count matches the cron; a
+  run log's first result event is the fire's completion evidence), a delegation line, and the
+  extent-parsed rule; `references/security-scan-doctrine.md` scores a scanner's findings by file
+  role (#0017, #0018, #0031, #0033, #0041). Declared body budget raised 4100 → 4900.
+- **skillwright 1.3.8 → 1.3.9.** Packaging step 4 measures every description in the delivery
+  set; Packaging gains step 5 (leak guards run against the staged tree after `git add -A`);
+  Entry — Audit gains a Third-party adoption paragraph scoring a scanner's findings by file
+  role; `references/description-crafting.md` gains a verb-parity rule; `references/release-
+  doctrine.md` states the eval-ledger head window as a layout rule (#0011, #0021, #0025, #0031,
+  #0034). Declared body budget raised 8450 → 9100.
+- **rigwright 1.1.6 → 1.1.7.** Entry — Audit gains a usage-evidence rule (name the counter, state
+  its blind spot, score into three buckets), the owner-install boundary for a catalog row
+  touching a live hook/permission file/`.mcp.json`/cap/baseline, a positive-control check on a
+  gating pattern list, the extent-parsed rule, and a newly-written-check-is-an-untested-claim
+  rule (#0016, #0024, #0026, #0039, #0041, #0042). Declared body budget raised 3500 → 4700.
+- **brandwright 1.4.3 → 1.5.0 (minor — new reference file).** New `references/measurement-
+  doctrine.md`, ten sections: the instrument ships with the definition (reference-data self-test,
+  negative control), the canary cell, gamut-ceiling margin as a published measurement, the
+  reflow module, the 400 px iframe harness, direction boards, the swatch-board pick loop, History
+  hunt targets, rig-copy parity, and propagation as its own unit — plus a known third-party
+  linter false-positive note (#0029, #0030, #0035, #0036, #0037, #0038). `references/pack.md`
+  re-synced from the registry (no drift — roster and seam content unchanged). Declared body
+  budget raised 3700 → 4700.
+- **promptwright 1.5.7 → 1.5.8.** Phase 5 Tier routing gains a role-based override for a verifier
+  that only re-derives evidence already on disk; Entry — Model's plan grain states a fan-out
+  row's agent count and the effort those agents inherit (#0022). Declared body budget raised
+  9470 → 9800.
+- **lorewright 1.1.8 → 1.1.9.** Verification doctrine gains "a computed figure publishes its
+  computation" (#0037). Declared body budget raised 3050 → 3450.
+- **evalwright — content applied, no version bump.** `references/eval-doctrine.md` gains the
+  provenance-layout authoring rule, the newly-written-instrument-gets-the-same-controls rule, and
+  "re-anchoring a suite is not running it" (#0021, #0025, #0042). `evalwright` is frozen per this
+  repo's `CLAUDE.md` ("no bumps unless broken; a security finding counts as broken") and none of
+  the three observations is a security finding, so `metadata.version` stays `1.1.1` and the
+  member's own `CHANGELOG.md` carries the addition under `[Unreleased]` rather than a dated
+  release. `build.py --check`'s "member bump needed" warning for evalwright is expected and is
+  this deliberate exception, not drift.
+- `references/pack-registry.md` (skillwright): the seven budget-row raises above.
+
+Pack version bumped patch (Z), not minor — no new pack member and no roster/seam count change;
+precedent is `foundation-v2.6.4` (promptwright's own 1.4.1 → 1.5.0 minor rode a pack patch) and
+`foundation-v2.6.10` (six members patched under one pack patch).
+
 ## [foundation-v2.7.1] - 2026-09-10
 
 **Estate-audit unit H2, follow-up.** `foundation-v2.7.0`'s `resumewright` 1.0.0 shipped

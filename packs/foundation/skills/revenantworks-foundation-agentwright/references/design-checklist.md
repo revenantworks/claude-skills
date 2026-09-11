@@ -32,6 +32,8 @@ Agent-to-agent (or run-to-run) data crosses in a named, fixed shape: fields, typ
 
 What a run emits, where, in what shape — subject-line format, sections, required fields, max length. A run that can emit "whatever seemed useful" can't be monitored. Contracts make silence, drift, and breakage visible.
 
+**The run record is part of the contract** (added 2026-09-11, observation #0017). A run session is a record, not a workspace: the spec states that follow-up work continues in a new session started from the repo, never in the routine's own session, and that any liveness check reads the fire's **first** result event rather than the last. A log is evidence only while it contains one run — anything appended after the routine's result turns the record into a workspace and the routine's duration, cost and history into something no check can read.
+
 ## 7. Zero-signal rule
 
 Decided by the zero-signal rule in SKILL.md (*Anti-patterns*) — its output line and its default are this area's options and defaults, and they bind whether or not this file is open.

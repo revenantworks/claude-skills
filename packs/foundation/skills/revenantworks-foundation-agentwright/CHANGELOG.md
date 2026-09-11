@@ -2,6 +2,27 @@
 
 > Renamed from `revenant-foundation-agentwright` on 2026-08-07 (pack 2.0.0 — the `revenant` → `revenantworks` marketplace migration). Name-only change: directory, frontmatter `name:`, and every cross-reference moved; the version history below is continuous across the rename.
 
+## [1.2.8] — 2026-09-11
+
+Applied by unit L1b (dispatch run `2026-09-10-estate-audit`) from the task-observer weekly
+review staged 2026-09-11. Body and reference only; the `description` is byte-identical.
+
+- **Entry — Audit gains three questions the ten checklist areas do not ask (#0017, #0018,
+  #0033).** Does every read the prompt names map to an input the run holds, and does a fallback
+  firing on a structurally unreachable primary log a failure rather than a success (#0018). Does
+  the session count per day match the cron (#0018). Is the run log still one run, with the fire's
+  **first** result event as its completion evidence (#0017). Plus a delegation line: a routine's
+  configuration is reachable only through a session-authenticated API a subagent does not
+  inherit, so name the surface that can reach it or keep the step where the tool exists (#0033).
+- **Entry — Audit states the extent it parsed (#0041)** when it scores a list read out of a
+  routine's configuration — the count derived twice, by different means, printed beside the
+  score.
+- **`references/design-checklist.md` area 6 states that the run record is part of the output
+  contract (#0017)** — follow-up work continues in a new session, never the routine's own.
+- **`references/security-scan-doctrine.md` scores a third-party scanner's findings by file role
+  (#0031).** Only the runtime set counts toward the composite; fixture findings are a
+  maintainer-hygiene note; the scanner's aggregate is quoted and then explicitly set aside.
+
 ## [1.2.7] — 2026-09-10
 
 **Estate-audit finding `agentwright-inventory-mode-private-pointer`.** Inventory mode's

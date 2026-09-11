@@ -2,6 +2,34 @@
 
 > Renamed from `revenant-foundation-brandwright` on 2026-08-07 (pack 2.0.0 — the `revenant` → `revenantworks` marketplace migration). Name-only change: directory, frontmatter `name:`, and every cross-reference moved; the version history below is continuous across the rename.
 
+## [1.5.0] — 2026-09-11
+
+Applied by unit L1b (dispatch run `2026-09-10-estate-audit`) from the task-observer weekly
+review staged 2026-09-11. Adds one reference file; the `description` is byte-identical. Minor
+bump — a new reference file is a new entry point per the pack's two-clock rule.
+`references/pack.md` regenerated from the pack registry in the same pass (`tools/build.py`).
+
+- **New `references/measurement-doctrine.md` (#0029, #0030, #0035, #0036, #0037)**, ten
+  sections: the instrument ships with the definition (with its reference-data self-test and a
+  negative control) · the canary cell · gamut-ceiling margin as a published measurement rather
+  than a blanket rule · the reflow module a multi-generator brand ships beside its tokens · the
+  400 px iframe harness as the only narrow-viewport check, with the two window-size recipes that
+  measured 500 and 770 CSS px while reporting 400, and the remedy that could not execute · one
+  lever per direction board with measured figures · the swatch-board pick loop with the ramp
+  regenerated per candidate · hunt targets in History rows and frozen dated records · rig-copy
+  parity · propagation as its own unit, with light mode from ink companions.
+- **Load budget names the new file** and when it opens.
+- **Entry — Build** requires the instrument and the re-derivation check beside any published
+  figures, plus the layout module for a multi-generator brand, the swatch-board loop and the
+  one-lever board.
+- **Entry — Apply** gains four rules: the iframe harness for phone reflow with the measured
+  width printed into the artefact; light mode from the definition's ink companions; diff-then-
+  verify for a mirrored rig copy; propagation as a separate sequenced unit.
+- **Entry — Audit** gains layout drift at two measured viewports, hunt targets read out of
+  History with the frozen-row rule, and a run of the repo's own figure-re-derivation check —
+  plus a note recording a third-party design linter's white-ground contrast false positives on
+  token-themed pages (#0038), as a known false positive, not a rule change.
+
 ## [1.4.3] — 2026-09-10
 
 **Case 28** added to `evals/test-cases.md`, closing the authored-not-covered debt the

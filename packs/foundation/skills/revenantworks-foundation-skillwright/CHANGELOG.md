@@ -2,6 +2,28 @@
 
 > Renamed from `revenant-foundation-skillwright` on 2026-08-07 (pack 2.0.0 — the `revenant` → `revenantworks` marketplace migration). Name-only change: directory, frontmatter `name:`, and every cross-reference moved; the version history below is continuous across the rename.
 
+## [1.3.9] — 2026-09-11
+
+Applied by unit L1b (dispatch run `2026-09-10-estate-audit`) from the task-observer weekly
+review staged 2026-09-11. Body and reference only; the `description` is byte-identical.
+
+- **Packaging step 4 measures every description in the delivery set (#0011)**, not only the
+  member under edit; ~900 characters is the soft-warning band under the hard ceiling.
+- **Packaging gains step 5: run the leak guards against the STAGED tree (#0034).** A guard built
+  on `git grep` sees the index, so write → test → add → commit puts every brand-new file through
+  a blind spot; `git add -A` comes before the last guard run. `references/release-doctrine.md`
+  release order step 4 carries the same change.
+- **Entry — Audit gains a Third-party adoption paragraph (#0031).** A static scanner's findings
+  are recorded with the role of the file each sits in, and only the runtime set scores toward the
+  adoption verdict; fixture findings are maintainer hygiene. The audit states which reading wins.
+- **`references/description-crafting.md` gains verb parity and two test notes (#0021, #0011).**
+  Every write-op verb the body documents needs a literal token in the description's trigger list;
+  re-anchoring an eval suite is not running it; measure the whole set's description lengths.
+- **`references/release-doctrine.md` states the eval-ledger head window as a LAYOUT rule
+  (#0025).** A provenance block is authored as one continuous paragraph (or newest-first) because
+  the freshness check reads a fixed head window, and a provenance failure has two candidate
+  causes, not one.
+
 ## [1.3.8] — 2026-09-11
 
 `references/pack-registry.md` roster update: the new foundation member

@@ -1,6 +1,6 @@
 # Assertion Suite — revenantworks-foundation-dispatchwright
 
-> **Provenance:** target `revenantworks-foundation-dispatchwright` v1.2.0, re-anchored to v1.2.5 (below) · suite authored
+> **Provenance:** target `revenantworks-foundation-dispatchwright` v1.2.0, re-anchored to v1.2.6 (below) · suite authored
 > 2026-09-09, closing the debt `evals/RESULTS.md` has carried since the member's 1.0.0 build:
 > "No assertion suite (`test-cases.md`) exists yet for this member — dispatchwright ships with
 > trigger evals only at 1.0.0." **16 cases**, assertion-only — each is an Input plus mechanical
@@ -66,6 +66,17 @@
 > code that lives elsewhere, and the seam bullet is a cross-reference — so no case is owed for
 > this bump specifically; the stash/agent-count debt from 1.2.4 stands as recorded. No case
 > added, dropped, or rewritten; still **16**.
+>
+> **Re-anchored to v1.2.6, 2026-09-11 — provenance only, nothing executed here:** §2's shape
+> check now counts surfaces, not verbs, keeping every recorded miss as a positive control
+> (task-observer observation #0016); §3 Decompose gained three rules — a unit's surface is its
+> tool list (#0033), a finding crossing a repo boundary is split before dispatch (#0020), and a
+> packet's finding-id list and brief are joined before it leaves (#0028); `references/ledger-
+> schema.md` gained a "Closing a row" section (#0023); `references/unit-brief-template.md`
+> gained a Tools line, a boundaries section, and an observations section (#0033, #0026, #0035,
+> #0036, #0019); the durability contract now states a unit's gate runs against the staged tree
+> (#0034). No case-bearing entry point moved and no existing case sits on changed ground; no
+> case added, dropped, or rewritten; still **16**.
 
 ## Contents
 

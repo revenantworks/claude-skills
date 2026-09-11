@@ -3,7 +3,7 @@ name: revenantworks-foundation-dispatchwright
 description: Runs a session's fan-out — turns one large request into tiered, budgeted, recoverable units and dispatches them. Trigger when a request will take more than a few agents or spans many repos, skills, or files at once — rebuild, re-architect, overhaul, consolidate, sweep, migrate, or 'do all of this'; when subagents or a workflow are about to be launched and nothing has assigned each one a model, effort, and surface; when a fan-out is already running and a unit died, stalled, hit a usage limit, or must be resumed without redoing landed work; when concurrent units would write the same repo; or say dispatchwright (plan, dispatch, resume, audit). Model and tier per unit come from promptwright's target table, never invented here; the hook or config that makes this fire is rigwright's placement; anything unattended on a schedule is agentwright's.
 license: MIT
 metadata:
-  version: "1.2.5"
+  version: "1.2.6"
   profile: standalone
   pack: foundation
   brand: revenantworks
@@ -131,6 +131,16 @@ between units. The cheapest correct answer is often no fan-out.
 - **A dispatchwright wave** only once the request already spans more agents than one turn can
   track, or more repos, skills, or files than one writer should touch at once.
 
+**Count the surfaces, not the verbs** (observation #0016). A trigger written as a list of
+phrasings matches the author's vocabulary, not the requester's. "Complete estate sweep",
+"analyze every skill", "clean everything up" and "audit github completely" all slid past a
+twelve-phrase list holding "simplify everything", "every repo" and "the whole estate" — the
+largest fan-out that rig had seen, and nothing fired. So read the shape as well as the words: a
+request naming **four or more distinct surfaces** — skills, plugins, hooks, permission files,
+routines, repos, accounts, machines — is a fan-out whatever verbs carry it. Any phrasing that
+should have fired and did not is kept afterward as a positive control in whatever gate enforces
+this, so the list only ever grows toward the real distribution.
+
 A plan that fails this check ends here: name the cheaper shape and stop, before any unit,
 tier, or ledger row exists.
 
@@ -147,6 +157,30 @@ Once Shape check confirms a fan-out, cut it into units:
 - **One writer per repo.** Two units writing the same repo in the same window is the fastest way
   to lose work to a rebase or a silent overwrite; sequence them or give one a worktree
   (section 6).
+- **A unit's surface is its tool list, not only its model.** Name, at dispatch, every tool the
+  unit needs beyond files and a shell. A session-authenticated or deferred tool — a routine or
+  trigger API, a connector, the artifact publisher — does **not** reach a subagent because the
+  parent session holds it: a unit briefed to diff live routines found no such tool in its own
+  list and returned that half unverifiable, costing a second pass at the top level (observation
+  #0033). A unit that needs one of those tools is either run inline by the orchestrator or
+  granted the tool explicitly in its brief.
+- **Split a finding that crosses a repo boundary before dispatch, never after.** A finding whose
+  recommendation names paths in two repos hands the acting unit a choice between overreaching a
+  single-repo write grant and silently dropping half the fix — and only the second is safe by
+  default, so that is what a careful unit does (observation #0020). Cut such a finding into one
+  sub-finding per repo, or name the boundary in the brief in as many words: *this finding also
+  touches `<repo>`; do not edit it — `<unit>` owns that half.* A finding's blast radius and a
+  unit's write scope are derived at different times by different steps; decompose is the one
+  place that sees both.
+- **Join the packet's two halves before it leaves.** A unit packet carries a finding-id list and
+  a brief written in prose. They are two independent claims about the same task, and they drift
+  the moment they are drawn from two upstream tables with no join key — one packet's id named a
+  finding in a different repo entirely while its brief described a correctly scoped task from a
+  third source, and the receiving unit spent a large share of its budget working out which one
+  was real (observation #0028). Before a packet is final, assert that every id resolves to that
+  unit's own repo or surface, and that the brief's subject is covered by at least one listed id.
+  A packet whose halves name different repos is an assembly defect, not a judgment call for the
+  receiving agent to paper over.
 
 ## 4 · Tier
 

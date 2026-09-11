@@ -2,6 +2,19 @@
 
 > Renamed from `revenant-foundation-promptwright` on 2026-08-07 (pack 2.0.0 — the `revenant` → `revenantworks` marketplace migration). Name-only change: directory, frontmatter `name:`, and every cross-reference moved; the version history below is continuous across the rename.
 
+## [1.5.8] — 2026-09-11
+
+Applied by unit L1b (dispatch run `2026-09-10-estate-audit`) from the task-observer weekly
+review staged 2026-09-11. Body only; the `description` is byte-identical.
+
+- **Phase 5 Tier routing, role-based overrides (#0022).** A verifier that only re-derives
+  evidence already on disk defaults to balanced or fast tier at low or medium effort; the top of
+  the ladder is for the judge weighing votes, not the voters fetching them. Stated with its
+  budget form: verification costs less than the discovery it verifies.
+- **Entry — Model, plan grain (#0022).** A target-table row that fans out states its agent count
+  and the effort each agent inherits — one row for N agents understates the plan's cost by N,
+  and the effort is this table's call, not a session default.
+
 ## [1.5.7] — 2026-09-10
 
 **U2b/promptwright-zero-headroom-both-budgets.** Description sat at 1002/1024 chars (22 left)

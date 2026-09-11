@@ -3,7 +3,7 @@ name: revenantworks-foundation-promptwright
 description: Builds, scores, hardens, and red-teams LLM prompts — from a rough idea to a copy-paste-ready artifact — and picks which model tier to run a prompt or task on. Trigger to write, fix, improve, debug, red-team, or rewrite a prompt, meta-prompt, template, or system prompt; to assemble parameters into a working prompt; for agent or bot instructions; when asked which model or tier a prompt, a live task, or each subtask of a plan should run on — a plan gets a per-subtask target table that also binds subtasks added mid-session; or say `promptwright` (`model` for a standalone tier/model pick or a plan's target table, `refresh` to update model data, `grill` to interview a prompt request until nothing essential is open). For building or auditing skill packages rather than prompts, skillwright; for pure token/cost trims with no behavior change, tokenwright; a sourced multi-model comparison is lorewright's verdict, not a run-target pick.
 license: MIT
 metadata:
-  version: "1.5.7"
+  version: "1.5.8"
   profile: standalone
   pack: foundation
   brand: revenantworks
@@ -155,6 +155,8 @@ Start at B; before moving up, try raising the reasoning-depth parameter — ofte
 
 **Role-based overrides.** A pure planning/orchestrator subtask defaults one effort notch lower than its tier suggests — high effort reliably over-thinks and scope-creeps a plan; raise it only once the plan fails to converge, never pre-emptively. A review subtask checking another model's output defaults to a **different model family**, stakes permitting — not a resampled instance of the same model, which tends to miss what it already rationalized away.
 
+**A verifier that only re-derives evidence already on disk defaults to balanced or fast tier at low or medium effort** (added 2026-09-11, observation #0022). Re-reading a file to confirm a finding is not the same job as weighing the votes, and the top of the ladder belongs to the judge, not the voters. The rule has a budget form as well as a quality form: **verification costs less than the discovery it verifies.** A run that inherited the session's own top effort across a wave of refuters spent 4.4M tokens, finished 43 of 246 agents, hit the account's usage limit, and killed the completeness critic along with the rest — the expensive half was the cheap-by-design half. Where a verification wave is tiered, state its estimated spend beside the finding wave's and raise effort only on the rows that weigh evidence rather than fetch it.
+
 **A model or effort the user names wins — like a named framework (Phase 3).** Build to the stated target, shaping the prompt for that tier (C-tier scaffolding in, A/S scaffolding out); never quietly substitute the routed pick. When routing disagrees, the Model line notes the target was set by user direction and offers the better tier or effort in one line, as a switch they can take. Entry — Model is bound identically: a stated target is confirmed, not re-routed, with the disagreement named.
 
 ## Phase 6 — Re-score & self-check
@@ -272,6 +274,7 @@ The four choices are fixed by spec — labels that differ are wrong however rele
 
 - **Living table.** The table binds the plan as it grows: a subtask created mid-session gets a row through the same steps *before* dispatch — tiered first, dispatched second, never rationalized after.
 - **Standing rule.** Beneath the table, emit one paste-ready rule line that keeps the living-table contract in force outside this run; which layer it lives in (CLAUDE.md, Project instructions) is rigwright's placement call — named, not made here.
+- **A row that fans out states its agent count and the effort each agent inherits** (added 2026-09-11, observation #0022). One row for a workflow or task call that spawns N agents understates the plan's cost by N, and the effort those agents run at is this table's call, not a default they inherit from the session. Write the count into the row — `subagent (workflow) ×N` — so the reading dispatcher budgets agents rather than rows.
 
 Decomposition is the caller's: promptwright targets the subtasks it is handed and never re-plans the project — a "break this down" with no targets ask is not this entry.
 

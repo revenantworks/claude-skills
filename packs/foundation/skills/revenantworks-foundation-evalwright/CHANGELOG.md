@@ -2,6 +2,27 @@
 
 > Renamed from `revenant-foundation-evalwright` on 2026-08-07 (pack 2.0.0 — the `revenant` → `revenantworks` marketplace migration). Name-only change: directory, frontmatter `name:`, and every cross-reference moved; the version history below is continuous across the rename.
 
+## [Unreleased] — applied by unit L1b, 2026-09-11, no version bump (member frozen)
+
+Reference only; the `description` is byte-identical. Content applied from the task-observer
+weekly review staged 2026-09-11 — `evalwright` is frozen (`CLAUDE.md`: "no bumps unless
+broken; a security finding counts as broken"), and none of #0021/#0025/#0042 is a security
+finding, so `frontmatter.metadata.version` stays `1.1.1` and this section stays `[Unreleased]`
+rather than becoming a dated release. `references/eval-doctrine.md` carries the content below
+regardless — the freeze blocks a version bump, not a documentation fix. Owner note: revisit
+if a future release wants this doctrine formally versioned.
+
+- **`references/eval-doctrine.md` states the provenance block's LAYOUT as an authoring rule
+  (#0025).** One continuous paragraph, or newest re-anchor first, because a freshness gate reads
+  a fixed head window; and a provenance-freshness failure has two candidate causes, not one.
+- **Same file: a newly written instrument gets the same controls as the thing it measures
+  (#0042).** Where the deliverable under test is a check, a scanner or a scorer, its suite
+  carries a positive control, a negative control and one independent cross-measurement — with
+  the positive control built from the real shape from the incident, never an invented example.
+- **Same file: re-anchoring a suite is not running it (#0021, #0025).** "Authored, not run" is a
+  finding — it is where a target's documented behaviour and its routing text drift undetected
+  across version bumps.
+
 ## [1.1.1] — 2026-08-17
 
 Frozen member; one real defect from the 2026-08-17 estate audit + security

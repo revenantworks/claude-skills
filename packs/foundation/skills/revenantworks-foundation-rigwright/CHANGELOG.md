@@ -2,6 +2,28 @@
 
 > Renamed from `revenant-foundation-rigwright` on 2026-08-07 (pack 2.0.0 — the `revenant` → `revenantworks` marketplace migration). Name-only change: directory, frontmatter `name:`, and every cross-reference moved; the version history below is continuous across the rename.
 
+## [1.1.7] — 2026-09-11
+
+Applied by unit L1b (dispatch run `2026-09-10-estate-audit`) from the task-observer weekly
+review staged 2026-09-11. Body only; the `description` is byte-identical.
+
+- **Entry — Audit gains a usage-evidence rule (#0024, #0039).** Name the counter and what it
+  counts; state what it structurally cannot see before a zero decides anything; score into three
+  buckets — used, unused-with-no-cover-story, and deliberately quiet — so a frozen member's line
+  reads "keep: confirm the reason still holds", never "drop candidate".
+- **Entry — Audit states the owner-install boundary (#0026).** A catalog row touching a live
+  hook, permission file, `.mcp.json`, policy cap or baseline splits into a repo edit and an
+  owner-gated install step, never one command string spanning both.
+- **Entry — Audit checks a gating pattern list for recorded positive controls (#0016).** Every
+  phrasing known to have missed is carried in the selftest, at least one as the literal string
+  the rig produced rather than an invented example.
+- **Entry — Audit states the extent it parsed (#0041).** An audit scoring a list read out of a
+  config derives the count twice, by different means, and prints both beside the score — a
+  parser that stops early succeeds over a smaller world and reports a clean result about it.
+- **Entry — Audit treats a newly written check as an untested claim (#0042).** A positive
+  control, a negative control, and one independent cross-measurement of the same population
+  before it informs a verdict; bin sizes compared, not only totals.
+
 ## [1.1.6] — 2026-09-10
 
 **Placement — the layer stack** gains a line: private-path leakage into public packages is

@@ -1,5 +1,34 @@
 # Changelog — revenantworks-foundation-dispatchwright
 
+## [1.2.6] — 2026-09-11
+
+Applied by unit L1b (dispatch run `2026-09-10-estate-audit`) from the task-observer weekly
+review staged 2026-09-11. Body and reference only; the `description` is byte-identical, so the
+routing surface is unchanged.
+
+- **§2 Shape check counts surfaces, not verbs (observation #0016).** A request naming four or
+  more distinct surfaces is a fan-out whatever verbs carry it; every phrasing that should have
+  fired and did not is kept as a positive control in the enforcing gate.
+- **§3 Decompose gains three rules.** A unit's surface is its tool list, and a deferred or
+  session-authenticated tool does not reach a subagent (#0033). A finding whose recommendation
+  crosses a repo boundary is split before dispatch, not resolved by the acting unit (#0020). A
+  packet's finding-id list and its prose brief are joined — every id must resolve to that unit's
+  own surface — before it is dispatched (#0028).
+- **`references/ledger-schema.md` gains "Closing a row" (#0023).** `done` joins the status
+  vocabulary as the closing state for a unit that produces no commit; a table gives every way a
+  unit can end its closing status and the moment it is written; the wave cap counts only rows in
+  `dispatched` or `committed`.
+- **`references/unit-brief-template.md` gains a tools line, a boundaries section and an
+  observations section.** Tools beyond files and a shell are named at dispatch (#0033). An apply
+  command that ends in an install is split into `repo_apply` and `owner_install` halves (#0026).
+  A pasted tool invocation is a claim about the environment and is calibrated in the brief or
+  marked unverified (#0035, #0036). A dispatched unit inherits the parent's observation-log
+  activation and returns candidate observations plus the decisions the brief did not cover,
+  rather than writing to a log outside its scope (#0019). The durability contract also states
+  that a unit's gate runs against the **staged** tree — a guard built on `git grep` is blind to
+  a file written but not yet added, and write → test → commit puts every new file through that
+  gap (#0034).
+
 ## [1.2.5] — 2026-09-11
 
 Reference and body-only pass; the `description` is byte-identical, so the routing surface is

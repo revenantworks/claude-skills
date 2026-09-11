@@ -44,7 +44,30 @@ override, so the two must agree.
 | `commit_ts` | Timestamp the commit line was added to the row. |
 | `push_ts` | Timestamp the row was updated after a confirmed push. |
 | `remote_sha` | What `git rev-parse origin/main` (or the unit's branch) actually shows — the field Reconcile checks, not `commit_sha`. |
-| `status` | `dispatched` \| `committed` \| `pushed` \| `verified` \| `stalled` \| `failed` \| `resumed`. Only `verified` means `commit_sha == remote_sha` was checked and matched. |
+| `status` | `dispatched` \| `committed` \| `pushed` \| `verified` \| `done` \| `stalled` \| `failed` \| `resumed`. Only `verified` means `commit_sha == remote_sha` was checked and matched; `done` is the closing state for a unit that produces no commit (see Closing a row). |
+
+## Closing a row
+
+Every way a unit can end needs a defined end state, **including the ways that produce no commit**
+(task-observer observation #0023). A lifecycle whose only exit is a matched sha leaves read-only
+units and failures parked at `dispatched` forever: twenty-five open rows once blocked a launch
+against a six-unit cap, sixteen of them units that had finished hours earlier, and closing them
+took a regex edit this doctrine nowhere described.
+
+| How the unit ended | Closing status | Written when |
+|---|---|---|
+| Writer unit, sha matched on origin | `verified` | Reconcile confirms `remote_sha` |
+| Read-only unit (no repo, no commit) | `done` | its report is received |
+| Unit that found nothing to change | `done`, with "no change needed" and the reason | its report is received |
+| Unit whose work was absorbed by another | `done`, naming the absorbing unit | the merge decision is made |
+| Unit that failed | `failed`, with the reason in the cell | the failure is known |
+
+**The dispatcher closes the row when the unit returns, not at Reconcile.** Reconcile still
+verifies every writer row independently — closing a read-only row early does not shorten the
+audit, it only stops a finished unit from counting as running.
+
+**The wave cap counts only rows in `dispatched` or `committed`.** That is the rule that makes
+"what must I close before the next wave" answerable off the ledger instead of by memory.
 
 ## Worked example row
 

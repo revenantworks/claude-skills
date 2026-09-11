@@ -2,6 +2,17 @@
 
 > Renamed from `revenant-foundation-lorewright` on 2026-08-07 (pack 2.0.0 — the `revenant` → `revenantworks` marketplace migration). Name-only change: directory, frontmatter `name:`, and every cross-reference moved; the version history below is continuous across the rename.
 
+## [1.1.9] — 2026-09-11
+
+Applied by unit L1b (dispatch run `2026-09-10-estate-audit`) from the task-observer weekly
+review staged 2026-09-11. Body only; the `description` is byte-identical.
+
+- **Verification doctrine gains "a computed figure publishes its computation" (#0037).** A
+  verdict or playbook resting on figures this run derived carries the formula, the inputs and
+  the script that produced them; a computation over unverified cells is unverified however exact
+  it looks; and a versioned artefact re-runs its re-derivation at every version, because the
+  figure that was correct when written looks exactly like the newest one.
+
 ## [1.1.8] — 2026-09-10
 
 **Estate finding `eval-ledgers-underreport-executed-probes`.** Cases 40–42's headings

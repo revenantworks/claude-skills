@@ -16,6 +16,18 @@ There is one scale in this skill and this file adds none. Scores are Entry — A
 
 **P0 keeps the definition Entry — Audit already states** — uncontrolled blast radius, missing kill switch, or untrusted content reaching privileged tools. Each class below names which of its own defects meets that bar rather than restating it. **P1** — a real exposure the agent's stated bounds still cap (over-broad grant on reversible tools, per-run credential hygiene missing where a breach stays recoverable). **P2** — hygiene that costs nothing to fix and buys margin (unstated-but-narrow scope, log verbosity short of secret leakage).
 
+**A third-party scanner's report is evidence, not a verdict** (added 2026-09-11, task-observer
+observation #0031). Where a static scanner's output is part of the scan's evidence, record each
+of its findings with **the role of the file it sits in** — runtime command, workflow, hook, eval
+or test fixture, docs — and score only the runtime set toward this scan's composite. A scanner
+returned 97/100 CRITICAL, DO NOT INSTALL for a plugin whose every HIGH finding sat in its own
+test harness; the one runtime file it examined it marked "static parse limit". Read as a number
+the report reversed an adoption; read by location it did not touch it. Fixture findings are a
+maintainer-hygiene note, never install risk. Quote the scanner's aggregate, then set it aside in
+one explicit sentence with the reason, so a later reader does not re-open the decision on the
+headline. A static scanner scores a repository; this doctrine scores an attack surface, and only
+the file's role tells you which findings belong to which.
+
 ## S1 — Tool-grant scope
 
 What the agent may call, versus what its job needs. Three questions, in order:
