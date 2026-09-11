@@ -17,6 +17,15 @@ This log starts at the foundation 1.0.0 baseline.
 > because it records what was true when written; read it as a date, not a tag.
 > Live code and runbooks cite dates instead, for exactly this reason.
 
+## [foundation-v2.7.4] - 2026-09-11
+
+- `packs/foundation/spec.md`'s Approved roster Version column was stale against live
+  `SKILL.md` metadata (e.g. skillwright showed 1.0.6, live 1.3.9) — every version cell
+  rewritten from each member's own frontmatter; nothing else in the table touched.
+- Reviewed `.claude/hooks`, `tools`, and `revenantworks-foundation-resumewright` across
+  `2acc301~1..31f6ec1` at code-review medium plus a polish pass: no correctness or
+  clarity defects found. Descriptions kept byte-identical. (estate-audit unit P1e)
+
 ## [foundation-v2.7.3] - 2026-09-11
 
 **Unit P1d, dispatch run `2026-09-10-estate-audit`.** Review + polish pass after L1b, plus the

@@ -237,15 +237,15 @@ motif, content carried forward; earlier designations frozen as written.*
 
 | Member | Job (one line) | Status | Version |
 |---|---|---|---|
-| `revenantworks-foundation-skillwright` | Builds, audits, and ports Agent Skills and packs (neutral by default) | SHIPPED | 1.0.6 |
-| `revenantworks-foundation-promptwright` | Builds, scores, and hardens prompts with model-tier routing | SHIPPED | 1.3.0 |
-| `revenantworks-foundation-commwright` | Shapes messages per channel and audience; neutral-voice default; audits drift | SHIPPED | 1.0.2 |
-| `revenantworks-foundation-agentwright` | Designs and audits autonomous agent systems | SHIPPED | 1.1.0 |
-| `revenantworks-foundation-lorewright` | Research-verified verdicts and playbook reference docs | SHIPPED | 1.1.2 |
-| `revenantworks-foundation-brandwright` | Single home of brand + voice; defines, applies on invoke, audits for drift, exports payloads + HTML guide card | SHIPPED | 1.0.2 |
+| `revenantworks-foundation-skillwright` | Builds, audits, and ports Agent Skills and packs (neutral by default) | SHIPPED | 1.3.9 |
+| `revenantworks-foundation-promptwright` | Builds, scores, and hardens prompts with model-tier routing | SHIPPED | 1.5.8 |
+| `revenantworks-foundation-commwright` | Shapes messages per channel and audience; neutral-voice default; audits drift | SHIPPED | 1.1.2 |
+| `revenantworks-foundation-agentwright` | Designs and audits autonomous agent systems | SHIPPED | 1.2.8 |
+| `revenantworks-foundation-lorewright` | Research-verified verdicts and playbook reference docs | SHIPPED | 1.1.9 |
+| `revenantworks-foundation-brandwright` | Single home of brand + voice; defines, applies on invoke, audits for drift, exports payloads + HTML guide card | SHIPPED | 1.5.0 |
 | `revenantworks-foundation-evalwright` | Authors and audits eval suites — build-time, zero runtime deps | SHIPPED | 1.1.2 |
-| `revenantworks-foundation-tokenwright` | Measures, budgets, and slims the token footprint of LLM-facing artifacts | SHIPPED | 1.1.0 |
-| `revenantworks-foundation-rigwright` | Builds the standing configuration Claude reads before work | SHIPPED | 1.0.2 |
+| `revenantworks-foundation-tokenwright` | Measures, budgets, and slims the token footprint of LLM-facing artifacts | SHIPPED | 1.2.4 |
+| `revenantworks-foundation-rigwright` | Builds the standing configuration Claude reads before work | SHIPPED | 1.1.7 |
 
 ---
 
