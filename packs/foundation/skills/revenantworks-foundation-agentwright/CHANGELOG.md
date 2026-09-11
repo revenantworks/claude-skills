@@ -15,7 +15,7 @@ scoring anchor moved. Evals re-anchor accordingly.
 ## [1.2.6] — 2026-09-10
 
 **Two additions from the estate's first task-observer weekly review** (observations #0003
-and #0004, `V:\Projects\.observer`). Entry — Emit's render step (rule 2) now says to prefer
+and #0004). Entry — Emit's render step (rule 2) now says to prefer
 a short pointer into a repo file over duplicating the full instruction text in a scheduler's
 own field, since a duplicated live/tracked pair drifts the first time only one side is
 edited; where the target platform requires the full text inline, the emit names which copy

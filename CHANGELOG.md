@@ -131,7 +131,7 @@ step; the `description` never moved across the four bumps.
 
 ## [foundation-v2.6.7] - 2026-09-10
 
-The estate's first task-observer weekly review (`V:\Projects\.observer`) staged and this
+The estate's first task-observer weekly review (the estate observer workspace) staged and this
 session installed nine observations against three foundation members — see PENDING.md and
 observations #0001-#0011 in the estate repo for the full disposition.
 

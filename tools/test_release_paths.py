@@ -8,6 +8,7 @@ brand-escrow step with it. build.py's own tests never touched release.py, so not
 caught it. These tests are that gap closed.
 """
 import os
+import re
 import subprocess
 import sys
 import unittest
@@ -55,7 +56,9 @@ class TestUnsetPathVars(unittest.TestCase):
         the pattern used to match only the literal `V:[\\/]Projects` string, so a
         different drive letter, a UNC path, or a Unix-style home directory would leak
         clean. Now any drive-letter-colon-slash path (any letter, either slash) plus
-        `/home/` and `/Users/` are all caught; the CHANGELOG exemption is unchanged.
+        `/home/` and `/Users/` are all caught; the CHANGELOG exemption is unchanged here —
+        see `test_changelog_entries_dated_today_or_later_carry_no_local_path` below for why
+        the exemption itself no longer covers every CHANGELOG line.
         """
         out = subprocess.run(["git", "grep", "-n", "-I", "-E",
                               r"\b[A-Za-z]:[\\/][A-Za-z]|/home/[^ )\n]|/Users/[^ )\n]", "--",
@@ -63,6 +66,43 @@ class TestUnsetPathVars(unittest.TestCase):
                               ":(exclude)tools/test_release_paths.py"],
                              capture_output=True, text=True, cwd=ROOT).stdout.strip()
         self.assertEqual(out, "", f"absolute local path in tracked file(s):\n{out}")
+
+    def test_changelog_entries_dated_today_or_later_carry_no_local_path(self):
+        """The blanket `*CHANGELOG*` exclusion above only makes sense for entries that are
+        already frozen history. It does not generalize to a fresh entry landing the same day
+        as this test runs — that is a live leak wearing a CHANGELOG's exemption, not history
+        (estate observation #0013, `changelog-exempt-but-eval-files-caught-a-local-path-leak`:
+        the CHANGELOG-only exemption does not travel to sibling file classes, and per the same
+        principle it should not travel to un-frozen entries within a CHANGELOG either).
+
+        This narrows the exemption instead of removing it: an entry is "historical" only once
+        its own dated header (`## [x.y.z] - YYYY-MM-DD` or the em-dash form) is strictly before
+        the cutoff below. Bump the cutoff forward, deliberately, when the day rolls over —
+        never widen the pattern back to the whole file.
+        """
+        CUTOFF = "2026-09-10"
+        PATH_RE = re.compile(r"[A-Za-z]:[\\/][A-Za-z]|/home/[^ )\n]|/Users/[^ )\n]")
+        HEADER_RE = re.compile(r"^##\s*\[[^\]]+\]\s*[-–—]\s*(\d{4}-\d{2}-\d{2})", re.M)
+
+        offenders = []
+        for path in ROOT.rglob("CHANGELOG.md"):
+            text = path.read_text(encoding="utf-8")
+            headers = list(HEADER_RE.finditer(text))
+            if not headers:
+                continue
+            for i, m in enumerate(headers):
+                entry_start = m.end()
+                entry_end = headers[i + 1].start() if i + 1 < len(headers) else len(text)
+                entry_date = m.group(1)
+                if entry_date < CUTOFF:
+                    continue  # frozen history — the file-level exemption still covers it
+                entry_text = text[entry_start:entry_end]
+                for line_no, line in enumerate(entry_text.splitlines(), 1):
+                    if PATH_RE.search(line):
+                        offenders.append(f"{path.relative_to(ROOT)} :: entry {entry_date} :: {line.strip()}")
+        self.assertEqual(offenders, [],
+                          "local path in a CHANGELOG entry dated today or later (not frozen "
+                          "history, so the blanket exemption must not cover it):\n" + "\n".join(offenders))
 
 
 if __name__ == "__main__":

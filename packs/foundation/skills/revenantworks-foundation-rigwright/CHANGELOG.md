@@ -14,7 +14,7 @@ paths named); both executed as traced runs, 2/2 (`evals/RESULTS.md`). 16 → **1
 ## [1.1.4] — 2026-09-10
 
 **Live/tracked pair rule** added to Placement — the layer stack (task-observer observation
-#0003, `V:\Projects\.observer`): a config that exists as both a live path a session reads
+#0003): a config that exists as both a live path a session reads
 and a tracked copy kept for history or staging drifts the moment either is edited alone.
 Before any edit, diff the pair; build on whichever is actually live; after editing, sync the
 other side and self-test from the path that fires. Folded into the Audit dimension's `rot`

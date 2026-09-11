@@ -19,7 +19,7 @@ scoring anchor moved; `evals/test-cases.md` and `evals/trigger-evals.md` re-anch
 ## [1.2.2] — 2026-09-10
 
 **Three additions from the estate's first task-observer weekly review** (observations
-#0006, #0007, #0008, `V:\Projects\.observer`). §6 Wave execution gains a bullet: an
+#0006, #0007, #0008). §6 Wave execution gains a bullet: an
 interrupt or rejected tool call in the parent session ends every unit running under it, and
 nothing announces the stop — after any such event, re-read the ledger and each unit's own
 journal before assuming a wave is still running; absence of output is unknown state, never
