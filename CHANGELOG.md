@@ -17,6 +17,57 @@ This log starts at the foundation 1.0.0 baseline.
 > because it records what was true when written; read it as a date, not a tag.
 > Live code and runbooks cite dates instead, for exactly this reason.
 
+## [localops-v1.1.0] - 2026-09-10
+
+- **lmstudiorunner 1.0.1 → 1.1.0.** Reasoning-budget enhancements from a live LM Studio
+  research pass (estate-audit unit W9, observation #0027): `references/api-surface.md`
+  gains an `enable_thinking` reliability caveat, a note that structured output does not
+  by itself add reasoning cost, and a "Sizing the budget: a one-request probe" section;
+  `SKILL.md` step 4 gains a matching sentence. `evals/SUITE.md` gains D7/D8 (33 → 35
+  cases, authored not run). See the member's own `CHANGELOG.md` for the full account.
+
+## [foundation-v2.6.10] - 2026-09-10
+
+**Estate-audit unit W9** (`promptwright-zero-headroom-both-budgets`,
+`estate-voice-vs-pack-doctrine-conflict-on-skill-bodies`,
+`estate-voice-drift-in-skill-bodies`, `release-gate-check-excludes-parity`) plus a
+tokenwright refresh, four CHANGELOG path-leak fixes, and a rigwright placement line — six
+members changed, one tag. See each member's own `CHANGELOG.md` for the full account.
+
+- **tokenwright 1.2.3 → 1.2.4.** `tokenwright refresh` (exempt from the 2026-08-17 freeze):
+  `measurement.md`'s per-model cache-floor table and cache-mechanics section re-verified
+  live; the description-cap figure re-confirmed; the skill-listing-budget claim flagged
+  unconfirmed rather than silently carried or silently dropped.
+- **promptwright 1.5.6 → 1.5.7.** Lossless slim: description 1002 → 938/1024 chars (8.4%
+  headroom), body ≈9470 → ≈9319/9470 tokens (1.6% headroom, an honest shortfall against
+  the 5% target, recorded rather than crossed). Blind trigger re-judge, 38/38 hold.
+- **rigwright 1.1.5 → 1.1.6.** Placement — the layer stack gains a line: private-path
+  leakage into public packages is a rig placement concern, not just a leak to scrub
+  (task-observer observations #0013, #0026).
+- **dispatchwright 1.2.3 → 1.2.4.** Durability contract gains a ledger/RESUME-committed-
+  at-every-write rule and a resume-time `git stash list` check; Wave execution gains a
+  count-agents-not-ledger-rows rule for the wave cap and usage window (task-observer
+  observations #0022, #0032). `references/ledger-schema.md`'s "Where it lives" reversed
+  from gitignored to committed to match.
+- **skillwright 1.3.6 → 1.3.7.** `references/pack-registry.md` budget-row update
+  (dispatchwright's raise 4500 → 4700) — a change to skillwright's own shipped reference.
+- Root `CHANGELOG.md`, `agentwright/CHANGELOG.md`, `dispatchwright/CHANGELOG.md`, and
+  `rigwright/CHANGELOG.md`: four lines citing an absolute local workspace path (the
+  estate observer's own drive path) rewritten to cite the observation ids they already
+  named alongside it (observation #0013). `tools/test_release_paths.py` gained a
+  narrower check — a local path in a CHANGELOG entry dated 2026-09-10 or later is no
+  longer covered by the blanket historical-CHANGELOG exemption.
+- Two findings skipped by owner decision 2026-09-10 (public packs stay neutral; a user
+  applies a voice with brandwright on their side): `estate-voice-drift-in-skill-bodies`,
+  `estate-voice-vs-pack-doctrine-conflict-on-skill-bodies`. No pack doctrine text in this
+  repo claimed otherwise — `rubrics.md`'s C-2 and `packs/foundation/CLAUDE.md` already
+  state the neutral-by-default rule, so no doctrine fix was needed.
+- One finding skipped on refutation: `release-gate-check-excludes-parity` — a Phase 2
+  refuter found `skillwright/references/release-doctrine.md`'s "Install parity" section
+  and Release order step 6 already name parity as a required, owner-run release step;
+  folding it into `--check` would make it a no-op in CI, which has no local install to
+  diff against. No code or doctrine change made.
+
 ## [localops-v1.0.1] - 2026-09-10
 
 - **lmstudiorunner 1.0.0 → 1.0.1.** Seven estate-audit findings, first patch since the
