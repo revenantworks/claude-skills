@@ -445,16 +445,17 @@ def _table_rows(text: str, suffix: str, wanted: tuple) -> list:
     return rows
 
 
-AGENT_COUNT_RE = re.compile(r"(?<![A-Za-z0-9])[xX](\d+)(?![A-Za-z0-9])")
+AGENT_COUNT_RE = re.compile(r"(?<![A-Za-z0-9])[xX](\d+)\s*$")  # the token closes the cell (P1e review, 2026-09-11)
 
 
 def agent_multiplier(surface: str) -> int:
     """How many units a single ledger row is worth against the wave cap
     (observation #0022). A `surface` cell may carry an agent-count token --
-    `x<N>` set off from the rest of the text by anything but a letter or
-    digit, e.g. `subagent (workflow) x245` -- naming how many agents the one
-    Workflow/Task call behind this row actually spawned. The LAST such token
-    wins if more than one appears. Anything that is not a positive integer --
+    `x<N>` as the LAST thing in the cell, e.g. `subagent (workflow) x245` --
+    naming how many agents the one Workflow/Task call behind this row actually
+    spawned. Only a closing token counts: a note such as `retried x2 after
+    timeout` in the middle of the cell is prose, not a count (a review of this
+    change found the earlier any-position match inflated such rows). Anything that is not a positive integer --
     no token, `x` with no digits after it, `x0` -- defaults to 1, the same
     weight a row with no token at all carries: a missing or broken count must
     never make a row cheaper than a plain single-agent row, only a real
@@ -743,7 +744,7 @@ def selftest() -> int:
             ("subagent (workflow) x245", 245),
             ("subagent (workflow) x1", 1),
             ("subagent (background) X12", 12),
-            ("x9 subagent (workflow)", 9),
+            ("subagent (workflow) x245 ", 245),
         ):
             if agent_multiplier(good) != want:
                 problems.append(f"0022: agent_multiplier({good!r}) should be {want}, "
@@ -752,7 +753,8 @@ def selftest() -> int:
             if agent_multiplier(plain) != 1:
                 problems.append(f"0022: a surface cell with no token should default to 1: {plain!r}")
         for malformed in ("subagent (workflow) x", "subagent (workflow) x0", "subagent (workflow) xN",
-                           "subagent (workflow) x-5", "boxed245", ""):
+                           "subagent (workflow) x-5", "boxed245", "",
+                           "x9 subagent (workflow)", "subagent (background) - retried x2 after timeout"):
             if agent_multiplier(malformed) != 1:
                 problems.append(f"0022: a malformed/absent token should default to 1, not zero out "
                                  f"the row: {malformed!r} -> {agent_multiplier(malformed)}")

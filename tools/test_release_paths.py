@@ -99,7 +99,7 @@ class TestUnsetPathVars(unittest.TestCase):
                 entry_text = text[entry_start:entry_end]
                 for line_no, line in enumerate(entry_text.splitlines(), 1):
                     if PATH_RE.search(line):
-                        offenders.append(f"{path.relative_to(ROOT)} :: entry {entry_date} :: {line.strip()}")
+                        offenders.append(f"{path.relative_to(ROOT)} :: entry {entry_date} line {line_no} :: {line.strip()}")
         self.assertEqual(offenders, [],
                           "local path in a CHANGELOG entry dated today or later (not frozen "
                           "history, so the blanket exemption must not cover it):\n" + "\n".join(offenders))
