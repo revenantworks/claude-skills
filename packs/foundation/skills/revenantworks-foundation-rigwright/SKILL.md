@@ -3,7 +3,7 @@ name: revenantworks-foundation-rigwright
 description: Builds the standing config Claude reads before work — a Claude Project's instructions and knowledge-file plan, a CLAUDE.md, a repo's .claude layout, hooks, and .mcp.json — emitted paste-ready in each surface's native form, checked against its limits. Trigger to set up, write, fix, or trim a Claude Project, project instructions, a CLAUDE.md, or a repo's Claude config; to decide which layer a rule belongs in — profile preferences, project instructions, CLAUDE.md, a skill, a hook, or auto-memory; or to score a setup for bloat and drift without rewriting it. Answers to "rigwright" ("rigwright audit", "rigwright refresh"). For an Agent Skill or a SKILL.md package, skillwright; for anything unattended — a Cowork task, a routine, a scheduled task, plus its cadence and guardrails — agentwright; for the wording of an instruction block once its home is settled, promptwright; for a pure token or cost cut on a config whose layout is already right, tokenwright.
 license: MIT
 metadata:
-  version: "1.1.5"
+  version: "1.1.6"
   profile: standalone
   pack: foundation
   brand: revenantworks
@@ -83,6 +83,13 @@ path loads, which path is tracked — so an audit that finds only one of them kn
 about the other. Fold this into the Audit dimension's **rot** check: a live/tracked pair
 that has silently diverged is rot the five-dimension scoreline should catch, not a separate
 question.
+
+**A private local path is not a placement for public-shipping content.** The observation
+log, dispatch run caches, and any owner-only workspace sit at an absolute local drive
+path for a reason — it names the rig and, often, a private repo's existence. Spelling
+that path out inside a public repo, a CHANGELOG, or an eval-provenance line is a
+placement defect, not just a leak — cite the finding or observation id instead
+(task-observer observations #0013, #0026).
 
 ## Restraint — when not to build
 

@@ -2,6 +2,24 @@
 
 > Renamed from `revenant-foundation-rigwright` on 2026-08-07 (pack 2.0.0 — the `revenant` → `revenantworks` marketplace migration). Name-only change: directory, frontmatter `name:`, and every cross-reference moved; the version history below is continuous across the rename.
 
+## [1.1.6] — 2026-09-10
+
+**Placement — the layer stack** gains a line: private-path leakage into public packages is
+a rig placement concern, not merely a leak to scrub after the fact. Where the observation
+log, dispatch run caches, and any owner-only workspace live is itself a placement
+decision, and spelling that absolute local path out inside a public repo, a CHANGELOG, or
+an eval-provenance line gets it wrong the same way a rule in the wrong config layer does —
+cite the finding or observation id instead. Sits beside the live/tracked-pair rule as a
+second "where does this actually live" check. Task-observer observations #0013
+(`changelog-exempt-but-eval-files-caught-a-local-path-leak` — a CHANGELOG-only path
+exemption doesn't generalize to eval files) and #0026
+(`finding-reversible-command-crosses-owner-boundary` — a fix's apply-and-install steps can
+straddle a repo-write/owner-only boundary without the schema flagging it) both surface the
+same underlying gap this line closes: nothing in the pack's own doctrine, until now, named
+a local path's presence in public-shipping content as this skill's business to catch. No
+entry point, gate, or count moved. Landed at ≈3480/3500 — 20 tokens of headroom, thin by
+design rather than a ratchet; a future addition should raise the row, not compress this one.
+
 ## [1.1.5] — 2026-09-10
 
 **Estate finding `rigwright-two-authored-not-covered-eval-gaps`.** Two behaviour changes
