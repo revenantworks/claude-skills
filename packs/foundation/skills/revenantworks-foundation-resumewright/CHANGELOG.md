@@ -1,5 +1,21 @@
 # Changelog — revenantworks-foundation-resumewright
 
+## [1.0.1] — 2026-09-11
+
+**Local-path leak fixed on first tag** (`tools/test_release_paths.py`'s
+`test_no_absolute_local_path_in_tracked_files`, widened 2026-09-10 per task-observer observation
+#0013 — the CHANGELOG-only exemption does not travel to other file classes; this is exactly the
+next class it was warning about). `SOURCES.md` named three private files by their absolute
+drive-letter path (the owner's own estate-run directory, the observation-log path) — this repo
+is public and no such path belongs in a tracked file. The three rows are unchanged in what they
+say; each now names its source generically ("a private estate-run directory's own RESUME.md,"
+"owner-private observation log") instead of by path. The test was written *before* this member's
+first commit and passed, because `git grep` (the check's own mechanism) only scans tracked
+content — a brand-new, not-yet-`git add`-ed file is invisible to it until the moment it lands.
+Caught and fixed in the very next commit against origin, before any other change rode on top of
+it. `description` and every behavior rule are byte-identical; no eval re-anchor beyond the
+provenance-line restatement below.
+
 ## [1.0.0] — 2026-09-11
 
 Baseline release. Built from the estate audit's H1/H2 research pass (cache/h1-handoff-research.md):

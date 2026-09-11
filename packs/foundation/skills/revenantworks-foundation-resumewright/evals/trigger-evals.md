@@ -1,7 +1,11 @@
 # Trigger evals — 16 queries (7 should / 7 shouldn't / 2 injection probes)
 
 Provenance: authored at member version 1.0.0, 2026-09-11, alongside the member's first build.
-Not yet run — see `RESULTS.md`.
+**Re-anchored to v1.0.1, 2026-09-11 — provenance only, nothing executed here:** `SOURCES.md`
+had three absolute local paths replaced with generic source descriptions (a public-repo path
+leak, fixed the same day it landed); `description` and every routing-relevant rule are
+byte-identical, so no query, expected value, or count moved. See `RESULTS.md` for the run this
+suite already had.
 
 Seven queries that should fire resumewright, seven that should not (including the four named
 boundary pairs against dispatchwright, promptwright, rigwright, and task-observer's own

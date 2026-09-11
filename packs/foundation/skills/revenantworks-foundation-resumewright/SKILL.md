@@ -3,7 +3,7 @@ name: revenantworks-foundation-resumewright
 description: Writes a committed session handoff on demand or before a pause — state, per-repo landed shas verified against origin, running units, the ordered remainder, every decision made, owner steps, and the resume procedure. Commits what it writes in the same call, in the repo the work lives in, so a stash, reset, or handover can never take it silently. Trigger on 'resumewright', 'write the handoff', 'pause here', 'holding position', a usage-limit or compaction warning, or before closing a session with work still open; 'resumewright resume' reads a committed handoff back, checking git stash list and git reflog first. A dispatchwright fan-out already carries its own resume state in its ledger — resumewright covers the ordinary session dispatchwright's contract does not reach. task-observer's handoff-doc mode is the fallback for a storage-less environment; where a repo exists, resumewright commits instead of pasting into chat.
 license: MIT
 metadata:
-  version: "1.0.0"
+  version: "1.0.1"
   profile: standalone
   pack: foundation
   brand: revenantworks

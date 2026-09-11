@@ -1,7 +1,8 @@
 # Assertion Suite — revenantworks-foundation-resumewright
 
-> **Provenance:** target `revenantworks-foundation-resumewright` v1.0.0 · suite authored
-> 2026-09-11, alongside the member's first build. **10 cases**, assertion-only — each is an
+> **Provenance:** target `revenantworks-foundation-resumewright` v1.0.0, re-anchored to v1.0.1
+> (below) · suite authored 2026-09-11, alongside the member's first build. **10 cases**,
+> assertion-only — each is an
 > Input plus mechanical yes/no Asserts against the run output. Authored cold against the shipped
 > `SKILL.md` and its one reference file (`handoff-template.md`); **authored, not run** — the
 > same standing convention every other member's first suite is built under.

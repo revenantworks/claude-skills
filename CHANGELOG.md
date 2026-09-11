@@ -17,6 +17,20 @@ This log starts at the foundation 1.0.0 baseline.
 > because it records what was true when written; read it as a date, not a tag.
 > Live code and runbooks cite dates instead, for exactly this reason.
 
+## [foundation-v2.7.1] - 2026-09-10
+
+**Estate-audit unit H2, follow-up.** `foundation-v2.7.0`'s `resumewright` 1.0.0 shipped
+`SOURCES.md` naming three private files by their absolute local drive path — this repo is
+public and `tools/test_release_paths.py`'s `test_no_absolute_local_path_in_tracked_files`
+(widened 2026-09-10 per task-observer observation #0013) exists to catch exactly that. The test
+passed pre-commit only because `git grep` scans tracked content and the member's folder was not
+yet `git add`-ed; the very next test run against the tagged commit caught it, and this release
+fixes it in the following commit before anything else rode on top.
+
+- **resumewright 1.0.0 → 1.0.1.** `SOURCES.md`'s three rows now name their source generically
+  (a private estate-run directory, an owner-private observation log) instead of by path. No
+  behavior, rule, or the shipped `description` moved.
+
 ## [foundation-v2.7.0] - 2026-09-10
 
 **Estate-audit unit H2.** A new foundation member, `revenantworks-foundation-resumewright`
