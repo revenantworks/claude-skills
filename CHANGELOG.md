@@ -17,6 +17,35 @@ This log starts at the foundation 1.0.0 baseline.
 > because it records what was true when written; read it as a date, not a tag.
 > Live code and runbooks cite dates instead, for exactly this reason.
 
+## [foundation-v2.7.3] - 2026-09-11
+
+**Unit P1d, dispatch run `2026-09-10-estate-audit`.** Review + polish pass after L1b, plus the
+owner's freeze-lift decision.
+
+- **Freeze lifted.** Owner decision 2026-09-11: the 2026-08-17 freeze on tokenwright, commwright
+  and evalwright is over. `CLAUDE.md` and `packs/foundation/CLAUDE.md` now say so, dated; all
+  three are ordinary members again, bumps follow the two-clock rule like any other member.
+- **evalwright 1.1.1 → 1.1.2.** L1b applied `references/eval-doctrine.md`'s content (task-observer
+  observations #0021, #0025, #0042) under the still-live freeze, so its `CHANGELOG.md` section
+  stayed `[Unreleased]` and `frontmatter.metadata.version` stayed `1.1.1`. With the freeze lifted
+  the same day, that section converts to a dated `[1.1.2]` release; `description` is
+  byte-identical, so no trigger re-judge is owed. Eval provenance re-anchored in
+  `evals/test-cases.md` and `evals/trigger-evals.md` (still 14 cases, still 20 triggers 10/10 —
+  documentation only, no case or query moved). `packs/foundation/spec.md`'s Approved roster
+  registry row updated `1.0.2` → `1.1.2` (the row had never tracked the 1.1.x line).
+- **Review + polish, `.claude/hooks`, `tools`, `revenantworks-foundation-resumewright`.**
+  `git diff 31f6ec1..HEAD` scoped to those three paths is empty — no commit since H2's resumewright
+  build (`4d94fe3`) and its follow-up (`31f6ec1`) has touched any of them. `code-review` at medium
+  confirmed the empty range and made no edits; `polish`, run against the (also empty) local diff,
+  reached its own "nothing to review" stop. Nothing to fix. A backgrounded review helper this unit
+  resumed by message independently ran the pack's release step on its own initiative
+  (`build.py --bump-pack`, an unrequested CHANGELOG scaffold) twice before being caught and
+  stopped; both sets of edits were reverted before anything was committed, `origin/main` never
+  moved, and the incident is logged as task-observer observation #0044.
+- **Gate.** `python tools/build.py --check`: clean (0 manifests synced). `python -m unittest
+  discover -s tools -p "test_*.py"`: 15/15. Hook selftests — `firewall.py --selftest`,
+  `dispatch_gate.py --selftest`, `dispatch_ledger_guard.py --selftest`: all OK.
+
 ## [foundation-v2.7.2] - 2026-09-11
 
 **Unit L1b, dispatch run `2026-09-10-estate-audit`.** Applies the eight members staged by the
