@@ -2,6 +2,26 @@
 
 > Renamed from `revenant-foundation-tokenwright` on 2026-08-07 (pack 2.0.0 — the `revenant` → `revenantworks` marketplace migration). Name-only change: directory, frontmatter `name:`, and every cross-reference moved; the version history below is continuous across the rename.
 
+## [1.2.4] — 2026-09-10
+
+`tokenwright refresh` (frozen member — owner decision 2026-08-17 names the refresh path itself
+exempt from the freeze, distinct from the security carve-out used at 1.2.3). `measurement.md`
+restamped Last-verified 2026-07-27 → 2026-09-10. Re-verified live against Anthropic's
+prompt-caching docs and the Claude Code skills docs: the per-model minimum-cacheable-length
+table gains Claude Fable 5.1 and Claude Mythos 5.1 at the 512-token floor and drops the
+"(most platforms)" caveat on the three retired-model rows to match the source's own plain
+"(retired)" labels; a new per-model cache-read price exception lands (Fable 5.1 / Mythos 5.1
+at ~0.025× base input, steeper than the general ~0.10×); the previously-unsourced claim that
+cache reads don't count against rate-limit utilization is now confirmed and cited, closing
+the flag carried since 2026-07-27. The 1,536-character description+`when_to_use` cap
+re-confirms verbatim. One finding, not a fix: the "skill-listing budget scales at 1% of the
+model's context window" claim (`skillListingBudgetFraction`) could not be relocated on the
+canonical docs page across three fetch passes or on the settings reference — recorded as
+**unconfirmed, not refuted** in `measurement.md` and `SOURCES.md`, left standing rather than
+retracted because it is eval-anchored (`evals/test-cases.md` Case 11), and flagged for a
+dedicated follow-up. No doctrine, entry point, or SKILL.md wording moved beyond the
+Cache mechanics / Platform reference points sync this refresh owns.
+
 ## [1.2.3] — 2026-08-20
 
 Frozen member (owner decision 2026-08-17: no bumps unless broken). This bump
