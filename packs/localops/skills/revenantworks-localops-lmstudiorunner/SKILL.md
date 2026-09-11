@@ -4,7 +4,7 @@ description: Hands work to a local model served by LM Studio and verifies what c
 license: MIT
 compatibility: Requires a running LM Studio server reachable over HTTP on this machine (port discovered, not assumed). Uses the surface's shell or HTTP tool to call that API and its file tools to write queue and report files; where neither exists it hands back the exact curl commands and the files as chat content. No packages, no cloud network at runtime. Siblings promptwright and agentwright are named for handoffs, never required.
 metadata:
-  version: "1.0.1"
+  version: "1.1.0"
   profile: standard
   pack: localops
   brand: revenantworks
@@ -69,6 +69,8 @@ Where the server supports it, load per task with a TTL so an idle model evicts i
 Prefer **structured output** over checking afterwards: pass a JSON schema and the server constrains the tokens, so malformed output cannot be produced rather than being caught later. Shapes in `references/api-surface.md`.
 
 Set the token budget from the **whole** completion, not the visible answer. A reasoning model spends most of its budget in a reasoning channel before writing a word — a measured unit spent 2,053 reasoning tokens to emit eight lines of code. **Too small a budget returns an empty answer with a length stop reason, not a short one.** Treat empty content as a budget failure and say so, rather than reporting that the model refused.
+
+Reasoning cost is roughly stable per model and prompt shape, not zero just because a thinking-disable flag was passed — probe once per model per session (`references/api-surface.md`, "Sizing the budget") rather than trusting the flag or a fixed multiplier.
 
 ## 5. Verify
 

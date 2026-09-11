@@ -10,6 +10,20 @@ All verified 2026-09-09 unless noted.
 - **A live `GET /api/v0/models` response**, 2026-09-09. The field table in
   `references/api-surface.md` is transcribed from an actual response, not from
   documentation — the docs do not enumerate every field the endpoint returns.
+- **Three live chat-completion probes against `gemma-4-12b-it` (Q4_K_M,
+  `tool_use`, loaded at full 262144 context), 2026-09-10** — the basis for
+  `references/api-surface.md`'s `enable_thinking` caveat and the "Sizing the
+  budget" section. `chat_template_kwargs.enable_thinking: false` did not
+  suppress reasoning (~168-200 tokens on all three requests, `max_tokens` 200
+  and 600). `response_format.json_schema` (`strict: true`) did not add
+  reasoning cost by itself — the difference between a 200-token budget failing
+  and a 600-token budget succeeding on the same schema was `max_tokens`, not
+  the schema. Cross-checked against `lmstudio.ai/docs/app/api/structured-output`
+  and `lmstudio.ai/docs/app/api/endpoints/openai`, fetched 2026-09-10: neither
+  page documents `chat_template_kwargs`, `reasoning_content`, `reasoning_effort`,
+  `enable_thinking`, or `reasoning_tokens` — the switch is a llama.cpp/vLLM
+  chat-template convention LM Studio passes through, not a first-party
+  documented field, treated here as best-effort per model, never guaranteed.
 
 ## Incumbents reviewed before building
 

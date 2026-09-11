@@ -3,6 +3,36 @@
 All notable changes to this skill. Format follows Keep a Changelog; this skill
 uses semantic versioning.
 
+## [1.1.0] — 2026-09-10
+
+**Reasoning-budget enhancements from unit X2's live LM Studio research** (estate-audit
+run, observation #0027 `schema-mode-reenabled-reasoning-and-ate-the-budget`). Three live
+probes against `gemma-4-12b-it` on this run's server, plus a re-fetch of LM Studio's
+structured-output and OpenAI-endpoint docs, settled the question 0027 raised and left open:
+
+- `references/api-surface.md` — Chat completions gains a caveat that
+  `chat_template_kwargs.enable_thinking: false` is not a documented LM Studio field and did
+  not suppress reasoning in the probes (verify per model, never assume). Structured output
+  gains a paragraph: a schema does not by itself add reasoning cost — the probes showed the
+  same ~168-token reasoning spend with and without a schema; a schema failing under budget
+  is a `max_tokens` sizing problem, not a "schema re-enabled reasoning" problem. A new
+  **Sizing the budget: a one-request probe** section states the procedure: one card, a
+  generous `max_tokens`, read `reasoning_tokens` and `finish_reason`, size the batch from
+  `reasoning_tokens + (expected_answer_tokens × 1.5)`.
+- `SKILL.md` step 4 (Constrain the generation) gains one sentence pointing at the probe
+  rather than trusting the thinking-disable flag or a fixed multiplier.
+- `SOURCES.md` gains the probe record and the two re-fetched doc pages, both confirming
+  `chat_template_kwargs`, `reasoning_content`, `reasoning_effort`, `enable_thinking`, and
+  `reasoning_tokens` are undocumented LM Studio fields — llama.cpp/vLLM chat-template
+  conventions passed through, best-effort per model.
+- `evals/SUITE.md`: **D7** (states "verify per model" rather than asserting the flag
+  works) and **D8** (`size <task>` withholds a `max_tokens` figure until a probe runs) —
+  33 → **35 cases**, both authored, not run. `evals/TRIGGERS.md` re-anchored, provenance
+  only — the `description` did not move.
+- The probe-list fix (`lmstudio-probe-list-omits-the-working-address-and-has-no-timeout`)
+  was already applied in the live file as of this pass's own re-check — no change needed.
+- `api-surface.md`'s Last-verified stamp moved 2026-09-09 → 2026-09-10.
+
 ## [1.0.1] — 2026-09-10
 
 **Seven estate-audit findings, first patch.** All body/reference; `description`

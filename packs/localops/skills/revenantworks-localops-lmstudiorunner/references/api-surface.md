@@ -1,6 +1,6 @@
 # LM Studio API surface *(calendar surface — 90 days)*
 
-> **Last verified: 2026-09-09** against LM Studio's developer documentation and
+> **Last verified: 2026-09-10** against LM Studio's developer documentation and
 > a live server. Re-verify with `lmstudiorunner refresh`. Field names and endpoint
 > paths are the volatile part; the reasons for reading them are not.
 
@@ -10,6 +10,7 @@
 - Listing models — the fields that matter
 - Chat completions
 - Structured output
+- Sizing the budget: a one-request probe
 - Model lifecycle: TTL and just-in-time loading
 - Speculative decoding
 - Degrading without a shell
@@ -100,6 +101,12 @@ Two response details that matter:
 - **`finish_reason` distinguishes a short answer from a truncated one.** A
   length stop with empty `content` means the budget ran out during reasoning.
   Report that as a budget failure.
+- **`chat_template_kwargs.enable_thinking: false` is not a documented LM
+  Studio field and is not guaranteed to zero out reasoning** — it is a
+  llama.cpp chat-template convention LM Studio passes through per model. A
+  live probe on 2026-09-10 against `gemma-4-12b-it` showed reasoning
+  continuing (~168-200 tokens) with the flag set to `false`. Verify per model
+  with one probe request before relying on it; never assume it.
 
 ## Structured output
 
@@ -130,6 +137,33 @@ rather than caught, which removes a whole retry loop.
 schema-valid array of 180 strings can still be 60 distinct values repeated —
 the measured failure. Schema plus a count-and-uniqueness check, not schema
 alone.
+
+**Structured output does not, by itself, add reasoning cost** — a schema
+changes the shape of the answer emitted after reasoning, not whether or how
+much the model reasons first. The failure mode ("schema mode ate the budget")
+is a `max_tokens` sizing problem restated: if the budget was already tight
+against the model's normal reasoning cost, adding a schema exposes that by
+giving the answer nowhere to land. Size `max_tokens` from a probe (below), not
+from the expected answer length alone.
+
+## Sizing the budget: a one-request probe
+
+Before sizing a batch, send one representative card with a generous
+`max_tokens` (600-800 for a short answer) and read two fields:
+`usage.completion_tokens_details.reasoning_tokens` and `finish_reason`.
+
+- `finish_reason: "length"` with empty `content`: the budget ran out inside
+  reasoning. Raise `max_tokens` and re-probe — never retry the same number
+  expecting a different result.
+- `finish_reason: "stop"` with content present: subtract `reasoning_tokens`
+  from `completion_tokens` for the true answer length, and set the batch's
+  `max_tokens` to `reasoning_tokens + (expected_answer_tokens × 1.5)` as a
+  margin, since reasoning cost is roughly stable across similar prompts on one
+  model but not identical.
+
+This is the probe `lmstudiorunner size <task>` (SKILL.md — Entry points) runs
+to answer "should I even hand this over" — the same request, just read for
+these two fields now, not only pass/fail.
 
 ## Model lifecycle: TTL and just-in-time loading
 

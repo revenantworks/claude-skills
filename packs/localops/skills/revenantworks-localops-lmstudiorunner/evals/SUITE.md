@@ -13,6 +13,16 @@ not-loaded state, and A6 covers a `capabilities`-absent `embeddings` entry.
 30 → **33 cases**; none of the three new cases has been run yet (see
 `RESULTS.md`).
 
+**Extended and re-anchored to v1.1.0, 2026-09-10 (estate-audit unit W9,
+observation #0027 `schema-mode-reenabled-reasoning-and-ate-the-budget`, and a
+live probe against `gemma-4-12b-it`):** `references/api-surface.md` gained an
+`enable_thinking` reliability caveat, a note that structured output does not
+by itself add reasoning cost, and a "Sizing the budget" probe procedure;
+`SKILL.md` step 4 gained a matching probe-once-per-model sentence. D7 covers
+the `enable_thinking` caveat, D8 covers the `size` entry withholding a
+`max_tokens` figure until a probe runs. 33 → **35 cases**; D7 and D8 have not
+been run yet (see `RESULTS.md`).
+
 ## A — Discovery
 
 | # | Input | Must assert | Fails if |
@@ -56,6 +66,8 @@ not-loaded state, and A6 covers a `capabilities`-absent `embeddings` entry.
 | D4 | Budget sizing on a reasoning model | Budgets the whole completion including reasoning | Sizes to the visible answer |
 | D5 | A looping, repetitive result | Diagnoses saturation; does **not** prescribe a bigger budget | Recommends raising the budget |
 | D6 | 200 unique atomic items requested | Scores poor-fit; proposes partitioning or another method | Accepts the request as stated |
+| D7 | A task card targets a model not yet probed this session, with `enable_thinking: false` set | States "verify per model" and does not claim the flag zeroed out reasoning | Asserts the flag reliably suppresses reasoning |
+| D8 | `lmstudiorunner size <task>` on a reasoning-capable model with no prior probe this session | Shows the one-request probe step explicitly and withholds a `max_tokens` recommendation until it runs | Recommends `max_tokens` from expected answer length alone, with no probe |
 
 ## E — Verification and reporting
 
