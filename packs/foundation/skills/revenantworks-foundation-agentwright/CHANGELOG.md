@@ -1,5 +1,47 @@
 # Changelog — revenantworks-foundation-agentwright
 
+## [1.2.9] — 2026-09-13
+
+Applied from the task-observer weekly review staged 2026-09-13 (autonomous mode, owner absent).
+Body and reference only; the `description` is byte-identical.
+
+- **Entry — Emit step 1 names a creation-type boundary as the decision (#0049).** Where a
+  rebuild's only path to the stated outcome moves the agent to a different creation type,
+  execution surface, or credential model, the move is asked about before anything is built —
+  the one technically viable path is still the owner's to authorize. `references/platform-notes.md`
+  carries the platform half: a job created as a Cowork task has no `sources` field and cannot be
+  given one, so "attach a real source" is a re-creation, not a setting (observed in use
+  2026-09-12, not vendor-documented — flagged for the next refresh).
+- **Entry — Design's kill-switch drill states the order and the proof (#0051).** Stop whatever
+  can relaunch the work before the work itself — a supervisor holding "resume when this finishes"
+  reads a killed job as never started and starts a fresh one — and the evidence is the work still
+  absent a minute later, never the stop command's success. `references/design-checklist.md` area 3
+  carries the two-act procedure and its verification; `references/security-scan-doctrine.md` S3
+  gains a fourth question, a halt layer with a live relauncher behind it being a hard layer that
+  isn't one (**P0**, on the clause the class already states).
+- **A third anti-pattern: a scheduled agent holding its own terminal date (#0052).** The date,
+  count or threshold that ends an unattended agent is read from state it already loads, never a
+  literal in the instructions, and reaching one is a hold that announces itself to the output
+  contract's destination. The test rides with it — *if this fires while nobody is watching, what
+  does the owner see*. `references/design-checklist.md` area 1 carries terminal conditions as part
+  of cadence, with "stop silently" named as never the behaviour.
+- **Turn shape 3 reads reversibility at the rebuild path, not at the delete (#0053).** Where the
+  agent may cut, prune or reset a generated collection, the regenerator's guard decides whether the
+  cut comes back; a rule that skips a source already holding an entry counts a cut one as handled,
+  so the delete is a tombstone. `references/design-checklist.md` area 4 carries the guard-reading
+  step and the question a cleanup rule answers out loud.
+
+**Body budget raised 4900 → 5300** in skillwright's `pack-registry.md`: four decision rules a
+design or emit run must not open a file to know — the creation-type boundary question, the
+kill-switch order and its absence test, the terminal-date anti-pattern with its watching test, and
+the reversibility-at-the-rebuild-path clause — body-resident for the same reason the entries and
+anti-patterns around them are, with their procedure pushed into the three reference files. Lands at
+≈5109.
+
+`evals/test-cases.md` Case 4 (kill-switch drill present) now sits on changed ground — the drill it
+asserts on gained a mandated order and verification clause — and is **owed a re-run**, not merely a
+re-anchor. No other case, no trigger row, and no count moves.
+
 > Renamed from `revenant-foundation-agentwright` on 2026-08-07 (pack 2.0.0 — the `revenant` → `revenantworks` marketplace migration). Name-only change: directory, frontmatter `name:`, and every cross-reference moved; the version history below is continuous across the rename.
 
 ## [1.2.8] — 2026-09-11

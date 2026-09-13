@@ -12,6 +12,8 @@ Loaded on every design and audit. Each area: what it decides, the options, the d
 
 When it runs: event-triggered, scheduled, or on-demand. Scheduled agents state timezone, market/business-hours awareness, and overlap rule (skip vs queue if the prior run is live). Default: skip on overlap, log the skip.
 
+**Terminal conditions — when it stops running** (added 2026-09-13, observation #0052). An agent's end is part of its cadence: a programme's last date, a run count, a budget or streak threshold. It is read from state the agent already loads — the ledger, the queue, the calendar it opens anyway — never typed into the instructions as a literal, where nothing validates it and nothing updates it when the plan changes. The behaviour at the boundary is a **hold that announces itself**: the run fires, states that it has reached the boundary and what is needed to pass it, and writes that to the destination area 6 names. "Stop silently" is never the behaviour — a successful exit producing nothing is indistinguishable from a quiet day, and any liveness check reading a last-fired timestamp keeps reporting health while the agent is finished. One routine carried *after this date, stop silently* in its own prompt and would have gone quiet on the day after, with no error anywhere to diagnose.
+
 ## 2. Guardrail tiers — soft vs hard
 
 **Soft** = rules in the prompt (shapes behavior, can be argued out of). **Hard** = enforced outside the model (per-run caps, tool allowlists, review-before-execute verbs, protected-list checks). Every consequential limit exists at **both** tiers or the spec says why hard isn't available on this surface. Caps are named numbers, not adjectives.
@@ -20,9 +22,13 @@ When it runs: event-triggered, scheduled, or on-demand. Scheduled agents state t
 
 Two minimum: **soft** — a phrase or message the agent honors immediately ("STOP" halts all action this run and future runs until cleared); **hard** — a mechanism the agent cannot override (disconnect the MCP/connector, disable the schedule, revoke the credential). The spec names both and who can pull each.
 
+**Cancelling is two acts, in one order** (added 2026-09-13, observation #0051). Stop whatever can relaunch the work — the supervising agent, the parked unit, the scheduler entry, a watchdog — before stopping the work itself. A survivor still holding "resume when this finishes" reads the missing job as *not started* rather than *cancelled*, and does the diligent thing: it starts a fresh one. Nothing announces that. The spec names both acts, their order, and the verification: re-read the evidence the work leaves behind — a process list, the artefact it writes, the run log — a minute after the stop, because a stop command returning success proves only that one thing ended. A kill switch that halts the work and leaves its owner running is not a kill switch.
+
 ## 4. Protected resources
 
 Resources the agent must never read or write, declared by exact identifier (list name, UUID, folder, account) — not by description. The guard rule travels with every prompt and the audit greps for the identifier in tool-call paths.
+
+**A cut against a generated collection** (added 2026-09-13, observation #0053). Where the agent may delete, prune, cut or reset entries in something a generator rebuilds — a work queue, a task list, a cache, an index — read the regeneration function's guard before writing the rule, and state in the spec what that guard treats as already handled. The common shape, *never re-add a source that already has an entry*, counts entries in terminal states (done, cut, skipped, dismissed) as handled: the entry is then a tombstone rather than a deletion, the generator believes that source is finished forever, and the source drops out of the system with the collection looking tidy. Either the rule does not cut, or it cuts and names the path that re-admits the source, and the spec says which. The question a cleanup rule answers out loud: *what does the thing that rebuilds this consider already done, and does my delete land inside that set?*
 
 ## 5. Handoff schemas
 

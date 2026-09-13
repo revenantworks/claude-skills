@@ -7,6 +7,18 @@
 > verbatim because they record what was true when written — read them by date,
 > not by version.
 
+## 2026-09-13 — v1.2.9 — **Case 4 RE-RUN (cold judgment, Claude Fable 5.1 — a different family from the Opus 5 unit that drafted the change): PASS; assert extended**
+
+Owed because the kill-switch rule gained content (observation #0051): stopping the process while
+its owner is alive is a restart trigger, so the order is owner first, process second, and the test
+is absence a minute later, not a stop command returning success. The judge was handed the applied
+v1.2.9 text (the rule landed in SKILL.md's Build entry as the decision line and in
+`references/design-checklist.md` — *Cancelling is two acts, in one order* — as the procedure) and the case's input (*any design run*) and reasoned
+the emitted spec cold: it still names a soft switch as an exact phrase, a hard layer, and who pulls
+each, so the original assert holds; the rule adds an ordering and a verification clause the
+original assert never asked for, so the assert was **extended** to require both rather than
+re-anchored over changed ground. Nothing executed; a judgment against shipped text, recorded as such.
+
 ## 2026-07-27 — v1.2.2 — two fixes applied (no run) — **DOCTRINE + SUITE EDIT, not an execution**
 
 **No skill was run this pass.** This entry records the two fixes the 1.2.1 execution passes surfaced and left gated — the S5 send-retry severity tension (logged non-failing in the Cases 17–20 run below) and the row-19 trigger FAIL (the cold re-run below). Both are now closed at the source. Nothing here re-executes a case or re-judges the listing; the evidence is mechanical (line refs, before/after strings, grepped counts), not a new pass rate.
