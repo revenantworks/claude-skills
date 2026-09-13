@@ -5,6 +5,7 @@
 - The deciding rule
 - Work classes — what a local model is asked to do
 - The scoring pass
+- Claim types — which of the model's statements survive
 - Capability classes — what kind of model a class needs
 - Failure shapes, and what each one means
 
@@ -54,6 +55,35 @@ yourself.
 
 Report the score with the class and the mode, and when the answer is "do it
 yourself", say which question failed.
+
+## Claim types
+
+Work classes say whether the *task* fits. Claim types say which of the
+model's *statements* are worth keeping, and they are not the same question:
+one overnight run answered a single prompt with four kinds of claim, and
+their confirmation rates ranged from a fifth to zero.
+
+| Claim type | Example | What checks it | Ask for it |
+|---|---|---|---|
+| **Enumeration** | "these are the public functions in this file" | grep or a parse against the source | Yes |
+| **Cross-reference** | "this function has no matching test" | grep over a stated population | Yes — with the population named (`task-cards.md`, rule 7) |
+| **Classification against a stated rule** | "this file is a scene script" | the rule, re-applied by hand | Yes |
+| **Correctness judgement** | "line 88 is wrong" | nothing mechanical — it needs the language semantics and the code's invariants held at once | No — drop it from the prompt, or label it a hypothesis for a cloud reviewer |
+
+Measured, on 44 files in one overnight run: of 17 suspected-bug claims, 0
+survived triage — misread language semantics, invented enum growth, paths an
+existing invariant test already rules out — while 23 of 113 untested-function
+claims held after a grep of the whole test tree. Six and a half hours of GPU
+time bought a useful coverage map and a bug list that cost a reviewer an hour
+to discard.
+
+**Shape-valid is not true.** Every one of those 17 passed the mechanical
+verifier: valid JSON, real function names, line numbers in range. A verifier
+proves the shape of a claim, never its truth. So triage a sample, report a
+**confirmation rate per claim type**, and let the next run's prompt keep only
+the types that confirmed — the rate, not the volume, is what says whether the
+hours were worth spending.
+
 
 ## Capability classes
 

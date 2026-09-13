@@ -4,7 +4,7 @@ description: Hands work to a local model served by LM Studio and verifies what c
 license: MIT
 compatibility: Requires a running LM Studio server reachable over HTTP on this machine (port discovered, not assumed). Uses the surface's shell or HTTP tool to call that API and its file tools to write queue and report files; where neither exists it hands back the exact curl commands and the files as chat content. No packages, no cloud network at runtime. Siblings promptwright and agentwright are named for handoffs, never required.
 metadata:
-  version: "1.1.0"
+  version: "1.1.1"
   profile: standard
   pack: localops
   brand: revenantworks
@@ -54,6 +54,9 @@ Score the task against the work classes in `references/work-classes.md`. The cla
 
 The one rule the classes elaborate: **a local model suits work where the specification is short, the output is long or repetitive, and something can check the result.** Where the specification is longer than the output, delegating costs more than doing it.
 
+**Score the claim types too, not only the task.** A claim a grep can check — what exists, what is named where, what has no matching test — is what a local model earns; a correctness judgement ("this line is wrong") needs the language semantics and the code's invariants held at once, which a small model does not do, so drop those from the prompt or label them hypotheses for a cloud reviewer (observation #0046). The table is in `references/work-classes.md`.
+
+
 Report the score, the class, and the mode. A poor-fit task gets a plain "do this yourself, here is why" — the recommendation is the deliverable, not a card.
 
 ## 3. Match a model — by class, never by name
@@ -80,6 +83,8 @@ Two rules that survive contact with real runs:
 
 - **A passing check is not a good result.** A check proves the assertions hold, never that they are worth asserting. A local model wrote an equality assertion with its arguments reversed: it passes, because equality is symmetric, and every failure message it could ever print is backwards. No gate catches that. Say what the check covered so the gap is visible.
 - **Count what should not have changed.** Most silent failures show up as something missing, not something failing — a dropped file, a shrunken list, a schema key that vanished. Check the count as hard as the result.
+- **A mechanical verifier proves shape, never truth.** Valid JSON with real names and in-range line numbers says the claim parsed, not that it survived the code — 17 suspected-bug claims passed the verifier and none survived triage, while 23 of 113 untested-function claims held (observation #0046). Triage a sample, report a **confirmation rate per claim type**, and keep only the types that confirmed in the next run's prompt.
+
 
 Unattended work that fails its check is reverted and set aside with its output and reason, never left half-applied.
 
