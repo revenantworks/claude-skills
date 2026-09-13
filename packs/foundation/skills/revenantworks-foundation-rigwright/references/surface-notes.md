@@ -1,6 +1,6 @@
 # Surface Notes — Volatile Baseline *(single update surface)*
 
-> **Last verified: 2026-08-17.** This is the **only** file `rigwright refresh` regenerates — surface fields, caps, and load behavior drift with releases; the layer stack in SKILL.md does not. When this stamp is over 60 days old, treat every number here as possibly stale and say so before quoting one. The placement doctrine never goes stale.
+> **Last verified: 2026-08-17.** This is the **only** file `rigwright refresh` regenerates — surface fields, caps, and load behavior drift with releases; the layer stack in SKILL.md does not. When this stamp is over 60 days old, treat every number here as possibly stale and say so before quoting one. The placement doctrine never goes stale, and a section marked *(durable)* below is rig-local edit mechanics rather than a surface fact — refresh carries it forward unchanged and does not restamp it.
 
 The layer stack decides *where* a rule belongs; this file records what each surface currently *provides and constrains*. A run that stays at the placement level never opens this file — SKILL.md *Load budget* is the source of that rule.
 
@@ -15,6 +15,9 @@ The layer stack decides *where* a rule belongs; this file records what each surf
 - MCP server configuration
 - Auto-memory
 - Where this file stops — the agentwright line
+- Where this file stops — the agentwright line
+- Rig edit mechanics *(durable)*
+
 
 ---
 
@@ -97,3 +100,20 @@ This layer is **not authored** by a build. It is included in the stack so an aud
 ## Where this file stops — the agentwright line
 
 Cowork tasks, Claude Code routines (cloud), and desktop scheduled tasks are **not documented here** and are not rigwright's to emit. Their fields, cadence presets, trigger types, missed-run semantics, and enforcement surfaces live in agentwright's `platform-notes.md`, which is the pack's single home for anything that runs unattended. A run that reaches for a scheduler here has crossed the seam and should hand off by name rather than duplicating the table.
+Cowork tasks, Claude Code routines (cloud), and desktop scheduled tasks are **not documented here** and are not rigwright's to emit. Their fields, cadence presets, trigger types, missed-run semantics, and enforcement surfaces live in agentwright's `platform-notes.md`, which is the pack's single home for anything that runs unattended. A run that reaches for a scheduler here has crossed the seam and should hand off by name rather than duplicating the table.
+
+---
+
+## Rig edit mechanics *(durable)*
+
+**Line endings are a per-file property, and this rig's repos are mixed (observation #0058).** Five files in one directory of one estate repo carried three different endings — same language, same project, and the two that differed were the two an earlier session had never opened. Per-file detection is the default here rather than a precaution: never sample one file and apply its answer to the rest. Nothing announces the mismatch on its own, because `git status` and `git diff` both normalise through the index.
+
+A scripted edit on this rig writes bytes (or passes `newline=""` — Python's `write_text` turns LF into CRLF) and derives the ending from the file it is about to write:
+
+```python
+def eol(b):
+    return "\r\n" if b.count(b"\r\n") > b.count(b"\n") - b.count(b"\r\n") else "\n"
+```
+
+Guessing wrong fails silently: `bytes.replace()` on a string that does not occur returns the original bytes, the file is written back unchanged, and the script exits zero. The asserted match count that turns that into a stop is dispatchwright's durability contract and is not repeated here; this file carries the rig-local fact the contract is applied against — that the endings are mixed.
+
