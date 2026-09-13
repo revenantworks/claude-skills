@@ -149,15 +149,23 @@ Declared here rather than in each member's frontmatter, changed 2026-07-27. The 
 | Member | Job | Route there when |
 |---|---|---|
 | `revenantworks-gamedev-pixelsmith` | Directs pixel art that must read at several zoom scales — per-band rules, terrain-versus-unit contrast, a one-scene look test, artist and generator briefs | The deliverable is a multi-scale pixel-art rule set, a look-test scorecard, an artist or generator brief, or an audit of existing art against those rules |
+| `revenantworks-gamedev-godotsmith` | Godot 4.x project conventions and the proof that a build is actually green — what a run's numbers may mean, the CI guards that keep them honest, who may close a gate, and the structural rules that make a project provable | The deliverable is an audit of whether a test run can be believed, a CI assertion set, a milestone gate ruling, or a read of Godot code against scene, signal, lifetime, determinism or repository conventions |
 
 **gamedev budgets** *(body-footprint table — one row per member; `build.py` validates each member's measured SKILL.md body against its row)*
 
 | Member | Budget (tokens) | Why |
 |---|---|---|
+| `revenantworks-gamedev-godotsmith` | 2600 | measured ≈2145 at the 1.0.0 build; the ten laws are body-resident because a run must not open a file to know what it is enforcing, and the four entry points each state the one or two rules that decide the run before any reference loads; all eight doctrine files hold procedure, worked commands and the borrowed-practice detail |
 | `revenantworks-gamedev-pixelsmith` | 3500 | measured ≈2360 at 1.0.0 build; the band model and the five laws are body-resident because a run must not open a file to know what it is enforcing; the references hold numbers, procedure, and templates |
 
-**gamedev seams:** none — a one-member pack has no boundary pair. The brandwright handoff (a brand palette is an input, never defined here) crosses packs and is carried by pixelsmith's own description; a seam row is owed when a second gamedev member lands.
+**gamedev seams** *(routing-seam table — one row per boundary pair; first declared 2026-09-12, when godotsmith made the pack two members)*
 
-**gamedev capstone:** none — a one-member pack (2026-08-29); revisit when the roster reaches three.
+| Seam | Left owns | Right owns | Router keys on | Cold-listing signal |
+|---|---|---|---|---|
+| pixelsmith ↔ godotsmith | Whether the art **reads** — palette and silhouette per zoom band, terrain-versus-unit contrast, the one-scene look test, and briefs for whoever draws or generates it | Whether the build is **provable** — what a test run's numbers may mean, the CI assertions that keep them honest, who may close a milestone gate, and the scene, signal, lifetime and determinism conventions underneath | What the answer would be measured against. A judgement by eye — does this read, does it hold at distance — is pixelsmith. A judgement against a count, a threshold or a stated bar is godotsmith. Recorded edge: "the units vanish when zoomed out" is pixelsmith even though a band alpha is a number, because the complaint is about perception; the same symptom traced to a clamp nobody checked against the band spacing is godotsmith, because the bar is arithmetic | both descriptions |
+
+The brandwright handoff (a brand palette is an input, never defined here) crosses packs and is carried by pixelsmith's own description.
+
+**gamedev capstone:** none — a two-member pack (godotsmith added 2026-09-12); revisit when the roster reaches three.
 
 **gamedev canonical repo:** `github.com/revenantworks/claude-skills` — source of truth for member drift audits (registered 2026-08-29). Nothing else carries the URL: manifests are generated from here, and every other file says "the registered canonical repo."

@@ -1,4 +1,17 @@
-# Changelog — revenantworks-foundation-skillwright
+# Changelog
+
+## [1.3.10] — 2026-09-12
+
+### Changed
+
+- `references/pack-registry.md`: registered `revenantworks-gamedev-godotsmith` as the second
+  gamedev member — roster row, body-footprint budget row (2600), and the pack's first
+  routing-seam table, replacing the "none — a one-member pack has no boundary pair" note
+  that had explicitly owed a seam row once a second member landed. Capstone note updated to
+  say two members.
+- Registry data only. No doctrine, entry point, rule or threshold in this skill changed, and
+  the `description` field is byte-identical, so no re-judge of its eval suite is owed.
+ — revenantworks-foundation-skillwright
 
 > Renamed from `revenant-foundation-skillwright` on 2026-08-07 (pack 2.0.0 — the `revenant` → `revenantworks` marketplace migration). Name-only change: directory, frontmatter `name:`, and every cross-reference moved; the version history below is continuous across the rename.
 

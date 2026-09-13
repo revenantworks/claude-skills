@@ -4,7 +4,7 @@ description: Directs pixel art that must read at several zoom scales at once —
 license: MIT
 compatibility: Optional image viewing — when the surface can show an image file (Claude Code Read on a PNG, a claude.ai upload), the look test scores the picture; on a surface with no image tool it runs the text-described path in full. No scripts, no packages, no network at runtime. Sibling revenantworks-foundation-brandwright is named for a brand palette handoff and is never required.
 metadata:
-  version: "1.0.1"
+  version: "1.0.2"
   profile: standard
   pack: gamedev
   brand: revenantworks

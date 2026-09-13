@@ -1,4 +1,15 @@
-# Changelog — revenantworks-gamedev-pixelsmith
+# Changelog
+
+## [1.0.2] — 2026-09-12
+
+### Changed
+
+- `references/pack.md` restamped: the gamedev roster is two members as of today, and the
+  pack's first routing-seam row (pixelsmith to godotsmith) now exists. Generated from the
+  registry by `tools/build.py`. No rule, threshold, count or entry point in this skill
+  changed, and the `description` field is byte-identical, so the trigger evals judge the
+  same routing surface and no re-judge is owed by this bump.
+ — revenantworks-gamedev-pixelsmith
 
 All notable changes to this skill are recorded here. Format follows Keep a Changelog; versions follow SemVer.
 
