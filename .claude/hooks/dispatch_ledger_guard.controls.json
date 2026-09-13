@@ -1,19 +1,23 @@
 {
   "positive": [
     {
-      "name": "real live dispatch-mode flag (armed, session c383d83c-...) + a real cwd that genuinely has no .dispatch/runs ledger (a path with no .dispatch/runs beneath it) \u2014 guard fails closed. Captured 2026-09-11; NOTE: depends on ~/.claude/dispatch-mode.json still being live (fresh within its 12h window) when this control runs \u2014 once that flag goes stale this case's real outcome becomes exit 0 (dispatch mode no longer armed for anyone), a property of the hook's own stateful design, not a fixture defect.",
+      "name": "real live dispatch-mode flag (armed, session c383d83c-...) + a real cwd that genuinely has no .dispatch/runs ledger (a path with no .dispatch/runs beneath it) — guard fails closed. Captured 2026-09-11; NOTE: depends on ~/.claude/dispatch-mode.json still being live (fresh within its 12h window) when this control runs — once that flag goes stale this case's real outcome becomes exit 0 (dispatch mode no longer armed for anyone), a property of the hook's own stateful design, not a fixture defect.",
       "argv": [],
       "stdin": "{\"tool_name\": \"Task\", \"session_id\": \"c383d83c-5af0-4a61-98ee-c4b6376d6fca\", \"cwd\": \"./.no-ledger-here\"}",
-      "expect_exit_in": [2],
+      "expect_exit_in": [
+        2
+      ],
       "expect_contains": "no current run ledger was found"
     }
   ],
   "negative": [
     {
-      "name": "real live dispatch-mode flag (armed) + the real, currently-live 2026-09-10-estate-audit ledger under ./.dispatch/runs \u2014 ledger is tiered and inside the wave cap, guard allows. Captured 2026-09-11; NOTE: relies on that ledger's mtime staying inside the 12h staleness window (it does not name this session id, so it currently qualifies on freshness, not on the session-name path) \u2014 once the run directory ages out or is archived this case needs a fresh real ledger substituted.",
+      "name": "real live dispatch-mode flag + the frozen, session-tied ledger fixture at workshop/estate/observer/fixtures/dispatch-ledger-current -- ledger is tiered and inside the wave cap, guard allows. The ledger body is a REAL ledger copied verbatim off the rig (2026-09-10-estate-audit); the sibling `session` marker beside it is what ledger_names_session() reads, so ledger_is_current() holds on the session-name path and NOT on mtime. Rewired 2026-09-13 because the previous form relied on the 12h freshness window and failed every run once that run directory aged out -- as its own note predicted. The `session` file and this session_id are one fact written twice: if they drift, this control silently falls back to the freshness path and starts rotting again.",
       "argv": [],
-      "stdin": "{\"tool_name\": \"Task\", \"session_id\": \"c383d83c-5af0-4a61-98ee-c4b6376d6fca\", \"cwd\": \".\"}",
-      "expect_exit_in": [0]
+      "stdin": "{\"tool_name\": \"Task\", \"session_id\": \"c383d83c-5af0-4a61-98ee-c4b6376d6fca\", \"cwd\": \"estate/observer/fixtures/dispatch-ledger-current\"}",
+      "expect_exit_in": [
+        0
+      ]
     }
   ]
 }
