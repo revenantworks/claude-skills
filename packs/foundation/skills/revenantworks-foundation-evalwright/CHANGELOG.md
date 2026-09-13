@@ -1,5 +1,36 @@
 # Changelog — revenantworks-foundation-evalwright
 
+## [1.1.3] — 2026-09-13
+
+Doctrine only; the `description` is byte-identical, and no entry point, gate, or count moved.
+Content applied from the task-observer weekly review of 2026-09-13 (autonomous mode), citing
+observations #0056, #0057, #0060. Two bullets land in the SKILL body's Anti-patterns; the worked
+detail sits in `references/eval-doctrine.md`.
+
+- **A coverage claim states the population it searched (#0056).** `eval-doctrine.md`'s coverage
+  map section now asks for every path that executes the code — the test directory, a CI job's own
+  scripts, smoke and tooling harnesses, example projects — to be enumerated before a gap is
+  reported, and makes a name hit a candidate rather than a confirmation until someone reads it and
+  sees the right class exercised. Measured: three of four apparent gaps in one pass were covered
+  by a headless script under `tools/` wired as a required CI step; an earlier delegated sweep
+  produced 90 false positives on loose name matching alone.
+- **A floor is not self-maintaining; an exact assertion is (#0057).** Same file, Count integrity:
+  a `>=` guard prints its slack on success (`tests=411 floor=404 slack=7`) or bounds it with
+  `<= floor + N`, and is re-derived from a baseline run before a suite changes. Measured: a floor
+  of 404 against a real baseline of 408, so four tests could have vanished with the guard still
+  green. dispatchwright's Reconcile carries the dispatch-time half of the same rule and is
+  dispositioned to its own unit.
+- **A large result is a claim about the instrument, exactly as an empty one is (#0060).** Same
+  file, Audit scoring: group findings by the string actually matched, count the distinct set, and
+  read it — 592 role-filtered findings collapsed to 133 distinct strings, every one documentation,
+  an API example, or ordinary English. Two cautions ride with it: a completeness percentage is a
+  ratio whose denominator the instrument chose, and a matcher that cannot tell describing a threat
+  from performing one ranks the most careful writing worst. The rule's primary home, skillwright's
+  third-party-adoption paragraph, is another unit's.
+- Body re-measured against the foundation 2200-token row after the two Anti-patterns bullets
+  (1.1.2 measured ≈1947; the two bullets add ≈130). Both eval files take a provenance re-anchor to
+  1.1.3 — no case was added, retired, or had its assertion moved, so nothing is owed a re-run.
+
 > Renamed from `revenant-foundation-evalwright` on 2026-08-07 (pack 2.0.0 — the `revenant` → `revenantworks` marketplace migration). Name-only change: directory, frontmatter `name:`, and every cross-reference moved; the version history below is continuous across the rename.
 
 ## [1.1.2] — 2026-09-11

@@ -1,5 +1,30 @@
 # Changelog — revenantworks-localops-lmstudiorunner
 
+## [1.1.1] — 2026-09-13
+
+**Claim-type doctrine from the task-observer weekly review of 2026-09-13** (autonomous mode,
+observations #0046 and #0056). Both are the residue of one overnight `gemma-4-12b-it` run over 44
+GDScript files and the triage that followed it. `description` byte-identical; no entry point moved.
+
+- `references/work-classes.md` gains a **Claim types** section (#0046): enumeration,
+  cross-reference and classification-against-a-stated-rule claims are checkable by grep and earn a
+  local model; correctness judgements need the language semantics and the code's invariants held
+  at once, so they are dropped from the prompt or labelled hypotheses for a cloud reviewer. With
+  the measured rates — 0 of 17 suspected bugs confirmed, 23 of 113 untested-function claims held —
+  and the rule they teach: shape-valid is not true. The Contents list names the new section.
+- `SKILL.md` step 2 gains the claim-type decision rule and step 5 a third verify bullet (#0046):
+  a mechanical verifier proves shape, never truth, so triage a sample, report a **confirmation
+  rate per claim type**, and keep only the types that confirmed in the next run's prompt.
+- `references/task-cards.md` gains card rule 7 (#0056): name the population for any absence claim.
+  A card that names only `tests/` inherits the narrow-scope error by construction, because a model
+  with no repository knowledge defaults to the obvious directory — and three of four apparent gaps
+  in one pass were covered by a headless script under `tools/` wired as a required CI step. Ask for
+  the file and line that matched with the claim; a bare name hit is a candidate, not a
+  confirmation. "Six rules" → "Seven rules".
+- `evals/SUITE.md` and `evals/TRIGGERS.md` take a provenance re-anchor to 1.1.1 — no case assertion
+  moved, so no case is owed a re-run. A case asserting the per-claim-type confirmation rate is owed
+  and recorded here rather than left silent.
+
 All notable changes to this skill. Format follows Keep a Changelog; this skill
 uses semantic versioning.
 

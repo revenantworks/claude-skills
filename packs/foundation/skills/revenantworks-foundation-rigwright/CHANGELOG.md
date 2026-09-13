@@ -1,5 +1,35 @@
 # Changelog — revenantworks-foundation-rigwright
 
+## [1.1.8] — 2026-09-13
+
+Applied from the task-observer weekly review staged 2026-09-13 (autonomous mode, owner absent).
+Body and one reference; the `description` is byte-identical.
+
+- **Placement — the layer stack gains the partition-by-reach rule (#0059).** What is true of one
+  repo belongs in that repo's `CLAUDE.md`; what is true of any project in its class belongs in a
+  skill; and the container call is answered per partition rather than once for the whole body,
+  each file stating in its own text that it does not repeat the other — the same rule in two
+  containers is the drifting copy the split exists to prevent. The stack's three standing rules
+  key on frequency, enforceability and rule-versus-reference; none asked about reach.
+  skillwright's niche verdict cites this call rather than restating it.
+- **Entry — Audit gains a hook-controls rule (#0047).** A stateful hook's controls are expected
+  to be side-effect-free at check time: the controls file names the state paths its hook writes,
+  and running the controls leaves them unchanged — an isolation flag the hook honors, or a
+  snapshot and restore around the call. Real, non-invented fixtures buy correctness, not safety;
+  the two are separate properties and satisfying the first says nothing about the second. The
+  mechanism is left open on purpose — what was missing was the stated expectation, not the
+  implementation.
+- **`references/surface-notes.md` gains a durable Rig edit mechanics section (#0058).** Line
+  endings are a per-file property and this rig's repos are mixed — one directory held three
+  across five files — so per-file detection is the default here, never one file's answer applied
+  to the rest. The header stamp now says `rigwright refresh` carries a *(durable)* section
+  forward unchanged, so a vendor-facing regeneration cannot drop a rig-local fact. The asserted
+  match count is dispatchwright's durability contract and is pointed at, not restated.
+- **Budget.** The body lands at ≈4733 against a 4700 row; the row needs raising to 4800 in
+  skillwright's `pack-registry.md`, as 1.1.6 said a future addition should do rather than
+  compress the lines already there. Each rule above is **authored-not-covered** in
+  `evals/test-cases.md` — recorded as owed, not claimed.
+
 > Renamed from `revenant-foundation-rigwright` on 2026-08-07 (pack 2.0.0 — the `revenant` → `revenantworks` marketplace migration). Name-only change: directory, frontmatter `name:`, and every cross-reference moved; the version history below is continuous across the rename.
 
 ## [1.1.7] — 2026-09-11

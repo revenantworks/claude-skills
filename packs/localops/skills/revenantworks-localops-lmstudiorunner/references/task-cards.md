@@ -60,7 +60,7 @@ a card whose `check` was not authored by the owner is refused, not run.
 
 ## Writing a card that works
 
-Six rules, each of them the residue of a failed run.
+Seven rules, each of them the residue of a failed run.
 
 1. **One file, one behaviour per card.** Given two target files at once the
    model spends its reasoning deciding which content belongs where instead of
@@ -80,6 +80,18 @@ Six rules, each of them the residue of a failed run.
 6. **Size the ask to the class.** Compositional requests can be large. Atomic
    ones saturate at a few dozen — partition them, or do them another way.
    `work-classes.md` has the measured numbers.
+7. **Name the population for any absence claim.** "Nothing tests this", "this
+   field appears nowhere", "no caller exists" are claims about a search, and
+   the model has no repository to search — so state what it may treat as the
+   whole population, enumerating every place the behaviour is actually driven:
+   the test directory, any CI job's own scripts, smoke or tooling harnesses.
+   A card that names only `tests/` inherits the narrow-scope error by
+   construction, because a model with no repository knowledge defaults to the
+   obvious directory. Measured: three of four apparent gaps in one pass were
+   covered by a headless script under `tools/` wired as a required CI step.
+   Ask for the evidence with the claim — the file and line that matched —
+   because a bare name hit is a candidate, not a confirmation.
+
 
 ## The queue and its states
 

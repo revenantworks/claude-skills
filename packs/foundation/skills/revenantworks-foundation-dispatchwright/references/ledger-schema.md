@@ -44,6 +44,8 @@ override, so the two must agree.
 | `commit_ts` | Timestamp the commit line was added to the row. |
 | `push_ts` | Timestamp the row was updated after a confirmed push. |
 | `remote_sha` | What `git rev-parse origin/main` (or the unit's branch) actually shows — the field Reconcile checks, not `commit_sha`. |
+| `reversal` | How this unit's change is undone: the exact command, or the path of the file holding the prior state — written at the same time as `commit_sha`, by the unit that made the change, never by a later reader (task-observer observation #0045). A git commit reverses itself, so a row whose only surface is a commit may read `—`; every other surface — a setting, a plugin, a routine, a remote, a junction, a moved folder, a repo description — carries its own. Reconcile (SKILL.md §8) treats an empty `reversal` on a landed non-git row as unverified. The counter-example the rule comes from: twenty-one branch deletions were the one destructive action whose undo was written as it happened (`cache/branch-deletions.json`, one tip sha per branch), and theirs is the only rollback line that is exact. |
+
 | `status` | `dispatched` \| `committed` \| `pushed` \| `verified` \| `done` \| `stalled` \| `failed` \| `resumed`. Only `verified` means `commit_sha == remote_sha` was checked and matched; `done` is the closing state for a unit that produces no commit (see Closing a row). |
 
 ## Closing a row
@@ -78,7 +80,8 @@ audit, it only stops a finished unit from counting as running.
 ```
 
 `status` reaches `verified` only after Reconcile confirms `remote_sha` independently — a row a
-unit's own report marks "done" stays at `pushed` until that check runs.
+unit's own report marks "done" stays at `pushed` until that check runs. The example omits the
+`reversal` column for width; this unit's surface is a git commit, so that cell would read `—`.
 
 ## Writing the ledger
 

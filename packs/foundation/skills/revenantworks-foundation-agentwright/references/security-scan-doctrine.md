@@ -54,6 +54,8 @@ Entry — Design and Entry — Audit already cover *specifying* these; the scan 
 - **Is there a stop condition?** Something the run reaches that ends it — a cap hit, an error class, a phrase honored. An agent whose only terminal state is "task complete" cannot stop when the task is the problem: **P0**.
 - **Is the blast radius bounded numerically?** Caps are numbers with units (`design-checklist.md` area 2) and the scan checks proportion, not just presence — a cap that cannot bind in any plausible run is a cap in name only, **P1**, and the finding states the radius it fails to bound.
 - **Can a running agent be halted?** Both layers, per checklist area 3, with the puller named for each. Missing hard layer is **P0** — it is the standing P0's second clause. Present but pullable only by the agent's own machinery (a flag the agent itself writes, a schedule it can re-enable) is a hard layer that isn't one: **P0**.
+- **Does anything survive the halt that can restart the work?** A supervising agent, a parked unit, a scheduler entry or a watchdog that treats an absent job as *not yet started* undoes the stop from the other side, and the run reads as a clean cancellation while the work is running again. A halt layer with a live relauncher behind it is a hard layer that isn't one: **P0**, on the same clause as the bullet above. The evidence this class accepts is the work absent on a later read, never the stop command's exit status (`design-checklist.md` area 3, observation #0051).
+
 
 ## S4 — Credentials and secrets
 

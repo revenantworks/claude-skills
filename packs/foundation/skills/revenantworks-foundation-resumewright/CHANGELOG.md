@@ -1,5 +1,16 @@
 # Changelog — revenantworks-foundation-resumewright
 
+## [1.0.2] — 2026-09-13
+
+Weekly skill review (autonomous mode), observation #0045.
+
+- The handoff's State block gains a line per non-git change with its reversal: a setting, plugin,
+  routine, remote or junction the session changed, undone by an exact command or restored from a
+  file holding the prior value, written by the session that made the change. A landed sha reverses
+  itself; nothing else in the handoff did, so a resume could not undo what a paused session had done.
+  Mirrors the `reversal` field dispatchwright's ledger row gains in the same review.
+- One line under What resumewright never does states the rule.
+
 ## [1.0.1] — 2026-09-11
 
 **Local-path leak fixed on first tag** (`tools/test_release_paths.py`'s

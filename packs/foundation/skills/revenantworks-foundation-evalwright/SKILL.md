@@ -3,7 +3,7 @@ name: revenantworks-foundation-evalwright
 description: Authors and audits eval suites for skills, prompts, and agent specs — a build-time generator whose suites live in the target and run by hand without it. Trigger when someone wants trigger evals, test cases, an assertion suite, or regression coverage written for a skill, SKILL.md, prompt card, or agent spec; when a should/shouldn't set needs balancing or a suite needs scoring — coverage per entry point, boundary pairs, count integrity; when a suite should be refreshed after its target changed; or when they say evalwright (audit — score a suite, refresh — re-derive after changes). For building the skill itself, skillwright; for the prompt under test, promptwright; for code unit tests and QA, engineering test tooling; automated benchmark loops belong to skill-creator's eval tools.
 license: MIT
 metadata:
-  version: "1.1.2"
+  version: "1.1.3"
   profile: standalone
   pack: foundation
   brand: revenantworks
@@ -66,6 +66,10 @@ A target plus a request for evals ("write trigger evals for my new skill", "buil
 ## Anti-patterns
 
 - **Count drift.** A suite whose stated counts fall out of sync with its actual case count is a real defect — the full rule and its re-check cadence live in `eval-doctrine.md`'s Count integrity section.
+- **A floor that prints a bare pass.** A `>=` guard falls behind reality on every addition without announcing it, while an exact assert cannot drift without failing — so a floor prints its slack or bounds it, and is re-derived from a baseline run before a suite changes (observation #0057). The full rule is in `eval-doctrine.md`'s Count integrity section.
+
+- **An assumed search population.** A coverage claim is a claim about where you looked, so enumerate every path that executes the code or fires the entry point before reporting a gap, and read each hit rather than counting it — a name match is a candidate, not a confirmation (observation #0056). The rule and its measured case live in `eval-doctrine.md`'s coverage map section.
+
 
 ## Behavior notes
 

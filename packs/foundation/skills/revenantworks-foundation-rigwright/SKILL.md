@@ -3,7 +3,7 @@ name: revenantworks-foundation-rigwright
 description: Builds the standing config Claude reads before work — a Claude Project's instructions and knowledge-file plan, a CLAUDE.md, a repo's .claude layout, hooks, and .mcp.json — emitted paste-ready in each surface's native form, checked against its limits. Trigger to set up, write, fix, or trim a Claude Project, project instructions, a CLAUDE.md, or a repo's Claude config; to decide which layer a rule belongs in — profile preferences, project instructions, CLAUDE.md, a skill, a hook, or auto-memory; or to score a setup for bloat and drift without rewriting it. Answers to "rigwright" ("rigwright audit", "rigwright refresh"). For an Agent Skill or a SKILL.md package, skillwright; for anything unattended — a Cowork task, a routine, a scheduled task, plus its cadence and guardrails — agentwright; for the wording of an instruction block once its home is settled, promptwright; for a pure token or cost cut on a config whose layout is already right, tokenwright.
 license: MIT
 metadata:
-  version: "1.1.7"
+  version: "1.1.8"
   profile: standalone
   pack: foundation
   brand: revenantworks
@@ -70,6 +70,10 @@ Three rules do most of the work:
 - **A reference is not a rule.** Material Claude should consult when relevant is a knowledge file or a linked doc. Pasting it into the instruction block converts an occasional lookup into a permanent tax.
 
 State the layer, the one-line why, and what would move it. Where two layers both work, say so and recommend rather than hedging.
+State the layer, the one-line why, and what would move it. Where two layers both work, say so and recommend rather than hedging.
+
+**Partition by reach before choosing a container (observation #0059).** What is true of one repo belongs in its `CLAUDE.md`; what is true of any project in its class belongs in a skill. Answer per partition, never once for the whole, and where it splits each file states it does not repeat the other — the same rule in both drifts.
+
 
 **A live/tracked pair is diffed before either is touched.** Some config exists in two
 places at once: a live path a session actually reads (`~/.claude/settings.json`, a live
@@ -123,6 +127,10 @@ Score 1–10 on five dimensions with honest anchors (7+ ship-ready · 4–6 work
 **A hook or permission file is the owner's to install, whatever the audit finds** (observation #0026). A catalog row that proposes a change to a live hook directory, a permission file, `.mcp.json`, a policy cap or a baseline splits into two fields: the repo edit this session may make, and the install step, marked owner-gated, that it only reports. Never one command string that starts in a repo and ends in a live config — the boundary has to travel with the row a later session reads alone.
 
 **A pattern list that gates a hook is a claim about future input** (observation #0016). Where the audit touches a trigger or dispatch pattern file, check that every phrasing known to have missed is carried in the selftest as a positive control, and that at least one control is the literal string the rig actually produced rather than an invented example. A list assembled from the author's vocabulary is silently inert against the requester's; only a recorded miss proves which one it is.
+**A pattern list that gates a hook is a claim about future input** (observation #0016). Where the audit touches a trigger or dispatch pattern file, check that every phrasing known to have missed is carried in the selftest as a positive control, and that at least one control is the literal string the rig actually produced rather than an invented example. A list assembled from the author's vocabulary is silently inert against the requester's; only a recorded miss proves which one it is.
+
+**A stateful hook's controls are side-effect-free at check time (observation #0047).** At a controls file, check that it names the state paths its hook writes and that running the controls leaves them unchanged — an isolation flag, or a snapshot and restore — because checking the wiring must not perform the write.
+
 
 **State the extent you parsed, beside the extent the file holds** (observation #0041). When the audit scores a list read out of a config — checks, rules, servers, allow entries — derive the count twice, by different means (the parse, and a grep for the item marker), and print both in the same line as the score. A parser that stops early does not fail: it succeeds over a smaller world and reports a clean, coherent result about it, and every number downstream is then correct about the fragment and wrong about the whole. One self-audit's end-of-list regex matched a column-zero section comment and read 36 of 53 checks; its "6 have never run" was internally consistent and the true figure was 17. A plausible number is worse than a zero, because nothing about it invites a second look.
 

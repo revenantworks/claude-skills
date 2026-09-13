@@ -23,6 +23,10 @@ prevents a repeat — e.g. "run `git stash list` before trusting a clean tree.">
 
 - <repo>: <N> commits, <what shipped>, verified via `git log --oneline origin/main -5` at
   <sha>. Repeat one line per repo touched this session.
+- <non-git change>: <the setting, plugin, routine, remote or junction changed> — undone by
+  `<exact command>` or restored from `<path of the file holding the prior state>`. One line per
+  change. A landed sha reverses itself; nothing else here does, and an undo reconstructed later
+  recovers only what someone happened to mention (task-observer observation #0045).
 
 ## Owner decisions recorded (do not re-ask)
 

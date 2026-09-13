@@ -1,5 +1,61 @@
 # Changelog — revenantworks-foundation-dispatchwright
 
+## [1.2.7] — 2026-09-13
+
+Nine task-observer observations from the weekly review staged 2026-09-13, drafted in autonomous
+mode and applied on a review branch by a single writer. Body and reference only; the
+`description` is byte-identical, so the routing surface is unchanged.
+
+- **§2 Shape check names a fork only the requester can settle (observation #0049).** When the
+  asked-for outcome has exactly one technically real path and that path crosses a boundary the
+  owner owns — which platform an unattended agent runs on, which account, which credential model
+  — the boundary is the decision, not an implementation detail; Shape check answers whether this
+  is a fan-out, never whether the approach was authorised. The creation-type judgment itself
+  stays agentwright's, as that observation assigns it.
+- **§5 Durability contract gains the scripted-edit rule (#0058).** A scripted multi-file edit
+  proves each edit landed with an asserted match count, not an exit code: a replace on a string
+  that does not occur returns the original bytes and exits zero, and line endings are a per-file
+  property — five files in one directory carried three. Write bytes, detect each file's own
+  ending, assert the count.
+- **§6 Wave execution gains two rules (#0043, #0044, #0051).** The `isolation: "worktree"` bullet
+  now states that a review or polish skill a unit invokes is itself a writer — helpers told to
+  report only have edited and pushed on their own, and one spawned a sub-agent that ran the
+  unit's own release step — so the helper runs inside the worktree, the tree is diffed after each
+  exchange, and the agents are re-listed to stop anything it started. A second bullet: cancelling
+  a unit mid-flight stops the agent first and its processes second, and the evidence is the work's
+  absence a minute later, never the kill command's success.
+- **§8 Reconcile gains a reversal check and tightens the test-total rule (#0045, #0057).** A
+  landed row whose surface is not a git commit is unverified until its `reversal` field is
+  non-empty. The existing test-total check now says where the expectation comes from — a baseline
+  run of the unchanged suite, not the last number someone wrote down — and an actual above it is
+  recorded as the new expectation rather than passed quietly; the shortfall half of #0057 was
+  already carried since 1.2.2 and is unchanged.
+- **`references/ledger-schema.md` gains the `reversal` field (#0045).** How the unit's change is
+  undone — the exact command, or the path of the file holding the prior state — written at the
+  same time as `commit_sha`, by the unit that made the change. A git commit reverses itself; a
+  setting, a plugin, a routine, a remote, a junction or a repo description does not, and the one
+  rollback line that came out exact was the one whose undo file was written as it happened.
+- **`references/unit-brief-template.md` gains six rules (#0043, #0044, #0045, #0047, #0053,
+  #0057, #0058).** A review or polish skill you invoke inherits none of this brief — record `HEAD`
+  and `git status`, isolate, diff after, and re-run `ListAgents` after each exchange with a
+  backgrounded helper. Record the prior value before changing anything that is not a git commit
+  and put the undo in the row's `reversal` field. A control or fixture written for a stateful hook
+  performs that hook's real side effect, so the unit names every state path it touches and the
+  mechanism that keeps the check side-effect-free. Read the regenerating function before cutting
+  from a generated collection — a cut inside an idempotency guard's "already handled" set is a
+  tombstone, not a delete. The Expected test total field is derived from a baseline run and
+  reports its slack. Every scripted edit asserts its occurrence count, with the two-line per-file
+  line-ending detector beside it.
+- Registry body budget raise owed, 5700 → 6000 (`references/pack-registry.md`, skillwright): the
+  six body additions are decision rules a fan-out run must not open a file to know — an
+  authorisation fork at Shape check, the proof an edit landed, what a helper counts as, how a
+  cancellation is verified, and the two Reconcile checks — body-resident for the same reason the
+  other caps are. Estimated ≈5940 against a 5547 baseline; the writer confirms with
+  `build.py --footprint` before landing and adjusts the ceiling if the measurement differs.
+  `.claude/hooks/` untouched: nothing here changes what `dispatch_gate.py` or
+  `dispatch_ledger_guard.py` parses, and the new `reversal` field is read by Reconcile, not by the
+  guard.
+
 ## [1.2.6] — 2026-09-11
 
 Applied by unit L1b (dispatch run `2026-09-10-estate-audit`) from the task-observer weekly

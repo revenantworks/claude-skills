@@ -10,7 +10,7 @@
       "name": "foundation",
       "source": "./packs/foundation",
       "description": "Eleven standalone wrights: skillwright (skills & packs), promptwright (prompts), commwright (messages), agentwright (agent specs), rigwright (standing Claude config), lorewright (research verdicts & playbooks), evalwright (eval suites), brandwright (brand & voice), tokenwright (token footprint), dispatchwright (fan-out dispatch), resumewright (committed session handoffs). Each routes on its own description and works alone; together they cover the full build-audit-ship loop.",
-      "version": "2.7.5",
+      "version": "2.8.0",
       "license": "MIT",
       "category": "productivity",
       "keywords": [
@@ -45,7 +45,7 @@
       "name": "localops",
       "source": "./packs/localops",
       "description": "Skills for running work on local models, on the -runner motif. First member: lmstudiorunner — hands work to an LM Studio model and verifies what comes back, scoring the task's shape first, auditing installed models from live metadata rather than a hardcoded list, and requiring a machine check for anything nobody will read.",
-      "version": "1.1.0",
+      "version": "1.1.1",
       "license": "MIT",
       "category": "productivity",
       "keywords": [

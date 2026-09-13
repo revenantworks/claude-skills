@@ -106,6 +106,9 @@ Provenance: derived from revenantworks-foundation-skillwright v1.0.0, 2026-07-14
 - Verdict `CROWDED / THIN` names at least one incumbent
 - 1–2 adjacent underserved niches proposed, with which to pursue first
 - The user's decision is requested — the verdict does not veto the build on its own
+- The verdict is stated per reach partition (v1.4.0, #0059): one partition here, because nothing
+  in a markdown-to-PDF converter is bound to a single repo; a split would carry one verdict per
+  container, each stating it does not repeat the other, with the container call handed to rigwright
 
 ## Case 10 — Deceptive by design (restraint: decline)
 

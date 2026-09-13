@@ -20,8 +20,11 @@ subagent; if this unit needs one and cannot be granted it, the step runs inline 
 
 **Expected artifacts:** [what "done" looks like — a file, a commit, a specific report shape]
 
-**Expected test total (if this unit ends in a test run):** [the count before the run starts —
-a reconciled total that falls short of this, even while green, is unverified, not done]
+**Expected test total (if this unit ends in a test run):** [the count before the run starts,
+derived from a baseline run of the unchanged suite — stash, run, restore — not from a config
+number or a memory. A reconciled total that falls short of this, even while green, is unverified,
+not done; a total above it means the expectation has gone stale, so report the slack (actual vs
+expected) rather than passing quietly (observation #0057)]
 
 **Stop condition:** [what tells you the unit is finished, stated before you start]
 
@@ -39,12 +42,36 @@ a reconciled total that falls short of this, even while green, is unverified, no
   you), right after your first commit (add the sha), and right after your first push (confirm the
   sha reached `origin`). A row you cannot update yourself, update by reporting the sha back to the
   dispatcher.
+
+- **Record the prior value before you change anything that is not a git commit** — a setting, a
+  plugin, a routine, a remote, a junction, a scheduled task, a repo description — and put the undo
+  in your row's `reversal` field: the exact command, or the path of the file holding the previous
+  state (`cache/<thing>-before.json`). Write it at the moment of the change, not at the end. A
+  reader reconstructing it later recovers only what someone happened to mention, and the gaps stay
+  invisible until the undo is needed (observation #0045).
+
 - **Run your gate against the STAGED tree, not the working tree.** A guard built on `git grep`,
   `git diff` or `git status` without an explicit untracked or staged scope cannot see a file you
   have written but not yet added — and the order this brief asks for (write → test → commit)
   puts every brand-new file through that blind spot. `git add -A`, re-run the guards, then
   commit. A clean suite proves nothing about a file that was untracked when it ran (observation
   #0034).
+
+- **Assert an occurrence count for every scripted edit.** Sampling one file's line ending and
+  normalising the rest to it makes `bytes.replace()` match nothing on the files that differ, which
+  returns the original bytes, writes them back unchanged and exits zero — a tree that looks
+  complete, a suite that passes, and a commit message describing changes that are not in the
+  commit (observation #0058). Detect per file:
+
+  ```python
+  def eol(b):
+      return b"\r\n" if b.count(b"\r\n") > b.count(b"\n") - b.count(b"\r\n") else b"\n"
+  ```
+
+  Then count the search string and exit non-zero when the count is not the expected one. The same
+  assertion catches a moved string, a file an earlier run already patched, and a wrong ending
+  alike, and it makes a re-run fail loudly ("expected 1, found 0") instead of quietly succeeding.
+
 - If a step needs a large fetched document (a spec, a long page, an API dump), write it once to
   `[shared fetch cache path]` and read it from there if you need it again — do not re-fetch, and
   do not assume you are the only unit that needs it.
@@ -55,6 +82,15 @@ a reconciled total that falls short of this, even while green, is unverified, no
 
 ### Boundaries this brief does not move
 
+- **A control or fixture you write for a stateful hook performs that hook's real side effect.** A
+  control built from a real invocation runs the real write path, so a check that only asks whether
+  a hook is wired will mutate the state that hook owns, on every future run, with no session
+  present to restore it (observation #0047). Name in your report every state path each control
+  touches, and say which mechanism keeps the check side-effect-free — a dry-run flag the hook
+  itself honours, or a byte-for-byte snapshot and restore around the call. A fixture whose
+  isolation lived only in your session's judgment is reported as unlanded, not as done.
+
+
 - **An "apply" command that ends in an install crosses an owner boundary.** A fix has two halves
   — the change to a repo you own, and the step that installs it into a live config (a hook
   directory, a permission file, `.mcp.json`, a policy cap, a baseline). Write them as two fields,
@@ -63,6 +99,16 @@ a reconciled total that falls short of this, even while green, is unverified, no
   live hooks directory, which a sibling finding in the same batch named as off-limits; whether a
   later session caught it depended on reading the sibling (observation #0026). A boundary stated
   once, somewhere else, does not travel with the field a different session reads alone.
+
+- **Read the rebuild path before you cut anything from a generated collection.** A queue, index or
+  cache usually guards regeneration with *never re-add a source that already has an entry*, and
+  terminal states — done, cut, skipped, dismissed — count as entries. A cut there is not a delete
+  but a tombstone: the generator now believes that source is handled forever, so the entry cannot
+  come back and the source drops out silently, while the collection looks tidy (observation
+  #0053). Before any cut, prune or reset step in this brief runs, read the regenerating function
+  and state what it treats as already handled. If your delete lands inside that set, say so —
+  then either do not cut, or cut and name the path that re-admits the source.
+
 - **A tool invocation pasted into this brief is a claim about the environment, not a
   measurement.** Where this brief states a verification *goal*, meet it any way that works and
   report what you measured. Where it pastes an exact command with its result already asserted
@@ -70,6 +116,16 @@ a reconciled total that falls short of this, even while green, is unverified, no
   marked unverified — a wrong recipe propagates to every unit in the wave at once and each unit
   independently believes it (observations #0035, #0036). Verify the property from inside the
   result before you report it, and report the value you measured, not the one you requested.
+
+- **A review or polish skill you invoke inherits none of this brief.** Record `HEAD` and
+  `git status` before the call, run the helper inside your worktree (or stash first), and diff
+  after: any edit it made is a finding to re-verify, never landed work, and any commit it made
+  breaks the one thing this brief guarantees — that you are the only writer here and every commit
+  is yours (observation #0043). Pass an explicit no-fix flag where the skill has one. When you
+  resume a backgrounded helper by message, re-run `ListAgents` after each exchange and stop
+  anything whose task resembles your own brief: one such sub-agent ran the unit's own release
+  step, twice, before it was found (observation #0044).
+
 
 ### Observations — return them, do not log them
 

@@ -1,6 +1,6 @@
 # Assertion suite — revenantworks-localops-lmstudiorunner 1.0.1
 
-Provenance: authored against SKILL.md at the 1.0.0 build (2026-09-09).
+Provenance: authored against SKILL.md at the 1.0.0 build (2026-09-09). **Re-anchored to v1.1.1, 2026-09-13 — provenance only, nothing executed here.** The 1.1.1 change lands the weekly review's doctrine edits (#0046, #0056); the `description` field is byte-identical, so the routing surface these judge did not move.
 Each case states its input, what must be true of the response, and what would
 falsify it. Run by reading; no runtime dependency.
 **Re-anchored to v1.0.1, 2026-09-10 — estate-audit findings
