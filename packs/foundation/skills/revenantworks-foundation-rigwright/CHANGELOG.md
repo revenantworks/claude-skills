@@ -1,5 +1,21 @@
 # Changelog — revenantworks-foundation-rigwright
 
+## [1.1.9] — 2026-09-13
+
+- **Entry — Audit gains a live-state-dependency rule (#0062).** A fixture whose validity rests
+  on a real flag, an expiring token, or a file another hook writes stays green only while
+  something keeps re-arming it — isolating that sibling's side effect (#0047, landed at 1.1.8)
+  can silently turn the fixture into a permanent fail with nothing actually broken, exactly the
+  failure this rig's `dispatch_ledger_guard.controls.json` reproduced within a day of #0047
+  shipping. Where an override point exists — an env var the hook already reads for its own
+  selftest, a temp file the control supplies — prefer pinning the exact state the control needs
+  over depending on whatever the real file currently says; where none exists, the check reports
+  `not-run` with the reason once the window has passed, never pass or fail.
+- Fixed a duplicated paragraph in Entry — Audit (the #0016 pattern-list rule was printed twice,
+  a merge artifact from 1.1.8's landing) while in the section for the change above.
+- Budget raised 5000 → 5300 (registry row); landed ≈4972 before this raise, 28 tokens of
+  headroom against a 5000 ceiling — the same trap this row's own history already named once.
+
 ## [1.1.8] — 2026-09-13
 
 Applied from the task-observer weekly review staged 2026-09-13 (autonomous mode, owner absent).

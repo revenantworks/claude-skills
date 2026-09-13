@@ -90,6 +90,17 @@ expected) rather than passing quietly (observation #0057)]
   itself honours, or a byte-for-byte snapshot and restore around the call. A fixture whose
   isolation lived only in your session's judgment is reported as unlanded, not as done.
 
+- **A control or fixture that depends on live state carries its own expiry.** Isolating one hook's
+  side effect (the bullet above) can silently starve a *sibling* fixture that was only staying
+  valid because the isolated write kept re-arming a flag, a token, or a timestamp the sibling reads
+  — a fixture that is real, never invented, and green for the wrong reason (observation #0062: the
+  sibling's own hook took its dependency on a real global flag literally, and the first unrelated
+  real session to arm that flag differently turned the fixture into a permanent, unannounced fail).
+  Before reporting a control done, name what live state — besides the file it directly touches —
+  its pass/fail depends on, and confirm the fixture is pinned against that dependency rather than
+  hoping the flag stays put; where the hook itself already exposes a test-override for that state,
+  use it instead of the real file.
+
 
 - **An "apply" command that ends in an install crosses an owner boundary.** A fix has two halves
   — the change to a repo you own, and the step that installs it into a live config (a hook

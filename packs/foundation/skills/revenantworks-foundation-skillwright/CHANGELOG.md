@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.4.1] — 2026-09-13
+
+- `references/pack-registry.md`: rigwright's budget row raised 5000 → 5300 at its own 1.1.9
+  (task-observer observation #0062, a live-state-dependency rule) — patch-only, no rubric or
+  entry-point content moved on skillwright's own side.
+
 ## [1.4.0] — 2026-09-13
 
 Applied from the task-observer weekly skill review staged 2026-09-13 (autonomous mode, owner

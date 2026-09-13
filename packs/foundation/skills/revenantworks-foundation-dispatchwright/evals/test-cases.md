@@ -1,6 +1,6 @@
 # Assertion Suite — revenantworks-foundation-dispatchwright
 
-> **Provenance:** target `revenantworks-foundation-dispatchwright` v1.2.0, re-anchored to v1.2.6 (below) · suite authored **Re-anchored to v1.2.7, 2026-09-13 — provenance only, nothing executed here.** The 1.2.7 change lands the weekly review's doctrine edits (#0043, #0044, #0045, #0047, #0049, #0051, #0053, #0057, #0058); the `description` field is byte-identical, so the routing surface these judge did not move.
+> **Provenance:** target `revenantworks-foundation-dispatchwright` v1.2.0, re-anchored to v1.2.6 (below) · suite authored **Re-anchored to v1.2.7, 2026-09-13 — provenance only, nothing executed here.** The 1.2.7 change lands the weekly review's doctrine edits (#0043, #0044, #0045, #0047, #0049, #0051, #0053, #0057, #0058); the `description` field is byte-identical, so the routing surface these judge did not move. **Re-anchored to v1.2.8, 2026-09-13 — provenance only, nothing executed here:** `references/unit-brief-template.md` gained a second Boundaries clause (#0062) — a control that depends on live state carries its own expiry. Reference-only; the `description` is byte-identical, so the routing surface these judge did not move.
 > 2026-09-09, closing the debt `evals/RESULTS.md` has carried since the member's 1.0.0 build:
 > "No assertion suite (`test-cases.md`) exists yet for this member — dispatchwright ships with
 > trigger evals only at 1.0.0." **16 cases**, assertion-only — each is an Input plus mechanical

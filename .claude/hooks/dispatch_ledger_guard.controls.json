@@ -1,9 +1,10 @@
 {
   "positive": [
     {
-      "name": "real live dispatch-mode flag (armed, session c383d83c-...) + a real cwd that genuinely has no .dispatch/runs ledger (a path with no .dispatch/runs beneath it) — guard fails closed. Captured 2026-09-11; NOTE: depends on ~/.claude/dispatch-mode.json still being live (fresh within its 12h window) when this control runs — once that flag goes stale this case's real outcome becomes exit 0 (dispatch mode no longer armed for anyone), a property of the hook's own stateful design, not a fixture defect.",
+      "name": "dispatch-mode flag pinned live for session c383d83c-... (2026-09-13, observation 0062) + a cwd that genuinely has no .dispatch/runs ledger beneath it — guard fails closed. Session id is the literal one captured 2026-09-11; pin_dispatch_flag stamps it into a throwaway flag file with a fresh timestamp at check time, so this no longer depends on the real ~/.claude/dispatch-mode.json naming this same session, which stopped being true the first time any other real session armed that file for itself.",
       "argv": [],
       "stdin": "{\"tool_name\": \"Task\", \"session_id\": \"c383d83c-5af0-4a61-98ee-c4b6376d6fca\", \"cwd\": \"./.no-ledger-here\"}",
+      "pin_dispatch_flag": true,
       "expect_exit_in": [
         2
       ],
@@ -12,9 +13,10 @@
   ],
   "negative": [
     {
-      "name": "real live dispatch-mode flag + the frozen, session-tied ledger fixture at workshop/estate/observer/fixtures/dispatch-ledger-current -- ledger is tiered and inside the wave cap, guard allows. The ledger body is a REAL ledger copied verbatim off the rig (2026-09-10-estate-audit); the sibling `session` marker beside it is what ledger_names_session() reads, so ledger_is_current() holds on the session-name path and NOT on mtime. Rewired 2026-09-13 because the previous form relied on the 12h freshness window and failed every run once that run directory aged out -- as its own note predicted. The `session` file and this session_id are one fact written twice: if they drift, this control silently falls back to the freshness path and starts rotting again.",
+      "name": "dispatch-mode flag pinned live for session c383d83c-... (2026-09-13, observation 0062) + the frozen, session-tied ledger fixture at workshop/estate/observer/fixtures/dispatch-ledger-current -- ledger is tiered and inside the wave cap, guard allows. The ledger body is a REAL ledger copied verbatim off the rig (2026-09-10-estate-audit); the sibling `session` marker beside it is what ledger_names_session() reads, so ledger_is_current() holds on the session-name path and NOT on mtime. pin_dispatch_flag replaces this control's second dependency on real machine state (the live ~/.claude/dispatch-mode.json correlating to this same session) with a throwaway flag file stamped fresh at check time, using the same literal session id captured 2026-09-11 -- so this case now proves the ledger-allows path deterministically instead of by coincidence with whatever session last armed the real flag. The `session` file and this session_id are one fact written twice: if they drift, this control silently falls back to the mtime-freshness path and starts rotting again.",
       "argv": [],
       "stdin": "{\"tool_name\": \"Task\", \"session_id\": \"c383d83c-5af0-4a61-98ee-c4b6376d6fca\", \"cwd\": \"estate/observer/fixtures/dispatch-ledger-current\"}",
+      "pin_dispatch_flag": true,
       "expect_exit_in": [
         0
       ]

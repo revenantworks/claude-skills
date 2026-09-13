@@ -17,6 +17,33 @@ This log starts at the foundation 1.0.0 baseline.
 > because it records what was true when written; read it as a date, not a tag.
 > Live code and runbooks cite dates instead, for exactly this reason.
 
+## [foundation-v2.8.1] - 2026-09-13
+
+- rigwright 1.1.8 → 1.1.9: Entry — Audit gains a live-state-dependency rule (#0062) — a
+  fixture whose validity rests on a real flag or another hook's write declares that
+  dependency and prefers pinning the exact state it needs over depending on whatever the
+  real file currently says. Fixed the same day this rig's own `dispatch_ledger_guard`
+  controls reproduced the failure #0062 predicted: the positive fixture (patched in
+  foundation-v2.8.0 for the OS-username leak, #0063) and the negative fixture both went
+  false the first time a real session other than the one that captured them armed
+  `~/.claude/dispatch-mode.json`, because the guard's own "other-session" branch short-
+  circuits before the ledger check either fixture exists to exercise. Both controls now
+  pin a throwaway flag file via `pin_dispatch_flag`, stamped fresh at check time with the
+  fixture's own already-captured session id — proven by running both end to end with the
+  real live flag deliberately left naming a different session, and by confirming the real
+  flag file byte-identical before and after. Budget raised 5000 → 5300; also fixed a
+  duplicated paragraph left by 1.1.8's landing.
+- dispatchwright 1.2.7 → 1.2.8: `references/unit-brief-template.md` gains a second Boundaries
+  clause (#0062) — isolating one hook's side effect can silently starve a sibling fixture that
+  was only staying valid because the isolated write kept re-arming a flag the sibling reads; a
+  unit reports what live state a control depends on and pins against it. Reference-only.
+- skillwright 1.4.0 → 1.4.1: `references/pack-registry.md` budget-row update only, carrying
+  rigwright's raise above; patch, no rubric or entry-point content moved. Eval provenance
+  gained the missing v1.4.0 anchor line (owed since the 2026-09-13 review, recorded
+  retroactively) alongside the new v1.4.1 one.
+- `estate/scripts/local_checks.py` (workshop, not a pack member): `_run_hook_control` gains
+  the `pin_dispatch_flag` mechanism the fix above uses — 5 new unit tests, 445/445 total.
+
 ## [localops-v1.1.1] - 2026-09-13
 
 - lmstudiorunner 1.1.0 → 1.1.1: weekly skill review (autonomous mode, PR). Section 2 gains the claim-type

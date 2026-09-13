@@ -1,5 +1,14 @@
 # Changelog — revenantworks-foundation-dispatchwright
 
+## [1.2.8] — 2026-09-13
+
+- `references/unit-brief-template.md` gains a second Boundaries clause (#0062): isolating one
+  hook's side effect can silently starve a sibling fixture that was only staying valid because
+  the isolated write kept re-arming a flag or timestamp the sibling reads. A unit reports what
+  live state (besides the path it directly touches) a control's pass/fail depends on, and pins
+  against that dependency — via the hook's own test-override where one exists — rather than
+  hoping the real file stays put. Reference-only; no entry-point contract moved.
+
 ## [1.2.7] — 2026-09-13
 
 Nine task-observer observations from the weekly review staged 2026-09-13, drafted in autonomous
