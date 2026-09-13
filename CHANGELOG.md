@@ -17,6 +17,37 @@ This log starts at the foundation 1.0.0 baseline.
 > because it records what was true when written; read it as a date, not a tag.
 > Live code and runbooks cite dates instead, for exactly this reason.
 
+## [localops-v1.1.1] - 2026-09-13
+
+- lmstudiorunner 1.1.0 → 1.1.1: weekly skill review (autonomous mode, PR). Section 2 gains the claim-type
+  table — enumeration and cross-reference claims a local model can produce, judgement claims it cannot —
+  and Section 5 reports a confirmation rate per claim type from a sample (#0046); the briefing rule
+  hands a delegated model the coverage search population explicitly (#0056).
+
+## [foundation-v2.8.0] - 2026-09-13
+
+- Weekly skill review, autonomous mode (owner absent), delivered as a pull request: fifteen open
+  observations (#0043–#0047, #0049, #0051–#0060) actioned across six foundation members. Minor
+  because skillwright 1.3.10 → 1.4.0 moved a contract: Build step 4 now returns a niche verdict per
+  reach partition and Restraint gained a fourth condition (#0059); Case 9 re-run cold, not re-anchored.
+- dispatchwright 1.2.6 → 1.2.7: helper isolation in Wave execution (#0043/#0044), a `reversal` field in
+  the ledger row and its Reconcile check (#0045), the hook-controls clause in the brief (#0047), the
+  boundary fork in Shape check (#0049), stop-order cancellation (#0051), the regeneration-guard
+  question (#0053), the slack rule beside the test-total check (#0057), the asserted match count for
+  scripted edits (#0058). Body budget raised 5700 → 6400, landed ≈6203.
+- agentwright 1.2.8 → 1.2.9: the boundary fork (#0049), kill-switch stop order and the one-minute
+  absence proof (#0051), hold-and-announce at a terminal date (#0052), the regeneration guard
+  (#0053); Case 4 re-run cold. Budget 4900 → 5300, landed ≈5111.
+- rigwright 1.1.7 → 1.1.8: side-effect-free hook controls that declare what they touch (#0047), the
+  mixed-line-endings fact (#0058), the partition-by-reach placement call (#0059). Budget 4700 → 5000,
+  landed ≈4888.
+- evalwright 1.1.2 → 1.1.3: the coverage search population (#0056), floors that print and bound their
+  slack (#0057), grouping a large scanner result by matched string (#0060).
+- resumewright 1.0.1 → 1.0.2: a reversal line per non-git change in the handoff's State block (#0045).
+- `.claude/hooks/dispatch_gate.controls.json` declares `touches` so HOOK-02's check restores the
+  dispatch-mode flag byte-for-byte instead of performing the hook's real write every run (#0047;
+  the check itself changed in workshop, PR #2).
+
 ## [foundation-v2.7.4] - 2026-09-11
 
 - `packs/foundation/spec.md`'s Approved roster Version column was stale against live
