@@ -3,7 +3,7 @@ name: revenantworks-foundation-dispatchwright
 description: Runs a session's fan-out — turns one large request into tiered, budgeted, recoverable units and dispatches them. Trigger when a request will take more than a few agents or spans many repos, skills, or files at once — rebuild, re-architect, overhaul, consolidate, sweep, migrate, or 'do all of this'; when subagents or a workflow are about to be launched and nothing has assigned each one a model, effort, and surface; when a fan-out is already running and a unit died, stalled, hit a usage limit, or must be resumed without redoing landed work; when concurrent units would write the same repo; or say dispatchwright (plan, dispatch, resume, audit). Model and tier per unit come from promptwright's target table, never invented here; the hook or config that makes this fire is rigwright's placement; anything unattended on a schedule is agentwright's.
 license: MIT
 metadata:
-  version: "1.2.6"
+  version: "1.2.7"
   profile: standalone
   pack: foundation
   brand: revenantworks
@@ -141,6 +141,13 @@ routines, repos, accounts, machines — is a fan-out whatever verbs carry it. An
 should have fired and did not is kept afterward as a positive control in whatever gate enforces
 this, so the list only ever grows toward the real distribution.
 
+**Name a fork only the requester can settle before planning past it** (observation #0049). When
+the outcome asked for has exactly one technically real path, and that path crosses a boundary the
+owner owns — which platform an unattended agent runs on, which account, which credential model —
+the boundary is the decision, not an implementation detail to work out on the way. Ask before
+building toward it: Shape check answers whether this is a fan-out, never whether the approach was
+authorised.
+
 A plan that fails this check ends here: name the cheaper shape and stop, before any unit,
 tier, or ledger row exists.
 
@@ -209,6 +216,14 @@ one rule: **a unit is done when it is on the remote, not when it is written.**
   lose only what it was doing at the moment it died, never everything before that.
 - Push before the unit writes its own report back. The report is the cheapest thing to lose and
   the least useful thing to protect first.
+
+- **A scripted multi-file edit proves each edit landed with an asserted match count; the script's
+  exit code proves nothing.** A replace on a string that does not occur returns the original bytes
+  and exits zero, so a unit reports success over files it never changed — and line endings are a
+  per-file property, with five files in one directory once carrying three of them (observation
+  #0058). Write bytes, detect each file's own ending, and assert the expected occurrence count
+  before writing.
+
 - A ledger row at three points: dispatch (before launch), commit (the sha), and push (confirmed
   against `origin/main`). A row missing any of the three is an unfinished unit, whatever the
   unit's own report claims. **The ledger file itself — and any RESUME/owner-steps file beside
@@ -243,8 +258,12 @@ one rule: **a unit is done when it is on the remote, not when it is written.**
   before any unit in it launches, not after.
 - **Stagger dispatch across a wave.** Launching every unit in the same minute is how two units end
   up racing for the same file before either has committed anything.
-- **`isolation: "worktree"` for every writer.** A unit that writes a repo gets its own worktree;
-  a unit that only reads does not need one.
+- **`isolation: "worktree"` for every writer, and a review helper counts as one.** A unit that
+  writes a repo gets its own worktree; a unit that only reads does not need one. A review or
+  polish skill a unit invokes inherits none of that unit's contract — helpers told to report only
+  have edited the tree and pushed on their own, and one spawned a sub-agent that ran the unit's
+  own release step (observations #0043, #0044). Run the helper inside the worktree, diff the tree
+  after each exchange, and re-list the agents to stop anything it started.
 - **Check the remaining rolling usage window before launching a top-tier wave.** A wave of
   frontier-tier units started against a nearly spent window is how a unit dies mid-write with
   nothing pushed yet — the durability contract limits the damage, but the check avoids it.
@@ -253,6 +272,14 @@ one rule: **a unit is done when it is on the remote, not when it is written.**
   and quiet reads exactly like "still working" until someone checks. After any interrupt or
   rejected call, re-read the ledger and each unit's own journal before assuming a wave is still
   running; absence of output is unknown state, never progress.
+
+- **Cancelling a unit mid-flight stops the agent first and its processes second.** A killed
+  process whose owner is still parked reads to that owner as *never started*, and a diligent unit
+  does the diligent thing and starts it again — one batch job came back eight minutes after its
+  PID was killed (observation #0051). After cancelling, re-list the processes or re-read the
+  artefact the job writes before reporting it stopped; a kill command returning success proves
+  only that one PID died.
+
 
 ## 7 · Escalation
 
@@ -289,7 +316,16 @@ equivalent for the unit's own repo and branch) and report, per run:
   silently drops a file that failed to parse still reports green on what it did run, and a total
   that is merely lower than expected passes every check that only looks at the pass/fail column.
   Every unit brief that ends in a test run states the expected total; a reconciled row whose actual
-  total falls short of it is unverified regardless of colour.
+  total falls short of it is unverified regardless of colour. That expectation is derived from a
+  baseline run of the unchanged suite, not from the last number someone wrote down, and an actual
+  above it is recorded as the new expectation rather than passed quietly — an expectation nobody
+  re-derives drifts below the real count and stops measuring anything, while every log still reads
+  green (observation #0057).
+
+- **A landed row whose surface is not a git commit carries its own reversal.** Reconcile checks
+  the `reversal` field is non-empty for every such row — a git sha reverses itself; a setting, a
+  routine, a remote or a junction does not, and an undo reconstructed afterwards is limited to
+  whatever prose a unit happened to leave (observation #0045).
 
 A row that cannot be verified is reported as unverified, never rounded up to done.
 
