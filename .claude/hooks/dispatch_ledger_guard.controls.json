@@ -1,9 +1,9 @@
 {
   "positive": [
     {
-      "name": "real live dispatch-mode flag (armed, session c383d83c-...) + a real cwd that genuinely has no .dispatch/runs ledger (this session's own scratchpad dir) \u2014 guard fails closed. Captured 2026-09-11; NOTE: depends on ~/.claude/dispatch-mode.json still being live (fresh within its 12h window) when this control runs \u2014 once that flag goes stale this case's real outcome becomes exit 0 (dispatch mode no longer armed for anyone), a property of the hook's own stateful design, not a fixture defect.",
+      "name": "real live dispatch-mode flag (armed, session c383d83c-...) + a real cwd that genuinely has no .dispatch/runs ledger (a path with no .dispatch/runs beneath it) \u2014 guard fails closed. Captured 2026-09-11; NOTE: depends on ~/.claude/dispatch-mode.json still being live (fresh within its 12h window) when this control runs \u2014 once that flag goes stale this case's real outcome becomes exit 0 (dispatch mode no longer armed for anyone), a property of the hook's own stateful design, not a fixture defect.",
       "argv": [],
-      "stdin": "{\"tool_name\": \"Task\", \"session_id\": \"c383d83c-5af0-4a61-98ee-c4b6376d6fca\", \"cwd\": \"~/AppData/Local/Temp/claude/C--Users-lostb/633537a9-fd16-4e43-8b40-81216d952282/scratchpad\"}",
+      "stdin": "{\"tool_name\": \"Task\", \"session_id\": \"c383d83c-5af0-4a61-98ee-c4b6376d6fca\", \"cwd\": \"./.no-ledger-here\"}",
       "expect_exit_in": [2],
       "expect_contains": "no current run ledger was found"
     }
