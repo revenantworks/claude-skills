@@ -1,5 +1,48 @@
 # Changelog
 
+## [1.4.0] — 2026-09-13
+
+Applied from the task-observer weekly skill review staged 2026-09-13 (autonomous mode, owner
+absent). Body and reference only; the `description` is byte-identical, so the trigger suite
+re-anchors rather than re-judges.
+
+- **Entry — Build step 4 partitions candidate content by reach before it returns a verdict
+  (#0059),** and Restraint gains a fourth condition for content whose real answer is a
+  placement call rather than a `do-not-build`. A verdict earned by the repo-bound half of a
+  body of content silently condemns the half that outlives it; where the answer is a split,
+  each container states in its own text that it does not repeat the other, which is the only
+  thing keeping a split from being a second copy. `references/rubrics.md` gains **Niche
+  verdict — partition by reach**: the three axes that decide the container (load moment,
+  reach, drift surface) and the worked split. Which layer a standing rule belongs in stays
+  rigwright's placement call, cited rather than restated. This is the entry-point contract
+  that makes the bump minor: step 4 returns a verdict per partition, not one verdict.
+- **Entry — Audit gains a Usage evidence rule (#0055).** "Skill X has not fired in N days" is
+  not a keep/drop verdict until one probe shows X could have fired on the material in the
+  window; the probe's result is recorded beside the count, and a probe that produces nothing
+  turns the finding into a capability or usage-rule question rather than a drop candidate. The
+  procedure, the degradation where the environment cannot run the probe, and the worked case —
+  a detector that could not parse the repo's only source language, so 60 days of silence was
+  structural — land in `references/rubrics.md` — Audit application notes. Reading the count
+  itself remains rigwright's Entry — Audit usage-evidence rule; this is the prior question of
+  whether zero was ever possible.
+- **Entry — Audit's Third-party adoption paragraph gains its second step (#0060),** after the
+  file-role filter: group the surviving findings by the matched string, count the distinct set,
+  and read it. Role says where a finding sits and only the string says what was matched, and a
+  finding count counts matches rather than problems — 592 role-surviving findings collapsed to
+  133 distinct strings, every one documentation or ordinary English. The corollary rides with
+  it: a coverage percentage's denominator is whatever the scanner counted, so re-derive it
+  against the skill's own content rather than quoting it. `references/rubrics.md` — Security
+  classes carries the sweep's numbers, the inverted-ranking finding (a pattern matcher cannot
+  tell describing an attack from performing one, so the most careful writing scores worst), and
+  the padded-denominator case.
+- `references/pack-registry.md`: skillwright's declared body budget raised 9100 → 9450 for the
+  three additions above, all decision rules a build or audit must not open a file to know;
+  landed at ≈9304.
+- All three rules are **authored-not-covered** — no case asserts the capability probe, the
+  distinct-string step, or the per-partition verdict. Case 9 (crowded niche verdict) now sits
+  on changed ground and is owed a re-run, not a re-anchor; the 43-query cold re-run owed since
+  v1.2.0 is neither discharged nor enlarged.
+
 ## [1.3.10] — 2026-09-12
 
 ### Changed

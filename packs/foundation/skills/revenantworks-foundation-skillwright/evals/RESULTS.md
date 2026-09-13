@@ -7,6 +7,20 @@
 > verbatim because they record what was true when written — read them by date,
 > not by version.
 
+## 2026-09-13 — v1.4.0 — **Case 9 RE-RUN (cold judgment, Claude Fable 5.1 — a different family from the Opus 5 unit that drafted the change): PASS; assert extended**
+
+Owed because Build step 4's output contract moved: a verdict per reach partition replaces one
+verdict (observation #0059). The judge was handed the applied v1.4.0 text of step 4 and Restraint,
+and the case input alone (*Build me a skill that converts markdown to PDF*), and reasoned the run
+cold. Partition first: every capability of a markdown-to-PDF converter is true of any project, so
+there is exactly one partition and no split. Verdict on it: **CROWDED / THIN** — incumbents named
+(pandoc, md-to-pdf, the markdown-pdf npm package, every editor's export), two adjacent underserved
+niches proposed (a house-style PDF from front-matter-driven templates; batch conversion with a
+manifest and a reproducible build), which to pursue first stated, and the decision handed to the
+user. All three original asserts hold; the new contract adds a fourth line rather than changing an
+existing one, so the assert was **extended**, not re-anchored. Nothing executed; a judgment against
+shipped text, recorded as such.
+
 ## 2026-07-27 — v1.4.2 — **COLD TRIGGER RE-RUN, 43/43 — the #26 restoration verified, zero regressions**
 
 Owed re-run discharged. An independent judge, **blind to the repo and to every expected value**, was handed only the current 8-member description listing (post-1.3.2) and the 43 queries stripped of their Expected column, and routed each to one member. Scored against the withheld key: **43 / 43, 0 FAIL, 0 ambiguous.** The restored `Every build ships trigger evals.` did its job — the judge routed **#26** ("…ships with a full eval suite") to skillwright citing *"skillwright builds ship evals"*, the exact string 1.4.0's removal had cost and #26 had gone AMBIGUOUS without. Every boundary row held: #35/#36 (README / CLAUDE.md prose → skillwright), #18 (a plain library README → **not** skillwright), #25 (suite authoring → evalwright), #37 (release announcement → commwright), #38–#40 (skill security → skillwright), #41–#43 (runtime/agent + code pen-test → agentwright / none). The description trim (−`and pack policy`, −`for a domain or role`) regressed nothing. Judge performed **zero file reads** (verified). No version bump — a re-execution against shipped text.

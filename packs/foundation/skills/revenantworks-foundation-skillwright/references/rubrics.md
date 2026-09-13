@@ -7,6 +7,7 @@ Rubric A is universal: every skill, any profile, is scored against it. Profiles 
 - Rubric A — published best practices + niche-research sources (volatile baseline, refresh target)
 - Scoring anchors
 - The universal rule
+- Niche verdict — partition by reach
 - Security classes — S-1 to S-4, the audit's security pass
 - Generator classes — G-1 to G-3, for a subject that generates from a structured source
 - Naming-class coverage
@@ -43,6 +44,19 @@ Rubric A is universal: every skill, any profile, is scored against it. Profiles 
 
 **No undeclared dependencies.** Profiles differ in what a skill may depend on; none permit hiding it. A skill that quietly assumes a tool, a sibling, or an installed package fails its profile — whichever profile that is.
 
+## Niche verdict — partition by reach
+
+*(Added 2026-09-13, observation #0059.)* "Should we build a skill for this?" reads as one question and is two: whether the content is worth writing down at all, and which container should hold it — a skill, a repo's `CLAUDE.md`, project instructions, a handbook page, a CI check. A verdict answering only the first carries an unstated answer to the second, and the unstated answer drives the whole recommendation.
+
+Three axes decide the container, and the partition follows them:
+
+- **Load moment.** A repo's `CLAUDE.md` loads in every session in that repo, unconditionally; a skill loads when its description matches. For a rule that must never be missed while working in one repo, the unconditional load is strictly better.
+- **Reach.** A `CLAUDE.md` reaches one repo; a skill reaches every project the rig ever touches. For a rule that will be just as true in the next project of the same class, the skill is the only container that gets it there.
+- **Drift surface.** Two containers holding the same rule is a second copy, and it will drift — which is the argument a `do-not-build` usually rests on. Two containers holding **disjoint** rules, each saying in its own text that it does not repeat the other, is a split, and the split stays real only while that sentence is true.
+
+So separate the candidate content by reach, return a verdict per partition, and name the container before naming the verdict. A body of project conventions came back `do-not-build` as a whole — correctly, for its repo-specific half, which would have become a fourth drifting copy — and shipped as a split instead: the parked gate, the deliberate reds, the lint exclusions and the branch layout went into the repo's missing `CLAUDE.md`, and the rules that outlive the project went into the skill, whose own file states that it deliberately does not repeat what `CLAUDE.md` carries. Which layer a standing rule belongs in is rigwright's placement call; a build verdict needs that call made before it, not after.
+
+
 ## Security classes
 
 Four classes, scanned on every audit as the security pass (SKILL.md — Entry — Audit) and filed as rows in that entry's one catalog on its P0/P1/P2 severities. All four are properties of the **skill artifact** — how the package is built — never of an agent that later runs it; a finding about runtime permission, cadence, or blast radius belongs to agentwright and is handed there by name. The severities below are floors: raise one where the context is worse, never lower it to keep a catalog short.
@@ -53,6 +67,11 @@ Four classes, scanned on every audit as the security pass (SKILL.md — Entry �
 - **S-4 unsafe defaults in generated output.** For a skill that emits artifacts — templates, skeletons, scaffolds, configs, commands — what its shipped default bakes in: blanket or world-writable permissions, verification or checksum disabled, an unpinned dependency or an untrusted source, a secret written into a generated file, a call to a host the skill never names. The default is the finding even where the prose invites the user to change it: a generated artifact ships as written. **P1**, or **P0** where the baked default is itself irreversible or credential-bearing.
 
 **Absent is not the same as clean.** A class the audited skill has no surface for is reported N/A rather than scored — structurally inapplicable, the way a skill with no identity surface passes C-2 — and a pass with no findings is stated in one line, never left silent.
+
+**A scanner's finding count is a count of matches, not of problems** *(added 2026-09-13, observation #0060)*. Filtering by file role — the rule Entry — Audit's *Third-party adoption* paragraph states — answers *where* a finding sits, and a verdict needs *what was matched*. So after the role filter, group the surviving findings by the string the scanner actually matched, count the distinct set, and read it: the distinct count is usually one to two orders of magnitude smaller, and a list a person can read in one sitting is the only form in which this evidence gets read at all. One sweep of 21 installed skills returned 690 findings, 109 HIGH and one CRITICAL. Role filtering removed 98 and left 592 in `SKILL.md` and `references/` — the files a model loads as instructions, the highest-value role, the one the rule says to keep and score. Those 592 collapsed to 133 distinct strings, and all 133 were documentation, an API example, or ordinary English: a never-echo rule matched as prompt extraction, a documented API endpoint matched 147 times as exfiltration, text teaching defence *against* injection matched as injection, and the single CRITICAL spanning a line break between the end of one word and the start of the next. Validated findings: zero of 690.
+
+Two consequences ride with it. **A pattern matcher cannot tell describing an attack from performing one**, so the more rigorously a skill documents a threat the worse it scores — a roster where documentation quality tracks risk score is reporting on its own instrument, not on the skills. And **a coverage percentage's denominator is whatever the scanner counted**: one scan's coverage fell from 72.2% to 64.3% when a `.git` directory was removed, because repository furniture had been counted as fully inspected and was padding the denominator. Scope the scan to the skill's own content and re-derive the figure rather than quoting it, and read a category name before trusting its severity — one class filed at HIGH turned out to mean "referenced artifact was not completely inspected", a coverage signal wearing a security name.
+
 
 ## Generator classes
 
@@ -86,3 +105,6 @@ Checks are pack charter, not universal law: a skill outside the registering pack
 ## Audit application notes
 
 Read the audited skill's declared profile first; score against that. Tools on a standard-profile skill are checked for declaration quality, not existence. A skill with no declared profile is scored against Rubric A plus the universal rule only, with a P1 finding to declare one. When the audited skill's pack registers a canonical repo (pack-registry), drift audits also diff the installed copy against that repo's current state and report installed-vs-canonical drift alongside Rubric A; when the repo is unreachable, score rubric-only and say so. When a build request's profile is looser than the skill needs, note once that a standalone-clean build is possible — an offer, not a nag.
+
+**Usage evidence — probe capability before a zero decides anything** *(added 2026-09-13, observation #0055)*. A zero-invocation count has three candidate causes the number itself cannot separate: the skill was never needed, nobody reached for it, or it could not have fired on the material in front of it. One cheap probe separates them — take a real artifact from the counted window, run the skill or its detector over it, and record what came back. Output of any kind leaves the keep/drop question standing. Nothing at all makes it a capability or usage-rule finding instead: one adopted skill's detector could not parse `.astro` and did not read standalone `.css`, so 60 days of silence over a 70-file `.astro` project was structural rather than a discipline problem, and the fix was a parser plus a rule to run it against built output rather than source — an answer no keep/drop verdict would have produced. Record the probe's result beside the count so the next reviewer inherits evidence rather than an inference, and re-probe every sibling flagged on the same reasoning: the untested inference had already been reused against a second member before anyone checked it. Where the environment cannot run the probe, report it as owed and hold the keep/drop call rather than settling it on the count. How the count itself is read — which counter, what it cannot see, and the three states a zero can mean — is rigwright's Entry — Audit usage-evidence rule; this is the prior question of whether zero was ever possible.
+
