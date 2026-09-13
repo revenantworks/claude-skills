@@ -3,7 +3,7 @@ name: revenantworks-foundation-resumewright
 description: Writes a committed session handoff on demand or before a pause — state, per-repo landed shas verified against origin, running units, the ordered remainder, every decision made, owner steps, and the resume procedure. Commits what it writes in the same call, in the repo the work lives in, so a stash, reset, or handover can never take it silently. Trigger on 'resumewright', 'write the handoff', 'pause here', 'holding position', a usage-limit or compaction warning, or before closing a session with work still open; 'resumewright resume' reads a committed handoff back, checking git stash list and git reflog first. A dispatchwright fan-out already carries its own resume state in its ledger — resumewright covers the ordinary session dispatchwright's contract does not reach. task-observer's handoff-doc mode is the fallback for a storage-less environment; where a repo exists, resumewright commits instead of pasting into chat.
 license: MIT
 metadata:
-  version: "1.0.1"
+  version: "1.0.2"
   profile: standalone
   pack: foundation
   brand: revenantworks
@@ -88,6 +88,9 @@ what it already states, and no trusting a stale copy over what the file on disk 
 - **Never leaves the handoff uncommitted, gitignored, or staged for later.** A written-but-
   uncommitted file is exactly as recoverable as one never written — the whole reason this skill
   exists is closing that gap, not moving it one step later.
+- **Never lists a non-git change without its reversal.** A setting, plugin, routine, remote or
+  junction the session changed goes in State now with the command that undoes it or the path
+  holding its prior value, written by the session that made the change (observation #0045).
 - **Never invents a landed sha, a decision, or a completed step.** Everything in State now is
   read from `git`; everything in Owner decisions is read from the session's own record. A claim
   neither can verify is reported as unverified, not rounded up to done — the same standard

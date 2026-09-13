@@ -1,6 +1,6 @@
 # Assertion Suite — revenantworks-foundation-resumewright
 
-> **Provenance:** target `revenantworks-foundation-resumewright` v1.0.0, re-anchored to v1.0.1
+> **Provenance:** target `revenantworks-foundation-resumewright` v1.0.0, re-anchored to v1.0.1 **Re-anchored to v1.0.2, 2026-09-13 — provenance only, nothing executed here.** The 1.0.2 change lands the weekly review's doctrine edits (#0045); the `description` field is byte-identical, so the routing surface these judge did not move.
 > (below) · suite authored 2026-09-11, alongside the member's first build. **10 cases**,
 > assertion-only — each is an
 > Input plus mechanical yes/no Asserts against the run output. Authored cold against the shipped

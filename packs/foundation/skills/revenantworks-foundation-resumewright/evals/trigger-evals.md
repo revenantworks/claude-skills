@@ -1,6 +1,6 @@
 # Trigger evals — 16 queries (7 should / 7 shouldn't / 2 injection probes)
 
-Provenance: authored at member version 1.0.0, 2026-09-11, alongside the member's first build.
+Provenance: authored at member version 1.0.0, 2026-09-11, alongside the member's first build. **Re-anchored to v1.0.2, 2026-09-13 — provenance only, nothing executed here.** The 1.0.2 change lands the weekly review's doctrine edits (#0045); the `description` field is byte-identical, so the routing surface these judge did not move.
 **Re-anchored to v1.0.1, 2026-09-11 — provenance only, nothing executed here:** `SOURCES.md`
 had three absolute local paths replaced with generic source descriptions (a public-repo path
 leak, fixed the same day it landed); `description` and every routing-relevant rule are
