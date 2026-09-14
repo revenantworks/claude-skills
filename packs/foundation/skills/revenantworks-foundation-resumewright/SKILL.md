@@ -1,9 +1,9 @@
 ---
 name: revenantworks-foundation-resumewright
-description: Writes a committed session handoff on demand or before a pause — state, per-repo landed shas verified against origin, running units, the ordered remainder, every decision made, owner steps, and the resume procedure. Commits what it writes in the same call, in the repo the work lives in, so a stash, reset, or handover can never take it silently. Trigger on 'resumewright', 'write the handoff', 'pause here', 'holding position', a usage-limit or compaction warning, or before closing a session with work still open; 'resumewright resume' reads a committed handoff back, checking git stash list and git reflog first. A dispatchwright fan-out already carries its own resume state in its ledger — resumewright covers the ordinary session dispatchwright's contract does not reach. task-observer's handoff-doc mode is the fallback for a storage-less environment; where a repo exists, resumewright commits instead of pasting into chat.
+description: Writes a committed session handoff on demand or before a pause — state, per-repo landed shas verified against origin, running units, the ordered remainder, every decision made, owner steps, and the resume procedure. Commits what it writes in the same call, in the repo the work lives in, so a stash, reset, or handover can never take it silently. Trigger on 'resumewright', 'write the handoff', 'hand off' / 'handoff', 'pause here', 'holding position', a usage-limit or compaction warning, or before closing a session with work still open; 'resumewright resume' reads a committed handoff back, checking git stash list and git reflog first. **A request to hand off work that has not started yet is a task brief, not a resume — this skill covers only this session's own already-done state, verified against git; a forward brief for new work routes to promptwright's Entry: Model for the tier pick (observation #0071), with the brief's own content written plainly or via dispatchwright's unit-brief template if it's a dispatched unit.** A dispatchwright fan-out already carries its own resume state in its ledger — resumewright covers the ordinary session dispatchwright's contract does not reach. task-observer's handoff-doc mode is the fallback for a storage-less environment; where a repo exists, resumewright commits instead of pasting into chat.
 license: MIT
 metadata:
-  version: "1.0.2"
+  version: "1.0.3"
   profile: standalone
   pack: foundation
   brand: revenantworks
@@ -45,10 +45,22 @@ the resume procedure (`resumewright resume` reads one back, checking `git stash 
 reflog` first). Inside an active dispatchwright fan-out its own ledger already covers this; I'm
 for everything else. Write the handoff now?"* — and stop.
 
-**Write** (default entry — "resumewright", "write the handoff", "pause here", "holding
-position", a usage-limit or compaction warning, or any request to leave a record before a
-session ends): the entry above covers bare invocation only; any of these phrases carrying a
-reason to write now skips the question and runs Write directly.
+**Write** (default entry — "resumewright", "write the handoff", "hand off"/"handoff", "pause
+here", "holding position", a usage-limit or compaction warning, or any request to leave a record
+before a session ends): the entry above covers bare invocation only; any of these phrases
+carrying a reason to write now skips the question and runs Write directly.
+
+**"Hand off" is ambiguous on its own — check which of two things is meant before writing
+anything** (observation #0071). *This session's own state, to be picked back up later*: Write,
+below. *New work that has not started yet, for a future session or agent to execute*: not this
+skill — that is a task brief, and it needs promptwright's Entry — Model for a tier pick (even
+when no single-shot prompt is being built) plus its own content written plainly, or through
+dispatchwright's unit-brief template if it is a dispatched unit. The two read alike from the
+outside (both are "a document for a later reader") and produce different shapes: a resume states
+what already happened, verified against git; a task brief states what should happen next, and has
+no git history to verify yet. Guessing wrong here is how a real handoff shipped with no tier
+recommendation, because the request didn't look like resumewright's job and didn't look like
+promptwright's either.
 
 1. **Gather.** For every repo this session touched: `git log --oneline origin/main -5` (or the
    unit's own branch) — a landed sha is one this shows, never one a report claimed. `git status`

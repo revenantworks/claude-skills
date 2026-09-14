@@ -2,6 +2,27 @@
 
 > Renamed from `revenant-foundation-promptwright` on 2026-08-07 (pack 2.0.0 — the `revenant` → `revenantworks` marketplace migration). Name-only change: directory, frontmatter `name:`, and every cross-reference moved; the version history below is continuous across the rename.
 
+## [1.5.9] — 2026-09-14
+
+**A real routing miss, caught by the owner asking directly** (observation #0071). Asked for "a
+prompt to hand off to do the work later" (a multi-step Claude Code task brief, not a single-shot
+prompt), the acting session invoked neither promptwright nor resumewright — the brief shipped
+with no tier or model recommendation, which is Entry — Model's job by dispatchwright's own stated
+rule ("the tier table is promptwright's... it never picks a model itself"). The gap wasn't that
+Entry — Model was the wrong call; it's that the request didn't read as "building a prompt" at a
+glance, so the entry was never reached.
+
+- `description` and `Entry — Model` both gain a clause: a handoff, task brief, or unit brief
+  written for a future session or agent to execute owes this entry's tier pick even when no
+  single-shot prompt is being built. The trigger is "something is being handed to a future
+  executor," not "a prompt is being built." Writing the handoff's own content is named as not
+  this skill's job (resumewright for session state, plain writing or dispatchwright's unit-brief
+  template otherwise).
+- `evals/trigger-evals.md` gains **#39** (should: a handoff request that needs the tier pick) and
+  **#40** (should-not: a session-state handoff that's resumewright's whole job). 38 → **40**,
+  19/19 → **20/20**. The `description` moved, so a full cold re-judge is owed and not yet
+  performed — recorded rather than skipped.
+
 ## [1.5.8] — 2026-09-11
 
 Applied by unit L1b (dispatch run `2026-09-10-estate-audit`) from the task-observer weekly

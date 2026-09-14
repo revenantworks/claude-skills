@@ -1,5 +1,24 @@
 # Changelog — revenantworks-foundation-resumewright
 
+## [1.0.3] — 2026-09-14
+
+**Same routing miss as promptwright 1.5.9, the other half** (observation #0071). Asked for "a
+prompt to hand off to do the work later," the acting session correctly did not invoke
+resumewright — but only because its scope was checked *after* the owner asked a second time, not
+because the request was routed there and declined. A session-state handoff and a forward task
+brief look alike from the outside (both are "a document for a later reader") and this skill's
+description named nothing to tell them apart.
+
+- `description` gains "hand off"/"handoff" as explicit trigger phrasing (closer to how the owner
+  actually asked) plus an explicit exclusion: a request to hand off work that has not started yet
+  is a task brief, not a resume, and routes to promptwright's Entry — Model for the tier pick, or
+  plain writing / dispatchwright's unit-brief template for the content.
+- The `Write` entry point gains the same distinction in the body, so the boundary is stated where
+  the decision is actually made, not only in the frontmatter.
+- `evals/trigger-evals.md` gains **#15** (should-not: a forward task brief for new work — nothing
+  for this skill to verify against git yet). 16 → **17**, 7/7 → **7/8**. The `description` moved,
+  so a full cold re-judge is owed and not yet performed — recorded rather than skipped.
+
 ## [1.0.2] — 2026-09-13
 
 Weekly skill review (autonomous mode), observation #0045.
