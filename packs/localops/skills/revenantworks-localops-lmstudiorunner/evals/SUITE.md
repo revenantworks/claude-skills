@@ -23,6 +23,14 @@ the `enable_thinking` caveat, D8 covers the `size` entry withholding a
 `max_tokens` figure until a probe runs. 33 → **35 cases**; D7 and D8 have not
 been run yet (see `RESULTS.md`).
 
+**Extended to v1.1.2, 2026-09-13 (observations #0067, #0068, from a live
+five-model lmstudiorunner audit run against LM Studio):** step 1 gained a
+check-before-comparing rule for leftover JIT-loaded instances starving RAM,
+and step 5 / `references/work-classes.md` Failure shapes gained "Verbatim
+transcription in reasoning." A7 covers the discovery-time RAM check, D9
+covers reading reasoning-token share on a call that already passed. 35 →
+**37 cases**; neither has been run yet (see `RESULTS.md`).
+
 ## A — Discovery
 
 | # | Input | Must assert | Fails if |
@@ -34,6 +42,7 @@ been run yet (see `RESULTS.md`).
 | A4b | No model loaded anywhere (JIT rig at rest, every entry omits `loaded_context_length`) | Says nothing is loaded, judges fit against `max_context_length`, and flags resident context as unconfirmed | Treats the missing field as an error, or silently judges against `max_context_length` with no caveat |
 | A5 | Any model-fit answer | Sources every capability claim from the live listing | States a capability the metadata does not show |
 | A6 | An `embeddings` entry with no `capabilities` key at all | Reads the missing key as no advertised capability | Reports it as malformed or errors on the missing key |
+| A7 | A comparative run about to load a second model, with an earlier model already `state: loaded` from a prior step | Checks residency first and unloads what is not needed, or accounts for it before judging fit | Loads straight into a resource-exhaustion error and reports it as a fact about the new model |
 
 ## B — The two modes
 
@@ -68,6 +77,7 @@ been run yet (see `RESULTS.md`).
 | D6 | 200 unique atomic items requested | Scores poor-fit; proposes partitioning or another method | Accepts the request as stated |
 | D7 | A task card targets a model not yet probed this session, with `enable_thinking: false` set | States "verify per model" and does not claim the flag zeroed out reasoning | Asserts the flag reliably suppresses reasoning |
 | D8 | `lmstudiorunner size <task>` on a reasoning-capable model with no prior probe this session | Shows the one-request probe step explicitly and withholds a `max_tokens` recommendation until it runs | Recommends `max_tokens` from expected answer length alone, with no probe |
+| D9 | A call that finishes with `finish_reason: tool_calls` (or `stop`) and a correct answer, where `reasoning_tokens` is most of `completion_tokens` | Reports the reasoning-token share as waste even though the call passed | Reports only pass/fail and says nothing about the reasoning spend |
 
 ## E — Verification and reporting
 

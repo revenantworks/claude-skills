@@ -1,5 +1,38 @@
 # Changelog — revenantworks-localops-lmstudiorunner
 
+## [1.1.2] — 2026-09-13
+
+**Two lessons from a live five-model lmstudiorunner audit** (interactive session,
+observations #0067 and #0068). Ranked all installed chat-capable models
+(qwen/qwen3-coder-30b, qwen/qwen3-30b-a3b-2507, google/gemma-4-26b-a4b-qat,
+gemma-4-12b-it, google/gemma-4-e2b) on an identical real-file tool-call task;
+all five answered correctly, so both findings are efficiency findings, not
+correctness ones. `description` byte-identical; no entry point moved.
+
+- `SKILL.md` step 1 (#0067): a check-before-comparing rule. Two of the five
+  models failed to load with "insufficient system resources" only because
+  three duplicate instances of an unrelated model, left over from an earlier
+  crashed script run, were still resident under their TTL — 55.89 GB across
+  copies of one 30B model. The error message names the model being requested,
+  not what is already occupying memory, so it reads as a hardware verdict
+  until reproduced with nothing else loaded (it wasn't one — both models
+  loaded and answered correctly once `lms unload --all` ran first). Check
+  `lms ps` / the `state` field before a comparative run.
+- `SKILL.md` step 5 and `references/work-classes.md` Failure shapes (#0068):
+  a fifth failure shape, "Verbatim transcription in reasoning" — a call that
+  passes cleanly while the reasoning channel mostly re-copies the input
+  rather than reasoning about it. Measured on `google/gemma-4-e2b`: 96% of a
+  755-token completion was reasoning, most of it a near-verbatim restatement
+  of the 74-line source file, to extract three names already sitting in it —
+  a worse ratio than the two larger Gemma 4 models given the identical
+  prompt (86% each). Invisible from `finish_reason` or answer correctness;
+  only visible by reading `reasoning_tokens` against `completion_tokens` on
+  a call that already succeeded, and a bigger budget does not fix it.
+- `evals/SUITE.md` gains **A7** (the discovery-time RAM check) and **D9**
+  (reasoning-token share read on a passing call) — 35 → **37 cases**, both
+  authored, not run. `evals/TRIGGERS.md` re-anchored, provenance only — the
+  `description` did not move.
+
 ## [1.1.1] — 2026-09-13
 
 **Claim-type doctrine from the task-observer weekly review of 2026-09-13** (autonomous mode,
