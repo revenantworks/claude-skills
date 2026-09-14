@@ -31,6 +31,15 @@ transcription in reasoning." A7 covers the discovery-time RAM check, D9
 covers reading reasoning-token share on a call that already passed. 35 →
 **37 cases**; neither has been run yet (see `RESULTS.md`).
 
+**Extended to v1.1.3, 2026-09-13 (observation #0069, from the overnight
+Evolution coverage sweep that followed the 1.1.2 audit):**
+`references/task-cards.md` rule 7 now states that naming a population is not
+the same as pasting it — a card that named 52 files without their content
+scored 0.10 precision / 0.35 recall on the cross-reference claim it asked
+for, the same range as the dropped "suspected bug" claim type. A8 covers a
+card that names a population without pasting it. 37 → **38 cases**; not run
+yet (see `RESULTS.md`).
+
 ## A — Discovery
 
 | # | Input | Must assert | Fails if |
@@ -43,6 +52,7 @@ covers reading reasoning-token share on a call that already passed. 35 →
 | A5 | Any model-fit answer | Sources every capability claim from the live listing | States a capability the metadata does not show |
 | A6 | An `embeddings` entry with no `capabilities` key at all | Reads the missing key as no advertised capability | Reports it as malformed or errors on the missing key |
 | A7 | A comparative run about to load a second model, with an earlier model already `state: loaded` from a prior step | Checks residency first and unloads what is not needed, or accounts for it before judging fit | Loads straight into a resource-exhaustion error and reports it as a fact about the new model |
+| A8 | A card asks for a cross-reference/absence claim and names the population by file path, but the card does not paste those files' content | Pastes the population's content (or shrinks the population to fit), and asks for a citation with the claim | Treats a named file list as sufficient and asks for the claim anyway |
 
 ## B — The two modes
 

@@ -1,5 +1,32 @@
 # Changelog — revenantworks-localops-lmstudiorunner
 
+## [1.1.3] — 2026-09-13
+
+**One lesson from the overnight coverage sweep that followed the 1.1.2 audit**
+(interactive session, observation #0069). Same evening: a 44-file, 2-model
+unattended run against `qwen/qwen3-30b-a3b-2507` and `qwen/qwen3-coder-30b`
+over the Evolution repo. Enumeration claims held up (0.87-0.88 precision,
+0.96 recall); the cross-reference ("untested function") claim collapsed to
+0.10 precision / 0.35 recall — the same range observation #0046 measured for
+"suspected bug" claims and dropped. `description` byte-identical; no entry
+point moved.
+
+- `references/task-cards.md` rule 7 rewritten: naming a population
+  (52 files, by path) is not the same as pasting it, and rule 2 ("paste the
+  source it needs") applies to every file rule 7 names, not only the
+  primary target. The card that produced the 0.10/0.35 result named the
+  population correctly and pasted none of its content — the model was asked
+  to judge presence across text it never saw. Rule 7 now says so directly,
+  with the measured numbers, and adds: if the population's content will not
+  fit in context alongside the target, that is the finding — shrink the
+  population per card, or accept the claim cannot be asked at that scope.
+- `references/work-classes.md` Claim types table, Cross-reference row: the
+  "Yes — with the population named" verdict now reads "shown, not just
+  named," with the same measurement.
+- `evals/SUITE.md` gains **A8** (a card names a population without pasting
+  it) — 37 → **38 cases**, authored, not run. `evals/TRIGGERS.md`
+  re-anchored, provenance only.
+
 ## [1.1.2] — 2026-09-13
 
 **Two lessons from a live five-model lmstudiorunner audit** (interactive session,

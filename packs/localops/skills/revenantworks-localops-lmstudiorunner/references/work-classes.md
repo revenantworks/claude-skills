@@ -66,7 +66,7 @@ their confirmation rates ranged from a fifth to zero.
 | Claim type | Example | What checks it | Ask for it |
 |---|---|---|---|
 | **Enumeration** | "these are the public functions in this file" | grep or a parse against the source | Yes |
-| **Cross-reference** | "this function has no matching test" | grep over a stated population | Yes — with the population named (`task-cards.md`, rule 7) |
+| **Cross-reference** | "this function has no matching test" | grep over a stated population | Yes — but only once the population is *shown*, not just named (`task-cards.md`, rule 7). A card that named 52 files by path without pasting their content scored 0.10 precision / 0.35 recall — indistinguishable from the correctness-judgement row below (observation #0069) |
 | **Classification against a stated rule** | "this file is a scene script" | the rule, re-applied by hand | Yes |
 | **Correctness judgement** | "line 88 is wrong" | nothing mechanical — it needs the language semantics and the code's invariants held at once | No — drop it from the prompt, or label it a hypothesis for a cloud reviewer |
 
