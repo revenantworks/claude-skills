@@ -902,7 +902,8 @@ def _guard(data: dict) -> int:
             "dispatch_ledger_guard: dispatch mode is active for this session but no current run "
             "ledger was found (checked CLAUDE_DISPATCH_LEDGER, then .dispatch/runs/*/ledger.{md,csv} "
             "under the cwd)." + extra + " Write the ledger row -- model, effort, surface, from "
-            "promptwright's target table -- before this dispatch. See references/ledger-schema.md.",
+            "dispatchwright's own tier table (references/tier-routing.md) -- before this dispatch. "
+            "See references/ledger-schema.md.",
             file=sys.stderr,
         )
         return 2
@@ -910,8 +911,8 @@ def _guard(data: dict) -> int:
     if not ledger_has_populated_row(ledger):
         print(
             f"dispatch_ledger_guard: {ledger} carries no row that names a model, an effort, and a "
-            "surface. Placeholders such as TBD, ?, x or a dash do not count. Tier the unit through "
-            "promptwright first and write the real row before dispatching it.",
+            "surface. Placeholders such as TBD, ?, x or a dash do not count. Tier the unit from "
+            "dispatchwright's own tier table first and write the real row before dispatching it.",
             file=sys.stderr,
         )
         return 2

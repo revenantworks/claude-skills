@@ -2,6 +2,21 @@
 
 > Renamed from `revenant-foundation-promptwright` on 2026-08-07 (pack 2.0.0 — the `revenant` → `revenantworks` marketplace migration). Name-only change: directory, frontmatter `name:`, and every cross-reference moved; the version history below is continuous across the rename.
 
+## [1.5.11] — 2026-09-14
+
+**Corrects a claim 1.5.10 made that dispatchwright 1.2.9 (same day) made untrue** (observation
+#0073). 1.5.10 said Entry — Model is "called as a service by resumewright (or a dispatchwright
+plan)"; dispatchwright's own per-unit tiering became self-contained in the same session
+(`references/tier-routing.md`, no sibling call) and never actually called this entry to begin
+with — the phrase described an aspiration for dispatchwright's *plan* output, not its real Tier
+mechanism, and would have gone stale the moment either changed.
+
+- `description` and `Entry — Model` both corrected: dispatchwright does not call this entry;
+  resumewright still does, for a task brief's tier line, per #0072.
+- No eval case named dispatchwright directly, so `evals/trigger-evals.md` needed no case change —
+  provenance note added for the description move regardless.
+
+
 ## [1.5.10] — 2026-09-14
 
 **Owner ruling on 1.5.9's split, same day** (observation #0072). 1.5.9 gave promptwright a direct

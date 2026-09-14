@@ -9,6 +9,7 @@
 - Net-cost accounting
 - Cache mechanics
 - Platform reference points
+- Model tier costs
 - Honesty rules
 
 ---
@@ -67,6 +68,26 @@ Estimates carry a ±15% band. When a decision sits inside the band (an artifact 
 - **Skill bodies** load on trigger, not always-on, so their cost is per-invocation rather than a standing tax; the discovery layer is the always-on surface. Two separate measures, and conflating them is a real error: the **≤500-line norm** is the ecosystem spec (agentskills.io), while **token weight** is the truer cost and does not track line count — a dense 265-line body can outweigh a sparse 500-line one, which is why a flat token gloss fires on spec-compliant skills. Measure both, and where a body earns extra weight by carrying enforceable rules inline, declare the budget rather than mute the signal. References load on demand one level deep; that progressive-disclosure shape is still the reference architecture for any artifact set.
 - **Tool/MCP schemas load whole and always** in most harnesses — documented sessions show five-figure always-on schema costs versus double-digit costs for an equivalent trigger-loaded skill. The strongest standing argument for conditional surfaces over resident ones.
 - **Session floors are real:** agent CLIs commonly start tens of thousands of tokens deep (system prompt + instruction files + schemas + skill metadata) before the first user word. Budget sheets treat that floor as spent, not available.
+
+## Model tier costs *(self-contained as of 2026-09-14, observation #0072/#0073 — no longer sourced from promptwright at report time)*
+
+Cost scales with tier (frontier > flagship > balanced > fast). Bands, cheapest to priciest
+within a tier, Claude (this pack's default vendor):
+
+| Tier | Claude | Relative cost |
+|---|---|---|
+| **C — fast** | Haiku 4.5 | ¢ |
+| **B — balanced** | Sonnet 5 | $ |
+| **A — flagship** | Opus 5 | $$ |
+| **S — frontier** | Fable 5.1 | $$$ |
+
+Sonnet 5 is $2/$10 (input/output per million tokens); Opus 5 is $5/$25; Fable 5.1 is $10/$50;
+Haiku 4.5 has no published per-tier multiplier lower than Sonnet's but is the cheapest Claude
+model offered. **A report reasons in relative bands (¢/$/$$/$$$), never a specific model's price
+per token, unless the exact figure was just re-verified this pass** — the bands are stable
+longer than the underlying prices. Where a different vendor's model is named by the user, its
+tier and relative cost are whatever `tokenwright refresh` last verified against that vendor's own
+pricing page; this table's absolute figures are Claude-only.
 
 ## Honesty rules
 

@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.4.2] — 2026-09-14
+
+Upkeep's calendar-surface-to-refresh-verb mapping (§ upkeep, step 4) gains a row for
+dispatchwright's new `tier-routing.md` → `dispatchwright refresh`, alongside a note that it and
+promptwright's `model-snapshot.md` now hold independent copies of the same Claude tier map
+(observation #0073, self-containment) — a sweep refreshing one does not refresh the other, and
+both are named due once either's stamp ages out. Body-only; `description` byte-identical.
+
 ## [1.4.1] — 2026-09-13
 
 - `references/pack-registry.md`: rigwright's budget row raised 5000 → 5300 at its own 1.1.9
