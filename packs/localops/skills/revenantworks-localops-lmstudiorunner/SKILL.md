@@ -4,7 +4,7 @@ description: Hands work to a local model served by LM Studio and verifies what c
 license: MIT
 compatibility: Requires a running LM Studio server reachable over HTTP on this machine (port discovered, not assumed). Uses the surface's shell or HTTP tool to call that API and its file tools to write queue and report files; where neither exists it hands back the exact curl commands and the files as chat content. No packages, no cloud network at runtime. Siblings promptwright and agentwright are named for handoffs, never required.
 metadata:
-  version: "1.1.1"
+  version: "1.1.2"
   profile: standard
   pack: localops
   brand: revenantworks
@@ -48,6 +48,8 @@ Ask the running server what exists. Default port 1234; probe others (1235 is com
 
 If no server answers, say so plainly with the start command (`lms server start`) and stop. Never fall back to guessing what is installed.
 
+**Before loading more than one model in the same run, check what is already resident** (`lms ps`, or the `state` field per model) and unload what an earlier step left behind. A just-in-time load only evicts on its own TTL — never on the next model's load call — so a crashed or restarted run can leave several models resident at once, all competing for the same RAM. The server's own "insufficient system resources" error then names the model being requested, not the models already occupying memory, and reads exactly like a hardware verdict on that model when the real cause is stale state from an earlier step (observation #0067). Reproduce a resource-exhaustion load failure with nothing else loaded before treating it as a fact about the model.
+
 ## 2. Classify the work
 
 Score the task against the work classes in `references/work-classes.md`. The classes are about the **shape of the work**, not the subject, because shape is what predicts whether a local model succeeds.
@@ -84,6 +86,7 @@ Two rules that survive contact with real runs:
 - **A passing check is not a good result.** A check proves the assertions hold, never that they are worth asserting. A local model wrote an equality assertion with its arguments reversed: it passes, because equality is symmetric, and every failure message it could ever print is backwards. No gate catches that. Say what the check covered so the gap is visible.
 - **Count what should not have changed.** Most silent failures show up as something missing, not something failing — a dropped file, a shrunken list, a schema key that vanished. Check the count as hard as the result.
 - **A mechanical verifier proves shape, never truth.** Valid JSON with real names and in-range line numbers says the claim parsed, not that it survived the code — 17 suspected-bug claims passed the verifier and none survived triage, while 23 of 113 untested-function claims held (observation #0046). Triage a sample, report a **confirmation rate per claim type**, and keep only the types that confirmed in the next run's prompt.
+- **Read the reasoning-token share on every call that succeeds, not only the ones that fail.** A correct answer with a clean stop reason can still have spent nearly all of its budget re-transcribing the input into the reasoning channel rather than reasoning about it — measured at 96% on one small model on a trivial task, worse than two larger models given the identical prompt (observation #0068). `finish_reason` and the final answer being right hide this; only `reasoning_tokens` against `completion_tokens` shows it, and unlike a budget failure, a bigger `max_tokens` does not fix it — it only lets the transcription finish, and the waste grows with the input.
 
 
 Unattended work that fails its check is reverted and set aside with its output and reason, never left half-applied.

@@ -145,3 +145,15 @@ could not parse, because the syntax was wrong in one context the rule did not
 carve out. **When output fails oddly, re-read the instruction before blaming
 the model** — in the measured cases the instruction was at fault more often
 than the model was.
+
+**Verbatim transcription in reasoning.** The call succeeds — a clean stop
+reason, a correct final answer — while most of the reasoning channel is a
+near-copy of the input rather than reasoning about it: one measured model
+spent 96% of its completion on a line-by-line restatement of a source file
+it had already been given, to extract three names from it. **Nothing in
+`finish_reason` or the correctness of the answer reveals this** — it is only
+visible by reading `reasoning_tokens` against `completion_tokens` on a call
+that *passed*, which is why the other failure shapes above do not catch it.
+Unlike a budget failure, a larger `max_tokens` does not fix it; it only lets
+the transcription finish, and the waste scales with the size of the input,
+not with the size of the answer.
