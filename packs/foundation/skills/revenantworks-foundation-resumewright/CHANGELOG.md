@@ -1,5 +1,27 @@
 # Changelog — revenantworks-foundation-resumewright
 
+## [1.0.4] — 2026-09-14
+
+**Owner ruling on 1.0.3's split, same day** (observation #0072, direct follow-up to #0071).
+1.0.3 gave the forward-task-brief half of a handoff request to promptwright and had this skill
+explicitly decline it. The owner ruled that shape wrong: one request should mean one skill,
+not two skills' descriptions negotiating who owns which half. resumewright now owns every
+handoff — backward session state and forward task briefs alike.
+
+- `description` widens from "session state only" to "every handoff" — a forward brief calls
+  promptwright's Entry — Model internally for its tier/model line rather than excluding the case.
+- The `Write` entry point states the two shapes explicitly (resume vs. task brief) instead of
+  declining one of them; step 1 (Gather) runs for both, since a task brief needs the starting
+  point too; step 2 (Write) branches by shape, the task-brief shape ending in a `Model:` line from
+  promptwright.
+- "What resumewright never does" gains an exception: a location gitignored **on purpose** (a
+  local-tooling directory with live git worktrees, the exact shape that already forced one prior
+  fix in this estate) does not get force-added — the write stands as local state and the report
+  says so, rather than fighting a deliberate rule with `-f`.
+- `evals/trigger-evals.md`: #15 flips should-not → should, renumbered **#8** in the should-fire
+  table. 17 stays 17, split moves 7/8 → **8/7**. Cold re-judge still owed, now against the 1.0.4
+  text.
+
 ## [1.0.3] — 2026-09-14
 
 **Same routing miss as promptwright 1.5.9, the other half** (observation #0071). Asked for "a

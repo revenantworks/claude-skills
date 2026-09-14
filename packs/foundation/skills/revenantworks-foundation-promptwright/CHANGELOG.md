@@ -2,6 +2,25 @@
 
 > Renamed from `revenant-foundation-promptwright` on 2026-08-07 (pack 2.0.0 — the `revenant` → `revenantworks` marketplace migration). Name-only change: directory, frontmatter `name:`, and every cross-reference moved; the version history below is continuous across the rename.
 
+## [1.5.10] — 2026-09-14
+
+**Owner ruling on 1.5.9's split, same day** (observation #0072). 1.5.9 gave promptwright a direct
+trigger on handoff/task-brief requests, so it and resumewright could both fire on the same
+request and negotiate who does what. The owner reviewed that shape and ruled it wrong: resumewright
+owns every handoff, backward or forward; promptwright answers a tier question when asked, or when
+resumewright asks it internally — it should not itself be a live candidate for "give me something
+to hand off."
+
+- `description` drops the 1.5.9 handoff clause; a handoff request no longer fires this skill
+  directly. Adds one line naming resumewright/dispatchwright as the actual owners and Entry —
+  Model as the service they call.
+- `Entry — Model` reframed: called by resumewright (or a dispatchwright plan) for a brief's tier
+  line, reached directly only on its own named ask or when neither sibling is assembling the
+  brief.
+- `evals/trigger-evals.md` **#39 flips should → shouldn't** (it was 1.5.9's own worked example of
+  the trigger this version removes). 40 stays 40, split moves 20/20 → **19/21**. Cold re-judge
+  still owed, now against the 1.5.10 text.
+
 ## [1.5.9] — 2026-09-14
 
 **A real routing miss, caught by the owner asking directly** (observation #0071). Asked for "a
