@@ -80,17 +80,30 @@ Seven rules, each of them the residue of a failed run.
 6. **Size the ask to the class.** Compositional requests can be large. Atomic
    ones saturate at a few dozen — partition them, or do them another way.
    `work-classes.md` has the measured numbers.
-7. **Name the population for any absence claim.** "Nothing tests this", "this
-   field appears nowhere", "no caller exists" are claims about a search, and
-   the model has no repository to search — so state what it may treat as the
-   whole population, enumerating every place the behaviour is actually driven:
-   the test directory, any CI job's own scripts, smoke or tooling harnesses.
-   A card that names only `tests/` inherits the narrow-scope error by
-   construction, because a model with no repository knowledge defaults to the
-   obvious directory. Measured: three of four apparent gaps in one pass were
-   covered by a headless script under `tools/` wired as a required CI step.
-   Ask for the evidence with the claim — the file and line that matched —
-   because a bare name hit is a candidate, not a confirmation.
+7. **Name the population for any absence claim, and paste it — naming alone
+   is rule 2 skipped by another name.** "Nothing tests this", "this field
+   appears nowhere", "no caller exists" are claims about a search, and the
+   model has no repository to search — so state what it may treat as the
+   whole population, enumerating every place the behaviour is actually
+   driven: the test directory, any CI job's own scripts, smoke or tooling
+   harnesses. A card that names only `tests/` inherits the narrow-scope
+   error by construction, because a model with no repository knowledge
+   defaults to the obvious directory. Measured: three of four apparent gaps
+   in one pass were covered by a headless script under `tools/` wired as a
+   required CI step. **A file list is not the same as the file** — rule 2
+   applies to every file this rule names, not only the primary target.
+   Measured the difference directly: a card that named 52 population files
+   by path but pasted none of their content scored 0.10 precision / 0.35
+   recall on the absence claim it asked for — the same range observation
+   #0046 measured for "suspected bug" claims, and dropped, because the
+   model had no material to judge from either time (observation #0069).
+   Ask for the evidence with the claim — the file and line that matched, or
+   that was searched and found absent — because a bare name hit is a
+   candidate, not a confirmation, and a claim with no citation at all is not
+   answerable, whatever its precision reads as. If the population's combined
+   content will not fit in context alongside the target file, that is the
+   finding: shrink the population per card, or accept the claim cannot be
+   asked at this scope — do not ask anyway on file names alone.
 
 
 ## The queue and its states
