@@ -1,5 +1,32 @@
 # Changelog — revenantworks-localops-lmstudiorunner
 
+## [1.1.4] — 2026-09-14
+
+**Three lessons from a portfolio-wide survey that extended a pre-existing local-model
+overnight queue** (`V:/Projects/.bionic/run_overnight.py`) to four new repos, observations
+#0070, #0074, #0075. `description` byte-identical; no entry point moved.
+
+- `SKILL.md` step 1 (#0070): before building any new runner, search the project for one
+  that already exists — a README/backlog naming "overnight"/"local model"/"unattended", or a
+  directory like `.bionic`. This session nearly re-litigated infrastructure that already had
+  worktree isolation, a money guard and commit conventions, because nothing looked. Read the
+  found runner's contract first; if its model is stale against this Discover pass, offer the
+  swap rather than leaving the two facts unconnected.
+- `SKILL.md` `queue` entry point (#0074): before a card adds to or creates a test file,
+  confirm the target repo's CI actually discovers that path (not a parse-only `compileall`
+  step) and, for an existing target, that it already uses the framework the check expects —
+  a hand-rolled probe script with a `test_*.py` name collects as zero tests under `unittest
+  discover` and silently never runs what gets appended to it. Found in the same session: 3 of
+  4 newly-queued repos had exactly this CI gap, and one existing "test" file was the
+  non-`TestCase` kind.
+- `SKILL.md` `run` entry point (#0075): a correctly-designed baseline check that refuses to
+  guess a green result also cannot bootstrap into a scope with zero existing tests — write
+  one small, verified-correct seed test yourself (never delegated) before queueing the first
+  card there.
+- `evals/SUITE.md` gains **E6** (a card targeting a CI-discovery-blind directory) and **E7**
+  (a scope with zero collectible tests) — 38 → **40 cases**, both authored, not run.
+  `evals/TRIGGERS.md` re-anchored, provenance only.
+
 ## [1.1.3] — 2026-09-13
 
 **One lesson from the overnight coverage sweep that followed the 1.1.2 audit**

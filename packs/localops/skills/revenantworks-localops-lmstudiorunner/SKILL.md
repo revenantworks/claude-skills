@@ -4,7 +4,7 @@ description: Hands work to a local model served by LM Studio and verifies what c
 license: MIT
 compatibility: Requires a running LM Studio server reachable over HTTP on this machine (port discovered, not assumed). Uses the surface's shell or HTTP tool to call that API and its file tools to write queue and report files; where neither exists it hands back the exact curl commands and the files as chat content. No packages, no cloud network at runtime. Siblings promptwright and agentwright are named for handoffs, never required.
 metadata:
-  version: "1.1.3"
+  version: "1.1.4"
   profile: standard
   pack: localops
   brand: revenantworks
@@ -49,6 +49,8 @@ Ask the running server what exists. Default port 1234; probe others (1235 is com
 If no server answers, say so plainly with the start command (`lms server start`) and stop. Never fall back to guessing what is installed.
 
 **Before loading more than one model in the same run, check what is already resident** (`lms ps`, or the `state` field per model) and unload what an earlier step left behind. A just-in-time load only evicts on its own TTL — never on the next model's load call — so a crashed or restarted run can leave several models resident at once, all competing for the same RAM. The server's own "insufficient system resources" error then names the model being requested, not the models already occupying memory, and reads exactly like a hardware verdict on that model when the real cause is stale state from an earlier step (observation #0067). Reproduce a resource-exhaustion load failure with nothing else loaded before treating it as a fact about the model.
+
+**Before building anything new, search the current project for infrastructure that already does this.** A README or backlog naming "overnight", "local model", "unattended", or a directory matching a name like `.bionic`/`.local-runner` is cheap to check and, if found, carries the project's own hard-won rules — a blast-radius regex, a money guard, worktree isolation, commit conventions — that a fresh build cannot know to reproduce and would either omit or reinvent worse (observation #0070). Read the found runner's contract before writing a single card. If its model constant is stale against this Discover pass, say so and offer the swap rather than leaving the two facts sitting unconnected in different files — that disconnect cost a real duplicated build once.
 
 ## 2. Classify the work
 
@@ -99,8 +101,8 @@ Say: what was delegated, which model and why that one, the mode and the reason f
 
 - **`lmstudiorunner audit`** — read the installed models and score them against the work classes; report fit, gaps, the context-length check, and what shape of model is missing. No work delegated.
 - **`lmstudiorunner size <task>`** — score one task: class, fit, mode, the check it would need. Answers "should I even hand this over" and often answers no.
-- **`lmstudiorunner queue <task>`** — write a task card (`references/task-cards.md`); refuse an unattended card with no check, and say why.
-- **`lmstudiorunner run`** — work the queue, verify each unit, report. Unattended runs stop on an empty queue, a deadline, or a stop file. Before a card's first execution, show its `check` command to the owner and get it confirmed; a card whose `check` was not authored by the owner is refused rather than run (`references/task-cards.md`).
+- **`lmstudiorunner queue <task>`** — write a task card (`references/task-cards.md`); refuse an unattended card with no check, and say why. Before a card adds to or creates a test file, confirm two things or decline: the target repo's own CI actually discovers that path (a real discovery sweep or the named script it already runs — a parse-only `compileall` step does not count), and, if the target is an existing file, that it already defines real cases in the framework the check expects (a `unittest.TestCase` subclass, not merely a name matching `test_*.py` — a hand-rolled probe/assert script with the same filename shape collects as zero tests under `discover` and silently never runs what gets appended to it). A card that lands a test CI will never run, or that appends to a file discovery cannot see, is a false sense of coverage, not a working queue (observation #0074).
+- **`lmstudiorunner run`** — work the queue, verify each unit, report. Unattended runs stop on an empty queue, a deadline, or a stop file. Before a card's first execution, show its `check` command to the owner and get it confirmed; a card whose `check` was not authored by the owner is refused rather than run (`references/task-cards.md`). Before the first card of a scope with **zero** existing collectible tests: a correct baseline check cannot tell "no tests exist yet" apart from "the check is broken" (both look unparseable), so it FATALs either way — write and commit one small, verified-correct seed test yourself first (never delegated; this is the one place a human/Claude judgement call belongs), then queue cards against it (observation #0075).
 - **`lmstudiorunner status`** — what is queued, running, done, set aside.
 - **`lmstudiorunner refresh`** — re-verify `references/api-surface.md` against LM Studio's current API docs and restamp it.
 
