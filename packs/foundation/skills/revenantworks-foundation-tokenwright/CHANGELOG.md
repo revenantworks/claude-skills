@@ -2,6 +2,22 @@
 
 > Renamed from `revenant-foundation-tokenwright` on 2026-08-07 (pack 2.0.0 — the `revenant` → `revenantworks` marketplace migration). Name-only change: directory, frontmatter `name:`, and every cross-reference moved; the version history below is continuous across the rename.
 
+## [1.2.5] — 2026-09-14
+
+**Self-containment, owner ruling** (observation #0073, same as dispatchwright 1.2.9). Behavior
+notes said tokenwright's cost reasoning "never names a specific model — the current name and
+pricing come from promptwright's snapshot via Entry — Model," a live dependency the skill's own
+Dependencies section didn't disclose.
+
+- `references/measurement.md` gains a **Model tier costs** section: relative cost bands (¢/$/$$/$$$)
+  per tier for Claude, folded into the skill's own already-volatile file rather than a new one —
+  tokenwright already reasons in bands, not absolute prices, so this is the minimum it needs.
+- Behavior notes' Scope line rewritten: promptwright is still where "which model should this run
+  on" goes, but tokenwright's own tier-cost reasoning no longer credits promptwright's snapshot as
+  its source.
+- `Entry — Refresh`'s re-verification list gains the model tier costs table.
+- `evals/trigger-evals.md` re-anchored, provenance only — the `description` did not move.
+
 ## [1.2.4] — 2026-09-10
 
 `tokenwright refresh` (frozen member — owner decision 2026-08-17 names the refresh path itself

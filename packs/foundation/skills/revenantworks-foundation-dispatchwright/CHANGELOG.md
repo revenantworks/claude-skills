@@ -1,5 +1,27 @@
 # Changelog — revenantworks-foundation-dispatchwright
 
+## [1.2.9] — 2026-09-14
+
+**Self-containment, owner ruling** (observation #0073). dispatchwright's Tier section (§4) called
+promptwright's Entry — Model live for every unit's tier row — a real, load-bearing dependency the
+skill's own `Dependencies (standalone profile)` section didn't disclose. Asked whether any
+model-using foundation skill leverages a sibling for its own recurring job, the owner ruled that
+this one, and tokenwright's parallel case, should carry the logic themselves instead — one source
+of truth that can drift from the skills that call it, traded deliberately for N self-contained
+copies that can drift from each other.
+
+- New `references/tier-routing.md`: a Claude-only tier table (S/A/B/C, one model name per tier),
+  the effort-before-tier rule, and the three role-based overrides §7 already restated from
+  promptwright — now this skill's own doctrine, not a citation. Stated explicitly as a one-time
+  copy of promptwright's `model-snapshot.md`, not a live mirror.
+- `description`, the intro paragraph, §1's seams list, §4 (rewritten), §7's two citations, and
+  Behavior notes — Scope all updated to read from the new file instead of calling promptwright.
+- New **`dispatchwright refresh`** entry point, since the skill now owns a calendar-volatile file;
+  `metadata.volatile` gains the corresponding entry.
+- `evals/trigger-evals.md`: #14's boundary note corrected (dispatchwright tiers its own units now,
+  not "what promptwright tiered"). 22 rows, 10/10 unchanged — the trigger conditions didn't move,
+  only the internal mechanism. Cold re-judge owed since the `description` moved, not yet performed.
+
 ## [1.2.8] — 2026-09-13
 
 - `references/unit-brief-template.md` gains a second Boundaries clause (#0062): isolating one
