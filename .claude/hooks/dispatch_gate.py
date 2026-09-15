@@ -87,6 +87,33 @@ def load_patterns() -> list[str]:
     return out
 
 
+# A shell prompt line: PowerShell (`PS ` then a location then `>`), bash/zsh
+# (`user@host:~$`), or a bare `$ `. Used only to find the edges of a pasted
+# terminal session.
+_SHELL_PROMPT = re.compile(r"^\s*(?:PS [^\n>]*>|[\w.-]+@[\w.-]+:[^\n$#]*[$#]|\$ )")
+
+
+def strip_pasted_terminal(prompt: str) -> str:
+    """The prompt with any pasted terminal session removed (observation 0079).
+
+    Owners paste command output back into chat all the time, and output can
+    quote this hook's own trigger words -- its selftest success line once did,
+    so pasting the proof that the gate worked tripped the gate. Pasted output
+    is data, not a request.
+
+    Only the span from the FIRST shell-prompt line to the LAST is dropped, and
+    only when there are at least two: text typed before or after the paste is
+    still the owner's own words and is still matched. That asymmetry is on
+    purpose -- a missed fan-out (observation 0016) costs far more than a stray
+    advisory note, so the strip takes only what is unmistakably a transcript.
+    """
+    lines = prompt.splitlines()
+    edges = [i for i, line in enumerate(lines) if _SHELL_PROMPT.match(line)]
+    if len(edges) < 2:
+        return prompt
+    return "\n".join(lines[: edges[0]] + lines[edges[-1] + 1:])
+
+
 def first_match(prompt: str, patterns: list[str]) -> str | None:
     for pat in patterns:
         try:
@@ -178,6 +205,37 @@ def selftest() -> int:
             f"regression): {real_fan_out_sample!r}"
         )
 
+    # Third control, added 2026-09-14 (observation 0079): a pasted terminal
+    # session. The owner pasted this hook's own --selftest output back into
+    # chat; its success line quoted the word the fan-out sample matched, so the
+    # proof that the gate worked tripped the gate. This is that real paste,
+    # with the account name in the prompt lines replaced by `owner`. Asserted
+    # three ways: raw it must still match (or the sample proves nothing about
+    # the strip), stripped it must not, and a request typed above the paste
+    # must survive the strip.
+    pasted_terminal_sample = (
+        'PS C:\\Users\\owner> Copy-Item "V:\\Projects\\github\\revenantworks\\claude-skills\\.claude'
+        '\\hooks\\dispatch_gate.py" "$HOME\\.claude\\hooks\\dispatch_gate.py"; python '
+        '"$HOME\\.claude\\hooks\\dispatch_gate.py" --selftest\n'
+        "dispatch_gate selftest: OK (17 pattern(s) armed; fan-out sample matched 'rebuild', real "
+        "observed fan-out prompt (observation 0016) matched 'every (skill|plugin|routine|task|hook|"
+        "project|repo)', ordinary sample matched nothing; flag readable by the guard, session-less "
+        "prompts write the sentinel; exits 0 on all 5 broken-input cases and still fires past an "
+        "uncompilable pattern)\n"
+        "PS C:\\Users\\owner>"
+    )
+    if patterns and not first_match(pasted_terminal_sample, patterns):
+        problems.append("the pasted-terminal sample no longer contains a trigger word, so it cannot "
+                        "prove the strip works; re-capture it")
+    pasted_hit = first_match(strip_pasted_terminal(pasted_terminal_sample), patterns) if patterns else None
+    if pasted_hit:
+        problems.append(f"a pasted terminal session matched {pasted_hit!r}; pasted output is data, "
+                        f"not a request (observation 0079)")
+    typed_above_paste = "Rebuild the whole estate once you have read this:\n" + pasted_terminal_sample
+    if patterns and not first_match(strip_pasted_terminal(typed_above_paste), patterns):
+        problems.append("a request typed above a pasted terminal session was stripped with it; only "
+                        "the span between the first and last prompt lines may be dropped")
+
     with tempfile.TemporaryDirectory() as td:
         tmp = Path(td)
 
@@ -240,6 +298,16 @@ def selftest() -> int:
         if out.strip():
             problems.append(f"an ordinary prompt printed output: {out!r}")
 
+        # --- a pasted terminal session arms nothing, through the real main() ---
+        code, out, flag_file = _run_gate(
+            {"session_id": "sess-1", "prompt": pasted_terminal_sample, "cwd": str(tmp)}, tmp
+        )
+        if code != 0:
+            problems.append(f"a pasted terminal session exited {code}; must be 0")
+        if flag_file.exists() or out.strip():
+            problems.append("a pasted terminal session armed dispatch mode through main(); "
+                            "strip_pasted_terminal is not wired in")
+
         # --- fail open on every broken input ------------------------------
         # The bad regex goes FIRST on purpose. With it last, a good pattern
         # earlier in the file matches and re.error never fires, so the case
@@ -288,15 +356,25 @@ def selftest() -> int:
                 "neither wrote a flag nor added context for a prompt that still matches"
             )
 
+    # Pattern NUMBERS, never pattern text: this line gets pasted back into chat,
+    # and echoing a trigger word here is exactly how observation 0079 happened.
+    # The line is then held to its own rule before it is printed.
+    success = (
+        f"dispatch_gate selftest: OK ({len(patterns)} pattern(s) armed; positive samples matched "
+        f"pattern #{patterns.index(hit) + 1 if hit in patterns else '?'} and "
+        f"#{patterns.index(hit2) + 1 if hit2 in patterns else '?'} (the second is observation "
+        f"0016's real prompt); the negative sample and a pasted terminal session matched nothing; "
+        f"flag readable by the guard, session-less prompts write the sentinel; exits 0 on "
+        f"{broken_input_cases} broken-input cases and still fires past an uncompilable pattern)"
+    )
+    if patterns and first_match(success, patterns):
+        problems.append("the selftest's own success line matches a trigger pattern, so pasting it "
+                        "back would trip the gate (observation 0079); reword it")
     if problems:
         for p in problems:
             print(f"DISPATCH_GATE SELFTEST FAIL: {p}")
         return 2
-    print(f"dispatch_gate selftest: OK ({len(patterns)} pattern(s) armed; fan-out sample matched "
-          f"{hit!r}, real observed fan-out prompt (observation 0016) matched {hit2!r}, ordinary "
-          f"sample matched nothing; flag readable by the guard, session-less prompts write the "
-          f"sentinel; exits 0 on all {broken_input_cases} broken-input cases and still fires past "
-          f"an uncompilable pattern)")
+    print(success)
     return 0
 
 
@@ -310,7 +388,7 @@ def main() -> int:
         if not prompt:
             return 0
         patterns = load_patterns()
-        hit = first_match(prompt, patterns)
+        hit = first_match(strip_pasted_terminal(prompt), patterns)
         if hit:
             write_flag(session_id)
             out = {

@@ -4,8 +4,12 @@
       "name": "real fan-out prompt \u2014 observation 0016 regression fixture, verbatim from dispatch_gate.py's own selftest (the actual real prompt this rig submitted on 2026-09-10 that the gate originally missed before the shape-based patterns were added). session_id is the flag's real live session id at the time this fixture was captured (2026-09-11), reused so the write is idempotent on the correlation (only its timestamp refreshes).",
       "argv": [],
       "stdin": "{\"session_id\": \"c383d83c-5af0-4a61-98ee-c4b6376d6fca\", \"prompt\": \"I want to do a complete estate sweep, run that routine but also lets analyze every skill, project, routine\", \"cwd\": \".\"}",
-      "expect_exit_in": [0],
-      "touches": ["~/.claude/dispatch-mode.json"],
+      "expect_exit_in": [
+        0
+      ],
+      "touches": [
+        "~/.claude/dispatch-mode.json"
+      ],
       "expect_contains": "additionalContext"
     }
   ],
@@ -14,8 +18,24 @@
       "name": "ordinary prompt \u2014 real fragment of this session's own actual task instructions (the HOOK-02 controls-file work order this fixture file was written to close), carries no fan-out language",
       "argv": [],
       "stdin": "{\"session_id\": \"c383d83c-5af0-4a61-98ee-c4b6376d6fca\", \"prompt\": \"Read the full _run_hook_control and check_hook_controls functions to get the exact JSON schema and invocation contract.\", \"cwd\": \".\"}",
-      "expect_exit_in": [0],
-      "touches": ["~/.claude/dispatch-mode.json"],
+      "expect_exit_in": [
+        0
+      ],
+      "touches": [
+        "~/.claude/dispatch-mode.json"
+      ],
+      "expect_not_contains": "additionalContext"
+    },
+    {
+      "name": "pasted terminal session \u2014 observation 0079 regression fixture: the owner's real 2026-09-14 paste of this hook's --selftest output back into chat. Its success line quoted 'rebuild', and the gate fired on a verification question. Account name in the prompt lines replaced by 'owner'; the JSON response to the last command is omitted; nothing else changed.",
+      "argv": [],
+      "stdin": "{\"session_id\": \"c383d83c-5af0-4a61-98ee-c4b6376d6fca\", \"prompt\": \"PS C:\\\\Users\\\\owner> Copy-Item \\\"V:\\\\Projects\\\\github\\\\revenantworks\\\\claude-skills\\\\.claude\\\\hooks\\\\dispatch_gate.py\\\" \\\"$HOME\\\\.claude\\\\hooks\\\\dispatch_gate.py\\\"; python \\\"$HOME\\\\.claude\\\\hooks\\\\dispatch_gate.py\\\" --selftest\\ndispatch_gate selftest: OK (17 pattern(s) armed; fan-out sample matched 'rebuild', real observed fan-out prompt (observation 0016) matched 'every (skill|plugin|routine|task|hook|project|repo)', ordinary sample matched nothing; flag readable by the guard, session-less prompts write the sentinel; exits 0 on all 5 broken-input cases and still fires past an uncompilable pattern)\\nPS C:\\\\Users\\\\owner> gh auth switch -u revenantworks; gh api -X PUT repos/revenantworks/claude-skills/branches/main/protection -F \\\"required_status_checks[strict]=false\\\" -f \\\"required_status_checks[contexts][]=check\\\" -F enforce_admins=false -F required_pull_request_reviews=null -F restrictions=null; gh auth switch -u MickMacPW\\nPS C:\\\\Users\\\\owner>\", \"cwd\": \".\"}",
+      "expect_exit_in": [
+        0
+      ],
+      "touches": [
+        "~/.claude/dispatch-mode.json"
+      ],
       "expect_not_contains": "additionalContext"
     }
   ]
