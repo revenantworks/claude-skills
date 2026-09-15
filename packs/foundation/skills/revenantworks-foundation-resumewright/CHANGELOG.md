@@ -1,5 +1,29 @@
 # Changelog — revenantworks-foundation-resumewright
 
+## [1.1.1] — 2026-09-14
+
+**The first blind re-judge of 1.1.0's description found a regression that 1.1.0 caused; this
+patch fixes it.** One fresh judge, holding the listing of all 14 members plus the 15 routing
+queries with the key withheld, scored 1.1.0 at **13 / 15**:
+
+- #14 ("There's no filesystem here — just tell me what to paste into the next chat.") came back
+  SHOULD. 1.1.0's "With no filesystem, task-observer's handoff-doc mode is the fallback" read as
+  this skill covering the case; 1.0.0's wording had passed it.
+- #12 ("Set up a hook that writes a handoff automatically before every compaction.") came back
+  AMBIGUOUS against rigwright, because no description said who places that hook.
+
+Changes:
+
+- `description`: its closing sentences become one exclusion — resuming an active dispatchwright
+  fan-out, setting up a hook that writes handoffs automatically (rigwright's), and a chat with no
+  filesystem to commit into (task-observer's handoff-doc mode). 994 → 955 characters, no `: `. A
+  second, different fresh judge scored it **15 / 15** (`evals/RESULTS.md`), which discharges the
+  re-judge owed since 1.0.3.
+- Write step 2, task-brief shape (observation #0076): a command the brief hands its executor points
+  at the repo's own command block or gives every surface's form, never only the form that worked
+  where the brief was written.
+- Eval provenance re-anchored; no case moved.
+
 ## [1.1.0] — 2026-09-14
 
 **Owner request: a handoff ends with a paste-ready starter prompt, not a bare sha.** A committed

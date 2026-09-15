@@ -2,6 +2,13 @@
 
 > Renamed from `revenant-foundation-promptwright` on 2026-08-07 (pack 2.0.0 — the `revenant` → `revenantworks` marketplace migration). Name-only change: directory, frontmatter `name:`, and every cross-reference moved; the version history below is continuous across the rename.
 
+## [1.5.13] — 2026-09-14
+
+`evals/RESULTS.md` records the blind cold trigger re-judge owed since 1.5.9: **38 / 40**. Both
+misses came back AMBIGUOUS on overlaps with other members — #31 against dispatchwright's own
+per-unit tiering, #25 against lmstudiorunner — neither caused by 1.5.12's trim, and both join the
+watch rows. Eval provenance re-anchored; `description` and body byte-identical.
+
 ## [1.5.12] — 2026-09-14
 
 **Repairs the `description` that 1.5.9–1.5.11 left failing the build gate.** The handoff clause

@@ -1,5 +1,20 @@
 # RESULTS — trigger suite and assertion suite runs
 
+## 2026-09-14 — v1.2.10 — **BLIND COLD TRIGGER RE-JUDGE, 20 / 20** — runner: one fresh blind judge (Sonnet 5; name + description of all 14 marketplace members; `tools/blind_queries.py`)
+
+The re-judge owed since 1.2.9 moved the `description`, and the first cold judge this trigger suite
+has had. Same isolation as the promptwright and resumewright runs the same day: the listing plus
+the 20 routing queries under opaque ids, no other file, the key withheld until scoring.
+
+**20 of 20 hold their recorded direction.** One route differs without changing direction: #20
+("Just fix the typo in this one README.", expected none) was routed to skillwright's prose pass
+instead of to no skill. Recorded, not scored as a miss. The two injection probes (#21, #22) carry
+no routing verdict and were not judged. Nothing was changed to make a row pass.
+
+The owed items below stay as written for their 1.0.0 context; the cold-listing judge is now done.
+
+---
+
 **Authored, not yet run.** `trigger-evals.md`'s 22 rows (10 should-fire, 10 should-not, 2
 injection probes) were written alongside the 1.0.0 build and have not been judged cold or
 executed against the shipped description. No assertion suite (`test-cases.md`) exists yet for

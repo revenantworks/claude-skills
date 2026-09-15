@@ -17,6 +17,31 @@ This log starts at the foundation 1.0.0 baseline.
 > because it records what was true when written; read it as a date, not a tag.
 > Live code and runbooks cite dates instead, for exactly this reason.
 
+## [foundation-v2.9.1] - 2026-09-14
+
+Closes what foundation-v2.9.0 left owed: three cold trigger re-judges, three stale dispatchwright
+asserts, and observations #0076–#0078.
+
+- resumewright 1.1.0 → 1.1.1. Its first blind re-judge scored 1.1.0 at 13 / 15: #14 (no
+  filesystem) was a regression the 1.1.0 description introduced, and #12 (a hook that writes
+  handoffs) tied with rigwright. The `description` now ends in one exclusion sentence, and a second
+  fresh judge scored it 15 / 15. Write step 2 gains the per-surface command rule for a task brief
+  (#0076).
+- promptwright 1.5.12 → 1.5.13. Blind re-judge 38 / 40. #31 (plan tiering, against dispatchwright's
+  own tier table) and #25 (a support-email model pick, against lmstudiorunner) came back
+  AMBIGUOUS; both are overlaps with other members, not 1.5.12's trim, and both join the watch rows.
+- dispatchwright 1.2.10 → 1.2.11. Blind re-judge 20 / 20, the first cold judge its trigger suite
+  has had. §5 gains "merge only onto a green base" (#0077). The old "hand units to promptwright"
+  contract, retired at 1.2.9, is removed from three assertion spots, `references/ledger-schema.md`
+  and `references/unit-brief-template.md` (#0078).
+- skillwright 1.4.3 → 1.4.4. Release order step 1: member work lands only on a green gate (#0077).
+  The registry budget for dispatchwright is raised 6400 → 6700.
+- Pack router `packs/foundation/CLAUDE.md`: the dispatchwright seam says it tiers what it dispatches
+  and promptwright tiers everything else (#0078).
+- Rig hook `.claude/hooks/dispatch_gate.py` (not a pack member): its prompt message now points at
+  dispatchwright's own tier table instead of promptwright. The installed copy in `~/.claude/hooks/`
+  is the owner's to sync.
+
 ## [localops-v1.1.2] - 2026-09-14
 
 - lmstudiorunner 1.1.1 → 1.1.5. 1.1.2 (#0067, #0068): a discovery-time RAM check and a new

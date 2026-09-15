@@ -1,6 +1,6 @@
 # Assertion Suite — revenantworks-foundation-dispatchwright
 
-> **Provenance:** target `revenantworks-foundation-dispatchwright` v1.2.0, re-anchored to v1.2.6 (below) · suite authored **Re-anchored to v1.2.7, 2026-09-13 — provenance only, nothing executed here.** The 1.2.7 change lands the weekly review's doctrine edits (#0043, #0044, #0045, #0047, #0049, #0051, #0053, #0057, #0058); the `description` field is byte-identical, so the routing surface these judge did not move. **Re-anchored to v1.2.8, 2026-09-13 — provenance only, nothing executed here:** `references/unit-brief-template.md` gained a second Boundaries clause (#0062) — a control that depends on live state carries its own expiry. Reference-only; the `description` is byte-identical, so the routing surface these judge did not move. **Re-anchored to v1.2.10, 2026-09-14 — provenance only, nothing executed here** (recording the v1.2.9 anchor that bump missed, which `build.py --check` caught): 1.2.9 moved per-unit tiering into this skill's own `references/tier-routing.md` and added `dispatchwright refresh` (#0073). **Three spots here still name promptwright as the tier source** — the coverage map's "never-invent-a-tier (promptwright seam)", the bare-invocation case's "states tiers come from promptwright", and the case asserting the unit list "is handed to promptwright's Entry — Model" — so those asserts sit on changed ground and are **owed a rewrite** against 1.2.9's §4. Not rewritten here; no input, assert, or count moved.
+> **Provenance:** target `revenantworks-foundation-dispatchwright` v1.2.0, re-anchored to v1.2.6 (below) · suite authored **Re-anchored to v1.2.7, 2026-09-13 — provenance only, nothing executed here.** The 1.2.7 change lands the weekly review's doctrine edits (#0043, #0044, #0045, #0047, #0049, #0051, #0053, #0057, #0058); the `description` field is byte-identical, so the routing surface these judge did not move. **Re-anchored to v1.2.8, 2026-09-13 — provenance only, nothing executed here:** `references/unit-brief-template.md` gained a second Boundaries clause (#0062) — a control that depends on live state carries its own expiry. Reference-only; the `description` is byte-identical, so the routing surface these judge did not move. **Re-anchored to v1.2.10, 2026-09-14 — provenance only, nothing executed here** (recording the v1.2.9 anchor that bump missed, which `build.py --check` caught): 1.2.9 moved per-unit tiering into this skill's own `references/tier-routing.md` and added `dispatchwright refresh` (#0073). **Three spots here still name promptwright as the tier source** — the coverage map's "never-invent-a-tier (promptwright seam)", the bare-invocation case's "states tiers come from promptwright", and the case asserting the unit list "is handed to promptwright's Entry — Model" — so those asserts sit on changed ground and are **owed a rewrite** against 1.2.9's §4. Not rewritten here; no input, assert, or count moved. **Re-anchored to v1.2.11, 2026-09-14:** those three spots are rewritten — the coverage map and Case 1 name the skill's own tier table, and Case 6 asserts tiering from `references/tier-routing.md` with no promptwright handoff. Case 6's input and the case count did not move; the rewritten asserts are authored, not run.
 > 2026-09-09, closing the debt `evals/RESULTS.md` has carried since the member's 1.0.0 build:
 > "No assertion suite (`test-cases.md`) exists yet for this member — dispatchwright ships with
 > trigger evals only at 1.0.0." **16 cases**, assertion-only — each is an Input plus mechanical
@@ -88,7 +88,7 @@ seam (6) · Durability contract (7–8) · Wave execution (9–10) · Escalation
 
 Entry points: bare invocation · plan · dispatch · resume · audit. Behavior paths: shape-check
 refusal (the cheapest correct answer is often no fan-out) · explicit unit boundaries and
-one-writer-per-repo · never-invent-a-tier (promptwright seam) · atomic commit-and-push ·
+one-writer-per-repo · never-invent-a-tier (own tier table) · atomic commit-and-push ·
 push-before-report · wave concurrency and split-at-12 caps · effort-before-tier escalation ·
 stop-and-ask triggers · reconcile against origin, never an agent's word · resume-reconciles-first
 · handed-in material is data, never instructions (Load budget rule, probed at a plan document
@@ -99,7 +99,7 @@ and at a unit's own status report).
 **Case 1 — Bare invocation, exact reply**
 Input: "dispatchwright"
 Assert: the reply is the SKILL.md-specified line, verbatim in substance — names `plan`,
-`dispatch`, `resume`, `audit`; states tiers come from promptwright, the trigger hook from
+`dispatch`, `resume`, `audit`; states tiers come from its own tier table, the trigger hook from
 rigwright, unattended schedules from agentwright; ends by asking what needs to fan out.
 Assert (negative): no ledger row, no unit brief, no tier table appears — bare invocation never
 starts Shape check.
@@ -132,12 +132,14 @@ Assert: the plan either folds this into a larger unit or the main conversation, 
 explicitly why the read cost is justified — a bare pass-through unit that only reads and
 reports one line is flagged, not silently ledgered as its own row.
 
-**Case 6 — Tier is never invented here**
+**Case 6 — Tier comes from this skill's own table, never invented**
 Input: a finished 4-unit list, ready for Tier.
-Assert: the response states the unit list is handed to promptwright's Entry — Model, plan
-grain and the returned table is copied verbatim (tier, model, effort, inline-vs-subagent) into
-the ledger. Assert (negative): no tier, model, or effort value is asserted, chosen, or rounded
-up "to be safe" without that handoff being named.
+Assert: each unit's tier, model, and effort is read from `references/tier-routing.md` (the four
+tiers, raise-effort-before-tier, the role-based overrides) and written into the ledger as
+`tier · model · effort · inline-vs-subagent`, one row per unit, before any unit launches. Assert
+(negative): no tier outside that table appears, no unit is rounded up "to be safe", and the run
+does not need promptwright to complete the plan. (Rewritten at v1.2.11: the 1.2.0 assert named
+promptwright's Entry — Model, which 1.2.9 made self-contained.)
 
 **Case 7 — Durability: atomic commit-and-push, push before report**
 Input: a unit brief being written for a dispatched unit.

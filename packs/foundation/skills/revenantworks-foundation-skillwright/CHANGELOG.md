@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.4.4] — 2026-09-14
+
+`references/release-doctrine.md` Release order, step 1 (observation #0077): member work lands only
+on a green gate. A change never merges while `build.py --check` or the tool suite is red; if main
+is already red, the change's first commit makes it green or the change waits. Branch protection
+that requires the check is named as the repo owner's structural option, recommended and not
+assumed. Reference-only; `description` byte-identical. Eval provenance re-anchored.
+
+`references/pack-registry.md`: dispatchwright's body budget raised 6400 → 6700 for its 1.2.11 §5
+rule, which landed the body at ≈6454. Registry prose only.
+
 ## [1.4.3] — 2026-09-14
 
 Eval provenance repair, plus one registry budget row. 1.4.2 never re-anchored

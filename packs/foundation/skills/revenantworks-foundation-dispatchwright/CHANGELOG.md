@@ -1,5 +1,22 @@
 # Changelog — revenantworks-foundation-dispatchwright
 
+## [1.2.11] — 2026-09-14
+
+- §5 Durability contract gains **Merge only onto a green base** (observation #0077): a unit that
+  lands through a pull request reads the base branch's check state before merging, and reports a
+  red base as a blocker instead of merging on it.
+- `evals/test-cases.md`: the coverage map, Case 1 and Case 6 no longer name promptwright as the
+  tier source (1.2.9 made tiering self-contained). Case 6 now asserts tiering from
+  `references/tier-routing.md`; its input and the case count did not move.
+- `evals/RESULTS.md`: the first blind cold trigger re-judge this suite has had — 20 / 20.
+- Eval provenance re-anchored; `description` byte-identical. The rig's `dispatch_gate.py` hook
+  message (claude-skills `.claude/hooks/`, not part of this package) also stopped telling a session
+  to hand units to promptwright.
+- The same retired wording survived in `references/ledger-schema.md` (the `model` and `effort`
+  fields said "copied verbatim from promptwright's target table") and in
+  `references/unit-brief-template.md`'s Effort line. Both now name this skill's own tier table, as
+  does the pack router's dispatchwright seam in `packs/foundation/CLAUDE.md` (observation #0078).
+
 ## [1.2.10] — 2026-09-14
 
 Eval provenance repair only. 1.2.9 re-anchored `evals/trigger-evals.md` but not

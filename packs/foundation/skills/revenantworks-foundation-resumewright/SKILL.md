@@ -1,9 +1,9 @@
 ---
 name: revenantworks-foundation-resumewright
-description: Owns every handoff — a committed session state (what already happened, verified against git) or a forward task brief (what a later session or agent should do next) — and ends each with a paste-ready starter prompt for the next chat. Trigger on 'resumewright', 'write the handoff', 'hand off' / 'handoff', 'give me a prompt to hand off', 'pause here', 'holding position', a usage-limit or compaction warning, before closing a session with work still open, or any request to write something for a later reader to pick up; 'resumewright resume' reads a committed handoff back, checking git stash list and git reflog first. A forward brief takes its tier/model line from promptwright's model entry (owner ruling, #0072). An active dispatchwright fan-out's ledger already carries its own resume state; resumewright covers everything outside it. With no filesystem, task-observer's handoff-doc mode is the fallback; a deliberately untracked location is written, not committed, and the report says so.
+description: Owns every handoff — a committed session state (what already happened, verified against git) or a forward task brief (what a later session or agent should do next) — and ends each with a paste-ready starter prompt for the next chat. Trigger on 'resumewright', 'write the handoff', 'hand off' / 'handoff', 'give me a prompt to hand off', 'pause here', 'holding position', a usage-limit or compaction warning, before closing a session with work still open, or any request to write something for a later reader to pick up; 'resumewright resume' reads a committed handoff back, checking git stash list and git reflog first. A forward brief takes its tier/model line from promptwright's model entry. It does not cover resuming an active dispatchwright fan-out, whose ledger carries its own state; setting up a hook that writes handoffs automatically, which is rigwright's; or a chat with no filesystem to commit into, which is task-observer's handoff-doc mode.
 license: MIT
 metadata:
-  version: "1.1.0"
+  version: "1.1.1"
   profile: standalone
   pack: foundation
   brand: revenantworks
@@ -82,7 +82,10 @@ work that doesn't exist.
    shape: the same gathered context, reframed as what a future executor needs — the work, the
    constraints and exclusions, any candidate data already found (so it isn't re-discovered), the
    concrete steps, and a `Model:` line from promptwright's Entry — Model naming the tier/model and
-   effort to run it at. Location, either shape: beside an existing run directory
+   effort to run it at. A command the brief hands its executor (a test run, a verify step, a
+   build) points at the repo's own command block or gives every surface's form, never only the
+   form that worked where the brief was written — writer and executor are often different
+   machines (observation #0076). Location, either shape: beside an existing run directory
    (`.dispatch/runs/<run>/RESUME.md`, matching a dispatchwright run already in progress) or, for
    an ordinary session with none, the project root as `RESUME.md` — the filename already in use,
    never a second name for the same job.

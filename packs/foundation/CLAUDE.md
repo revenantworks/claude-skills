@@ -40,11 +40,13 @@ Each works alone. Initial routing is at the description level — this table is 
 - **Security splits on the object, not the vocabulary.** Two members carry a security capability and the word *injection* sits in both descriptions, so the object decides and nothing else. A **running agent** — its tool grants, credentials, blast radius, what an injected instruction could make it do — is agentwright's `security-scan`. A **skill package as built** — injection surface in its own instructions, secrets in the artifact, undeclared or ungated capability, unsafe defaults in what it generates — is skillwright's, run as a named pass inside every `audit` rather than as its own verb. Code-level threat coverage is neither; that is a security harness's, and both descriptions say so. Each ships self-contained: neither loads a file in the other's directory, so either works with the other uninstalled.
 - **The rig is attended; the agent is not.** Standing configuration a human reads in session — Project instructions, a knowledge-file plan, `CLAUDE.md`, a `.claude` layout, `.mcp.json` — is **rigwright**'s. Anything firing on a schedule or an event with nobody reading the result — a Cowork task, a routine, a desktop scheduled task, and the cadence, blast radius and kill switch around it — is **agentwright**'s, and `agentwright emit` renders the spec into the surface that runs it. The test is **who reads the output, never the filename**: a desktop scheduled task stored on disk as a `SKILL.md` is still agentwright's, because a filename names a format and not an object. "Set up" appears on both sides and decides nothing.
 - **Always-on config is rigwright's; on-demand packages are skillwright's.** The split is whether the artifact is charged on every turn or only when it is relevant: the same every-session/some-sessions test rigwright's own layer stack applies internally, so the seam and the doctrine cannot drift apart. A `SKILL.md` under `.claude/skills/` is skillwright's even though rigwright emits the tree around it.
-- **dispatchwright dispatches; promptwright tiers.** A big request that will fan out into many
-  agents or repos is dispatchwright's — it decomposes into units, gets each one tiered by
-  promptwright's target table, dispatches with a durability contract, and reconciles against
-  origin. It never picks a model itself, never places its own trigger hook (rigwright), and never
-  runs anything unattended (agentwright).
+- **dispatchwright tiers what it dispatches; promptwright tiers everything else.** A big request
+  that will fan out into many agents or repos is dispatchwright's — it decomposes into units,
+  tiers each one from its own `references/tier-routing.md` (self-contained since dispatchwright
+  1.2.9, observation #0073), dispatches with a durability contract, and reconciles against
+  origin. A plan's per-subtask target table with nothing to dispatch, or a single tier pick, stays
+  promptwright's. dispatchwright never places its own trigger hook (rigwright), and never runs
+  anything unattended (agentwright).
 - **dispatchwright's ledger owns an active fan-out's resume state; resumewright owns everything
   else.** Inside a running dispatch, its own ledger and `dispatchwright resume` already cover
   which units landed and what remains. resumewright is for the session-level handoff outside

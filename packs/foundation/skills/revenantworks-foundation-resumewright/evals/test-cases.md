@@ -12,7 +12,7 @@
 > 1.1.0 adds Write step 4's paste-ready starter prompt, a new output contract, so it arrives with a
 > case: **Case 11**. Cases 1–10 are untouched — no input, assert, or numbering moved; Case 5's
 > "a commit sha or an explicit reason none was made" still holds, and the prompt comes after it.
-> 10 → **11**, authored, not run.
+> 10 → **11**, authored, not run. **Re-anchored to v1.1.1, 2026-09-14 — provenance only, nothing executed here:** the `description` moved (a re-judge fix) and Write step 2 gained the per-surface command rule (#0076); no case's input or assert sits on either, so no case moved; still **11**.
 >
 > Cases 9 and 10 are the two injection probes this member already carries as prose in
 > `evals/trigger-evals.md` rows 15–16 (added 2026-09-11). They are restated here verbatim, as

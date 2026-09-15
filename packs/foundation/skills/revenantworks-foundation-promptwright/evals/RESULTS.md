@@ -1,5 +1,25 @@
 # RESULTS — trigger suite and assertion suite runs
 
+## 2026-09-14 — v1.5.12 — **BLIND COLD TRIGGER RE-JUDGE, 38 / 40** — runner: one fresh blind judge (Sonnet 5; name + description of all 14 marketplace members; `tools/blind_queries.py`)
+
+The re-judge owed since 1.5.9. The judge read only the 14-member listing and the 40 queries under
+opaque ids, was told to open no other file, and never saw the key; scoring used
+`blind_queries.py --key` afterwards. The drafter of 1.5.12's description did not judge it.
+
+**38 of 40 hold their recorded direction.** Two came back AMBIGUOUS and are scored as misses:
+
+- **#31** ("Here's the build plan for the importer — assign each subtask a model tier…", expected
+  SHOULD): AMBIGUOUS between promptwright and dispatchwright. Since dispatchwright 1.2.9 its own
+  description says model and tier per unit come from its own tier table, and neither description
+  says where a plan's target table ends and a dispatch's unit tiering begins. 1.5.12 touched only
+  the handoff tail, so this is not its regression. It joins the standing watch rows.
+- **#25** ("Which model should I use for triaging ~500 support emails a day?", expected SHOULD):
+  AMBIGUOUS against lmstudiorunner's "to ask which installed model fits a job". A pre-existing
+  overlap with the localops member; also a watch row.
+
+Every handoff row held: #39 and #40 routed to resumewright. The earlier watch rows #29, #34 and #37
+all held. Nothing was changed to make a row pass.
+
 ## 2026-08-01 — v1.1.0 — **Plan grain added — trigger suite re-judged 34/34, Case 37 authored, not run**
 
 Method: build-pass instrumentation plus the description re-judge a description move owes. Entry — Model gained plan grain (the target table with its living-table and standing-rule contracts); the `description` gained the plan clause (918 chars, within the 1024 limit). No phase, dimension, anchor, or output contract changed for any existing input, so Cases 1–36 are not owed a re-run — the 2026-07-25 **35/35** and the 2026-07-27 **C36 1/1** stand as the last executed assertion results (predecessor-era designations, frozen as written).

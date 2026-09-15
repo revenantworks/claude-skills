@@ -55,8 +55,8 @@ ADDITIONAL_CONTEXT = (
     "Before any Task/Agent/Workflow call this turn, run dispatchwright's Shape "
     "check first (is this really a fan-out, or does the main conversation / one "
     "subagent / a skill do it cheaper?). If it is a fan-out: decompose into units, "
-    "hand the unit list to promptwright's Entry - Model (plan grain) for the tier "
-    "table, and write a ledger row -- model, effort, surface -- for every unit "
+    "tier each one from dispatchwright's own tier table (references/tier-routing.md), "
+    "and write a ledger row -- model, effort, surface -- for every unit "
     "BEFORE dispatching it. See revenantworks-foundation-dispatchwright."
 )
 

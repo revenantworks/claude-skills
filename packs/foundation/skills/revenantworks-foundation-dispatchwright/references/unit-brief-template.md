@@ -12,7 +12,8 @@ Fill the bracketed fields; do not paraphrase the contract itself.
 touches this repo in this window."] No other unit writes here while you run.
 
 **Class:** [mechanical / structured / judgment] · **Model:** [from the tier table] ·
-**Effort:** [from the tier table] — assigned by promptwright's target table, not chosen by you.
+**Effort:** [from the tier table] — assigned by the dispatcher from dispatchwright's own tier table
+(`references/tier-routing.md`), not chosen by you.
 
 **Tools beyond files and a shell:** [name them — a routine/trigger API, a connector, the artifact
 publisher, a browser. A deferred or session-authenticated tool the parent holds does NOT reach a

@@ -5,6 +5,34 @@ alongside the 1.0.0 build and have not been executed against a live session.
 
 ---
 
+## 2026-09-14 — v1.1.1 — **BLIND COLD TRIGGER RE-JUDGE, 15 / 15 routing rows** — runner: a second fresh blind judge (Sonnet 5; name + description of all 14 marketplace members; `tools/blind_queries.py`)
+
+A re-judge of the repaired description, with the same isolation as the run below: the listing and
+the 15 routing queries under opaque ids, no other file, the key withheld until scoring. A different
+judge instance from the 1.1.0 run. **15 of 15 hold their recorded direction.** #12 routed to
+rigwright on the new exclusion clause; #14 routed to task-observer's handoff-doc mode. The judge's
+own hardest call was #12, which hits two trigger words (handoff, compaction) while the exclusion
+carves it out. The re-judge owed since 1.0.3 is discharged.
+
+## 2026-09-14 — v1.1.0 — **BLIND COLD TRIGGER RE-JUDGE, 13 / 15 routing rows** — runner: one fresh blind judge (Sonnet 5; the same 14-member listing; `tools/blind_queries.py`)
+
+The re-judge owed since 1.0.3, run against the 1.1.0 description the day it shipped. **13 of 15.**
+Two misses:
+
+- **#14** (no filesystem; expected SHOULD-NOT → task-observer): judged SHOULD. 1.1.0 had rewritten
+  the fallback clause as "With no filesystem, task-observer's handoff-doc mode is the fallback",
+  which read as this skill's own coverage. A regression the 1.1.0 trim introduced; 1.0.0's wording
+  passed it.
+- **#12** (a hook that writes handoffs before compaction; expected SHOULD-NOT → rigwright):
+  AMBIGUOUS between rigwright and resumewright. No description said who places that hook.
+
+Both misses drove the 1.1.1 description change above. That change was made after this run, to fix
+what this run found, and it was judged by a different fresh judge — recorded here rather than
+presented as a clean first pass. The two injection probes (#16, #17) carry no routing verdict and
+were not judged.
+
+---
+
 ## 2026-09-11 — v1.0.0 — **BLIND COLD TRIGGER RE-JUDGE, 14 / 14 routing rows** — runner: one blind cold judge (name + description only, all eleven foundation members)
 
 **This is the suite's first execution**, run in the same pass as the build, per `tools/blind_queries.py resumewright`. The judge held only the frontmatter `name` + `description` of every foundation member — resumewright included — and judged all 14 routing rows of `evals/trigger-evals.md` cold, in the tool's decorrelated order, with the answer column stripped. The two injection probes (#15, #16) carry a `Correct handling` column, not a routing verdict, so `blind_queries.py` itself excludes them from the blind list (reported on stderr: "skipped 2 row(s) in a table with no query column"); they are traced separately below.

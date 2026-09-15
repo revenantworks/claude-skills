@@ -3,7 +3,7 @@ name: revenantworks-foundation-dispatchwright
 description: Runs a session's fan-out — turns one large request into tiered, budgeted, recoverable units and dispatches them. Trigger when a request will take more than a few agents or spans many repos, skills, or files at once — rebuild, re-architect, overhaul, consolidate, sweep, migrate, or 'do all of this'; when subagents or a workflow are about to be launched and nothing has assigned each one a model, effort, and surface; when a fan-out is already running and a unit died, stalled, hit a usage limit, or must be resumed without redoing landed work; when concurrent units would write the same repo; or say dispatchwright (plan, dispatch, resume, audit). Model and tier per unit come from this skill's own tier table (`references/tier-routing.md`, self-contained as of 2026-09-14, observation #0073) — no sibling required; the hook or config that makes this fire is rigwright's placement; anything unattended on a schedule is agentwright's.
 license: MIT
 metadata:
-  version: "1.2.10"
+  version: "1.2.11"
   profile: standalone
   pack: foundation
   brand: revenantworks
@@ -227,6 +227,10 @@ one rule: **a unit is done when it is on the remote, not when it is written.**
   lose only what it was doing at the moment it died, never everything before that.
 - Push before the unit writes its own report back. The report is the cheapest thing to lose and
   the least useful thing to protect first.
+- **Merge only onto a green base** (observation #0077). A unit that lands through a pull request
+  reads the base branch's check state before it merges, and reports a red base as a blocker
+  instead of merging on it. The first merge on red spends the gate: every later failure then
+  reads as pre-existing, which is how four PRs once merged red in a single day.
 
 - **A scripted multi-file edit proves each edit landed with an asserted match count; the script's
   exit code proves nothing.** A replace on a string that does not occur returns the original bytes
