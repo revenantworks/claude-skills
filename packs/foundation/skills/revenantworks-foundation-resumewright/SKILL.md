@@ -1,9 +1,9 @@
 ---
 name: revenantworks-foundation-resumewright
-description: Owns every handoff — a committed session state (what already happened, verified against git) and a forward task brief (what a future session or agent should do next, nothing done yet) alike. Trigger on 'resumewright', 'write the handoff', 'hand off' / 'handoff', 'give me a prompt to hand off', 'pause here', 'holding position', a usage-limit or compaction warning, before closing a session with work still open, or any request to write something for a later reader to pick up; 'resumewright resume' reads a committed handoff back, checking git stash list and git reflog first. **A forward brief calls promptwright's Entry: Model for its tier/model line rather than reinventing tiering here (owner ruling, observation #0072) — dispatchwright's own rule that tiering is always promptwright's still holds, it's just resumewright that asks, not the requester.** A dispatchwright fan-out already carries its own resume state in its ledger — resumewright covers the ordinary session dispatchwright's contract does not reach. task-observer's handoff-doc mode is the fallback for a storage-less environment; where a repo exists (and isn't deliberately untracked, e.g. a gitignored local-tooling directory), resumewright commits instead of pasting into chat — and says so plainly when the natural location is untracked by design.
+description: Owns every handoff — a committed session state (what already happened, verified against git) or a forward task brief (what a later session or agent should do next) — and ends each with a paste-ready starter prompt for the next chat. Trigger on 'resumewright', 'write the handoff', 'hand off' / 'handoff', 'give me a prompt to hand off', 'pause here', 'holding position', a usage-limit or compaction warning, before closing a session with work still open, or any request to write something for a later reader to pick up; 'resumewright resume' reads a committed handoff back, checking git stash list and git reflog first. A forward brief takes its tier/model line from promptwright's model entry (owner ruling, #0072). An active dispatchwright fan-out's ledger already carries its own resume state; resumewright covers everything outside it. With no filesystem, task-observer's handoff-doc mode is the fallback; a deliberately untracked location is written, not committed, and the report says so.
 license: MIT
 metadata:
-  version: "1.0.4"
+  version: "1.1.0"
   profile: standalone
   pack: foundation
   brand: revenantworks
@@ -21,7 +21,8 @@ record survives whatever happens to the tree next. It is not a summarizer and no
 line it writes is checked against `git`, never taken on a session's own word.
 
 **Workflow:** Gather (git, the ledger if one exists, this session's own record) → Write (the
-template shape) → Commit (same call, same repo) → Report the commit sha
+template shape) → Commit (same call, same repo) → Report the sha **and emit the paste-ready
+starter prompt** for the next chat
 
 ## Load budget
 
@@ -95,8 +96,17 @@ work that doesn't exist.
    rather than fighting a rule someone set on purpose. Never a separate later commit, and never
    held for a "final snapshot" step — the whole point is that this write survives the next thing
    that happens to the tree, not the next time someone remembers to save it.
-4. **Report** the commit sha (and push confirmation, the no-remote line, or the untracked-location
-   line) back to the session.
+4. **Report, then hand the next session its opening message.** Report the commit sha (and push
+   confirmation, the no-remote line, or the untracked-location line). Then emit, in the chat, a
+   **ready-to-paste starter prompt** in a fenced block — the thing the owner copies into the new
+   chat, per `references/handoff-template.md` → Starter prompt. It names the repo and how to open
+   it, the committed handoff file **by path**, the verified sha and branch (for a deliberately
+   untracked location, the path and the word *uncommitted* in place of a sha), the instruction to
+   read that file first, and anything the file itself cannot carry: a decision made out loud and
+   not yet written down, an access or environment note, the single thing to do first, and what
+   not to do. The committed file is the record; this prompt is the pointer to it. A Write that
+   ends at the sha has done half the job, and the half it skipped is the half the owner retypes
+   wrong.
 
 **Resume** ("resumewright resume", or any request to pick a paused session back up): before
 reading the handoff as ground truth, confirm it is still there in the shape it was left —
@@ -109,6 +119,9 @@ what it already states, and no trusting a stale copy over what the file on disk 
 
 ## What resumewright never does
 
+- **Never ends a Write at the commit sha.** The committed file and the paste-ready starter prompt
+  that points to it are one deliverable, not two — step 4 is not optional, and "the handoff is
+  committed" is not a complete report of it.
 - **Never leaves the handoff uncommitted or staged for later by oversight.** A written-but-
   uncommitted file is exactly as recoverable as one never written — the whole reason this skill
   exists is closing that gap, not moving it one step later. **The one exception is a location

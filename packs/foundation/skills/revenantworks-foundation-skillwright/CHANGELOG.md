@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.4.3] — 2026-09-14
+
+Eval provenance repair, plus one registry budget row. 1.4.2 never re-anchored
+`evals/test-cases.md` or `evals/trigger-evals.md`, and `build.py --check` failed on both.
+
+- Both suites re-anchored to v1.4.3, recording the missed 1.4.2 anchor. Provenance only.
+- `references/pack-registry.md`: resumewright's body budget raised 2600 → 3200 for its 1.1.0
+  starter-prompt step (owner request), which landed the body at ≈2895. Registry prose only; no
+  rubric or entry-point content moved.
+
 ## [1.4.2] — 2026-09-14
 
 Upkeep's calendar-surface-to-refresh-verb mapping (§ upkeep, step 4) gains a row for

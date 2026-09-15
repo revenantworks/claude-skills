@@ -1,5 +1,11 @@
 # Changelog — revenantworks-foundation-dispatchwright
 
+## [1.2.10] — 2026-09-14
+
+Eval provenance repair only. 1.2.9 re-anchored `evals/trigger-evals.md` but not
+`evals/test-cases.md`, and `build.py --check` failed on it. Both suites re-anchored to v1.2.10; no
+case, row, or count moved.
+
 ## [1.2.9] — 2026-09-14
 
 **Self-containment, owner ruling** (observation #0073). dispatchwright's Tier section (§4) called

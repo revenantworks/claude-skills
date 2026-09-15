@@ -2,6 +2,12 @@
 
 > Renamed from `revenant-foundation-tokenwright` on 2026-08-07 (pack 2.0.0 — the `revenant` → `revenantworks` marketplace migration). Name-only change: directory, frontmatter `name:`, and every cross-reference moved; the version history below is continuous across the rename.
 
+## [1.2.6] — 2026-09-14
+
+Eval provenance repair only. 1.2.5 re-anchored `evals/trigger-evals.md` but not
+`evals/test-cases.md`, and `build.py --check` failed on it. Both suites re-anchored to v1.2.6; no
+case, row, or count moved.
+
 ## [1.2.5] — 2026-09-14
 
 **Self-containment, owner ruling** (observation #0073, same as dispatchwright 1.2.9). Behavior

@@ -2,6 +2,22 @@
 
 > Renamed from `revenant-foundation-promptwright` on 2026-08-07 (pack 2.0.0 — the `revenant` → `revenantworks` marketplace migration). Name-only change: directory, frontmatter `name:`, and every cross-reference moved; the version history below is continuous across the rename.
 
+## [1.5.12] — 2026-09-14
+
+**Repairs the `description` that 1.5.9–1.5.11 left failing the build gate.** The handoff clause
+added across those three versions took the field to 1294 characters, over the 1024 house ceiling,
+and its unquoted `Entry: Model` made the whole frontmatter fail YAML parse; `build.py --check`
+failed on both.
+
+- `description`: the bold two-sentence tail becomes one boundary sentence, "A handoff or task
+  brief is resumewright's to write." 1294 → 990 characters, no `: ` in the value; everything before
+  it is byte-identical to 1.5.8's released text. The service-call detail — resumewright calls
+  Entry — Model for a brief's tier line, and dispatchwright does not call it at all (#0073) — stays
+  in the body, where 1.5.11 already put it.
+- `evals/test-cases.md` re-anchored to v1.5.12 (1.5.9–1.5.11 never re-anchored it);
+  `evals/trigger-evals.md` re-anchored. No row, case, or count moved; the cold re-judge owed since
+  1.5.9 is still owed, now against the 1.5.12 text.
+
 ## [1.5.11] — 2026-09-14
 
 **Corrects a claim 1.5.10 made that dispatchwright 1.2.9 (same day) made untrue** (observation

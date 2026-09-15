@@ -17,6 +17,43 @@ This log starts at the foundation 1.0.0 baseline.
 > because it records what was true when written; read it as a date, not a tag.
 > Live code and runbooks cite dates instead, for exactly this reason.
 
+## [localops-v1.1.2] - 2026-09-14
+
+- lmstudiorunner 1.1.1 → 1.1.5. 1.1.2 (#0067, #0068): a discovery-time RAM check and a new
+  Failure shape. 1.1.3 (#0069): `task-cards.md` rule 7 requires pasting a named population's
+  content, not only listing it. 1.1.4 (#0070, #0074, #0075): before building a runner, search for
+  one that already exists; before queueing a test card, confirm the repo's CI actually discovers
+  that path. 1.1.5: the 1.1.4 CHANGELOG entry named an absolute local path — a public-repo leak
+  `tools/test_release_paths.py` failed on — now generic.
+
+## [foundation-v2.9.0] - 2026-09-14
+
+**Minor, not patch:** resumewright gains a new output contract and dispatchwright a new entry
+point (`dispatchwright refresh`). This release also repairs a red main. PRs #4–#7 merged with
+pack-ci failing, and `build.py --check` reported 12 errors across five members before this pass.
+
+- resumewright 1.0.2 → 1.1.0. 1.0.3 (#0071): "hand off"/"handoff" trigger phrasing. 1.0.4
+  (#0072, owner ruling): resumewright owns every handoff, backward session state and forward
+  task brief alike. 1.1.0 (owner request): Write step 4 ends by emitting a paste-ready starter
+  prompt — the repo, the handoff file by path, the verified sha, read-this-first — and
+  `references/handoff-template.md` gains its Starter prompt section. The `description` 1.0.4
+  shipped (1321 chars, frontmatter failing YAML parse) is repaired to 994 chars. Case 11 added.
+- promptwright 1.5.8 → 1.5.12. 1.5.9–1.5.11 (#0071, #0072, #0073): a handoff clause added,
+  then reduced to a boundary — a handoff request fires resumewright, never this skill directly,
+  and dispatchwright no longer calls Entry — Model. 1.5.12: that clause's `description` (1294
+  chars, failing YAML parse) is repaired to 990 chars.
+- dispatchwright 1.2.8 → 1.2.10. 1.2.9 (#0073, owner ruling): per-unit tiering is
+  self-contained in a new `references/tier-routing.md`, with a new `dispatchwright refresh`
+  entry. 1.2.10: eval provenance repair; three assertion-suite spots that still name promptwright
+  as the tier source are recorded as owed a rewrite.
+- tokenwright 1.2.4 → 1.2.6. 1.2.5 (#0073): `measurement.md` gains a Model tier costs section.
+  1.2.6: eval provenance repair.
+- skillwright 1.4.1 → 1.4.3. 1.4.2 (#0073): upkeep's refresh-verb mapping gains
+  dispatchwright's `tier-routing.md`. 1.4.3: eval provenance repair, and resumewright's registry
+  budget raised 2600 → 3200.
+- Owed, not performed: cold trigger re-judges for resumewright, promptwright and dispatchwright
+  (their descriptions moved).
+
 ## [foundation-v2.8.1] - 2026-09-13
 
 - rigwright 1.1.8 → 1.1.9: Entry — Audit gains a live-state-dependency rule (#0062) — a

@@ -47,6 +47,38 @@ re-ask the question. One list, not scattered through the state section.>
 <ids and short titles>
 ```
 
+## Starter prompt (emitted in chat at step 4 — never written into the handoff file)
+
+The block the owner copies into the new chat. It is a POINTER, not a summary: everything durable
+belongs in the committed file, and anything restated here is a second copy that can drift from
+it. Short enough to read in one glance.
+
+```
+Work in <repo name> (<path, or the clone/open instruction>).
+
+Read <path/to/handoff.md> first — that is the brief. It is committed at <sha>
+on <branch>, verified against origin.
+
+First task: <the one thing to start with, in a sentence.>
+
+<Only what the file cannot carry: a decision made out loud this session and
+never written down · an access, credential or environment note · an explicit
+"do not do X" a reader of the file might otherwise assume.>
+```
+
+Rules for it:
+
+- **Name the file by path, always.** "Read the handoff" without a path makes the next session
+  search for one, and a search can surface a stale file from an older pause.
+- **Name the sha.** It is what lets the next session notice the repo moved after the handoff was
+  written — the difference between a starting point and a wrong answer. A deliberately untracked
+  location has no sha: say *uncommitted* and name the path instead, never an invented one.
+- **Never restate the plan.** If the ordered remainder needs repeating here, the file is not doing
+  its job; fix the file instead.
+- **Drop empty extras, never pad them.** A session with nothing unwritten emits the first three
+  lines and stops.
+- **No secret values, same as the file** — names, paths and shas only.
+
 ## Resume-time checks (before trusting the file above)
 
 1. `git stash list` and `git reflog -5` on the repo the handoff file lives in — a handover or a

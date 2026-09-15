@@ -1,9 +1,15 @@
 # Changelog — revenantworks-localops-lmstudiorunner
 
+## [1.1.5] — 2026-09-14
+
+Public-repo path leak closed. The 1.1.4 entry below named the overnight runner by an absolute
+local path; it now names it generically. `tools/test_release_paths.py` failed on it. Eval
+provenance re-anchored; nothing else moved.
+
 ## [1.1.4] — 2026-09-14
 
 **Three lessons from a portfolio-wide survey that extended a pre-existing local-model
-overnight queue** (`V:/Projects/.bionic/run_overnight.py`) to four new repos, observations
+overnight queue** (a project-local `.bionic/run_overnight.py`) to four new repos, observations
 #0070, #0074, #0075. `description` byte-identical; no entry point moved.
 
 - `SKILL.md` step 1 (#0070): before building any new runner, search the project for one

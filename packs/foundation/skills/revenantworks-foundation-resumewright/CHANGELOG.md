@@ -1,5 +1,30 @@
 # Changelog — revenantworks-foundation-resumewright
 
+## [1.1.0] — 2026-09-14
+
+**Owner request: a handoff ends with a paste-ready starter prompt, not a bare sha.** A committed
+handoff still left the owner composing the next session's opening message by hand, and the part
+most often retyped wrong was the file path — the one thing that makes the rest reachable. The
+change was first drafted against 1.0.1 in a synced copy with no git, and kept durable in another
+repo until it could land here; it is merged onto 1.0.4, not pasted over it.
+
+- Workflow line and Write step 4: Report now ends by emitting the starter prompt in a fenced
+  block — the repo, the handoff file by path, the verified sha and branch, read-this-first, and
+  only what the file cannot carry. Step 4 keeps 1.0.4's untracked-location line; for that case the
+  prompt names the path and says *uncommitted* instead of a sha.
+- "What resumewright never does" gains a first bullet: never ends a Write at the commit sha.
+- `references/handoff-template.md` gains a **Starter prompt** section (the block and five rules),
+  immediately before Resume-time checks. It is emitted in chat, never written into the file.
+- **`description` repaired.** 1.0.4 shipped it at 1321 characters, over the 1024 house ceiling,
+  with an unquoted `Entry: Model` that made the whole frontmatter fail YAML parse; `build.py
+  --check` failed on both. Rewritten to 994 characters with no `: ` in the value. Every trigger
+  phrase is kept verbatim; it now names the starter prompt, and it drops the claim that
+  dispatchwright's tiering is promptwright's, untrue since dispatchwright 1.2.9 (#0073).
+- `evals/test-cases.md` re-anchored to v1.1.0 (1.0.3 and 1.0.4 never re-anchored it) and gains
+  **Case 11** for the starter prompt — 10 → 11 cases, authored, not run.
+  `evals/trigger-evals.md` re-anchored; the description moved again, so the cold re-judge owed
+  since 1.0.3 is still owed, now against the 1.1.0 text.
+
 ## [1.0.4] — 2026-09-14
 
 **Owner ruling on 1.0.3's split, same day** (observation #0072, direct follow-up to #0071).

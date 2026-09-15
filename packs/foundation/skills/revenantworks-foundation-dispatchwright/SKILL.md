@@ -3,7 +3,7 @@ name: revenantworks-foundation-dispatchwright
 description: Runs a session's fan-out — turns one large request into tiered, budgeted, recoverable units and dispatches them. Trigger when a request will take more than a few agents or spans many repos, skills, or files at once — rebuild, re-architect, overhaul, consolidate, sweep, migrate, or 'do all of this'; when subagents or a workflow are about to be launched and nothing has assigned each one a model, effort, and surface; when a fan-out is already running and a unit died, stalled, hit a usage limit, or must be resumed without redoing landed work; when concurrent units would write the same repo; or say dispatchwright (plan, dispatch, resume, audit). Model and tier per unit come from this skill's own tier table (`references/tier-routing.md`, self-contained as of 2026-09-14, observation #0073) — no sibling required; the hook or config that makes this fire is rigwright's placement; anything unattended on a schedule is agentwright's.
 license: MIT
 metadata:
-  version: "1.2.9"
+  version: "1.2.10"
   profile: standalone
   pack: foundation
   brand: revenantworks
