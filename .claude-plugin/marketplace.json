@@ -10,7 +10,7 @@
       "name": "foundation",
       "source": "./packs/foundation",
       "description": "Eleven standalone wrights: skillwright (skills & packs), promptwright (prompts), commwright (messages), agentwright (agent specs), rigwright (standing Claude config), lorewright (research verdicts & playbooks), evalwright (eval suites), brandwright (brand & voice), tokenwright (token footprint), dispatchwright (fan-out dispatch), resumewright (committed session handoffs). Each routes on its own description and works alone; together they cover the full build-audit-ship loop.",
-      "version": "2.9.1",
+      "version": "2.10.0",
       "license": "MIT",
       "category": "productivity",
       "keywords": [

@@ -1,5 +1,37 @@
 # RESULTS — trigger suite and assertion suite runs
 
+## 2026-09-17 — v1.3.0 — **AUTHORED, NOT RUN — the `description` moved; a cold re-judge is OWED** — runner: none (this entry records what was written, not a run)
+
+**What ran: nothing.** No trigger row and no assertion case was judged or executed for 1.3.0.
+This entry exists so the file says so in its own words rather than by omission.
+
+- `trigger-evals.md`: 22 → **31 rows (16 / 13 / 2)**. Rows #23–#28 (should fire: the plan
+  table, the window fit, the confirmation stop, in the owner's own phrasings) and #29–#31 (should
+  not: an API-pricing question → promptwright / claude-api, a context-window question → none, a
+  single subagent's token count → none) are **authored, not run**. Rows 1–22 are unchanged; the
+  2026-09-14 blind re-judge below (20 / 20 on rows 1–20) stands as their last judged result — but
+  it was judged against the 1.2.9 `description`, and 1.3.0's `description` **moved** (one trigger
+  clause added, two trims; the exact diff is in this member's CHANGELOG). Per this pack's rule that
+  any description move owes a cold re-judge, **a full 31-row blind re-judge is owed** and was not
+  performed here. The rows most exposed by the move are #11 and #14 (promptwright tier picks —
+  "est. tokens" now sits in the description) and the new pair #24 / #29 — plus #27 ("Break the waves up to fit."), whose
+  only word in common with the description is "fit" (no "wave", "break" or "split" in it; the
+  boundary note under the trigger table names it a known exposure). **The re-judge must report
+  #11, #14, #24, #27 and #29 individually**, not only as a score.
+- `test-cases.md`: 16 → **18 cases**. Case 3's gate assert is sharpened to the exact table and the
+  stop (rewritten, not run); Case 17 (window fit with data — the expected table, split, wall
+  figures and the too-large unit) and Case 18 (no data — the one-line ask, then the
+  no-calibration ask) are **authored, not run**. Cases 1–2 and 4–16 are as recorded below:
+  15–16 traced 2026-09-08, the rest authored-not-run since 2026-09-09.
+- The three rig hooks that carry the mechanical half of the window fit (`usage_windows.py`,
+  `dispatch_gate.py`, `dispatch_ledger_guard.py`, in the `claude-skills` repo's `.claude/hooks/`,
+  not this package) each pass their own `--selftest` and their controls files; those are code
+  tests, not this suite, and are recorded in the hooks' commit, not here.
+
+Nothing was changed to make a row pass. No case was scored.
+
+---
+
 ## 2026-09-14 — v1.2.10 — **BLIND COLD TRIGGER RE-JUDGE, 20 / 20** — runner: one fresh blind judge (Sonnet 5; name + description of all 14 marketplace members; `tools/blind_queries.py`)
 
 The re-judge owed since 1.2.9 moved the `description`, and the first cold judge this trigger suite

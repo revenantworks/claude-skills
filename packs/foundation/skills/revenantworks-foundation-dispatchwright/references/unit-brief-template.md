@@ -27,6 +27,20 @@ number or a memory. A reconciled total that falls short of this, even while gree
 not done; a total above it means the expectation has gone stale, so report the slack (actual vs
 expected) rather than passing quietly (observation #0057)]
 
+**Verification list (if this repo has CI):** [every step the CI file runs, in the CI file's own
+commands, and the file's path — "every step `.github/workflows/ci.yml` runs, in its own words".
+The dispatcher derives this paragraph by reading that file at brief-writing time, never from a
+CLAUDE.md, an earlier brief, or memory: a brief written from memory left out the linter CI had
+gained a week earlier, every named check reported green, and two pushes went red on lint alone
+(observation #0087). A reviewer's checklist repeats this list, not a paraphrase of it. After
+your push, read the remote run's result — a red run is reported on your row, not left for the
+next unit to discover.]
+
+**Budget and window:** [est. tokens with its basis — `median of N rows` or `owner` — and the
+window the plan fitted this unit to, copied from the ledger row's `window` cell
+(`references/window-fit.md`). Report your actual tokens and wall time at the end; both feed the
+next plan's calibration.]
+
 **Stop condition:** [what tells you the unit is finished, stated before you start]
 
 ---

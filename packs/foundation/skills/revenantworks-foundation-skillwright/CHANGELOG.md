@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.4.5] — 2026-09-17
+
+`references/pack-registry.md`: dispatchwright's body budget raised 6700 → 7200 for its 1.3.0 window
+fit (the plan table and stop, the §6 fit rules, the §8 calibration write-back), which landed the
+body at ≈6952. Registry prose only; `description` byte-identical. Eval provenance re-anchored.
+
 ## [1.4.4] — 2026-09-14
 
 `references/release-doctrine.md` Release order, step 1 (observation #0077): member work lands only

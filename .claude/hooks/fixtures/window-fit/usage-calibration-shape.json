@@ -1,0 +1,19 @@
+{
+  "updated": "2026-09-17",
+  "note": "SHAPE fixture for the hook controls -- the figures are the doctrine's worked example (references/window-fit.md), not this rig's measurements; Reconcile replaces this file's real sibling at ~/.dispatch/usage-calibration.json with measured points",
+  "windows": {
+    "five_hour": {
+      "tokens_per_percent": 41000,
+      "samples": 3,
+      "median_of_last": 10,
+      "points": []
+    },
+    "seven_day": {
+      "tokens_per_percent": 250000,
+      "samples": 2,
+      "median_of_last": 10,
+      "points": []
+    }
+  },
+  "wall": {}
+}

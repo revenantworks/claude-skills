@@ -1,14 +1,21 @@
 # revenantworks-foundation-dispatchwright
 
 Runs a session's fan-out. Turns one large request — a rebuild, a re-architecture, a sweep
-across many repos or skills — into units small enough to finish, tiers each one through
-promptwright, dispatches it with a durability contract, and reconciles the result against the
-repo itself, never against an agent's own report.
+across many repos or skills — into units small enough to finish, tiers each one from its own
+tier table, fits the wave into the usage windows, shows the table and stops for a go, dispatches
+with a durability contract, and reconciles the result against the repo itself, never against an
+agent's own report.
 
 What separates it from ad hoc multi-agent orchestration:
 
-- **It never picks a model.** Every unit's tier, model, and effort come from promptwright's
-  Entry — Model plan grain, copied into the ledger verbatim.
+- **It never invents a tier.** Every unit's tier, model, and effort come from this skill's own
+  `references/tier-routing.md` (self-contained since 1.2.9), written into the ledger before the
+  unit launches.
+- **Nothing launches before the table and the go.** A plan ends on one table per wave — unit,
+  class, model, effort, est. tokens, est. wall, window — and one confirmation line, then stops
+  (since 1.3.0). The window column comes from the rig's usage-windows reading, or from the owner
+  when there is no fresh reading; a percent becomes tokens only through a measured calibration,
+  never a guess.
 - **Every unit is done when it is on the remote, not when it is written.** Commit and push are
   one atomic call, pushed after every finished piece of work, never held to the end.
 - **A ledger row, not a report, is the record.** Reconcile checks every row against
@@ -31,10 +38,13 @@ revenantworks-foundation-dispatchwright/
 ├── references/
 │   ├── ledger-schema.md          # the run ledger's fields, a worked row, and where it lives
 │   ├── unit-brief-template.md    # the copy-paste brief every dispatched unit carries
+│   ├── tier-routing.md           # the skill's own tier table, effort ladder and overrides (1.2.9)
+│   ├── window-fit.md             # the plan table, the stop, and fitting a wave into the usage windows (1.3.0)
 │   └── anti-patterns.md          # the 13 failure modes, one line each, with the 2026-08-17 examples
 └── evals/                        # in full folder-zips, excluded from .skill
-    ├── trigger-evals.md          # 10 should-fire, 10 should-not, 2 injection probes
-    └── RESULTS.md                # authored-not-run ledger — what running the suite still owes
+    ├── trigger-evals.md          # 16 should-fire, 13 should-not, 2 injection probes
+    ├── test-cases.md             # 18 assertion cases
+    └── RESULTS.md                # the run ledger — what was judged, what is authored-not-run, what is owed
 ```
 
 ## Install
@@ -55,19 +65,31 @@ rig that wants them. Nothing below depends on them.
 
 | Entry | What it does |
 |---|---|
-| **plan** | Runs Shape check first — says so and stops if the request isn't a real fan-out. Otherwise decomposes, tiers via promptwright, writes the ledger, and presents the wave plan once, gated |
-| **dispatch** | An approved plan → a ledger row per unit before launch, then the wave runs per the wave-execution caps |
+| **plan** | Runs Shape check first — says so and stops if the request isn't a real fan-out. Otherwise decomposes, tiers from its own table, fits the wave into the usage windows (reads `~/.claude/usage-windows.json` when fresh, else asks the owner per window), writes the ledger, and ends on one table — unit, class, model, effort, est. tokens, est. wall, window — plus one confirmation line, then stops for the go |
+| **dispatch** | An approved plan → a ledger row per unit before launch, then the wave runs per the wave-execution caps, with no second ask; a unit added mid-run is announced and asks again only if it no longer fits the window |
 | **resume** | A dead, stalled, or usage-limited run → reads origin and the ledger first, re-dispatches only what is unfinished or unverified |
 | **audit** | Reconciles a running or finished run against `git rev-parse origin/main`; read-only, reports and never re-dispatches on its own |
 
-## The three seams
+## The seams
 
-- **Tiering is promptwright's.** dispatchwright hands promptwright the unit list and copies back
-  the target table; it never invents a tier.
+- **Tiering is its own** (since 1.2.9, observation #0073): `references/tier-routing.md`, a
+  one-time copy of promptwright's snapshot, refreshed by `dispatchwright refresh` — no sibling
+  is needed to complete a plan.
 - **Where the trigger lives is rigwright's.** The hook or CLAUDE.md rule that makes a big request
   reach for dispatchwright is rigwright's placement call.
 - **Unattended runs are agentwright's, whole.** A cron job or anything firing with nobody reading
   the result is out of scope here.
+- **A general session handoff is resumewright's.** Inside an active fan-out the ledger and
+  `dispatchwright resume` carry the state; everything outside that is resumewright's.
+
+## Usage windows, in one line
+
+Only a statusLine command sees the subscription windows, so the rig's `usage_windows.py` writes
+them to `~/.claude/usage-windows.json`; a plan reads that file when it is under 15 minutes old
+and asks the owner otherwise, converts percent to tokens only through
+`~/.dispatch/usage-calibration.json` (a running median of verified waves — with fewer than two
+measurements it says so and asks), and marks every unit with the first window it fits. Full
+contract: `references/window-fit.md`.
 
 ## Durability contract, in one line
 

@@ -1,0 +1,1 @@
+{"written_at": 1789662433, "model": {"id": "claude-opus-5", "display_name": "Opus"}, "context_used_percentage": 8, "five_hour": {"used_percentage": 97.5, "resets_at": 1738425600}, "seven_day": {"used_percentage": 41.2, "resets_at": 1738857600}, "spend_limit": {"used_percentage": 62.8, "resets_at": 1740787200}}

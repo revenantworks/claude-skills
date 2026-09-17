@@ -65,6 +65,40 @@ with nothing after it) defaults to 1, the same as a row with no token at all,
 so a normal single-agent row is never penalized and a broken token never
 silently zeroes a row out of the count.
 
+Extended 2026-09-17 (dispatchwright 1.3.0, references/window-fit.md): the
+usage windows. After every check above passes, the guard reads
+`~/.claude/usage-windows.json` (written by usage_windows.py, the sibling
+statusLine command -- the only place the harness publishes the subscription
+windows) and `~/.dispatch/usage-calibration.json` (tokens-per-percent, measured
+by Reconcile from verified waves). The rule, kept simple on purpose:
+
+  - No windows file, or one older than 15 minutes -> say NOTHING (exit 0). The
+    plan step already asked the owner; the guard has no better number.
+  - `five_hour.used_percentage` >= 97 -> BLOCK (exit 2), naming the reset
+    time, UNLESS every open row's `window` cell begins with `next` AND the
+    call is the owner's explicit resume (any string in tool_input contains
+    the word "resume"). A wave the plan already deferred to the next window,
+    re-launched by the owner after that window rolled but before a fresh
+    reading landed, is the one case a 97% reading is stale by construction.
+  - Otherwise sum `estimated_tokens` over the open rows; for each window with
+    a calibration (samples >= 1) compute remaining = (100 - used) x
+    tokens_per_percent x (1 - margin, default 15%); when remaining is below
+    the sum, print ONE WARNING line with the numbers into additionalContext
+    (exit 0). No calibration for a window means no comparison for it -- a
+    number this hook cannot measure is a number it does not print.
+  - On an allowed dispatch, when the ledger has a `pct_at_dispatch` column,
+    fill each open row's empty cell with `5h=<pct> 7d=<pct>` -- the dispatch
+    half of the calibration point Reconcile completes. Best-effort, never a
+    reason to block, and skipped in fixture mode.
+
+`--windows-file PATH`, `--calibration-file PATH` and `--ledger PATH` on argv
+read fixtures instead of the live files (the windows file is then taken as
+current, since a controls runner can hand a file but not a timestamp; the
+ledger write is skipped). CLAUDE_USAGE_WINDOWS / CLAUDE_USAGE_CALIBRATION
+override the live paths with the freshness check kept, for --selftest. Every
+ledger written before 1.3.0 lacks the four optional columns and is read
+exactly as before.
+
 FAILS CLOSED whenever it is armed and cannot prove the dispatch is tiered --
 that is the point of this hook. dispatch_gate.py is the opposite and must stay
 that way: it runs on every prompt, and a gate that can block is how the
@@ -211,7 +245,7 @@ def ledger_is_current(path: Path, session_id: str, now: float | None = None) -> 
 def ledger_candidates(cwd: str) -> list[Path]:
     """Every ledger the conventions allow, newest first. CLAUDE_DISPATCH_LEDGER
     names one file directly and wins outright."""
-    env = os.environ.get("CLAUDE_DISPATCH_LEDGER")
+    env = _argv_path("--ledger") or os.environ.get("CLAUDE_DISPATCH_LEDGER")
     if env:
         p = Path(env)
         return [p] if p.is_file() else []
@@ -520,6 +554,304 @@ def repo_collision(path: Path) -> str | None:
     return None
 
 
+# ---------------------------------------------------------------------------
+# Usage windows (dispatchwright 1.3.0, references/window-fit.md). The reader
+# is duplicated in dispatch_gate.py on purpose: each hook installs alone into
+# ~/.claude/hooks/ and imports nothing beside itself.
+# ---------------------------------------------------------------------------
+WINDOWS_STALE_SECONDS = 15 * 60
+WINDOWS_CLOCK_SKEW_SECONDS = 5 * 60
+FIVE_HOUR_BLOCK_PCT = 97.0
+SAFETY_MARGIN = 0.15
+WINDOW_LABELS = (("five_hour", "5h"), ("seven_day", "7d"))
+
+
+HOOKS_DIR = Path(__file__).resolve().parent
+
+
+def _argv_path(flag: str) -> Path | None:
+    """A fixture path from argv. A relative path that does not exist under the
+    cwd is resolved against this hook's own directory, so a controls file can
+    say `fixtures/window-fit/<name>` and never an absolute local path (the
+    repo's test_release_paths forbids those in tracked files); the fixtures
+    are installed beside the hooks for the same reason."""
+    argv = sys.argv[1:]
+    if flag in argv:
+        i = argv.index(flag)
+        if i + 1 < len(argv):
+            p = Path(argv[i + 1])
+            if not p.is_absolute() and not p.exists() and (HOOKS_DIR / p).exists():
+                return HOOKS_DIR / p
+            return p
+    return None
+
+
+def windows_path() -> Path:
+    override = os.environ.get("CLAUDE_USAGE_WINDOWS")
+    return Path(override) if override else Path.home() / ".claude" / "usage-windows.json"
+
+
+def calibration_path() -> Path:
+    override = os.environ.get("CLAUDE_USAGE_CALIBRATION")
+    return Path(override) if override else Path.home() / ".dispatch" / "usage-calibration.json"
+
+
+def read_windows(path: Path, fixture: bool = False) -> dict | None:
+    """The windows file as a dict, or None when absent, unreadable, not an
+    object, or (unless fixture) older than WINDOWS_STALE_SECONDS. None means
+    'say nothing' here, never 'block'."""
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+    if not isinstance(data, dict):
+        return None
+    if fixture:
+        return data
+    ts = data.get("written_at")
+    if isinstance(ts, bool) or not isinstance(ts, (int, float)):
+        return None
+    age = time.time() - ts
+    if not (-WINDOWS_CLOCK_SKEW_SECONDS <= age <= WINDOWS_STALE_SECONDS):
+        return None
+    return data
+
+
+def read_calibration(path: Path) -> dict | None:
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def _pct_of(windows: dict | None, key: str):
+    w = (windows or {}).get(key)
+    if not isinstance(w, dict):
+        return None
+    v = w.get("used_percentage")
+    if isinstance(v, bool) or not isinstance(v, (int, float)):
+        return None
+    return float(v)
+
+
+def tokens_per_percent(cal: dict | None, key: str) -> float | None:
+    """The measured tokens-per-percent for a window, or None when there is no
+    measurement (no file, no entry, zero samples, or a non-number)."""
+    wins = (cal or {}).get("windows")
+    entry = wins.get(key) if isinstance(wins, dict) else None
+    if not isinstance(entry, dict):
+        return None
+    tpp = entry.get("tokens_per_percent")
+    samples = entry.get("samples")
+    if isinstance(tpp, bool) or not isinstance(tpp, (int, float)) or tpp <= 0:
+        return None
+    if not isinstance(samples, int) or samples < 1:
+        return None
+    return float(tpp)
+
+
+def safety_margin(cal: dict | None) -> float:
+    m = (cal or {}).get("margin")
+    if isinstance(m, bool) or not isinstance(m, (int, float)) or not (0 <= m < 1):
+        return SAFETY_MARGIN
+    return float(m)
+
+
+_TOKENS_RE = re.compile(r"(\d[\d,]*(?:\.\d+)?)\s*([kKmM])?")
+
+
+def parse_tokens(cell: str) -> int | None:
+    """The leading number of an estimated_tokens cell: `60000`, `60,000`,
+    `60k (median of 4 rows)`, `1.2M (owner)`. None when there is no number --
+    the caller counts that as 0 and names the cell."""
+    m = _TOKENS_RE.search(str(cell or ""))
+    if not m:
+        return None
+    try:
+        n = float(m.group(1).replace(",", ""))
+    except ValueError:
+        return None
+    unit = (m.group(2) or "").lower()
+    if unit == "k":
+        n *= 1_000
+    elif unit == "m":
+        n *= 1_000_000
+    return int(n)
+
+
+def _is_open(row: dict) -> bool:
+    status = _norm(row.get("status", ""))
+    return (not status) or (status in PLACEHOLDER_CELLS) or (status in OPEN_STATUSES)
+
+
+def open_rows(path: Path) -> list:
+    """Every open row as a dict of the cells the window step reads."""
+    try:
+        text = path.read_text(encoding="utf-8", errors="replace")
+    except Exception:
+        return []
+    rows = _table_rows(text, path.suffix.lower(), ("unit_id", "status", "surface", "estimated_tokens", "window"))
+    return [r for r in rows if _is_open(r)]
+
+
+def estimated_open_tokens(path: Path) -> tuple[int, list]:
+    """(sum of estimated_tokens over open rows, taken exactly as written; the
+    unit ids whose cell carried no number).
+
+    No re-weighting by the surface cell's x<N> agent-count token happens
+    here: the plan's estimate for a fan-out row is already N x per-agent
+    (references/window-fit.md, ledger-schema.md's estimated_tokens field),
+    so multiplying again would double-count. The x<N> token weights the
+    wave cap in open_unit_count(), not this sum."""
+    total = 0
+    unreadable = []
+    for row in open_rows(path):
+        n = parse_tokens(row.get("estimated_tokens", ""))
+        if n is None:
+            unreadable.append(row.get("unit_id") or "?")
+            continue
+        total += n
+    return total, unreadable
+
+
+def all_open_rows_next(path: Path) -> bool:
+    rows = open_rows(path)
+    if not rows:
+        return False
+    return all(_norm(r.get("window", "")).startswith("next") for r in rows)
+
+
+def is_resume_call(data: dict) -> bool:
+    """The owner's explicit resume, read off the call itself: any string
+    value in tool_input carries the word 'resume'. Coarse by design."""
+    ti = data.get("tool_input")
+    if not isinstance(ti, dict):
+        return False
+    for v in ti.values():
+        if isinstance(v, str) and re.search(r"\bresum(e|ed|ing)\b", v, re.I):
+            return True
+    return False
+
+
+def _local(ts, fmt: str) -> str:
+    try:
+        return time.strftime(fmt, time.localtime(float(ts)))
+    except Exception:
+        return ""
+
+
+def record_pct_at_dispatch(path: Path, windows: dict) -> bool:
+    """Fill each open row's EMPTY `pct_at_dispatch` cell with `5h=<pct> 7d=<pct>`.
+    Markdown ledgers only; the file's own line ending is kept; only the
+    target cell's bytes change. Returns True when something was written.
+    Never raises -- a failed write is not a reason to block a dispatch."""
+    try:
+        if path.suffix.lower() != ".md":
+            return False
+        parts = []
+        for key, label in WINDOW_LABELS:
+            pct = _pct_of(windows, key)
+            if pct is not None:
+                parts.append(f"{label}={pct:g}")
+        if not parts:
+            return False
+        value = " ".join(parts)
+        raw = path.read_bytes()
+        eol = b"\r\n" if raw.count(b"\r\n") > raw.count(b"\n") - raw.count(b"\r\n") else b"\n"
+        lines = raw.split(eol)
+        header_idx = None
+        col = status_col = None
+        for i, ln in enumerate(lines):
+            s = ln.decode("utf-8", errors="replace")
+            if s.strip().startswith("|"):
+                cells = [c.strip().lower() for c in s.strip().strip("|").split("|")]
+                if "pct_at_dispatch" in cells:
+                    header_idx, col = i, cells.index("pct_at_dispatch")
+                    status_col = next((j for j, c in enumerate(cells) if "status" in c), None)
+                    break
+        if header_idx is None:
+            return False
+        changed = False
+        for i in range(header_idx + 1, len(lines)):
+            s = lines[i].decode("utf-8", errors="replace")
+            if not s.strip().startswith("|"):
+                if s.strip():
+                    break  # the table ended
+                continue
+            bars = [j for j, ch in enumerate(s) if ch == "|"]
+            if len(bars) < col + 2:
+                continue
+            cells = [c.strip() for c in s.strip().strip("|").split("|")]
+            if all(set(c) <= {"-", ":"} for c in cells):
+                continue
+            status = cells[status_col] if status_col is not None and status_col < len(cells) else ""
+            if not _is_open({"status": status}):
+                continue
+            cell = s[bars[col] + 1:bars[col + 1]]
+            if cell.strip() and _norm(cell) not in PLACEHOLDER_CELLS:
+                continue
+            s = s[:bars[col] + 1] + f" {value} " + s[bars[col + 1]:]
+            lines[i] = s.encode("utf-8")
+            changed = True
+        if changed:
+            path.write_bytes(eol.join(lines))
+        return changed
+    except Exception:
+        return False
+
+
+def window_step(ledger: Path, data: dict, fixture_windows: Path | None = None,
+                fixture_cal: Path | None = None) -> tuple[int, str | None, str | None]:
+    """(exit code, stderr reason or None, additionalContext line or None) for
+    the usage-window rule in the docstring. Runs only after the ledger checks
+    have passed; exit 2 here is the 97% block and nothing else."""
+    fixture = fixture_windows is not None
+    windows = read_windows(fixture_windows or windows_path(), fixture=fixture)
+    if windows is None:
+        return 0, None, None
+    cal = read_calibration(fixture_cal or calibration_path())
+    five = _pct_of(windows, "five_hour")
+    if five is not None and five >= FIVE_HOUR_BLOCK_PCT:
+        if not (all_open_rows_next(ledger) and is_resume_call(data)):
+            when = _local((windows.get("five_hour") or {}).get("resets_at"), "%H:%M") or "unknown"
+            return 2, (
+                f"dispatch_ledger_guard: the 5-hour usage window is {five:g}% used (>= "
+                f"{FIVE_HOUR_BLOCK_PCT:g}%); it resets at {when} local. A unit launched now dies "
+                "mid-write. Wait for the reset, or -- if this wave was already fitted to the next "
+                "window (every open row's `window` cell says `next`) -- launch it as an explicit "
+                "resume once the window has rolled. See references/window-fit.md."
+            ), None
+        # Deferred wave, explicit resume: the 97% reading is stale by construction.
+    est, unreadable = estimated_open_tokens(ledger)
+    margin = safety_margin(cal)
+    warnings = []
+    for key, label in WINDOW_LABELS:
+        used = _pct_of(windows, key)
+        tpp = tokens_per_percent(cal, key)
+        if used is None or tpp is None:
+            continue
+        remaining = (100.0 - used) * tpp * (1.0 - margin)
+        if remaining < est:
+            when = _local((windows.get(key) or {}).get("resets_at"), "%H:%M" if key == "five_hour" else "%a %H:%M")
+            warnings.append(
+                f"{label} {used:g}% used, remaining allowance ~{int(remaining):,} tokens after a "
+                f"{int(margin * 100)}% margin at {int(tpp):,} tokens/% -- below the {est:,} tokens "
+                f"the open rows estimate" + (f"; resets {when}" if when else "")
+            )
+    context = None
+    if warnings:
+        context = (
+            "dispatch_ledger_guard WARNING (usage windows): " + " · ".join(warnings) + ". "
+            "Split the wave at a unit boundary so the remainder waits for the reset "
+            "(references/window-fit.md), or confirm with the owner before launching."
+            + (f" Rows with no readable estimated_tokens counted as 0: {', '.join(unreadable)}." if unreadable else "")
+        )
+    if not fixture:
+        record_pct_at_dispatch(ledger, windows)
+    return 0, None, context
+
+
 TIERED_LEDGER = (
     "| unit_id | task | class | model | effort | surface |\n"
     "|---------|------|-------|-------|--------|---------|\n"
@@ -527,10 +859,12 @@ TIERED_LEDGER = (
 )
 
 
-def _run_guard(payload: dict, flag: dict | None, tmp: Path, env_extra: dict | None = None) -> int:
+def _run_guard_full(payload, flag: dict | None, tmp: Path, env_extra: dict | None = None,
+                    argv: list | None = None) -> tuple[int, str, str]:
     """Run this file as the real hook, in a subprocess, against a temp flag.
     The selftest asserts on EXIT CODES, not on internal returns -- D2 was
-    exactly the kind of bug an internals-only test cannot see."""
+    exactly the kind of bug an internals-only test cannot see. Returns
+    (exit code, stdout, stderr)."""
     flag_file = tmp / "flag.json"
     if flag is None:
         if flag_file.exists():
@@ -540,15 +874,23 @@ def _run_guard(payload: dict, flag: dict | None, tmp: Path, env_extra: dict | No
     env = dict(os.environ)
     env["CLAUDE_DISPATCH_FLAG"] = str(flag_file)
     env.pop("CLAUDE_DISPATCH_LEDGER", None)
+    # Isolate every case from the live windows and calibration files: a fresh
+    # reading on the rig must not change what the pre-1.3.0 cases see.
+    env["CLAUDE_USAGE_WINDOWS"] = str(tmp / "no-usage-windows.json")
+    env["CLAUDE_USAGE_CALIBRATION"] = str(tmp / "no-usage-calibration.json")
     env.update(env_extra or {})
     proc = subprocess.run(
-        [sys.executable, str(Path(__file__).resolve())],
+        [sys.executable, str(Path(__file__).resolve())] + list(argv or []),
         input=payload if isinstance(payload, str) else json.dumps(payload),
         capture_output=True,
         text=True,
         env=env,
     )
-    return proc.returncode
+    return proc.returncode, proc.stdout, proc.stderr
+
+
+def _run_guard(payload, flag: dict | None, tmp: Path, env_extra: dict | None = None) -> int:
+    return _run_guard_full(payload, flag, tmp, env_extra)[0]
 
 
 def selftest() -> int:
@@ -865,6 +1207,180 @@ def selftest() -> int:
             if code not in (0, 2):
                 problems.append(f"{label}: exit {code} is neither allow (0) nor block (2)")
 
+        # --- usage windows, dispatchwright 1.3.0 -----------------------------
+        # Windows files in the shape usage_windows.py writes from the documented
+        # statusline payload; only written_at is minted here, as the flag's ts is.
+        def _windows_file(name, written_at, five=23.5, seven=41.2):
+            p = tmp / name
+            p.write_text(json.dumps({
+                "written_at": written_at,
+                "model": {"id": "claude-opus-5", "display_name": "Opus"},
+                "five_hour": {"used_percentage": five, "resets_at": 1738425600},
+                "seven_day": {"used_percentage": seven, "resets_at": 1738857600},
+                "spend_limit": None,
+            }), encoding="utf-8")
+            return str(p)
+
+        w_fresh = _windows_file("w-fresh.json", now)
+        w_block = _windows_file("w-block.json", now, five=97.5)
+        w_block_stale = _windows_file("w-block-stale.json", now - WINDOWS_STALE_SECONDS - 60, five=97.5)
+        w_week = _windows_file("w-week.json", now, seven=98.0)
+        cal_ok = tmp / "cal-ok.json"
+        cal_ok.write_text(json.dumps({"windows": {
+            "five_hour": {"tokens_per_percent": 41000, "samples": 3},
+            "seven_day": {"tokens_per_percent": 250000, "samples": 2},
+        }}), encoding="utf-8")
+        cal_tiny = tmp / "cal-tiny.json"
+        cal_tiny.write_text(json.dumps({"windows": {
+            "five_hour": {"tokens_per_percent": 10, "samples": 1},
+        }}), encoding="utf-8")
+        cal_none = tmp / "cal-none.json"
+        cal_none.write_text(json.dumps({"windows": {"five_hour": {"tokens_per_percent": None, "samples": 0}}}),
+                            encoding="utf-8")
+
+        header13 = (
+            "| unit_id | task | class | model | effort | surface | repo | worktree | "
+            "expected_artifacts | estimated_tokens | est_wall | window | pct_at_dispatch | "
+            "pct_at_reconcile | dispatch_ts | commit_sha | commit_ts | push_ts | remote_sha | status |\n"
+            "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|\n"
+        )
+
+        def _row13(unit_id, est="400000 (owner)", window="this 5-hour window", pct="", status="dispatched"):
+            return (
+                f"| {unit_id} | thing | judgment | Claude Opus 5 | high | subagent (background) | — | — | x | "
+                f"{est} | 9 min | {window} | {pct} | | t | | | | | {status} |"
+            )
+
+        def _run13(name, rows, header=header13):
+            d = tmp / name / ".dispatch" / "runs" / "r1"
+            d.mkdir(parents=True)
+            (d / "ledger.md").write_text(header + "\n".join(rows) + "\n", encoding="utf-8")
+            return d / "ledger.md"
+
+        led_plain = _run13("w-plain", [_row13("U1"), _row13("U2", est="60k (median of 4 rows)")])
+        led_next = _run13("w-next", [_row13("U3", window="next 5-hour window at 11:00"),
+                                     _row13("U4", window="next 5-hour window at 11:00")])
+        led_mixed = _run13("w-mixed", [_row13("U3", window="next 5-hour window at 11:00"),
+                                       _row13("U4", window="this 5-hour window")])
+        led_record = _run13("w-record", [_row13("U1"), _row13("U2", pct="5h=1 7d=2"),
+                                         _row13("U9", status="verified")])
+        led_bad_cell = _run13("w-badcell", [_row13("U1", est="a lot"), _row13("U2", est="500000 (owner)")])
+        resume_call = {"tool_name": "Task", "session_id": "abc",
+                       "tool_input": {"description": "dispatchwright resume U3", "prompt": "resume U3 from its ledger row"}}
+        plain_call = {"tool_name": "Task", "session_id": "abc",
+                      "tool_input": {"description": "verify findings", "prompt": "check the findings"}}
+
+        # (label, payload, env, expected exit, must-contain in stdout+stderr, must-not-contain)
+        window_cases = [
+            ("1.3.0: no windows file says nothing and allows",
+             {**plain_call, "cwd": str(tmp / "w-plain")}, {}, 0, (), ("WARNING", "5-hour usage window")),
+            ("1.3.0: a stale windows file at 97.5% neither blocks nor warns",
+             {**plain_call, "cwd": str(tmp / "w-plain")}, {"CLAUDE_USAGE_WINDOWS": w_block_stale}, 0, (),
+             ("WARNING", "5-hour usage window")),
+            ("1.3.0: a fresh windows file at 97.5% blocks and names the reset time",
+             {**plain_call, "cwd": str(tmp / "w-plain")}, {"CLAUDE_USAGE_WINDOWS": w_block}, 2,
+             ("97.5% used", "resets at"), ()),
+            ("1.3.0: 97.5%, every open row deferred to next, and an explicit resume allows",
+             {**resume_call, "cwd": str(tmp / "w-next")}, {"CLAUDE_USAGE_WINDOWS": w_block}, 0, (),
+             ("5-hour usage window",)),
+            ("1.3.0: 97.5% with next rows but no resume word still blocks",
+             {**plain_call, "cwd": str(tmp / "w-next")}, {"CLAUDE_USAGE_WINDOWS": w_block}, 2,
+             ("97.5% used",), ()),
+            ("1.3.0: 97.5% on a resume where one open row is not deferred still blocks",
+             {**resume_call, "cwd": str(tmp / "w-mixed")}, {"CLAUDE_USAGE_WINDOWS": w_block}, 2,
+             ("97.5% used",), ()),
+            ("1.3.0: ample allowance allows with no warning",
+             {**plain_call, "cwd": str(tmp / "w-plain")},
+             {"CLAUDE_USAGE_WINDOWS": w_fresh, "CLAUDE_USAGE_CALIBRATION": str(cal_ok)}, 0, (), ("WARNING",)),
+            ("1.3.0: a tiny 5h calibration warns with the numbers and still allows",
+             {**plain_call, "cwd": str(tmp / "w-plain")},
+             {"CLAUDE_USAGE_WINDOWS": w_fresh, "CLAUDE_USAGE_CALIBRATION": str(cal_tiny)}, 0,
+             ("WARNING", "additionalContext", "5h 23.5% used", "460,000 tokens"), ()),
+            ("1.3.0: a nearly spent 7d window warns on the 7d calibration",
+             {**plain_call, "cwd": str(tmp / "w-plain")},
+             {"CLAUDE_USAGE_WINDOWS": w_week, "CLAUDE_USAGE_CALIBRATION": str(cal_ok)}, 0,
+             ("WARNING", "7d 98% used"), ("5h 23.5% used",)),
+            ("1.3.0: no calibration means no comparison, no warning",
+             {**plain_call, "cwd": str(tmp / "w-plain")},
+             {"CLAUDE_USAGE_WINDOWS": w_fresh, "CLAUDE_USAGE_CALIBRATION": str(cal_none)}, 0, (), ("WARNING",)),
+            ("1.3.0: an unreadable estimated_tokens cell counts as 0 and is named in the warning",
+             {**plain_call, "cwd": str(tmp / "w-badcell")},
+             {"CLAUDE_USAGE_WINDOWS": w_week, "CLAUDE_USAGE_CALIBRATION": str(cal_ok)}, 0,
+             ("WARNING", "counted as 0: U1"), ()),
+            ("1.3.0: a pre-1.3.0 ledger without the new columns is read exactly as before",
+             {**plain_call, "cwd": str(tmp / "fresh")}, {"CLAUDE_USAGE_WINDOWS": w_fresh,
+                                                          "CLAUDE_USAGE_CALIBRATION": str(cal_ok)}, 0, (), ("WARNING",)),
+            ("1.3.0: a pre-1.3.0 ledger still blocks at 97.5%",
+             {**plain_call, "cwd": str(tmp / "fresh")}, {"CLAUDE_USAGE_WINDOWS": w_block}, 2, ("97.5% used",), ()),
+        ]
+        for label, payload, extra, expected, wants, must_nots in window_cases:
+            code, out, err = _run_guard_full(payload, fresh_flag, tmp, extra)
+            combined = out + err
+            if code != expected:
+                problems.append(f"{label}: expected exit {expected}, got {code} ({combined.strip()[:200]!r})")
+            if code not in (0, 2):
+                problems.append(f"{label}: exit {code} is neither allow (0) nor block (2)")
+            for want in wants:
+                if want not in combined:
+                    problems.append(f"{label}: output lacks {want!r}: {combined.strip()[:300]!r}")
+            for must_not in must_nots:
+                if must_not in combined:
+                    problems.append(f"{label}: output wrongly carries {must_not!r}")
+
+        # The dispatch half of the calibration point: an allowed dispatch fills
+        # every open row's EMPTY pct_at_dispatch cell, leaves a filled one and a
+        # closed row alone, and changes no other byte.
+        before = led_record.read_text(encoding="utf-8")
+        code, out, err = _run_guard_full({**plain_call, "cwd": str(tmp / "w-record")}, fresh_flag, tmp,
+                                         {"CLAUDE_USAGE_WINDOWS": w_fresh})
+        after = led_record.read_text(encoding="utf-8")
+        if code != 0:
+            problems.append(f"1.3.0: the pct_at_dispatch write case exited {code}")
+        rows_after = after.splitlines()
+        u1 = next((r for r in rows_after if r.startswith("| U1 ")), "")
+        u2 = next((r for r in rows_after if r.startswith("| U2 ")), "")
+        u9 = next((r for r in rows_after if r.startswith("| U9 ")), "")
+        if "| 5h=23.5 7d=41.2 |" not in u1:
+            problems.append(f"1.3.0: an empty pct_at_dispatch cell on an open row was not filled: {u1!r}")
+        if "| 5h=1 7d=2 |" not in u2:
+            problems.append(f"1.3.0: a filled pct_at_dispatch cell was overwritten: {u2!r}")
+        if "5h=23.5" in u9:
+            problems.append(f"1.3.0: a closed row's pct_at_dispatch cell was filled: {u9!r}")
+        if before.replace("|  | | t |", "| 5h=23.5 7d=41.2 | | t |", 1) != after:
+            problems.append("1.3.0: the pct_at_dispatch write changed bytes outside the one target cell")
+        # A second run is idempotent.
+        _run_guard_full({**plain_call, "cwd": str(tmp / "w-record")}, fresh_flag, tmp, {"CLAUDE_USAGE_WINDOWS": w_fresh})
+        if led_record.read_text(encoding="utf-8") != after:
+            problems.append("1.3.0: a second allowed dispatch rewrote pct_at_dispatch cells")
+        # Fixture mode: the ledger and the windows file come from argv, the
+        # windows file is taken as current, and the ledger is never written.
+        fixture_led = tmp / "fixture-ledger.md"
+        fixture_led.write_text(header13 + _row13("U1") + "\n", encoding="utf-8")
+        (tmp / "session").write_text("abc", encoding="utf-8")
+        fx_before = fixture_led.read_bytes()
+        code, out, err = _run_guard_full(
+            {**plain_call, "cwd": str(tmp / "bare")}, fresh_flag, tmp, {},
+            ["--ledger", str(fixture_led), "--windows-file", w_block_stale],
+        )
+        if code != 2 or "97.5% used" not in (out + err):
+            problems.append(f"1.3.0: fixture mode did not read the argv windows file as current (exit {code})")
+        code, out, err = _run_guard_full(
+            {**plain_call, "cwd": str(tmp / "bare")}, fresh_flag, tmp, {},
+            ["--ledger", str(fixture_led), "--windows-file", w_fresh, "--calibration-file", str(cal_ok)],
+        )
+        if code != 0 or fixture_led.read_bytes() != fx_before:
+            problems.append("1.3.0: fixture mode wrote the ledger or blocked an allowed dispatch")
+
+        # parse_tokens and the resume detector, pinned.
+        for cell, want in (("400000", 400000), ("60,000", 60000), ("60k (median of 4 rows)", 60000),
+                           ("1.2M (owner)", 1200000), ("~86k", 86000), ("a lot", None), ("", None)):
+            if parse_tokens(cell) != want:
+                problems.append(f"1.3.0: parse_tokens({cell!r}) should be {want!r}, got {parse_tokens(cell)!r}")
+        if not is_resume_call(resume_call) or is_resume_call(plain_call):
+            problems.append("1.3.0: is_resume_call does not separate a resume from a plain call")
+        if is_resume_call({"tool_input": {"prompt": "check the resumewright handoff"}}):
+            problems.append("1.3.0: is_resume_call matched 'resumewright' as a resume")
+
     if problems:
         for p in problems:
             print(f"DISPATCH_LEDGER_GUARD SELFTEST FAIL: {p}")
@@ -873,7 +1389,11 @@ def selftest() -> int:
         "dispatch_ledger_guard selftest: OK (flag states incl. uncorrelated, "
         "ledger currency, cell validators, agent-count token parsing, and 18 real "
         "exit-code cases covering all four 2026-08-18 defects, the 2026-08-20 "
-        "wave-cap enforcement, and the 2026-09-11 observation #0022 fix)"
+        "wave-cap enforcement, and the 2026-09-11 observation #0022 fix; plus "
+        f"{len(window_cases)} usage-window cases (2026-09-17, dispatchwright 1.3.0): "
+        "silent on an absent or stale file, the 97% block with its resume exemption, "
+        "the calibration warning with its numbers, a pre-1.3.0 ledger unchanged, "
+        "the pct_at_dispatch cell write, and argv fixture mode)"
     )
     return 0
 
@@ -939,6 +1459,17 @@ def _guard(data: dict) -> int:
         )
         return 2
 
+    # Usage windows (1.3.0): silent without a fresh reading; the 97% block;
+    # the calibration warning; the pct_at_dispatch cell.
+    code, reason, context = window_step(
+        ledger, data, _argv_path("--windows-file"), _argv_path("--calibration-file")
+    )
+    if code == 2:
+        print(reason, file=sys.stderr)
+        return 2
+    if context:
+        print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse",
+                                                 "additionalContext": context}}))
     return 0
 
 

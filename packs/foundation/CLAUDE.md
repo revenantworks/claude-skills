@@ -23,7 +23,7 @@ The always-on companion to the **foundation** pack's eleven wrights. Each skill 
 | Define, apply, or audit a brand or voice | **brandwright** | `brandwright build / apply / audit` |
 | Author or audit an eval suite | **evalwright** | "write trigger evals for &lt;target&gt;" |
 | Slim, budget, or audit token footprint | **tokenwright** | "slim this / what does it cost" |
-| A request that will fan out into many agents or repos | **dispatchwright** | "rebuild / re-architect all of this", "resume that stalled run", `dispatchwright` |
+| A request that will fan out into many agents or repos | **dispatchwright** | "rebuild / re-architect all of this", "show me the table before you launch", "will it fit in my window", "resume that stalled run", `dispatchwright` |
 | Write a committed session handoff, on demand or before a pause | **resumewright** | "write the handoff", "pause here", "holding position", `resumewright` |
 
 Each works alone. Initial routing is at the description level — this table is the proactive cue, not a dependency. An uninstalled wright is named, never a blocker.
