@@ -71,4 +71,10 @@ plan fits a usage window and #29 asks the API price of a model — the descripti
 windows ("5-hour, weekly") and the table, never a price, so a fire on #29 means the cost words
 have grown past the window they belong to; a miss on #24 means "fit it into the usage windows"
 needs a pushier phrasing, not a broader one. #30 and #31 are the two other 1.3.0 near-misses: a
-context-window question and one agent's actual spend, neither a plan against a window.
+context-window question and one agent's actual spend, neither a plan against a window. **#27 is
+a known exposure** ("Break the waves up to fit."): its vocabulary is the fit rule's, not the
+description's — "wave", "break" and "split" appear nowhere in the 990-character description, and
+its only shared word is "fit" (from "fit it into the usage windows"). It is kept in the owner's own
+register on purpose; the owed cold re-judge must report #27 individually, and a miss there reads as
+this note predicted, not as a surprise. The choice between adding "waves" to the description and
+marking #27 known-ambiguous is owner-owned, the same way #9's was.
