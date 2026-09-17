@@ -38,7 +38,12 @@ never the line.
 
 Overrides, for tests and for a rig that keeps the file elsewhere:
   CLAUDE_USAGE_WINDOWS   path of the file to write (default ~/.claude/usage-windows.json)
-  --out PATH             same, on argv; argv wins over the environment.
+  --out PATH             same, on argv; argv wins over the environment. A relative
+                         PATH whose parent directory does not exist under the cwd
+                         but does exist beside this script resolves there, so a
+                         controls file can say `fixtures/window-fit/<name>` (the
+                         same rule dispatch_gate.py's _argv_path applies) and the
+                         controls never write the live file.
 
 Run `python usage_windows.py --selftest` to check the real main() against the
 documented statusline shape, a windowless payload, broken stdin, an unwritable
@@ -53,6 +58,7 @@ import time
 from pathlib import Path
 
 DEFAULT_PATH = Path.home() / ".claude" / "usage-windows.json"
+HOOKS_DIR = Path(__file__).resolve().parent
 WINDOW_KEYS = ("five_hour", "seven_day", "spend_limit")
 
 
@@ -61,7 +67,10 @@ def out_path(argv: list[str] | None = None) -> Path:
     if "--out" in argv:
         i = argv.index("--out")
         if i + 1 < len(argv):
-            return Path(argv[i + 1])
+            p = Path(argv[i + 1])
+            if not p.is_absolute() and not p.parent.is_dir() and (HOOKS_DIR / p).parent.is_dir():
+                return HOOKS_DIR / p
+            return p
     override = os.environ.get("CLAUDE_USAGE_WINDOWS")
     return Path(override) if override else DEFAULT_PATH
 
@@ -294,6 +303,26 @@ def selftest() -> int:
         if proc.returncode != 0 or not env_out.exists():
             problems.append("CLAUDE_USAGE_WINDOWS was not honoured")
 
+        # --- a relative --out resolves beside the hook when its parent lives only there ---
+        rel = Path("fixtures") / "window-fit" / ".selftest-usage-windows.json"
+        beside = HOOKS_DIR / rel
+        if (HOOKS_DIR / "fixtures" / "window-fit").is_dir():
+            try:
+                if beside.exists():
+                    beside.unlink()
+                proc = subprocess.run(
+                    [sys.executable, str(Path(__file__).resolve()), "--out", str(rel)],
+                    input=json.dumps(DOCUMENTED_PAYLOAD), capture_output=True, text=True,
+                    cwd=td, env={k: v for k, v in os.environ.items() if k != "CLAUDE_USAGE_WINDOWS"},
+                )
+                if proc.returncode != 0 or not beside.exists():
+                    problems.append("a relative --out with no such parent under the cwd did not resolve beside the hook")
+                if (Path(td) / rel).exists():
+                    problems.append("a relative --out was written under the cwd instead of beside the hook")
+            finally:
+                if beside.exists():
+                    beside.unlink()
+
     if problems:
         for p in problems:
             print(f"USAGE_WINDOWS SELFTEST FAIL: {p}")
@@ -301,7 +330,8 @@ def selftest() -> int:
     print(
         "usage_windows selftest: OK (the documented statusline shape writes the file atomically "
         "and prints model | ctx | 5h | 7d; a windowless refresh leaves the file alone; absent "
-        "fields print nothing; exits 0 on 6 broken-input cases; env override honoured)"
+        "fields print nothing; exits 0 on 6 broken-input cases; env override honoured; a "
+        "relative --out resolves beside the hook)"
     )
     return 0
 

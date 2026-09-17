@@ -33,3 +33,5 @@ venv/
 
 # dispatchwright run ledgers — session working state, never a durable artifact
 .dispatch/
+.claude/hooks/fixtures/window-fit/.control-usage-windows.json
+.claude/hooks/fixtures/window-fit/.selftest-usage-windows.json
