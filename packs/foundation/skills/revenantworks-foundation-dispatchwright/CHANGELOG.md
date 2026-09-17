@@ -1,5 +1,84 @@
 # Changelog — revenantworks-foundation-dispatchwright
 
+## [1.3.0] — 2026-09-17
+
+**The plan table, the stop, and the window fit — owner request, 2026-09-17.** The owner asked that
+before anything is dispatched the orchestrator show one table per wave (unit, model, effort,
+estimated tokens, estimated wall time), pause for confirmation, and fit the estimate into the
+usage windows — the 5-hour window, the weekly window and any per-model window the owner tracks —
+reading usage where the harness exposes it, asking for percent used and time left per window
+where it does not, and breaking the work up to fit. The research behind the design (run
+`2026-09-17-dispatchwright-window-fit`, unit U1) established the facts everything below rests
+on: only a configured statusLine command receives `rate_limits` (five_hour / seven_day
+`used_percentage` and `resets_at`; claude.ai Pro/Max; after the first API response); hooks
+receive none; the model has no surface of its own; there is no per-model window in the data; the
+windows are percent, and the capacity behind a percent is not published. Minor bump: `plan` and
+`dispatch` changed contract. Neighbouring lesson: observation #0087 (a brief's verification list
+is derived from the CI file, never recalled), landed in the brief template in the same pass.
+
+- **Entry points.** `dispatchwright plan` now ends on **one table** — `unit | class | model |
+  effort | est. tokens | est. wall | window`, per wave — and **one confirmation line** saying what
+  runs now and what waits for which window, then **stops**; nothing launches until the owner says
+  go. `dispatchwright dispatch` runs an approved plan without a second ask; a unit added mid-run
+  gets a row through the same table, is announced in one line, and asks again only if it pushes
+  the plan past the window it was fitted to. The bare-invocation reply names the fitted table and
+  the stop. §2 Shape check names the table as the shape every passing plan ends in.
+- **§6 Wave execution** replaces "check the remaining rolling usage window before a top-tier wave"
+  with the window-fit rule: read `~/.claude/usage-windows.json` when it is under 15 minutes old
+  (the gate hook injects it), otherwise ask the owner one line per window and never guess; a
+  percent becomes tokens only through the measured calibration (`~/.dispatch/usage-calibration.json`);
+  with fewer than two measurements say so and fit on the owner's token figure or the one point
+  marked "one data point" — never a number reasoned into being (D-44); walk the units in plan
+  order against each window's remaining allowance less a stated margin (default 15%), mark each
+  with the first window it fits, split only at a unit boundary, and read a unit larger than a
+  whole window as a decomposition defect (§3).
+- **§8 Reconcile** records each row's actual tokens, wall time and `pct_at_reconcile`, and appends
+  one calibration point per window per wave (actual tokens against the used-percentage delta
+  since `pct_at_dispatch`); a wave with no `pct_at_dispatch` yields no point and the report says
+  so.
+- **New `references/window-fit.md`** (loaded by a plan — Load budget updated): the windows and
+  where their numbers come from (the data file's schema, the 15-minute staleness rule, the exact
+  one-line ask), the calibration file's schema and the running median, the estimate-names-its-
+  basis rule, the fit algorithm with its window labels, the table and confirmation line with a
+  worked example, the mid-run unit rule, what Reconcile writes back, and the three rig hooks.
+- **`references/ledger-schema.md`** gains four optional columns — `est_wall`, `window`,
+  `pct_at_dispatch`, `pct_at_reconcile` — and states that the guard tolerates every ledger without
+  them; `estimated_tokens` now carries its basis beside the number.
+- **`references/unit-brief-template.md`** gains a *Verification list* field (observation #0087: every
+  step the CI file runs, in the CI file's own commands, derived by reading the file at
+  brief-writing time — a brief written from memory left out a linter CI had gained a week earlier
+  and two pushes went red on lint alone) and a *Budget and window* line (est. tokens with its
+  basis, the fitted window, and the instruction to report actual tokens and wall time).
+- **`description` moved** — the routing surface changed, in three places: one clause added after
+  the model/effort/surface clause, *"to see the plan table (units, models, est. tokens, wall time)
+  and fit it into the usage windows (5-hour, weekly) before anything launches"*; and two trims to
+  stay under the 1024-character ceiling — the tier-table parenthetical *"(`references/tier-routing.md`,
+  self-contained as of 2026-09-14, observation #0073) — no sibling required"* became
+  *"(`references/tier-routing.md`)"*, and *"this skill's own tier table"* became *"its own tier
+  table"*. Everything else is byte-identical. 934 → 990 characters.
+- **Evals.** `evals/trigger-evals.md`: 22 → 31 rows (16 / 13 / 2) — six should-fire rows in the
+  owner's own phrasings (#23–#28: "show me the table before you launch", "how much will this cost
+  and will it fit in my window", "fit the plan into what I have left this week", "I have 40% of
+  the 5-hour window left", "break the waves up to fit", "pause for my go before dispatching") and
+  three should-not (#29 an API-pricing question → promptwright / claude-api, #30 a context-window
+  question, #31 a single subagent's token count); boundary note for the #24 / #29 pair.
+  `evals/test-cases.md`: 16 → 18 — Case 3 sharpened to the table and the stop, Case 17 (window
+  fit with data: the expected table, split, wall figures and a too-large unit), Case 18 (no data:
+  the ask, then the no-calibration ask). `evals/RESULTS.md` re-anchored honestly: **nothing ran**;
+  the moved description **owes a cold re-judge**, recorded, not performed.
+- **Rig hooks** (`claude-skills` `.claude/hooks/`, not package contents): new `usage_windows.py`
+  (the statusLine command that writes the data file and prints one status line);
+  `dispatch_gate.py` injects the windows line or says the plan must ask; `dispatch_ledger_guard.py`
+  warns with the numbers, blocks at five_hour ≥ 97% unless every open row is deferred to `next`
+  and the call is an explicit resume, and fills `pct_at_dispatch`. Each carries `--selftest` and
+  a controls file; the two existing hooks' prior behaviour and their 18 exit-code cases are
+  unchanged. The statusline setting in `settings.json` and the `Copy-Item` of the three hooks
+  are the owner's steps.
+- Body budget raised 6700 → 7200 (skillwright's `references/pack-registry.md`, skillwright 1.4.5);
+  landed at ≈6952. README updated (entry table, package contents, the seams — its 1.0.0-era
+  "tiers through promptwright" lines were stale since 1.2.9 and are corrected here). The pack
+  router `packs/foundation/CLAUDE.md` gains two window-fit phrasings on the dispatchwright row.
+
 ## [1.2.11] — 2026-09-14
 
 - §5 Durability contract gains **Merge only onto a green base** (observation #0077): a unit that

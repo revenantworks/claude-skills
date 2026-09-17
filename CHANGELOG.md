@@ -17,6 +17,33 @@ This log starts at the foundation 1.0.0 baseline.
 > because it records what was true when written; read it as a date, not a tag.
 > Live code and runbooks cite dates instead, for exactly this reason.
 
+## [foundation-v2.10.0] - 2026-09-17
+
+The owner's window-fit request (2026-09-17): before anything is dispatched, show one table per
+wave (unit, model, effort, estimated tokens, estimated wall time), pause for a go, and fit the
+estimate into the usage windows. Minor because dispatchwright's `plan` and `dispatch` entries
+changed contract.
+
+- dispatchwright 1.2.11 → 1.3.0. `plan` ends on one fitted table and a confirmation stop; §6
+  carries the window fit (read `~/.claude/usage-windows.json` when under 15 minutes old, else ask
+  the owner per window, never guess; percent becomes tokens only through the measured calibration
+  in `~/.dispatch/usage-calibration.json`; split at unit boundaries; a unit larger than a window
+  is a decomposition defect); §8 writes the calibration point back. New
+  `references/window-fit.md`; four optional ledger columns; the brief gains the CI-derived
+  verification list (#0087) and a budget/window line. The `description` moved (one trigger
+  clause added, two trims); trigger evals 22 → 31 (16/13/2), assertion cases 16 → 18; RESULTS
+  says nothing ran and a cold re-judge is owed. Body budget 6700 → 7200, landed ≈6952.
+- skillwright 1.4.4 → 1.4.5: the registry budget row above; registry prose only.
+- `.claude/hooks/`: new `usage_windows.py` (the statusLine command that writes the windows file
+  and prints one status line); `dispatch_gate.py` injects the windows and the calibration state,
+  or says the plan must ask; `dispatch_ledger_guard.py` warns with the numbers when a window's
+  remaining allowance is below the open rows' estimate, blocks at five_hour ≥ 97% unless every
+  open row is deferred to `next` and the call is an explicit resume, and fills `pct_at_dispatch`.
+  Three controls files, fixtures under `.claude/hooks/fixtures/window-fit/`; the two existing
+  hooks' 18 exit-code cases run unchanged. Owner steps: the `statusLine` setting and the
+  `Copy-Item` of the three hooks into `~/.claude/hooks/`.
+- Pack router `packs/foundation/CLAUDE.md`: two window-fit phrasings on the dispatchwright row.
+
 ## [foundation-v2.9.1] - 2026-09-14
 
 Closes what foundation-v2.9.0 left owed: three cold trigger re-judges, three stale dispatchwright

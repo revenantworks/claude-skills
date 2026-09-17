@@ -47,6 +47,7 @@ through a file the statusline writes, or through the owner.
 {
   "written_at": 1758115200,
   "model": {"id": "claude-fable-5-1", "display_name": "Fable"},
+  "context_used_percentage": 8,
   "five_hour": {"used_percentage": 23.5, "resets_at": 1758124800},
   "seven_day": {"used_percentage": 41.2, "resets_at": 1758556800},
   "spend_limit": null
@@ -147,11 +148,16 @@ margin, **default 15%**, stated in the table's caption.
 1. **Remaining allowance per window** = (100 − used_percentage) × tokens_per_percent × (1 − margin).
    For an owner-entered per-model window the owner's tokens-left figure stands in for the product.
 2. **Walk the units in plan order, accumulating.** For each unit, add its estimate to the running
-   total and test the total against every window's remaining allowance. The unit is marked with the
-   **first window it fits**, in this order of preference: `this 5-hour window` · `this week` ·
-   `next 5-hour window at HH:MM` (local time, from `five_hour.resets_at`) · `next week` (from
-   `seven_day.resets_at`). A per-model window the owner named is tested alongside the two harness
-   windows and its name appears in the cell when it is the binding one.
+   total for every window and test each total against that window's remaining allowance. The unit
+   is marked with the **first window it fits**, in this order: `this 5-hour window` (fits the
+   5-hour remainder and the week's) · `next 5-hour window at HH:MM` (over the 5-hour remainder,
+   inside the week's; local time from `five_hour.resets_at`; the 5-hour running total restarts at
+   a full window less margin, 100 × tokens_per_percent × (1 − margin)) · `next week` (over the
+   week's remainder; from `seven_day.resets_at`; the weekly total restarts likewise). `this week`
+   appears only in a plan that has a 7-day reading and no 5-hour one (an owner who tracks the
+   week alone): it means the unit fits the week's remainder. A per-model window the owner named
+   is tested alongside the harness windows and its name appears in the cell when it is the
+   binding one.
 3. **A wave splits only at unit boundaries.** The first unit that no longer fits the current window
    starts the next wave; nothing inside a unit is cut to make it fit. When a later unit fits the
    current window but an earlier one did not, plan order still wins — the wave does not reorder
@@ -169,7 +175,7 @@ Nothing here rounds a unit up "to be safe": the margin is the only conservatism,
 
 `dispatchwright plan` ends by presenting **one table** and **one confirmation line**, then stops:
 
-```
+```text
 Wave plan — run 2026-09-17-example · margin 15% · 5h 23.5% used (resets 14:00) · 7d 41.2% used (resets Tue 09:00) · calibration: 5h 3 samples, 7d one data point
 | unit | class      | model         | effort | est. tokens          | est. wall | window                         |
 |------|------------|---------------|--------|----------------------|-----------|--------------------------------|
