@@ -93,7 +93,7 @@ The capacity behind a percent is not published, so a percent becomes tokens only
         {"run": "2026-09-17-window-fit", "wave": 1, "tokens": 501000, "pct_delta": 12.4, "date": "2026-09-17"}
       ]
     },
-    "seven_day": {"tokens_per_percent": null, "samples": 1, "median_of_last": 10, "points": [
+    "seven_day": {"tokens_per_percent": 238571, "samples": 1, "median_of_last": 10, "points": [
       {"run": "2026-09-17-window-fit", "wave": 1, "tokens": 501000, "pct_delta": 2.1, "date": "2026-09-17"}
     ]}
   },
@@ -117,8 +117,12 @@ Reconcile has measured.
   10). `samples` is the count of points ever taken; the date is the last write.
 - **Until two points exist, the skill says so.** With zero, it asks the owner for the allowance in
   tokens per window, and fits on that. With one, it fits on that one point and marks every row it
-  produced *"one data point"*. It never fills the gap with a figure reasoned into being from a
-  model's context size, a plan's price, or a remembered number — this estate's D-44 rule.
+  produced *"one data point"*. A one-point window still writes `tokens_per_percent` — the median
+  of one point is that point, `501000 / 2.1 = 238571` in the example above — and "one data point"
+  is read off `samples: 1`, never off a `null`; `tokens_per_percent` is `null` only when there is
+  no point at all, and both rig hooks read a `null` as *no calibration*. It never fills the gap
+  with a figure reasoned into being from a model's context size, a plan's price, or a remembered
+  number — this estate's D-44 rule.
 - **`wall`** holds the median seconds per thousand tokens per unit class, from verified rows'
   actual wall time. It feeds the table's est. wall column the same way: no sample, no number.
 

@@ -696,8 +696,14 @@ def open_rows(path: Path) -> list:
 
 
 def estimated_open_tokens(path: Path) -> tuple[int, list]:
-    """(sum of estimated_tokens over open rows, weighted by the surface cell's
-    agent-count token; the unit ids whose cell carried no number)."""
+    """(sum of estimated_tokens over open rows, taken exactly as written; the
+    unit ids whose cell carried no number).
+
+    No re-weighting by the surface cell's x<N> agent-count token happens
+    here: the plan's estimate for a fan-out row is already N x per-agent
+    (references/window-fit.md, ledger-schema.md's estimated_tokens field),
+    so multiplying again would double-count. The x<N> token weights the
+    wave cap in open_unit_count(), not this sum."""
     total = 0
     unreadable = []
     for row in open_rows(path):

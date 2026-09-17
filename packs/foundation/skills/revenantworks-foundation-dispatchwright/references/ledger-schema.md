@@ -38,23 +38,22 @@ override, so the two must agree.
 | `repo` | The repo this unit writes, or `—` for a read-only unit. |
 | `worktree` / `branch` | The path and branch a writer unit runs in, per §6's one-writer-per-repo rule. `—` for a unit that shares the main tree. |
 | `expected_artifacts` | What the unit should produce — a file, a commit, a report — stated before dispatch, not inferred after. |
-| `estimated_tokens` | The plan's own estimate, for §8's actual-vs-estimated report, with its basis beside it — `60000 (median of 4 rows)` or `400000 (owner)` (`references/window-fit.md`). `dispatch_ledger_guard.py` sums this column over the open rows to compare against the windows' remaining allowance; a cell it cannot read as a number counts as 0 and is named in its warning. |
+| `estimated_tokens` | The plan's own estimate, for §8's actual-vs-estimated report, with its basis beside it — `60000 (median of 4 rows)` or `400000 (owner)` (`references/window-fit.md`). **A row for a Workflow or Task call that fans out to N agents holds N × the per-agent figure** — the N being the `x<N>` token on its `surface` cell — so the guard can take the column as written. `dispatch_ledger_guard.py` sums this column over the open rows exactly as written (no re-weighting by the surface cell) to compare against the windows' remaining allowance; a cell it cannot read as a number counts as 0 and is named in its warning. A per-agent figure written here under-counts the wave by the fan-out factor (observation #0022). |
 | `est_wall` *(optional, 1.3.0)* | The plan's wall-time estimate for the table — est. tokens × the class's measured seconds per thousand tokens from the calibration file, or `—` when no sample exists. |
 | `window` *(optional, 1.3.0)* | Which window the fit placed the unit in, in the table's own words: `this 5-hour window`, `this week`, `next 5-hour window at HH:MM`, `next week`, an owner-named per-model window, `too large`, or `unfitted`. A cell beginning `next` is what lets the guard's ≥97% block stand aside on the owner's explicit resume. |
 | `pct_at_dispatch` *(optional, 1.3.0)* | The windows' used-percentages when the unit launched, `5h=23.5 7d=41.2`. Written by the guard when the windows file is fresh, else by the dispatcher from the reading the plan used, else left empty — never back-filled from memory. |
 | `pct_at_reconcile` *(optional, 1.3.0)* | The same reading at Reconcile, same form. The pair is one calibration point per wave (`references/window-fit.md`); a wave missing either half yields none. |
-
-The four 1.3.0 columns are optional: `dispatch_ledger_guard.py` tolerates a ledger without them —
-every ledger written before 1.3.0 — and a plan that omits them loses only the fit's record, not
-the guard's other checks.
 | `dispatch_ts` | Timestamp the row was written, before the unit launched. |
 | `commit_sha` | The commit the unit made, once it reports one. |
 | `commit_ts` | Timestamp the commit line was added to the row. |
 | `push_ts` | Timestamp the row was updated after a confirmed push. |
 | `remote_sha` | What `git rev-parse origin/main` (or the unit's branch) actually shows — the field Reconcile checks, not `commit_sha`. |
 | `reversal` | How this unit's change is undone: the exact command, or the path of the file holding the prior state — written at the same time as `commit_sha`, by the unit that made the change, never by a later reader (task-observer observation #0045). A git commit reverses itself, so a row whose only surface is a commit may read `—`; every other surface — a setting, a plugin, a routine, a remote, a junction, a moved folder, a repo description — carries its own. Reconcile (SKILL.md §8) treats an empty `reversal` on a landed non-git row as unverified. The counter-example the rule comes from: twenty-one branch deletions were the one destructive action whose undo was written as it happened (`cache/branch-deletions.json`, one tip sha per branch), and theirs is the only rollback line that is exact. |
-
 | `status` | `dispatched` \| `committed` \| `pushed` \| `verified` \| `done` \| `stalled` \| `failed` \| `resumed`. Only `verified` means `commit_sha == remote_sha` was checked and matched; `done` is the closing state for a unit that produces no commit (see Closing a row). |
+
+The four 1.3.0 columns are optional: `dispatch_ledger_guard.py` tolerates a ledger without them —
+every ledger written before 1.3.0 — and a plan that omits them loses only the fit's record, not
+the guard's other checks.
 
 ## Closing a row
 
