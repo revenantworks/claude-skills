@@ -30,9 +30,25 @@ instead of skipping it, rather than handing a session-less dispatch a free pass.
 Changing the sentinel here without changing UNCORRELATABLE_SESSION_IDS in the
 guard reopens that hole; the selftest below pins the string for that reason.
 
+The usage windows (added 2026-09-17, dispatchwright 1.3.0, references/window-fit.md).
+The plan turn must fit its wave table into the subscription windows, and only
+a statusLine command ever sees those numbers -- usage_windows.py (the sibling
+statusline script) writes them to `~/.claude/usage-windows.json` on every
+refresh. When this gate fires it appends ONE more line to additionalContext:
+the windows and the calibration state when that file is under 15 minutes old,
+or a line saying the plan must ask the owner when the file is absent, stale,
+or unreadable. It never guesses a number and never blocks on one -- the line
+is data for the plan turn, nothing more, and any fault in reading it produces
+the must-ask line rather than an exception. `--windows-file PATH` and
+`--calibration-file PATH` on argv read fixture files instead of the live ones
+and skip the freshness check (a controls runner can hand a file, not a
+timestamp); CLAUDE_USAGE_WINDOWS / CLAUDE_USAGE_CALIBRATION override the live
+paths with the freshness check kept, for --selftest.
+
 Run `python dispatch_gate.py --selftest` to check the patterns file compiles,
 that the samples discriminate, that the flag it writes is one the guard can
-read, and that the hook still exits 0 on every broken input it can be handed.
+read, that the windows line reads a fresh file and asks on a stale or absent
+one, and that the hook still exits 0 on every broken input it can be handed.
 Stdlib only.
 """
 import json
@@ -137,6 +153,131 @@ def write_flag(session_id: str) -> None:
     path.write_text(json.dumps(payload), encoding="utf-8")
 
 
+# ---------------------------------------------------------------------------
+# Usage windows (dispatchwright 1.3.0). Duplicated in dispatch_ledger_guard.py
+# on purpose: each hook installs alone into ~/.claude/hooks/ and imports nothing
+# beside itself.
+# ---------------------------------------------------------------------------
+WINDOWS_STALE_SECONDS = 15 * 60
+WINDOWS_CLOCK_SKEW_SECONDS = 5 * 60
+WINDOW_LABELS = (("five_hour", "5h"), ("seven_day", "7d"))
+
+
+def _argv_path(flag: str) -> Path | None:
+    argv = sys.argv[1:]
+    if flag in argv:
+        i = argv.index(flag)
+        if i + 1 < len(argv):
+            return Path(argv[i + 1])
+    return None
+
+
+def windows_path() -> Path:
+    override = os.environ.get("CLAUDE_USAGE_WINDOWS")
+    return Path(override) if override else Path.home() / ".claude" / "usage-windows.json"
+
+
+def calibration_path() -> Path:
+    override = os.environ.get("CLAUDE_USAGE_CALIBRATION")
+    return Path(override) if override else Path.home() / ".dispatch" / "usage-calibration.json"
+
+
+def read_windows(path: Path, fixture: bool = False) -> dict | None:
+    """The windows file as a dict, or None when absent, unreadable, not an
+    object, or (unless fixture) older than WINDOWS_STALE_SECONDS."""
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+    if not isinstance(data, dict):
+        return None
+    if fixture:
+        return data
+    ts = data.get("written_at")
+    if isinstance(ts, bool) or not isinstance(ts, (int, float)):
+        return None
+    age = time.time() - ts
+    if not (-WINDOWS_CLOCK_SKEW_SECONDS <= age <= WINDOWS_STALE_SECONDS):
+        return None
+    return data
+
+
+def read_calibration(path: Path) -> dict | None:
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def calibration_state(cal: dict | None, key: str) -> str:
+    """'no calibration', 'one data point (N tokens/%)' or 'K samples (N tokens/%)'."""
+    entry = ((cal or {}).get("windows") or {}).get(key) if isinstance((cal or {}).get("windows"), dict) else None
+    if not isinstance(entry, dict):
+        return "no calibration"
+    tpp = entry.get("tokens_per_percent")
+    samples = entry.get("samples")
+    if isinstance(tpp, bool) or not isinstance(tpp, (int, float)) or tpp <= 0:
+        return "no calibration"
+    if not isinstance(samples, int) or samples < 1:
+        return "no calibration"
+    if samples == 1:
+        return f"one data point ({int(tpp)} tokens/%)"
+    return f"{samples} samples ({int(tpp)} tokens/%)"
+
+
+def _local(ts, fmt: str) -> str:
+    try:
+        return time.strftime(fmt, time.localtime(float(ts)))
+    except Exception:
+        return ""
+
+
+def windows_line(windows: dict | None, cal: dict | None, path: Path) -> str:
+    """The one line the plan turn reads. Never raises."""
+    try:
+        if windows is None:
+            return (
+                f"dispatchwright windows: no fresh reading ({path} absent, unreadable, or older "
+                f"than {WINDOWS_STALE_SECONDS // 60} min) -- the plan must ASK the owner, one line, "
+                "for percent used and reset time for the 5-hour and 7-day windows, and any "
+                "per-model window they track, before fitting the table. Never guess a window."
+            )
+        segs = []
+        for key, label in WINDOW_LABELS:
+            w = windows.get(key)
+            if isinstance(w, dict) and isinstance(w.get("used_percentage"), (int, float)):
+                seg = f"{label} {w['used_percentage']}% used"
+                when = _local(w.get("resets_at"), "%H:%M" if key == "five_hour" else "%a %H:%M")
+                if when:
+                    seg += f", resets {when}"
+                seg += f"; calibration {calibration_state(cal, key)}"
+                segs.append(seg)
+            else:
+                segs.append(f"{label} not in the reading")
+        read_at = _local(windows.get("written_at"), "%H:%M")
+        return (
+            f"dispatchwright windows (read {read_at} from {path}): " + " · ".join(segs) +
+            ". Fill the plan table's window column from these through references/window-fit.md; "
+            "'no calibration' means ask the owner for that window's allowance in tokens; ask "
+            "only for a per-model window the owner tracks by hand."
+        )
+    except Exception:
+        return (
+            "dispatchwright windows: the reading could not be interpreted -- the plan must ASK "
+            "the owner for percent used and reset time per window before fitting the table."
+        )
+
+
+def windows_context() -> str:
+    """Fixture paths from argv win; otherwise the live paths with freshness."""
+    fixture = _argv_path("--windows-file")
+    wpath = fixture or windows_path()
+    windows = read_windows(wpath, fixture=fixture is not None)
+    cal = read_calibration(_argv_path("--calibration-file") or calibration_path())
+    return windows_line(windows, cal, wpath)
+
+
 def _run_gate(payload, tmp: Path, env_extra: dict | None = None) -> tuple[int, str, Path]:
     """Run this file as the real hook, in a subprocess, against a temp flag and
     a temp patterns file. Asserting on the real exit code is the point: the one
@@ -147,6 +288,10 @@ def _run_gate(payload, tmp: Path, env_extra: dict | None = None) -> tuple[int, s
     env = dict(os.environ)
     env["CLAUDE_DISPATCH_FLAG"] = str(flag_file)
     env["CLAUDE_DISPATCH_PATTERNS"] = str(patterns_path())
+    # Isolate every case from the live windows file: a fresh reading on the rig
+    # must not change what the older cases see.
+    env["CLAUDE_USAGE_WINDOWS"] = str(tmp / "no-usage-windows.json")
+    env["CLAUDE_USAGE_CALIBRATION"] = str(tmp / "no-usage-calibration.json")
     env.update(env_extra or {})
     proc = subprocess.run(
         [sys.executable, str(Path(__file__).resolve())],
@@ -356,6 +501,78 @@ def selftest() -> int:
                 "neither wrote a flag nor added context for a prompt that still matches"
             )
 
+        # --- the usage-windows line (dispatchwright 1.3.0) --------------------
+        # The shape is the documented statusline payload as usage_windows.py
+        # writes it; only written_at is minted here, the same way the flag's
+        # ts is minted above.
+        def _windows_file(name: str, written_at: float, five: float = 23.5) -> Path:
+            p = tmp / name
+            p.write_text(json.dumps({
+                "written_at": written_at,
+                "model": {"id": "claude-opus-5", "display_name": "Opus"},
+                "five_hour": {"used_percentage": five, "resets_at": 1738425600},
+                "seven_day": {"used_percentage": 41.2, "resets_at": 1738857600},
+                "spend_limit": None,
+            }), encoding="utf-8")
+            return p
+
+        fresh_windows = _windows_file("fresh-windows.json", time.time())
+        stale_windows = _windows_file("stale-windows.json", time.time() - WINDOWS_STALE_SECONDS - 60)
+        corrupt_windows = tmp / "corrupt-windows.json"
+        corrupt_windows.write_text("{not json", encoding="utf-8")
+        cal_two = tmp / "cal-two.json"
+        cal_two.write_text(json.dumps({"windows": {
+            "five_hour": {"tokens_per_percent": 41000, "samples": 3},
+            "seven_day": {"tokens_per_percent": 250000, "samples": 1},
+        }}), encoding="utf-8")
+        windows_cases = [
+            ("a fresh windows file", {"CLAUDE_USAGE_WINDOWS": str(fresh_windows),
+                                      "CLAUDE_USAGE_CALIBRATION": str(cal_two)},
+             ("5h 23.5% used", "7d 41.2% used", "3 samples (41000 tokens/%)", "one data point (250000 tokens/%)"),
+             ("must ASK",)),
+            ("a fresh windows file with no calibration", {"CLAUDE_USAGE_WINDOWS": str(fresh_windows)},
+             ("5h 23.5% used", "no calibration"), ("must ASK",)),
+            ("a stale windows file", {"CLAUDE_USAGE_WINDOWS": str(stale_windows)},
+             ("must ASK",), ("5h 23.5%",)),
+            ("an absent windows file", {}, ("must ASK",), ("5h 23.5%",)),
+            ("a corrupt windows file", {"CLAUDE_USAGE_WINDOWS": str(corrupt_windows)},
+             ("must ASK",), ("5h 23.5%",)),
+        ]
+        for label, extra, wants, must_nots in windows_cases:
+            code, out, flag_file = _run_gate(
+                {"session_id": "sess-1", "prompt": fan_out_sample, "cwd": str(tmp)}, tmp, extra
+            )
+            if code != 0:
+                problems.append(f"windows: {label} exited {code}; must be 0")
+            if "additionalContext" not in out:
+                problems.append(f"windows: {label} lost the base additionalContext")
+            for want in wants:
+                if want not in out:
+                    problems.append(f"windows: {label} -- context lacks {want!r}")
+            for must_not in must_nots:
+                if must_not in out:
+                    problems.append(f"windows: {label} -- context wrongly carries {must_not!r}")
+        # Fixture mode on argv skips the freshness check (a controls runner can
+        # hand a file but cannot mint a timestamp) and must still exit 0.
+        proc = subprocess.run(
+            [sys.executable, str(Path(__file__).resolve()), "--windows-file", str(stale_windows),
+             "--calibration-file", str(cal_two)],
+            input=json.dumps({"session_id": "sess-1", "prompt": fan_out_sample, "cwd": str(tmp)}),
+            capture_output=True, text=True,
+            env={**os.environ, "CLAUDE_DISPATCH_FLAG": str(tmp / "argv-flag.json"),
+                 "CLAUDE_DISPATCH_PATTERNS": str(patterns_path())},
+        )
+        if proc.returncode != 0 or "5h 23.5% used" not in proc.stdout:
+            problems.append("windows: --windows-file fixture mode did not read the file as current")
+        # A windows line must never be a reason to block: an ordinary prompt
+        # with a fresh file still arms nothing and prints nothing.
+        code, out, flag_file = _run_gate(
+            {"session_id": "sess-1", "prompt": ordinary_sample, "cwd": str(tmp)}, tmp,
+            {"CLAUDE_USAGE_WINDOWS": str(fresh_windows)},
+        )
+        if code != 0 or flag_file.exists() or out.strip():
+            problems.append("windows: an ordinary prompt with a fresh windows file armed or printed something")
+
     # Pattern NUMBERS, never pattern text: this line gets pasted back into chat,
     # and echoing a trigger word here is exactly how observation 0079 happened.
     # The line is then held to its own rule before it is printed.
@@ -365,7 +582,10 @@ def selftest() -> int:
         f"#{patterns.index(hit2) + 1 if hit2 in patterns else '?'} (the second is observation "
         f"0016's real prompt); the negative sample and a pasted terminal session matched nothing; "
         f"flag readable by the guard, session-less prompts write the sentinel; exits 0 on "
-        f"{broken_input_cases} broken-input cases and still fires past an uncompilable pattern)"
+        f"{broken_input_cases} broken-input cases and still fires past an uncompilable pattern; "
+        f"the usage-windows line reads a fresh file with its calibration state and says the plan "
+        f"must ask on {len(windows_cases) - 2} stale/absent/corrupt files, fixture mode on argv "
+        f"skips freshness)"
     )
     if patterns and first_match(success, patterns):
         problems.append("the selftest's own success line matches a trigger pattern, so pasting it "
@@ -391,10 +611,15 @@ def main() -> int:
         hit = first_match(strip_pasted_terminal(prompt), patterns)
         if hit:
             write_flag(session_id)
+            try:
+                windows = windows_context()
+            except Exception:
+                windows = ("dispatchwright windows: unreadable -- the plan must ASK the owner for "
+                           "percent used and reset time per window before fitting the table.")
             out = {
                 "hookSpecificOutput": {
                     "hookEventName": "UserPromptSubmit",
-                    "additionalContext": ADDITIONAL_CONTEXT.format(pattern=hit),
+                    "additionalContext": ADDITIONAL_CONTEXT.format(pattern=hit) + " " + windows,
                 }
             }
             print(json.dumps(out))

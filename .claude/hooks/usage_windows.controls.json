@@ -1,0 +1,30 @@
+{
+  "positive": [
+    {
+      "name": "the documented statusline payload (code.claude.com/docs/en/statusline.md, read 2026-09-17, trimmed to the keys this script reads plus their neighbours; values are the docs' own: Opus, ctx 8%, 5h 23.5%, 7d 41.2%, spend 62.8%) -- writes ~/.claude/usage-windows.json and prints the one-line status. touches snapshots and restores the live file byte-for-byte.",
+      "argv": [],
+      "stdin": "{\"cwd\": \"/current/working/directory\", \"session_id\": \"abc123...\", \"model\": {\"id\": \"claude-opus-5\", \"display_name\": \"Opus\"}, \"workspace\": {\"current_dir\": \"/current/working/directory\", \"project_dir\": \"/original/project/directory\"}, \"version\": \"2.1.90\", \"cost\": {\"total_cost_usd\": 0.01234, \"total_duration_ms\": 45000}, \"context_window\": {\"total_input_tokens\": 15500, \"total_output_tokens\": 1200, \"context_window_size\": 200000, \"used_percentage\": 8, \"remaining_percentage\": 92}, \"rate_limits\": {\"five_hour\": {\"used_percentage\": 23.5, \"resets_at\": 1738425600}, \"seven_day\": {\"used_percentage\": 41.2, \"resets_at\": 1738857600}, \"spend_limit\": {\"used_percentage\": 62.8, \"resets_at\": 1740787200}}}",
+      "expect_exit_in": [
+        0
+      ],
+      "touches": [
+        "~/.claude/usage-windows.json"
+      ],
+      "expect_contains": "5h 23.5%"
+    }
+  ],
+  "negative": [
+    {
+      "name": "the same documented payload before the session's first API response: rate_limits absent (the docs state the field appears only after the first response) and context_window percentages null (may be null early in the session). Must print only the model name, never a placeholder, and must leave ~/.claude/usage-windows.json alone -- a windowless refresh from one session must not blank another session's good reading.",
+      "argv": [],
+      "stdin": "{\"cwd\": \"/current/working/directory\", \"session_id\": \"abc123...\", \"model\": {\"id\": \"claude-opus-5\", \"display_name\": \"Opus\"}, \"workspace\": {\"current_dir\": \"/current/working/directory\", \"project_dir\": \"/original/project/directory\"}, \"version\": \"2.1.90\", \"cost\": {\"total_cost_usd\": 0.01234, \"total_duration_ms\": 45000}, \"context_window\": {\"total_input_tokens\": 15500, \"total_output_tokens\": 1200, \"context_window_size\": 200000, \"used_percentage\": null, \"remaining_percentage\": null}}",
+      "expect_exit_in": [
+        0
+      ],
+      "touches": [
+        "~/.claude/usage-windows.json"
+      ],
+      "expect_not_contains": "5h"
+    }
+  ]
+}
