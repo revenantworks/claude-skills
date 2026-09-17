@@ -566,12 +566,23 @@ SAFETY_MARGIN = 0.15
 WINDOW_LABELS = (("five_hour", "5h"), ("seven_day", "7d"))
 
 
+HOOKS_DIR = Path(__file__).resolve().parent
+
+
 def _argv_path(flag: str) -> Path | None:
+    """A fixture path from argv. A relative path that does not exist under the
+    cwd is resolved against this hook's own directory, so a controls file can
+    say `fixtures/window-fit/<name>` and never an absolute local path (the
+    repo's test_release_paths forbids those in tracked files); the fixtures
+    are installed beside the hooks for the same reason."""
     argv = sys.argv[1:]
     if flag in argv:
         i = argv.index(flag)
         if i + 1 < len(argv):
-            return Path(argv[i + 1])
+            p = Path(argv[i + 1])
+            if not p.is_absolute() and not p.exists() and (HOOKS_DIR / p).exists():
+                return HOOKS_DIR / p
+            return p
     return None
 
 

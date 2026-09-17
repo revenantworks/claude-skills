@@ -13,12 +13,12 @@
       "expect_contains": "additionalContext"
     },
     {
-      "name": "the observation 0016 real fan-out prompt again, with the windows file handed on argv (fixture mode: fixtures/window-fit/usage-windows-documented.json, written by usage_windows.py from the documented statusline payload; fixtures/window-fit/usage-calibration-shape.json, the doctrine's worked calibration shape -- NOT this rig's measurements). The gate's additionalContext must carry the windows line with both readings and the calibration state, so the plan turn fills the table's window column without asking. Paths are this rig's absolute paths: the controls runner passes argv but cannot mint a timestamp, so fixture mode skips the 15-minute freshness check.",
+      "name": "the observation 0016 real fan-out prompt again, with the windows file handed on argv (fixture mode: fixtures/window-fit/usage-windows-documented.json, written by usage_windows.py from the documented statusline payload; fixtures/window-fit/usage-calibration-shape.json, the doctrine's worked calibration shape -- NOT this rig's measurements). The gate's additionalContext must carry the windows line with both readings and the calibration state, so the plan turn fills the table's window column without asking. Fixture paths are relative and resolve against the hook's own directory (the fixtures dir is installed beside the hooks; no absolute local path in a tracked file); the controls runner passes argv but cannot mint a timestamp, so fixture mode skips the 15-minute freshness check.",
       "argv": [
         "--windows-file",
-        "V:/Projects/github/revenantworks/claude-skills/.claude/hooks/fixtures/window-fit/usage-windows-documented.json",
+        "fixtures/window-fit/usage-windows-documented.json",
         "--calibration-file",
-        "V:/Projects/github/revenantworks/claude-skills/.claude/hooks/fixtures/window-fit/usage-calibration-shape.json"
+        "fixtures/window-fit/usage-calibration-shape.json"
       ],
       "stdin": "{\"session_id\": \"c383d83c-5af0-4a61-98ee-c4b6376d6fca\", \"prompt\": \"I want to do a complete estate sweep, run that routine but also lets analyze every skill, project, routine\", \"cwd\": \".\"}",
       "expect_exit_in": [
@@ -33,7 +33,7 @@
       "name": "the same real fan-out prompt with the windows file pointed at a path that does not exist (the absent-file case every rig without the statusline command is in). The gate still fires, still arms the flag, and its windows line says the plan must ASK the owner -- never a guessed number.",
       "argv": [
         "--windows-file",
-        "V:/Projects/github/revenantworks/claude-skills/.claude/hooks/fixtures/window-fit/does-not-exist.json"
+        "fixtures/window-fit/does-not-exist.json"
       ],
       "stdin": "{\"session_id\": \"c383d83c-5af0-4a61-98ee-c4b6376d6fca\", \"prompt\": \"I want to do a complete estate sweep, run that routine but also lets analyze every skill, project, routine\", \"cwd\": \".\"}",
       "expect_exit_in": [

@@ -11,12 +11,12 @@
       "expect_contains": "no current run ledger was found"
     },
     {
-      "name": "fixtures/window-fit/ledger.md is the REAL ledger of dispatch run 2026-09-17-dispatchwright-window-fit copied verbatim (one open row, U2, estimated_tokens 400000, surface x2, pre-1.3.0 columns); the sibling `session` file names the same literal session id the other controls use, so ledger_is_current() holds on the session-name path regardless of the fixture's mtime; pin_dispatch_flag stamps a throwaway flag fresh at check time. Handed on argv (--ledger) because .dispatch/ is gitignored in this repo. Windows fixture: the documented statusline shape with five_hour at 97.5% (fixtures/window-fit/usage-windows-five-hour-97.json, written by usage_windows.py). The guard fails closed and names the reset time; the row has no `next` window cell and the call is not a resume, so no exemption.",
+      "name": "fixtures/window-fit/ledger.md is the REAL ledger of dispatch run 2026-09-17-dispatchwright-window-fit copied verbatim (one open row, U2, estimated_tokens 400000, surface x2, pre-1.3.0 columns); the sibling `session` file names the same literal session id the other controls use, so ledger_is_current() holds on the session-name path regardless of the fixture's mtime; pin_dispatch_flag stamps a throwaway flag fresh at check time. Handed on argv (--ledger) because .dispatch/ is gitignored in this repo; the path is relative and resolves against the hook's own directory (fixtures installed beside the hooks). Windows fixture: the documented statusline shape with five_hour at 97.5% (fixtures/window-fit/usage-windows-five-hour-97.json, written by usage_windows.py). The guard fails closed and names the reset time; the row has no `next` window cell and the call is not a resume, so no exemption.",
       "argv": [
         "--ledger",
-        "V:/Projects/github/revenantworks/claude-skills/.claude/hooks/fixtures/window-fit/ledger.md",
+        "fixtures/window-fit/ledger.md",
         "--windows-file",
-        "V:/Projects/github/revenantworks/claude-skills/.claude/hooks/fixtures/window-fit/usage-windows-five-hour-97.json"
+        "fixtures/window-fit/usage-windows-five-hour-97.json"
       ],
       "stdin": "{\"tool_name\": \"Task\", \"session_id\": \"c383d83c-5af0-4a61-98ee-c4b6376d6fca\", \"cwd\": \"./.no-ledger-here\", \"tool_input\": {\"description\": \"verify findings\", \"prompt\": \"check the findings\"}}",
       "pin_dispatch_flag": true,
@@ -26,14 +26,14 @@
       "expect_contains": "97.5% used"
     },
     {
-      "name": "fixtures/window-fit/ledger.md is the REAL ledger of dispatch run 2026-09-17-dispatchwright-window-fit copied verbatim (one open row, U2, estimated_tokens 400000, surface x2, pre-1.3.0 columns); the sibling `session` file names the same literal session id the other controls use, so ledger_is_current() holds on the session-name path regardless of the fixture's mtime; pin_dispatch_flag stamps a throwaway flag fresh at check time. Handed on argv (--ledger) because .dispatch/ is gitignored in this repo. Windows fixture: seven_day at 99% (usage-windows-seven-day-99.json) with the doctrine's calibration SHAPE (usage-calibration-shape.json: 7d 250000 tokens/%, 2 samples -- the worked example, not this rig's measurement). Remaining 7d allowance = 1% x 250000 x 0.85 = 212,500 < the 400,000 the open row estimates, so the guard prints the WARNING line with the numbers into additionalContext and still allows (exit 0).",
+      "name": "fixtures/window-fit/ledger.md is the REAL ledger of dispatch run 2026-09-17-dispatchwright-window-fit copied verbatim (one open row, U2, estimated_tokens 400000, surface x2, pre-1.3.0 columns); the sibling `session` file names the same literal session id the other controls use, so ledger_is_current() holds on the session-name path regardless of the fixture's mtime; pin_dispatch_flag stamps a throwaway flag fresh at check time. Handed on argv (--ledger) because .dispatch/ is gitignored in this repo; the path is relative and resolves against the hook's own directory (fixtures installed beside the hooks). Windows fixture: seven_day at 99% (usage-windows-seven-day-99.json) with the doctrine's calibration SHAPE (usage-calibration-shape.json: 7d 250000 tokens/%, 2 samples -- the worked example, not this rig's measurement). Remaining 7d allowance = 1% x 250000 x 0.85 = 212,500 < the 400,000 the open row estimates, so the guard prints the WARNING line with the numbers into additionalContext and still allows (exit 0).",
       "argv": [
         "--ledger",
-        "V:/Projects/github/revenantworks/claude-skills/.claude/hooks/fixtures/window-fit/ledger.md",
+        "fixtures/window-fit/ledger.md",
         "--windows-file",
-        "V:/Projects/github/revenantworks/claude-skills/.claude/hooks/fixtures/window-fit/usage-windows-seven-day-99.json",
+        "fixtures/window-fit/usage-windows-seven-day-99.json",
         "--calibration-file",
-        "V:/Projects/github/revenantworks/claude-skills/.claude/hooks/fixtures/window-fit/usage-calibration-shape.json"
+        "fixtures/window-fit/usage-calibration-shape.json"
       ],
       "stdin": "{\"tool_name\": \"Task\", \"session_id\": \"c383d83c-5af0-4a61-98ee-c4b6376d6fca\", \"cwd\": \"./.no-ledger-here\", \"tool_input\": {\"description\": \"verify findings\", \"prompt\": \"check the findings\"}}",
       "pin_dispatch_flag": true,
@@ -54,14 +54,14 @@
       ]
     },
     {
-      "name": "fixtures/window-fit/ledger.md is the REAL ledger of dispatch run 2026-09-17-dispatchwright-window-fit copied verbatim (one open row, U2, estimated_tokens 400000, surface x2, pre-1.3.0 columns); the sibling `session` file names the same literal session id the other controls use, so ledger_is_current() holds on the session-name path regardless of the fixture's mtime; pin_dispatch_flag stamps a throwaway flag fresh at check time. Handed on argv (--ledger) because .dispatch/ is gitignored in this repo. Windows fixture: the documented reading as-is (5h 23.5%, 7d 41.2%; usage-windows-documented.json) with the same calibration shape. Both windows leave far more than 400,000 tokens, so the guard allows with no warning and no block -- and, in fixture mode, writes nothing into the ledger.",
+      "name": "fixtures/window-fit/ledger.md is the REAL ledger of dispatch run 2026-09-17-dispatchwright-window-fit copied verbatim (one open row, U2, estimated_tokens 400000, surface x2, pre-1.3.0 columns); the sibling `session` file names the same literal session id the other controls use, so ledger_is_current() holds on the session-name path regardless of the fixture's mtime; pin_dispatch_flag stamps a throwaway flag fresh at check time. Handed on argv (--ledger) because .dispatch/ is gitignored in this repo; the path is relative and resolves against the hook's own directory (fixtures installed beside the hooks). Windows fixture: the documented reading as-is (5h 23.5%, 7d 41.2%; usage-windows-documented.json) with the same calibration shape. Both windows leave far more than 400,000 tokens, so the guard allows with no warning and no block -- and, in fixture mode, writes nothing into the ledger.",
       "argv": [
         "--ledger",
-        "V:/Projects/github/revenantworks/claude-skills/.claude/hooks/fixtures/window-fit/ledger.md",
+        "fixtures/window-fit/ledger.md",
         "--windows-file",
-        "V:/Projects/github/revenantworks/claude-skills/.claude/hooks/fixtures/window-fit/usage-windows-documented.json",
+        "fixtures/window-fit/usage-windows-documented.json",
         "--calibration-file",
-        "V:/Projects/github/revenantworks/claude-skills/.claude/hooks/fixtures/window-fit/usage-calibration-shape.json"
+        "fixtures/window-fit/usage-calibration-shape.json"
       ],
       "stdin": "{\"tool_name\": \"Task\", \"session_id\": \"c383d83c-5af0-4a61-98ee-c4b6376d6fca\", \"cwd\": \"./.no-ledger-here\", \"tool_input\": {\"description\": \"verify findings\", \"prompt\": \"check the findings\"}}",
       "pin_dispatch_flag": true,
