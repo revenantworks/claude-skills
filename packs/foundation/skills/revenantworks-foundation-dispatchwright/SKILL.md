@@ -1,9 +1,9 @@
 ---
 name: revenantworks-foundation-dispatchwright
-description: Runs a session's fan-out — turns one large request into tiered, budgeted, recoverable units and dispatches them. Trigger when a request will take more than a few agents or spans many repos, skills, or files at once — rebuild, re-architect, overhaul, consolidate, sweep, migrate, or 'do all of this'; when subagents or a workflow are about to be launched and nothing has assigned each one a model, effort, and surface; when a fan-out is already running and a unit died, stalled, hit a usage limit, or must be resumed without redoing landed work; when concurrent units would write the same repo; or say dispatchwright (plan, dispatch, resume, audit). Model and tier per unit come from this skill's own tier table (`references/tier-routing.md`, self-contained as of 2026-09-14, observation #0073) — no sibling required; the hook or config that makes this fire is rigwright's placement; anything unattended on a schedule is agentwright's.
+description: Runs a session's fan-out — turns one large request into tiered, budgeted, recoverable units and dispatches them. Trigger when a request will take more than a few agents or spans many repos, skills, or files at once — rebuild, re-architect, overhaul, consolidate, sweep, migrate, or 'do all of this'; when subagents or a workflow are about to be launched and nothing has assigned each one a model, effort, and surface; to see the plan table (units, models, est. tokens, wall time) and fit it into the usage windows (5-hour, weekly) before anything launches; when a fan-out is already running and a unit died, stalled, hit a usage limit, or must be resumed without redoing landed work; when concurrent units would write the same repo; or say dispatchwright (plan, dispatch, resume, audit). Model and tier per unit come from its own tier table (`references/tier-routing.md`); the hook or config that makes this fire is rigwright's placement; anything unattended on a schedule is agentwright's.
 license: MIT
 metadata:
-  version: "1.2.11"
+  version: "1.3.0"
   profile: standalone
   pack: foundation
   brand: revenantworks
@@ -41,8 +41,9 @@ ledger row; absent, everything below runs exactly as written, only without that 
 
 ## Load budget
 
-A plan opens `references/ledger-schema.md` for the row shape and `references/tier-routing.md` for
-the tier table (Tier, §4). A dispatch adds `references/unit-brief-template.md`, the brief every
+A plan opens `references/ledger-schema.md` for the row shape, `references/tier-routing.md` for
+the tier table (Tier, §4), and `references/window-fit.md` for the plan table, the stop, and the
+window fit (§2, §6). A dispatch adds `references/unit-brief-template.md`, the brief every
 unit carries. A resume opens both plus the live ledger file itself. An audit opens
 `references/ledger-schema.md` only — its job is reading rows against `git`, not writing new ones.
 `references/anti-patterns.md` is a lookup, reached for on a spot-check or when a run shows a
@@ -68,20 +69,26 @@ rig with them installed and a surface without them load the same skill. Reach fo
 
 **Bare invocation** ("dispatchwright", no task): reply exactly — *"dispatchwright here. I turn
 one large request into tiered, budgeted, recoverable units and run them (`plan` builds the
-ledger and target table, `dispatch` launches a wave, `resume` picks a dead or stalled run back up
+ledger and the wave table, fitted to your usage windows, and stops for your go; `dispatch`
+launches an approved wave; `resume` picks a dead or stalled run back up
 from the ledger and the remote, `audit` reconciles a run against origin). Tiers come from my own
 tier table, the trigger hook from rigwright, unattended schedules from agentwright. What needs
 to fan out?"* — and stop.
 
 **`dispatchwright plan`** (or any request shaped like Unit 1 below — many agents, many repos,
 "rebuild all of this"): run Shape check. If it is not a fan-out, say so in one line and stop —
-recommend the main conversation, a subagent, or a skill instead. If it is, run Decompose and
-Tier, write the ledger, and present the wave plan once, gated (section 6). Approval starts
-Dispatch; a declined or partial plan is handed back as the ledger file, nothing launched.
+recommend the main conversation, a subagent, or a skill instead. If it is, run Decompose, Tier
+and the window fit (§6, `references/window-fit.md`), write the ledger, and end on **one table** —
+`unit | class | model | effort | est. tokens | est. wall | window`, per wave — followed by **one
+confirmation line** saying what runs now and what waits for which window. Then **stop**. Nothing
+launches until the owner says go. A declined or partial plan is handed back as the ledger file,
+nothing launched.
 
 **`dispatchwright dispatch`** (an approved plan, or "just run it" on a plan already shown): write
 each unit's ledger row before it launches — tiered, briefed, and given a surface — then launch
-per Wave execution. Never launch a unit with no row.
+per Wave execution, with no second ask. A unit added mid-run gets a row through the same table,
+is announced in one line, and asks again only if it pushes the plan past the window it was
+fitted to. Never launch a unit with no row.
 
 **`dispatchwright resume`** (a run stalled, died, hit a usage limit, or a new session picking up
 someone else's): first action, always — `git log --oneline origin/main -5` and a read of the
@@ -160,7 +167,10 @@ building toward it: Shape check answers whether this is a fan-out, never whether
 authorised.
 
 A plan that fails this check ends here: name the cheaper shape and stop, before any unit,
-tier, or ledger row exists.
+tier, or ledger row exists. A plan that passes it ends the same way every time: one table per
+wave — `unit | class | model | effort | est. tokens | est. wall | window` — one confirmation
+line, and a stop for the owner's go (`references/window-fit.md`). A plan presented as prose, or
+one that launches a unit before the line is answered, has skipped the gate.
 
 ## 3 · Decompose
 
@@ -279,9 +289,17 @@ one rule: **a unit is done when it is on the remote, not when it is written.**
   have edited the tree and pushed on their own, and one spawned a sub-agent that ran the unit's
   own release step (observations #0043, #0044). Run the helper inside the worktree, diff the tree
   after each exchange, and re-list the agents to stop anything it started.
-- **Check the remaining rolling usage window before launching a top-tier wave.** A wave of
-  frontier-tier units started against a nearly spent window is how a unit dies mid-write with
-  nothing pushed yet — the durability contract limits the damage, but the check avoids it.
+- **Fit every wave into the usage windows before it is shown, and never guess a window**
+  (`references/window-fit.md`). Read the 5-hour and 7-day windows from
+  `~/.claude/usage-windows.json` when it is under 15 minutes old (the gate hook injects it);
+  otherwise ask the owner, one line, for percent used and reset time per window plus any
+  per-model window they track. A percent becomes tokens only through the measured calibration
+  (`~/.dispatch/usage-calibration.json`); with fewer than two measurements say so and fit on the
+  owner's token figure or the one point marked "one data point" — never a number reasoned into
+  being. Walk the units in plan order against each window's remaining allowance less a stated
+  margin (default 15%), mark each with the first window it fits, split only at a unit boundary,
+  and read a unit larger than a whole window as a decomposition defect (§3). A frontier-tier
+  wave started against a nearly spent window is how a unit dies mid-write with nothing pushed.
 - **Silence is not a liveness signal.** A rejected tool call or an interrupt in the parent session
   ends every unit running under it, and nothing announces the stop — the units simply go quiet,
   and quiet reads exactly like "still working" until someone checks. After any interrupt or
@@ -320,8 +338,12 @@ equivalent for the unit's own repo and branch) and report, per run:
 - **Unclaimed commits** — a commit on origin with no ledger row that names it.
 - **Unpushed worktrees** — a worktree with commits that never reached origin.
 - **Duplicated work** — two units that touched the same file or claim the same result.
-- **Actual vs. estimated spend, per tier** — so the next plan's estimates get better, not just
-  the units this one dispatched.
+- **Actual vs. estimated spend, per tier and per window** — so the next plan's estimates get
+  better, not just the units this one dispatched. Each row records its actual tokens, actual
+  wall time and `pct_at_reconcile`; each wave appends one calibration point per window (actual
+  tokens against the used-percentage delta since `pct_at_dispatch`) to
+  `~/.dispatch/usage-calibration.json`, per `references/window-fit.md`. A wave with no
+  `pct_at_dispatch` yields no point, and the report says so.
 - **A reported gate figure is re-derived, not read off a summary line.** A unit that reports a
   pass — a frame rate, a test count, any number a decision hangs on — restates the raw counts and
   the conditions they were measured under; the reconcile step re-derives the figure from those raw
