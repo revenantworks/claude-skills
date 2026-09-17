@@ -72,8 +72,13 @@ is derived from the CI file, never recalled), landed in the brief template in th
   warns with the numbers, blocks at five_hour ≥ 97% unless every open row is deferred to `next`
   and the call is an explicit resume, and fills `pct_at_dispatch`. Each carries `--selftest` and
   a controls file; the two existing hooks' prior behaviour and their 18 exit-code cases are
-  unchanged. The statusline setting in `settings.json` and the `Copy-Item` of the three hooks
-  are the owner's steps.
+  unchanged. The `usage_windows.py` controls write a gitignored throwaway file beside the hook
+  through its own `--out` override, never the live `~/.claude/usage-windows.json` the gate and
+  the guard read as ground truth. The install is delivered finished, per the estate's handover
+  rule, in the handbook's `config\`: `settings.global.FINAL.json` rebuilt from live with the
+  `statusLine` entry, and one `Copy-Item` line in `hooks-block.md` that lands the three files,
+  their controls and the `fixtures\window-fit\` directory beside the live hooks (the controls
+  resolve fixture paths against the hook's own directory) and runs the three selftests.
 - Body budget raised 6700 → 7200 (skillwright's `references/pack-registry.md`, skillwright 1.4.5);
   landed at ≈6952. README updated (entry table, package contents, the seams — its 1.0.0-era
   "tiers through promptwright" lines were stale since 1.2.9 and are corrected here). The pack
