@@ -1,5 +1,28 @@
 # Changelog — revenantworks-foundation-dispatchwright
 
+## [1.3.1] — 2026-09-22
+
+**`dispatchwright refresh` — Claude Opus 5.5 shipped 2026-09-22.** The model row in
+`references/tier-routing.md` was re-verified against the live models overview
+(`platform.claude.com/docs/en/about-claude/models/overview`) and the Opus 5.5 migration guide,
+both read 2026-09-22.
+
+- Tier A (flagship) now names **Opus 5.5** (`claude-opus-5-5`). The page lists Opus 5 as a legacy
+  model. Tiers S (Fable 5.1), B (Sonnet 5) and C (Haiku 4.5) match the page and did not move.
+- Last-verified stamp 2026-09-14 → 2026-09-22.
+- No doctrine moved. The tier definitions, the "When" column, the effort-before-tier rule and the
+  role-based overrides are unchanged.
+- **State effort on every tier-A row.** Opus 5.5's API default effort is `medium`; Opus 5's was
+  `high`. A unit that left effort to the model default ran at `high` on tier A and now runs one
+  notch lower. Any tier row or brief that assumed Opus runs at `high` by default must now state
+  `effort` explicitly. The ledger's `effort` field already requires a value; this closes the gap
+  for anything that inherited the default instead.
+- Page facts, recorded for estimates, not doctrine: Opus 5.5 costs $4 / $20 per MTok (Opus 5:
+  $5 / $25), cache reads 5% of input ($0.20 / MTok), 1M context, 128K max output. Thinking is always
+  on and cannot be disabled. Forced `tool_choice` (`any`, `tool`) returns a 400.
+- Eval provenance re-anchored to v1.3.1 (`build.py --check` requires the current version on the
+  provenance lines). The `description` is byte-identical.
+
 ## [1.3.0] — 2026-09-17
 
 **The plan table, the stop, and the window fit — owner request, 2026-09-17.** The owner asked that

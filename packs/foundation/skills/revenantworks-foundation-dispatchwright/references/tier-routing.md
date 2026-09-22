@@ -1,6 +1,6 @@
 # Tier routing — self-contained (dispatchwright's own copy)
 
-> **Last verified: 2026-09-14.** This is the **only** file to edit when the Claude model lineup
+> **Last verified: 2026-09-22.** This is the **only** file to edit when the Claude model lineup
 > changes — the routing logic in this file (tiers, the effort ladder, role-based overrides) is
 > durable and never needs touching for a lineup update. To regenerate the model-name row, say
 > **"dispatchwright refresh"** (SKILL.md — Entry — Refresh). If today is more than 60 days past
@@ -21,7 +21,7 @@
 | Tier | Claude model | When |
 |---|---|---|
 | **S — frontier** | Fable 5.1 | Failure is very costly; the hardest reasoning; longest-horizon agents |
-| **A — flagship** | Opus 5 | Hard multi-step reasoning, complex agents, expensive-mistake analysis |
+| **A — flagship** | Opus 5.5 | Hard multi-step reasoning, complex agents, expensive-mistake analysis |
 | **B — balanced** *(default)* | Sonnet 5 | Most writing, coding, analysis, summarization, agent work |
 | **C — fast** | Haiku 4.5 | Classification, extraction, routing, high-volume or latency-bound work |
 
