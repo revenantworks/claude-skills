@@ -50,10 +50,14 @@ description clause, and `tools/build.py` gains `--bump-member`.
   1.1.10, skillwright 1.4.6. Two fixes at install: brandwright's example paths reworded to pass
   `tools/test_release_paths.py`, and rigwright's registry budget moved 5300 → 5600 in the number
   cell, not only in the note.
-- **brandwright 1.6.0**: a Claude Design System export (the fifth payload), eight
-  design-system-readiness rules at Build, and a readiness check at Audit; new
+- **brandwright 1.5.1 → 1.6.1.** 1.6.0: a Claude Design System export (the fifth payload),
+  eight design-system-readiness rules at Build, and a readiness check at Audit; new
   `references/design-system-export.md`; one description clause; trigger evals #31–#34 and cases
-  29–30 authored, not run; registry budget 4700 → 5000.
+  29–30 authored, not run; registry budget 4700 → 5000. 1.6.1 (doctrine only, description
+  byte-identical): `measurement-doctrine.md` section 11 on palette exploration and refresh
+  (options drawn beside the live palette, usability reported with separation, "nothing pops"
+  diagnosed before it is fixed) and section 10 propagation lessons (a role map beside retired
+  hexes, #0134); Case 31 authored, not run.
 - **`tools/build.py --bump-member`**: one command moves a member's version, its CHANGELOG head
   and every eval provenance head. Six new tests, 21 in all.
 - **Repo: the brand firewall hook is retired** (owner, 2026-09-22). `.claude/hooks/firewall.py`
