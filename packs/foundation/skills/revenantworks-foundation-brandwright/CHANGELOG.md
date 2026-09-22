@@ -2,6 +2,26 @@
 
 > Renamed from `revenant-foundation-brandwright` on 2026-08-07 (pack 2.0.0 — the `revenant` → `revenantworks` marketplace migration). Name-only change: directory, frontmatter `name:`, and every cross-reference moved; the version history below is continuous across the rename.
 
+## [1.6.0] — 2026-09-22
+
+Minor bump: a new reference file and a fifth export payload. The `description` changed (one clause).
+
+- **Claude Design System export.** Entry — Export gains a fifth payload: the brand as a Claude
+  Design System — `tokens.json` in the list shape the Design System reads (primary ground's theme
+  first, a usage note on every token), a README brand book of token-naming usage rules, real font
+  files, mark files copied never redrawn, components only where the definition names them, and a
+  cover. Created from the Artifact tool's Design System type where offered, following that type's
+  own instructions for file shapes; otherwise handed back as the `project/` tree.
+- **Design-system-ready builds.** Entry — Build states eight readiness rules (grammar-safe token
+  names, every theme declared and derived, contrast per ground per theme, `on-` companions, a
+  focus ring per theme, real font files, marks as files, colour-blind-safe states). They sit
+  inside the existing 14 groups; the count and order are unchanged.
+- **Audit readiness check.** Entry — Audit gains a fourth addition: where a Design System is in
+  play, each failing readiness rule is a P2 in its own category, never an eighth category.
+- New reference `references/design-system-export.md`; Load budget, trigger evals (#31–#34) and
+  test cases (29–30) updated. The four existing export shapes, the 14 groups, the seven audit
+  categories and the P0 triggers are untouched.
+
 ## [1.5.1] — 2026-09-22
 
 Doctrine only; the `description` is byte-identical, and no entry, category, count, or score
