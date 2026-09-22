@@ -139,5 +139,83 @@ class LiveRegistry(unittest.TestCase):
         self.assertEqual(len(set(seen.values())), len(seen), "two packs share one conformance line")
 
 
+class BumpMember(unittest.TestCase):
+    """--bump-member moves every file a member bump's gate forces to move, in one stroke
+    (observation #0129: a refresh said "patch bump" and never named the eval re-anchor
+    build.py --check fails without; the same gap produced dispatchwright 1.2.10)."""
+
+    SKILL = '---\nname: revenantworks-demo-alpha\nmetadata:\n  version: "1.0.0"\n---\n\n# alpha\n'
+    TRIGGER = ("# Trigger evals\n\nProvenance: authored at member version 1.0.0. "
+               "**Re-anchored to v1.0.0, 2026-01-01.**\n\n## Should fire\n")
+    CASES = "# Assertion Suite\r\n\r\n> **Provenance:** target v1.0.0\r\n\r\n## Case 1\r\n"
+    RESULTS = "# Results\n\nRun at v0.9.0.\n"
+
+    def make(self, clog: str) -> "Path":
+        import shutil
+        import tempfile
+        from pathlib import Path
+        root = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, root, True)
+        (root / "evals").mkdir()
+        (root / "SKILL.md").write_bytes(self.SKILL.encode())
+        (root / "CHANGELOG.md").write_bytes(clog.encode())
+        (root / "evals" / "trigger-evals.md").write_bytes(self.TRIGGER.encode())
+        (root / "evals" / "test-cases.md").write_bytes(self.CASES.encode())
+        (root / "evals" / "RESULTS.md").write_bytes(self.RESULTS.encode())
+        return root
+
+    def gate_problems(self, root, ver):
+        before = len(build.problems)
+        build.validate_evals(root, ver)
+        new = build.problems[before:]
+        del build.problems[before:]
+        return new
+
+    def test_unreleased_heading_becomes_the_version(self):
+        root = self.make("# Changelog\n\n## [Unreleased]\n\n- staged fix\n\n## [1.0.0] — 2026-01-01\n")
+        self.assertEqual(build.bump_member(root, "1.1.0", "staged batch installed", "2026-09-22"), 0)
+        self.assertIn('version: "1.1.0"', (root / "SKILL.md").read_text(encoding="utf-8"))
+        clog = (root / "CHANGELOG.md").read_text(encoding="utf-8")
+        self.assertIn("## [1.1.0] — 2026-09-22\n\n- staged fix", clog)
+        self.assertNotIn("Unreleased", clog)
+        self.assertEqual(self.gate_problems(root, "1.1.0"), [])
+
+    def test_unbracketed_unreleased_heading_is_renamed_too(self):
+        root = self.make("# Changelog\n\n## Unreleased\n\n- staged fix\n\n## [1.0.0] — 2026-01-01\n")
+        build.bump_member(root, "1.1.0", "r", "2026-09-22")
+        clog = (root / "CHANGELOG.md").read_text(encoding="utf-8")
+        self.assertIn("## [1.1.0] — 2026-09-22\n\n- staged fix", clog)
+        self.assertEqual(clog.count("## ["), 2)
+
+    def test_no_unreleased_scaffolds_a_heading_with_the_reason(self):
+        root = self.make("# Changelog\n\n## [1.0.0] — 2026-01-01\n\n- first\n")
+        build.bump_member(root, "1.0.1", "model row refreshed", "2026-09-22")
+        clog = (root / "CHANGELOG.md").read_text(encoding="utf-8")
+        self.assertLess(clog.index("## [1.0.1] — 2026-09-22"), clog.index("## [1.0.0]"))
+        self.assertIn("- model row refreshed", clog)
+
+    def test_evals_re_anchored_line_endings_kept_results_untouched(self):
+        root = self.make("# Changelog\n\n## [1.0.0] — 2026-01-01\n")
+        self.assertEqual(len(self.gate_problems(root, "1.0.1")), 2)  # the gate this closes
+        build.bump_member(root, "1.0.1", "model row refreshed", "2026-09-22")
+        self.assertEqual(self.gate_problems(root, "1.0.1"), [])
+        cases = (root / "evals" / "test-cases.md").read_bytes()
+        self.assertEqual(cases.count(b"\r\n"), cases.count(b"\n"), "CRLF file came back mixed")
+        self.assertIn(b"Re-anchored to v1.0.1, 2026-09-22", cases)
+        self.assertEqual((root / "evals" / "RESULTS.md").read_text(encoding="utf-8"), self.RESULTS)
+
+    def test_idempotent(self):
+        root = self.make("# Changelog\n\n## [1.0.0] — 2026-01-01\n")
+        build.bump_member(root, "1.0.1", "r", "2026-09-22")
+        snap = {p: p.read_bytes() for p in root.rglob("*.md")}
+        build.bump_member(root, "1.0.1", "r", "2026-09-22")
+        self.assertEqual({p: p.read_bytes() for p in root.rglob("*.md")}, snap)
+
+    def test_rejects_a_bad_version(self):
+        root = self.make("# Changelog\n\n## [1.0.0] — 2026-01-01\n")
+        self.assertEqual(build.bump_member(root, "1.0", "r", "2026-09-22"), 1)
+        self.assertIn('version: "1.0.0"', (root / "SKILL.md").read_text(encoding="utf-8"))
+
+
 if __name__ == "__main__":
     unittest.main()

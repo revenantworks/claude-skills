@@ -1,6 +1,6 @@
 # Assertion suite — revenantworks-gamedev-godotsmith
 
-Provenance: authored at v1.0.0, 2026-09-12, against the SKILL.md and references in the same
+Provenance: authored at v1.0.0, 2026-09-12, against the SKILL.md and references in the same **Re-anchored to v1.0.1, 2026-09-22:** provenance only, nothing executed here: the 2026-09-20 task-observer batch was installed (doctrine and references only). The `description` is byte-identical, so no query, expected value, or count moved.
 commit. Authored, not run — see `RESULTS.md`.
 
 Each case names the behaviour asserted, the input, and what a pass looks like. A case fails

@@ -31,6 +31,14 @@ Either way the **repo** copies are always fully restamped — policy governs pac
 
 **Repo workspace (Claude Code or equivalent):** edit in place. When the repo carries a pack build script (`tools/build.py` by convention), run it — it re-derives `pack.md` from the registry, syncs and validates the members **the registry names**, and rebuilds `dist/` — instead of packaging natively. `--check` mode is the CI drift guard: it fails when any member's `pack.md` disagrees with the registry. Its reach ends where the registry does: a folder no registry row names is not visited at all, so nothing inside an unregistered member is checked until Integrate step 1 adds its row.
 
+## Contract changes — sweep for the retired wording
+
+**A contract lives in every place that restates it, not only in the file that defines it** (added 2026-09-20, task-observer observation #0078). A member change landed where its author looked — the `description` and the SKILL.md body — while the retired contract stayed live in five other surfaces, each still teaching the old behaviour: a rig hook's prompt-submit message, the pack router `CLAUDE.md`, two of the member's own references, and three assertion-suite spots.
+
+So a member-contract change is not landed until the **retired wording** has been searched for. Search the old phrasing and its obvious paraphrases across the whole repo *and* the rig's hooks directory — searching the member's name instead finds every surface that mentions it and misses every surface that restates what it used to do. Name these surfaces in the release note, each either updated or explicitly cleared: **description · body · references · eval asserts · pack router · registry seams · hook messages**.
+
+Two riders. An **eval assert that encodes the old behaviour is a trap, not drift** — it fails a run that is now correct — so it is retired by name in the same pass rather than left for the next red suite to explain. And a copy that is **injected into live sessions** — a hook message, a router seam — is the most expensive one to leave stale, because it reaches sessions directly; where such a copy restates a member's contract, replace the restatement with a pointer to the skill, which is the only fix that leaves one fewer copy behind.
+
 ## Commit line template
 
 `pack(<pack>): integrate <member> <version> — registry row, roster ×<N>, <k> package(s) rebuilt [<policy>]`

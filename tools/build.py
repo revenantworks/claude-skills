@@ -22,6 +22,9 @@ Usage:
   python3 tools/build.py --only revenantworks-foundation-tokenwright   limit zip build to one member (sync still runs)
   python3 tools/build.py --bump-pack <pack> <X.Y.Z>   one-stroke version write: marketplace entry +
                                     pack plugin.json + root CHANGELOG scaffold (prevents split-brain bumps)
+  python3 tools/build.py --bump-member <member> <X.Y.Z> "<reason>"   one-stroke member write: frontmatter
+                                    version + CHANGELOG head ([Unreleased] renamed, else scaffolded with
+                                    the reason) + a dated re-anchor on every evals/*.md provenance head
   python3 tools/build.py --parity   diff EVERY shipped file in both installed copies against repo HEAD —
                                     the marketplace clone AND the plugin cache Claude Code actually loads;
                                     exit 1 on drift; skips cleanly when no local install exists (CI-safe)
@@ -64,6 +67,10 @@ BUMP = None
 if "--bump-pack" in sys.argv:
     i = sys.argv.index("--bump-pack")
     BUMP = (sys.argv[i + 1], sys.argv[i + 2])  # (pack, version)
+BUMP_MEMBER = None
+if "--bump-member" in sys.argv:
+    i = sys.argv.index("--bump-member")
+    BUMP_MEMBER = (sys.argv[i + 1], sys.argv[i + 2], sys.argv[i + 3])  # (member, version, reason)
 FOOTPRINT = "--footprint" in sys.argv
 problems: list[str] = []
 warnings: list[str] = []
@@ -684,6 +691,67 @@ def bump_pack(pack: str, ver: str) -> int:
     return 0
 
 
+def _rewrite(p: Path, edit) -> bool:
+    """Apply edit(text) -> text to one file, keeping that file's own line ending (bytes in,
+    bytes out — write_text would turn LF into CRLF on Windows). True when the file changed."""
+    raw = p.read_bytes().decode("utf-8")
+    eol = "\r\n" if "\r\n" in raw else "\n"
+    new = edit(raw.replace("\r\n", "\n"))
+    if new == raw.replace("\r\n", "\n"):
+        return False
+    p.write_bytes(new.replace("\n", eol).encode("utf-8"))
+    return True
+
+
+def bump_member(folder: Path, ver: str, reason: str, today: str | None = None) -> int:
+    """One-stroke member version write (observation #0129) — every file a member bump's gate
+    forces to move: the SKILL.md frontmatter version; the CHANGELOG head (a staged
+    `## [Unreleased]` or `## Unreleased` heading becomes `## [ver] — date`, otherwise a heading plus `reason`
+    is scaffolded); and a dated re-anchor on each evals/*.md provenance head (RESULTS.md is
+    an execution ledger and is left alone). Idempotent. Run --check afterwards."""
+    if not re.fullmatch(r"\d+\.\d+\.\d+", ver):
+        print(f"✗ {ver!r} is not X.Y.Z"); return 1
+    today = today or date.today().isoformat()
+    changed: list[str] = []
+
+    def version(text: str) -> str:
+        new, n = re.subn(r'(\n\s*version:\s*)"?[\d.]+"?', rf'\g<1>"{ver}"', text, count=1)
+        if n != 1:
+            raise SystemExit(f"✗ {folder.name}: no frontmatter version line in SKILL.md")
+        return new
+    if _rewrite(folder / "SKILL.md", version):
+        changed.append("SKILL.md")
+
+    def changelog(text: str) -> str:
+        if re.search(rf"^##\s*\[{re.escape(ver)}\]", text, re.M):
+            return text
+        staged = r"^##\s*\[?Unreleased\]?"  # both Keep a Changelog forms: [Unreleased] and Unreleased
+        if re.search(staged, text, re.M | re.I):
+            return re.sub(staged + r".*$", f"## [{ver}] — {today}", text, count=1, flags=re.M | re.I)
+        m = re.search(r"^## ", text, re.M)
+        block = f"## [{ver}] — {today}\n\n- {reason}\n\n"
+        return text[:m.start()] + block + text[m.start():] if m else text.rstrip("\n") + "\n\n" + block
+    if _rewrite(folder / "CHANGELOG.md", changelog):
+        changed.append("CHANGELOG.md")
+
+    prov = re.compile(r"(?i)provenance|derived|target|re-?anchored")  # validate_evals' own window
+    for f in sorted((folder / "evals").glob("*.md")) if (folder / "evals").is_dir() else []:
+        if f.name == "RESULTS.md":
+            continue
+
+        def anchor(text: str) -> str:
+            lines = text.split("\n")
+            hits = [i for i, ln in enumerate(lines[:16]) if prov.search(ln)]
+            if not hits or f"v{ver}" in "\n".join(lines[i] for i in hits):
+                return text
+            lines[hits[-1]] = lines[hits[-1]].rstrip() + f" **Re-anchored to v{ver}, {today}:** {reason}"
+            return "\n".join(lines)
+        if _rewrite(f, anchor):
+            changed.append(f"evals/{f.name}")
+    print(f"✓ {folder.name} → {ver}: {', '.join(changed) or 'already at this version'}")
+    return 0
+
+
 def _frontmatter(p: Path) -> str:
     return p.read_text(encoding="utf-8").split("---")[1]
 
@@ -909,6 +977,12 @@ def main() -> int:
     packs = {p: prof for p, prof in packs.items() if (PACKS / p).is_dir() or pack_members(text, p)}
     if BUMP:
         return bump_pack(*BUMP)
+    if BUMP_MEMBER:
+        member, ver, reason = BUMP_MEMBER
+        found = sorted(PACKS.glob(f"*/skills/{member}"))
+        if len(found) != 1:
+            print(f"✗ {member!r}: {len(found)} matching member folders under packs/*/skills/"); return 1
+        return bump_member(found[0], ver, reason)
     if PARITY:
         return parity(packs)
     check_marketplace(packs)

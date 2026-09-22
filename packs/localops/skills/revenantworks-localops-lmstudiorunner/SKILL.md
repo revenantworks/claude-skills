@@ -4,7 +4,7 @@ description: Hands work to a local model served by LM Studio and verifies what c
 license: MIT
 compatibility: Requires a running LM Studio server reachable over HTTP on this machine (port discovered, not assumed). Uses the surface's shell or HTTP tool to call that API and its file tools to write queue and report files; where neither exists it hands back the exact curl commands and the files as chat content. No packages, no cloud network at runtime. Siblings promptwright and agentwright are named for handoffs, never required.
 metadata:
-  version: "1.1.5"
+  version: "1.1.6"
   profile: standard
   pack: localops
   brand: revenantworks
@@ -69,6 +69,8 @@ Match the work class to a **capability class** (`references/work-classes.md` —
 
 Say which installed model fits, and **when nothing installed fits, say what shape of model would** — "this needs a model with a `tool_use` capability; none installed has one" — rather than naming a model that may not exist by the time anyone reads it. That is why no model names are written down here: the list is read fresh, and a name in a skill file is a name that goes stale.
 
+**When nothing installed fits and what the owner actually wants is a model to acquire, hand the pick to a lorewright Selection verdict rather than stopping at the shape.** Declining to write model names *here* is a rule about a file that goes stale, never a rule against naming one in an answer — so name the sibling that answers it. Hand over the capability shape from this step and the host's memory budget — RAM, VRAM, and the largest quantized file that fits alongside the context headroom the work class needs — as hard filters, so the verdict screens candidates on published file size per quantization instead of re-deriving fit math this skill already owns (observation #0065).
+
 Where the server supports it, load per task with a TTL so an idle model evicts itself rather than holding VRAM.
 
 ## 4. Constrain the generation
@@ -116,4 +118,4 @@ Bare invocation ("lmstudiorunner"): reply in at most four sentences — what it 
 
 **Running in Bionic.** LM Studio's Bionic agent loads this file directly from a skills directory and needs only `name` and `description`. Everything an entry point needs is in the body or its references, so it works with no Claude Code extensions. Where a shell is unavailable, hand back the exact `curl` commands instead of running them.
 
-**It does not pick cloud models or tiers** (promptwright), **write the prompt text** (promptwright), or **design the schedule, guardrails and kill switch** around an unattended run (agentwright). It decides whether a local model should do a piece of work, which one, and whether the result can be trusted.
+**It does not pick cloud models or tiers** (promptwright), **write the prompt text** (promptwright), **choose and source a model that is not installed yet** (lorewright — a Selection verdict, given this skill's capability shape and memory budget as hard filters), or **design the schedule, guardrails and kill switch** around an unattended run (agentwright). It decides whether a local model should do a piece of work, which one, and whether the result can be trusted.

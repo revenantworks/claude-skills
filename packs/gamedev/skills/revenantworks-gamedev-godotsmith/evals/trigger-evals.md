@@ -1,6 +1,6 @@
 # Trigger Evals — 24 queries (12 should / 12 shouldn't)
 
-Read each cold against name + description only. Provenance: authored at
+Read each cold against name + description only. Provenance: authored at **Re-anchored to v1.0.1, 2026-09-22:** provenance only, nothing executed here: the 2026-09-20 task-observer batch was installed (doctrine and references only). The `description` is byte-identical, so no query, expected value, or count moved.
 `revenantworks-gamedev-godotsmith` v1.0.0, 2026-09-12. Authored, not run — see `RESULTS.md`.
 
 The hard half is rows 13 to 24. godotsmith sits next to four things it must not absorb:

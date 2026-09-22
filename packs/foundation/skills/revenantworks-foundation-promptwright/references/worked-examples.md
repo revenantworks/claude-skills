@@ -141,7 +141,7 @@ Act on what you can read. Ask only if a file is essential and cannot be inferred
 
 **TL;DR**  This system prompt turns Claude into a code-review agent: it reads the files it needs, posts specific inline comments on correctness, security, and style, summarizes what it found, and hard-stops with an escalation flag rather than approving whenever it hits a critical security issue.
 
-**Model**  Tier A — Claude Opus 4.8 · effort medium — a tool-driven agent making security judgments on real code is exactly where flagship reliability earns its cost; adaptive thinking handles the reasoning, so no CoT scaffolding in the prompt
+**Model**  Tier A — Claude Opus 5.5 · effort medium — a tool-driven agent making security judgments on real code is exactly where flagship reliability earns its cost; adaptive thinking handles the reasoning, so no CoT scaffolding in the prompt
 
 **Score**  3.4 → 9.0  (+5.6)
 Clarity 9 · Specificity 9 · Context 8 · Completeness 9 · Structure 9

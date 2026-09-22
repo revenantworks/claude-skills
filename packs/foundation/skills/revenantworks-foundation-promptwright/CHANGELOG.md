@@ -2,6 +2,33 @@
 
 > Renamed from `revenant-foundation-promptwright` on 2026-08-07 (pack 2.0.0 — the `revenant` → `revenantworks` marketplace migration). Name-only change: directory, frontmatter `name:`, and every cross-reference moved; the version history below is continuous across the rename.
 
+## [1.5.14] — 2026-09-22
+
+**`promptwright refresh` — Claude Opus 5.5 launch.** All five columns of `references/model-snapshot.md`
+re-verified live against each vendor's model and pricing pages, and cross-checked against the LiteLLM
+registry, whose figures matched every vendor page read.
+
+- **Tier map.** Claude A: Opus 5 → **Opus 5.5**. OpenAI S: GPT-5.5 Pro → **GPT-6 Astra** (OpenAI's own
+  start-here pick; 5.5 Pro is still listed and not deprecated, at 3× Astra's price). Gemini B: 3.7 Flash →
+  **3.8 Flash**. Grok A: 4.6 → **4.7** (xAI's current recommendation). DeepSeek B and C: V4-Flash →
+  **V4.1-Flash** (`deepseek-flash`; the `deepseek-v4-flash` ids are retired but still routed to it).
+- **Quirks and prices.** Opus 5.5 is $4/$20 with cache hits at 0.05×; 300K Batch output excludes Fable 5.1;
+  thinking is always on for Fable 5.1 and Opus 5.5, and Opus 5.5 rejects forced `tool_choice`; Gemini 3.1
+  Flash-Lite ($0.25/$1.50) is Google's price floor, correcting the old claim that 3.5 Flash-Lite was; the
+  GPT-5.6-and-later cache rules are re-verified; the unverified GPT-5.4 mini/nano clause is dropped.
+- **Reasoning-depth row.** Claude's `effort` default is `high` except **Opus 5.5, whose default is
+  `medium`**; GPT-6 Astra takes low–max with no `none`; Gemini's `thinking_level` values and its `medium`
+  default re-verified per model.
+- **Canonical sources.** The xAI and DeepSeek rows point at their models and pricing pages; the Anthropic,
+  OpenAI and Google rows name their pricing pages.
+- **Entry — Refresh** (#0129, #0130): step (3) names the eval re-anchor the bump forces (`tools/build.py
+  --bump-member` in the source repo); a new step (5) closes every refresh with a **seen, not applied** line.
+- `references/worked-examples.md`: the tier-A example named Claude Opus 4.8, two generations old; it now
+  names Claude Opus 5.5 (found by the 2026-09-22 cross-skill sweep for stale model names).
+- **Seen, not applied** (durable doctrine this refresh may not edit): Anthropic's overview now says to start
+  with Opus 5.5 for most workloads, while Phase 5 says to start at tier B; OpenAI's start-here pick is its
+  S-tier model. Both are the owner's call.
+
 ## [1.5.13] — 2026-09-14
 
 `evals/RESULTS.md` records the blind cold trigger re-judge owed since 1.5.9: **38 / 40**. Both

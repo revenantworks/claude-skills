@@ -1,5 +1,29 @@
 # Changelog
 
+## [1.4.6] — 2026-09-22
+
+- **rigwright's body budget raised 5300 → 5600 (#0063, #0080, #0088).** `references/pack-registry.md`: applying those three observations put three decision rules in rigwright's body, where that skill's own standing logic says decision rules belong, and the body measured ≈5490 against a row last set at ≈4972. The row is not wrong and the placement is not wrong — the budget had simply not been re-set since the rules that justify it landed. It lives here rather than in rigwright because this is the registry that governs every member's budget, which is also why the rigwright staging unit reported it instead of editing it: it was outside that unit's write scope.
+Doctrine only; the `description` is byte-identical, and no entry point, step number, or count
+moved. Content applied from the task-observer review of 2026-09-20, citing observation #0078. It was
+patch-bumped at install on 2026-09-22 (`release.py` bumps only the pack).
+
+- **A contract lives in every place that restates it (#0078).** New section in
+  `references/pack-integration.md`: a member-contract change is not landed until the retired
+  *wording* — not the member's name — has been searched for across the whole repo and the rig's
+  hooks directory, with the surfaces named in the release note (description · body · references ·
+  eval asserts · pack router · registry seams · hook messages). Two riders: an eval assert
+  encoding the old behaviour is a trap that fails a now-correct run and is retired by name in the
+  same pass; and a copy injected into live sessions — a hook message, a router seam — is replaced
+  by a pointer to the skill rather than restated. Observed: a member made its tiering
+  self-contained and the old instruction survived in a live hook, the pack router, two references
+  and three eval asserts. Entry — Integrate's opening line points at the new section; its five
+  numbered steps are unchanged.
+- **Entry — Refresh** (2026-09-22, observations #0129 and #0130): the patch bump now names the eval
+  re-anchor it forces — in the source repo `tools/build.py --bump-member` moves the version, the CHANGELOG
+  head and both eval provenance lines in one stroke — and every refresh ends with a **seen, not applied**
+  line: each change on the verified pages that touches doctrine the refresh may not edit, listed for the
+  owner, never acted on.
+
 ## [1.4.5] — 2026-09-17
 
 `references/pack-registry.md`: dispatchwright's body budget raised 6700 → 7200 for its 1.3.0 window

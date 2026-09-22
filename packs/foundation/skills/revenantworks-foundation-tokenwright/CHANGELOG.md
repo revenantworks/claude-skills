@@ -2,6 +2,28 @@
 
 > Renamed from `revenant-foundation-tokenwright` on 2026-08-07 (pack 2.0.0 — the `revenant` → `revenantworks` marketplace migration). Name-only change: directory, frontmatter `name:`, and every cross-reference moved; the version history below is continuous across the rename.
 
+## [1.2.7] — 2026-09-22
+
+**`tokenwright refresh` — Claude Opus 5.5 launch.** `references/measurement.md` re-verified against
+Anthropic's pricing, prompt-caching and effort pages, OpenAI's prompt-caching guide and pricing page, and the
+raw Markdown of Claude Code's skills, settings-reference and env-vars pages; restamped 2026-09-22.
+
+- **Cache mechanics.** Opus 5.5 cache hits price at ~0.05× input (Fable 5.1 and Mythos 5.1 stay at
+  ~0.025×), and Opus 5.5 joins the 512-token minimum-cacheable row. OpenAI's figures, not re-fetched on
+  2026-09-10, are now verified: GPT-5.6 and later have a 1,024-token floor, 0.1× reads, 1.25× writes and a
+  cache life of at least 30 minutes.
+- **Skill-listing budget re-confirmed**, closing the 2026-09-10 caveat. The section "Skill descriptions are
+  cut short" is on the skills page, and the settings reference lists `skillListingBudgetFraction` (default
+  `0.01`) and `skillListingMaxDescChars` (default `1536`). The 2026-09-10 "could not locate" result was a
+  false negative from a summarizing fetch; this pass read the raw `.md` pages. `SOURCES.md` closes its two
+  open rows the same way.
+- **Model tier costs.** Tier A names Opus 5.5 at $4/$20; the Haiku 4.5 line states its $1/$5 price.
+- **Sync sweep** (grep over SKILL.md and SOURCES.md): SKILL.md states `1,536` once, `1% of` once,
+  `skillListingMaxDescChars` once and `skillListingBudgetFraction` once. No mirrored figure moved, so zero
+  hits were re-synced. The house ceiling (1,024, warn at 1,000) was re-read from `tools/build.py`: unchanged.
+- **Entry — Refresh** (#0129, #0130): the bump names the eval re-anchor it forces, and a refresh closes with
+  a **seen, not applied** line.
+
 ## [1.2.6] — 2026-09-14
 
 Eval provenance repair only. 1.2.5 re-anchored `evals/trigger-evals.md` but not

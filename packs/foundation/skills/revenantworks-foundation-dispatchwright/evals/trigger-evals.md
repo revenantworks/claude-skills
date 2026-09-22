@@ -13,7 +13,7 @@ invoke dispatchwright, and compare against the expected column.
 
 | # | Query | Why |
 |---|---|---|
-| 1 | "Rebuild all of this." | The description's own example phrase — a scale word with no named scope, over an estate-sized target. |
+| 1 | "Rebuild all of this." | The description's own example phrase — a scale word with no named scope, over an estate-sized target. | **Re-anchored to v1.3.2, 2026-09-22:** provenance only, nothing executed here: the 2026-09-20 task-observer batch was installed (doctrine and references only). Also: tier-routing gained a default-effort line, the window-fit example names Opus 5.5, and Entry — Refresh now names the eval re-anchor and closes with a seen-not-applied line (#0129, #0130). The `description` is byte-identical, so no query, expected value, or count moved.
 | 2 | "This touches 9 repos and needs about 20 agents — set it up." | Explicit repo count and agent count, both past "a few agents or spans many repos." |
 | 3 | "We're about to launch a multi-agent workflow across three skills and nobody's assigned models yet." | A workflow about to launch with no model/effort/surface assignment — the description's second clause verbatim. |
 | 4 | "One of the dispatched units died mid-run on a usage limit — pick it back up without redoing what's already landed." | A stalled fan-out that must resume without redoing landed work — the description's third clause. |

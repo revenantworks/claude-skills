@@ -2,6 +2,44 @@
 
 All notable changes to this skill. Format follows Keep a Changelog; versioning is semantic.
 
+## [1.0.1] — 2026-09-22
+
+Task-observer pass, 2026-09-20, from one Godot project's opening, keep-neutral and fog
+builds. Observations 0085, 0086, 0087, 0090, 0092. The member was patch-bumped at install on
+2026-09-22 (`release.py` bumps only the pack).
+
+### Changed
+
+- **Build proof now names what each tool cannot see (0092).** The headless import runs after
+  **every** source change, not only when a file is added: it is the only tool that reports a
+  parse or type-inference error — an untyped array literal defeating inference passes lint
+  clean and is dropped silently by the suite. `project-hygiene.md` section 1, C1 and Entry —
+  Check step 1.
+- **"Green" means every step the workflow file runs, and the list is read from the file
+  (0087).** A brief or checklist copied from memory drifts the moment CI grows a step; a
+  lint step added a week earlier went unrun through three review rounds and two red pushes.
+  New `ci-guards.md` section 5, which also records that a push is verified by the remote run
+  and that a red step leaves every later step unverified rather than passing (0090). Entry —
+  Guard and Entry — Check step 4 carry the short form.
+- **A pinned literal read off a float-driven run is a per-platform fact (0090).** Pin it per
+  platform keyed by `OS.get_name()`, each row measured on its own platform and a missing row
+  failing loudly, or assert the property instead; integer-derived literals and hashes over
+  committed bytes are exempt. `determinism-and-state.md` section 3.
+- **Work added inside a per-entity per-step loop is the trigger to run the stress harness
+  (0085).** A cost that scales with entity count is invisible at fixture size and is the
+  whole frame at a realistic one; the trigger is structural, not a hunch, and the review
+  reads the loop rather than the tests. `determinism-and-state.md` section 4, renamed, and
+  Entry — Review.
+- **The red-then-green checkpoint has one named exception (0086).** For a literal only the
+  running mechanism can produce, build it, probe the literal under stated conditions, pin it,
+  then prove the test can fail by perturbing it once — the positive control taken after the
+  fact, with the commit body naming which tests took that path. `gdscript-invariants.md`
+  section 3.
+- **Per-commit isolation and the dummy renderer's textures (0092).** A multi-task unit proves
+  each commit alone before the all-together run, because a later task's code masks an earlier
+  task's defect; and under `--headless` a test reads the live `Image` a system holds, never
+  `ImageTexture.get_image()` after an `update()`. `gut-traps.md` sections 3 and 4.
+
 ## [1.0.0] — 2026-09-12
 
 Born. Second member of the gamedev pack.

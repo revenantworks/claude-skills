@@ -85,6 +85,25 @@ func test_the_sweep_catches_a_band_width_below_the_floor() -> void:
 
 If someone later breaks the detector, this test fails and names what it was written for.
 
+**The exception: a literal only the running mechanism can produce.** Writing the test first
+and observing the red before any source changes is the checkpoint that proves a test can fail
+— and it assumes the expected value follows from the design. For a geometric recovery point,
+a tick-exact arrival, a save size after a format change or a state fingerprint, no literal
+exists before the mechanism does, and typing one from expectation violates the older rule
+that a literal is measured, never guessed. The two rules collide, and the collision has one
+answer:
+
+1. Build the mechanism.
+2. Take the literal with a probe, under stated conditions, and pin it with those conditions
+   beside it (`determinism-and-state.md` section 3 for what makes a pinned literal portable).
+3. Prove the test can fail *after the fact*, by perturbing the measured value once — the
+   positive control above, taken in the other order.
+4. Say in the commit body which tests took that path and why.
+
+The dropped-script trap is still covered, because the `Scripts` count is checked on every run
+whatever the order (L1). Name this path in the process so each implementer follows a step
+rather than writing a paragraph justifying an exception nobody wrote down.
+
 ## 4. The lint config that records what but not why
 
 A `.gdlintrc` full of bare disables is a list of rules someone turned off. Nobody can tell

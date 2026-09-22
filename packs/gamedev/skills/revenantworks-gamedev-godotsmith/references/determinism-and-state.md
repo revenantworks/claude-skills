@@ -12,7 +12,7 @@ Sources for the borrowed practices are in `SOURCES.md`. Nothing here is copied t
 1. Randomness
 2. Save formats and the canonical form
 3. State hashing
-4. Fixed tick versus render tick
+4. Fixed tick versus render tick, and per-entity work
 5. Typed state containers
 6. Perceived fairness
 
@@ -63,11 +63,27 @@ Two rules:
   round-trip test that hashes only the fields somebody remembered is how a dropped field
   survives for months.
 
+**A hash or fingerprint read off a simulated state after many ticks is a per-platform fact.**
+A float-driven run amplifies any difference between two builds' floating-point results, so a
+long trajectory ends somewhere else on a different platform for the same seed and the same
+command log. Reproducing the literal twice on one machine proves determinism, not
+portability. Before pinning such a literal, decide which kind it is:
+
+- **Pin it per platform**, keyed by `OS.get_name()`, each row measured on its own platform —
+  the CI log is the probe for the runner's row — and fail loudly, never skip, on a platform
+  with no row. A skipped row is a test that reports green everywhere it was never run.
+- **Or assert the property instead**: identical across two runs, across a save and load,
+  across a season. A property holds on every platform and needs no table.
+
+Literals derived from integers, and hashes over committed bytes, are exempt — they are the
+same everywhere. The doctrine says which kind a new literal is *before* it is pinned, because
+the alternative is finding out from a CI run that reaches the test step days later.
+
 The harness that runs this belongs in the coverage population (L2). It drives real functions
 with real assertions, and a search scoped to the test directory will report those functions
 as untested.
 
-## 4. Fixed tick versus render tick
+## 4. Fixed tick versus render tick, and per-entity work
 
 **Simulation runs on the fixed tick. Presentation runs on the render tick.** Mixing them
 makes behaviour frame-rate dependent, which means the game plays differently on different
@@ -80,6 +96,24 @@ Animation, UI and camera smoothing go in the variable one.
 it; writing it behind the solver's back skips collision resolution and produces tunnelling
 that looks random. Teleporting is the deliberate exception and should be written so it reads
 as one.
+
+**Work added inside a per-entity per-tick loop is itself the trigger to run the stress
+harness.** A lookup over the whole roster, a sort, a distance scan or a filter over all
+entities, placed inside a loop that already runs once per entity per tick, multiplies
+quietly: at the ten or twenty entities a test fixture holds it costs half a millisecond and
+passes every assertion, and at a realistic count it is the whole frame. In one real project a
+per-member scan inside a per-member loop measured about 0.5 ms/tick on the suite's fixtures
+and 168 ms against a 17.3 ms ceiling at a 300-person load. The harness caught it only because
+running it after every task was mandatory — nobody suspected the change.
+
+So the rule is structural, not a feeling about whether a change looks heavy: **any change
+that adds work inside a per-entity per-step loop runs the project's stress harness at a
+realistic entity count before the task is called done, whatever the unit suite says, and the
+review asks for the figure with its conditions.** Where a design states a "compute once per
+tick, not once per entity" contract, the review checks the implementation against it by
+reading the loop, not by reading the tests — the tests cannot see it. This is L1's
+performance instance: a green suite is a claim about the instrument, and the instrument's
+fixture is too small.
 
 ## 5. Typed state containers
 

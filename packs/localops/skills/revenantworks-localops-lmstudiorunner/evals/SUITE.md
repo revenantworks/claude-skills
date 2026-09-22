@@ -13,7 +13,7 @@ not-loaded state, and A6 covers a `capabilities`-absent `embeddings` entry.
 30 → **33 cases**; none of the three new cases has been run yet (see
 `RESULTS.md`).
 
-**Extended and re-anchored to v1.1.4, 2026-09-14 (portfolio-wide bionic-queue
+**Extended and re-anchored to v1.1.4, 2026-09-14 (portfolio-wide bionic-queue **Re-anchored to v1.1.6, 2026-09-22:** provenance only, nothing executed here: the 2026-09-20 task-observer batch was installed (doctrine and references only). The `description` is byte-identical, so no query, expected value, or count moved.
 extension, observations #0070, #0074, #0075):** SKILL.md step 1 gained the
 existing-project-scoped-runner check; `queue` and `run` gained the
 CI-discovery and zero-baseline-seed checks. E6 (a card targeting a

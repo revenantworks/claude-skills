@@ -63,6 +63,26 @@ round.
 Skip the question only when the request already names the must-haves, or the field is
 small enough that every candidate has every feature. Say which applies in one clause.
 
+**Probe the host when the thing under judgement runs on it** (added 2026-09-20, observation
+#0064). Self-hosted software, a local model, a driver, a build toolchain — fitness swings by
+an order of magnitude on the machine it lands on, so the environment is a source and is read
+live like any other. Where the session holds tools that can reach that machine, measure
+before verification: RAM, CPU and instruction set, GPU vendor and VRAM, OS, free space on the
+drive it would use, and what the relevant local runtime already has installed. The readings
+are **[documented]** constraints for this run, and the output records what was probed. Where
+no tool can reach the host, the deciding specs are asked for **inside the one gate batch** —
+"it depends on your hardware" is the hedge this mode forbids, not an answer.
+
+**A local-model pick reads its memory budget rather than re-deriving one** (added 2026-09-20,
+observation #0065). Where the ask is which model to acquire for a local server and the sibling
+that owns that runtime is installed — `revenantworks-localops-lmstudiorunner`, whose discover
+step already owns the fit maths — take the capability shape and the memory budget (RAM, VRAM,
+the largest model file that fits, context headroom) from it as **hard filters** rather than
+recomputing them here, and screen candidates on **published file size per quantization**
+against that budget before any quality axis. The absence rule holds: with that sibling not
+installed, probe the host per the rule above, derive the budget here, and say that is what
+happened.
+
 **Score only what was asked.** A criterion the user did not raise never costs a candidate
 its place. Where a candidate is weak on an axis outside the stated set, that belongs in
 the flaws line (§4a) or nowhere — not in the ranking. A verdict that quietly penalises a
@@ -89,6 +109,10 @@ no Means column, so there is no wording here that can drift from the body's. Whe
 vendor page is the source and two grades look live, the body's kind-of-fact test settles
 it; this table never overrides it, and a product's own tag legend copies the body's four
 glosses, not this column.
+
+**Where the figure came through a summariser or a snippet, the body's *a summarising tool
+is a second author* rule binds this step and is not restated** — it decides both the grade
+and whether the cell may be entered at all.
 
 **Independent evidence first — search order, not just tag order.** The tag ladder grades
 what was found; this rule governs what to look for. For any criterion a vendor could

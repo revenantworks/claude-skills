@@ -1,5 +1,21 @@
 # Changelog — revenantworks-foundation-evalwright
 
+## [1.1.4] — 2026-09-22
+
+Doctrine only; the `description` is byte-identical, and no entry point, gate, or count moved.
+Content applied from the task-observer review of 2026-09-20, citing observation #0061. It was
+patch-bumped at install on 2026-09-22 (`release.py` bumps only the pack).
+
+- **A clean control is a claim about the control, exactly as an empty result is (#0061).**
+  `references/eval-doctrine.md`, Audit scoring, beside the empty-and-large-result rule: a control
+  that comes back clean refutes nothing until someone answers whether it could have fired at all.
+  Two cases by name — where a probe sits is part of what it tests, so a control appended at the
+  end of an artefact exercises the end-of-input path and is not the same probe as the identical
+  text mid-file; and where the instrument is importable, instrument it rather than write the next
+  control. Measured: fourteen appended controls, every one structurally incapable of reproducing
+  the defect and every clean result read as refutation, against one instrumented run that returned
+  the root cause and its offsets.
+
 ## [1.1.3] — 2026-09-13
 
 Doctrine only; the `description` is byte-identical, and no entry point, gate, or count moved.

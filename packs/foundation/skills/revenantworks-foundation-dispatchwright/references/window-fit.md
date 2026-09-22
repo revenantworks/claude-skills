@@ -185,8 +185,8 @@ Wave plan — run 2026-09-17-example · margin 15% · 5h 23.5% used (resets 14:0
 |------|------------|---------------|--------|----------------------|-----------|--------------------------------|
 | U1   | mechanical | Claude Haiku 4.5 | low  | 60k (median of 4 rows) | 1 min   | this 5-hour window             |
 | U2   | structured | Claude Sonnet 5  | medium | 400k (median of 2 rows) | 9 min | this 5-hour window             |
-| U3   | judgment   | Claude Opus 5    | high | 900k (owner)           | 33 min  | next 5-hour window at 14:00    |
-| U4   | judgment   | Claude Opus 5    | high | 700k (owner)           | 26 min  | next 5-hour window at 14:00    |
+| U3   | judgment   | Claude Opus 5.5  | high | 900k (owner)           | 33 min  | next 5-hour window at 14:00    |
+| U4   | judgment   | Claude Opus 5.5  | high | 700k (owner)           | 26 min  | next 5-hour window at 14:00    |
 Runs now: U1–U2 (~460k, ~10 min). Waits for the next 5-hour window at 14:00: U3–U4 (~1.6M). Go?
 ```
 

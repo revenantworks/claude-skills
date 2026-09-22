@@ -1,5 +1,64 @@
 # Changelog — revenantworks-foundation-dispatchwright
 
+## [1.3.2] — 2026-09-22
+
+**Task-observer pass: nine observations from the Evolution run-to-M4 waves and the 1.3.0 release
+itself.** Doctrine only — patch-bumped at install on 2026-09-22 (`release.py` bumps only the pack). Observations #0078,
+#0081, #0082, #0083, #0087, #0088, #0089, #0090, #0091.
+
+- **§1 Scope and seams** gains the seam-propagation rule (#0078): a seam that moves is found by
+  grepping the whole tree — the rig's hooks directory included — for the retired *phrasing*, not
+  for the member's name, because a contract lives in every surface that restates it (description,
+  body, references, eval asserts, pack router, registry seams, hook messages) and the most
+  expensive stale copy is the one a live hook injects into every session. Prefer a pointer to the
+  skill over a restatement; name the surfaces checked in the CHANGELOG entry.
+- **§3 Decompose** gains three things. Unit sizing (#0091): no unit larger than one heavy task,
+  "heavy" read from the design's own inventory rather than the plan's batch labels — a wave carries
+  several heavy tasks only as separate agent calls in sequence. Shared content (#0082): before
+  splitting a document set among parallel writers, grep the set for anything appearing in more than
+  one writer's file and settle it centrally, assign it to one owner, or merge the files; the first
+  interlock found is evidence others exist. And the surface bullet now covers credentials (#0088):
+  ask whether the unit can act as the needed account *now*, not whether a credential exists on the
+  machine.
+- **§5 Durability contract**: the identity check names the account the push *and* every later API
+  step need, and a step needing an account switch the sandbox refuses a subagent is a controller
+  step (#0088). New rule on the return shape (#0089): a stage's return is the last thing that can
+  fail, so it must be the smallest thing — short facts only, long content to the commit body or a
+  file beside the ledger with the field carrying its path.
+- **§6 Wave execution** gains three rules. Do not commit to a unit's repo between writing its brief
+  and launching it; rewrite the base instead (#0083). Name the review-as-router shape and derive a
+  run's status from its final review, never from the first implementer's stop (#0091). A stage that
+  returns nothing but whose commit is visible in `git log` is continued from, not declared dead
+  (#0089).
+- **§8 Reconcile**: a row is verified only when the remote CI run on its commit is green, and while
+  a gate step is red every step after it is *unverified, not merely untested* — a local suite and a
+  reviewer's own reproductions on one machine prove determinism there, not portability to the
+  runner (#0087, #0090).
+- **`dispatchwright resume`**: a workflow wave is relaunched by pasting the archived script inline;
+  a harness-issued launch handle is scoped to the session that received it (#0081).
+- **`references/ledger-schema.md`** gains `shared_artifacts` (#0082), `script_archive` and
+  `script_launch_handle` (#0081); the `surface` cell now records a controller-run step
+  (`PR and release: controller`, #0088); "Resuming a run" gains the inline-relaunch paragraph
+  (#0081).
+- **`references/unit-brief-template.md`** gains *Shared content in your file* (#0082), *Base
+  commit* — ancestor plus target-files-unchanged, never HEAD equality (#0083), *Account and
+  credential* (#0088), and *Return shape* (#0089). The *Verification list* field that observation
+  #0087 asked for already landed in 1.3.0; only its reconcile half (CI green) was outstanding and
+  is now in §8.
+- **`references/tier-routing.md`** (2026-09-22, #0130): a default-effort line under the tier table, verified
+  with the row as lineup data (Fable 5.1 `high` · Opus 5.5 `medium` · Sonnet 5 `high` · Haiku 4.5 has no
+  effort control); the refresh now regenerates it with the row. The Sources paragraph no longer says the row
+  is a copy of promptwright's snapshot as of the stamp; it names the one-time 2026-09-14 copy and the live
+  re-verification since.
+- **`references/window-fit.md`**: the worked example's two tier-A rows name Claude Opus 5.5 (effort still
+  stated explicitly as `high`).
+- **Entry — Refresh** (#0129, #0130): the bump names the eval re-anchor it forces (`tools/build.py
+  --bump-member` in the source repo); the refresh regenerates the default-effort line with the model row and
+  closes with a **seen, not applied** line.
+- Surfaces checked for retired refresh wording (#0078): the whole repo, `.claude/hooks/` included. Three eval
+  asserts restate a refresh contract (agentwright, promptwright and skillwright `evals/test-cases.md`); each
+  still holds, because the change only adds a closing line, so none was rewritten.
+
 ## [1.3.1] — 2026-09-22
 
 **`dispatchwright refresh` — Claude Opus 5.5 shipped 2026-09-22.** The model row in

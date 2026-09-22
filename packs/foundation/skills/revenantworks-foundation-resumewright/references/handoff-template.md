@@ -73,6 +73,10 @@ Rules for it:
 - **Name the sha.** It is what lets the next session notice the repo moved after the handoff was
   written — the difference between a starting point and a wrong answer. A deliberately untracked
   location has no sha: say *uncommitted* and name the path instead, never an invented one.
+- **Never hand over a handle this session was issued.** A workflow `scriptPath` the tool
+  persisted, a run id, a path under the session working directory: the next session is refused when
+  it uses one. Give the archive copy to paste inline and say how a fresh session gets its own
+  handle — a command is *exact* only if the reader can run it as written.
 - **Never restate the plan.** If the ordered remainder needs repeating here, the file is not doing
   its job; fix the file instead.
 - **Drop empty extras, never pad them.** A session with nothing unwritten emits the first three
@@ -89,6 +93,10 @@ Rules for it:
 3. `git log --oneline origin/main -5` per repo named in State now, to confirm nothing has moved
    since the handoff was written — a stale handoff is read as a starting point, not as current
    truth without a re-check.
+4. If the repo holds more than one handoff-shaped file, the newer one supersedes and the older one
+   should say so. Where neither says so, take the newest by `git log` as current and stamp the
+   other before working from either — the wrong file wins whichever the reader's instructions name
+   first, and its stale claims then propagate into every surface written from it.
 
 ## Where the file lives
 
@@ -97,5 +105,10 @@ Rules for it:
   what the ledger already tracks, it never keeps a second copy of unit state.
 - An ordinary session with no run directory: the project root, `RESUME.md` — the filename
   already established by this shape, never a second name for the same job.
+- An older handoff already there under another name (`HANDOFF.md` beside a new `RESUME.md`):
+  stamp the older file's header in the same commit — `> Superseded by <path> on <date>.` — and
+  leave nothing in it that still reads as the next action. A file is superseded only when it says
+  so itself; a note in the new file cannot be seen by the reader who opened the old one. The same
+  goes for any claim about current state: one file holds it, every other points there.
 - A repo with no remote: state that plainly in the file's own header (State now, or the opening
   line) so a reader knows a local commit there is the only copy that exists anywhere.

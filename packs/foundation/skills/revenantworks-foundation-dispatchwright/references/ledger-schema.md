@@ -34,7 +34,7 @@ override, so the two must agree.
 | `class` | `mechanical` \| `structured` \| `judgment` — the same three classes the 2026-08-17 rebuild's lesson names, and the input to Tier (§4). |
 | `model` | Read from this skill's own `references/tier-routing.md` — never invented, never rounded up "to be safe" (self-contained since 1.2.9, observation #0073). |
 | `effort` | From the same file: the effort ladder and its role-based overrides. |
-| `surface` | `inline` \| `subagent (background)` \| `subagent (foreground)` \| `remote worktree`. **A row for a Workflow or Task call that itself fans out to more than one agent states the count as an `x<N>` token in this cell** — `subagent (workflow) x245`, not three rows for 245 agents (task-observer observation #0022: three rows once hid 245 refuter agents from the wave cap and the usage-window check). `dispatch_ledger_guard.py`'s `open_unit_count()` parses the token and counts the row as N units against the 6-unit wave cap, not 1; a missing or malformed token (no digits, `x0`, `xN`) defaults to 1, the same weight a row with no token carries. Two tokens in one cell: the last one wins. |
+| `surface` | `inline` \| `subagent (background)` \| `subagent (foreground)` \| `remote worktree`. **A row for a Workflow or Task call that itself fans out to more than one agent states the count as an `x<N>` token in this cell** — `subagent (workflow) x245`, not three rows for 245 agents (task-observer observation #0022: three rows once hid 245 refuter agents from the wave cap and the usage-window check). `dispatch_ledger_guard.py`'s `open_unit_count()` parses the token and counts the row as N units against the 6-unit wave cap, not 1; a missing or malformed token (no digits, `x0`, `xN`) defaults to 1, the same weight a row with no token carries. Two tokens in one cell: the last one wins. **Where a step in this unit's route needs a credential the unit may not switch to, the split is recorded here too** — `subagent (background) · PR and release: controller` — so the wave's end state ("branch pushed, PR body written") is on the row rather than discovered by a denial (task-observer observation #0088). |
 | `repo` | The repo this unit writes, or `—` for a read-only unit. |
 | `worktree` / `branch` | The path and branch a writer unit runs in, per §6's one-writer-per-repo rule. `—` for a unit that shares the main tree. |
 | `expected_artifacts` | What the unit should produce — a file, a commit, a report — stated before dispatch, not inferred after. |
@@ -43,6 +43,9 @@ override, so the two must agree.
 | `window` *(optional, 1.3.0)* | Which window the fit placed the unit in, in the table's own words: `this 5-hour window`, `this week`, `next 5-hour window at HH:MM`, `next week`, an owner-named per-model window, `too large`, or `unfitted`. A cell beginning `next` is what lets the guard's ≥97% block stand aside on the owner's explicit resume. |
 | `pct_at_dispatch` *(optional, 1.3.0)* | The windows' used-percentages when the unit launched, `5h=23.5 7d=41.2`. Written by the guard when the windows file is fresh, else by the dispatcher from the reading the plan used, else left empty — never back-filled from memory. |
 | `pct_at_reconcile` *(optional, 1.3.0)* | The same reading at Reconcile, same form. The pair is one calibration point per wave (`references/window-fit.md`); a wave missing either half yields none. |
+| `shared_artifacts` *(optional, parallel-writer waves)* | Content this unit's file shares with another writer's — a table, a string set, a constant, a task id — and how it was settled: `central` (fixed before dispatch; quote it verbatim), `owner: <unit_id>` (another unit owns it; quote that file), or `—`. Enumerated by grepping the whole document set before the split, never by recalling which collision was noticed last (SKILL.md §3, task-observer observation #0082). The re-check diffs exactly these cells. |
+| `script_archive` *(optional, workflow rows)* | Path of the wave script as archived beside the ledger — what a human diffs and what a later session pastes inline. It is the record, never a launch handle. |
+| `script_launch_handle` *(optional, workflow rows)* | The path the harness returned when it persisted its own copy of the script, with the session it was issued in. Valid for that session only (task-observer observation #0081): a later session pastes `script_archive` inline, receives a fresh handle, and writes it here. |
 | `dispatch_ts` | Timestamp the row was written, before the unit launched. |
 | `commit_sha` | The commit the unit made, once it reports one. |
 | `commit_ts` | Timestamp the commit line was added to the row. |
@@ -109,3 +112,12 @@ untracked-or-uncommitted run directory silently, and a clean `git status` after 
 "nothing to recover" rather than "something is stashed" (task-observer observation #0032). One
 `git stash pop` on the right stash restores it; nothing about a plain read of the working tree
 tells a resuming session to look there.
+
+**A workflow wave is relaunched from the archive, inline** (task-observer observation #0081). A
+harness that accepts a script path only for a script it persisted in the current session, or for a
+file under the session working directory, refuses the run directory's copy — a junction of the run
+dir under the home directory does not help, and reading the file through a file tool first does not
+change the answer. So a handoff line reading *"re-dispatch via `Workflow({scriptPath: <run
+dir>/…})`"* is exact only for the session that wrote it. Paste `script_archive` inline, then write
+the new `script_launch_handle` onto the row. The danger in the other direction is quieter: a session
+that edits the run-dir copy and relaunches by a still-valid harness path runs the stale script.

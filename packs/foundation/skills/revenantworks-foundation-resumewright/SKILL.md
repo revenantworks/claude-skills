@@ -3,7 +3,7 @@ name: revenantworks-foundation-resumewright
 description: Owns every handoff — a committed session state (what already happened, verified against git) or a forward task brief (what a later session or agent should do next) — and ends each with a paste-ready starter prompt for the next chat. Trigger on 'resumewright', 'write the handoff', 'hand off' / 'handoff', 'give me a prompt to hand off', 'pause here', 'holding position', a usage-limit or compaction warning, before closing a session with work still open, or any request to write something for a later reader to pick up; 'resumewright resume' reads a committed handoff back, checking git stash list and git reflog first. A forward brief takes its tier/model line from promptwright's model entry. It does not cover resuming an active dispatchwright fan-out, whose ledger carries its own state; setting up a hook that writes handoffs automatically, which is rigwright's; or a chat with no filesystem to commit into, which is task-observer's handoff-doc mode.
 license: MIT
 metadata:
-  version: "1.1.1"
+  version: "1.1.2"
   profile: standalone
   pack: foundation
   brand: revenantworks
@@ -85,10 +85,22 @@ work that doesn't exist.
    effort to run it at. A command the brief hands its executor (a test run, a verify step, a
    build) points at the repo's own command block or gives every surface's form, never only the
    form that worked where the brief was written — writer and executor are often different
-   machines (observation #0076). Location, either shape: beside an existing run directory
+   machines (observation #0076). A command is *exact* only if a fresh session can run it as
+   written: a handle this harness issued to this session — a workflow `scriptPath` the tool itself
+   persisted, a run id, a path under the session working directory — is not one, and a later session
+   is refused when it tries. Name the archive copy the reader pastes inline and how they obtain a
+   new handle, never the path that only resolved where the brief was written (observation #0081).
+   Location, either shape: beside an existing run directory
    (`.dispatch/runs/<run>/RESUME.md`, matching a dispatchwright run already in progress) or, for
    an ordinary session with none, the project root as `RESUME.md` — the filename already in use,
-   never a second name for the same job.
+   never a second name for the same job. **Where an older handoff under a different name is already
+   there** (a `HANDOFF.md` beside a new `RESUME.md`), stamp the older file's own header, in the same
+   commit, with a dated line naming the file that supersedes it: a handoff is superseded only when
+   the older file says so, and a later reader opens whichever name its instructions happen to name
+   first (observation #0080). Same rule for the content: a status claim that can change — a gate
+   open, a run paused, a wave stopped — lives in exactly one file, and every other surface points at
+   that file instead of restating it, because the restated copy is the one nobody rereads for
+   staleness.
 3. **Commit**, same call: `git add -A && git commit -m "..."` for the handoff (and anything else
    this step is also responsible for landing) in the repo the file lives in, then `git push
    origin` — only `origin`, never another remote — if that repo has one. A repo with no remote
@@ -132,6 +144,10 @@ what it already states, and no trusting a stale copy over what the file on disk 
   deliberately untracked after a prior session hit real corruption from nested git worktrees) —
   there, committing would fight that decision, not fix a gap, so the write stands as local state
   and the report says so plainly rather than force-adding with `-f`.
+- **Never leaves an older handoff readable as current.** Writing a new one beside an existing
+  file under another name, without stamping that file as superseded in the same commit, leaves two
+  files that both read as current — and the reader opens whichever one their instructions name
+  first (observation #0080).
 - **Never lists a non-git change without its reversal.** A setting, plugin, routine, remote or
   junction the session changed goes in State now with the command that undoes it or the path
   holding its prior value, written by the session that made the change (observation #0045).

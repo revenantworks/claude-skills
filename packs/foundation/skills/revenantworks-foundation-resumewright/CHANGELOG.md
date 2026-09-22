@@ -1,5 +1,28 @@
 # Changelog — revenantworks-foundation-resumewright
 
+## [1.1.2] — 2026-09-22
+
+**Two handoff files that both read as current, and an "exact" command only the writing session
+could run** (task-observer observations #0080, #0081).
+
+- Write step 2, Location (#0080): a new handoff written beside an older one under another name
+  stamps that older file's own header, in the same commit, with a dated line naming its successor
+  — a handoff is superseded only when the older file says so. With it, the content rule: a status
+  claim that can change lives in exactly one file, every other surface pointing there rather than
+  restating it.
+- "What resumewright never does" gains a bullet: never leaves an older handoff readable as
+  current (#0080).
+- Write step 2, the executor-command line (#0081): extends the #0076 rule — a command is *exact*
+  only if a fresh session can run it as written, so a harness-issued handle scoped to this session
+  (a persisted workflow `scriptPath`, a run id, a session-directory path) is named as the archive
+  copy to paste inline plus how to obtain a new handle, never as the path that resolved here.
+- `references/handoff-template.md`: Where the file lives gains the supersede stamp and its
+  one-line form (#0080); Resume-time checks gain a fourth step for a repo holding more than one
+  handoff-shaped file (#0080); Starter-prompt rules gain "never hand over a handle this session
+  was issued" (#0081).
+
+The member was patch-bumped at install on 2026-09-22 (`release.py` bumps only the pack).
+
 ## [1.1.1] — 2026-09-14
 
 **The first blind re-judge of 1.1.0's description found a regression that 1.1.0 caused; this

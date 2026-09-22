@@ -19,7 +19,7 @@ Read on every build. Shapes are starting points, not quotas — include only the
 - **Constraints outperform aspirations.** "Never introduce a new dependency without asking" changes behavior; "strive for high-quality code" does not. Where a rule can be written as a boundary, write it as one.
 - **One statement, one home.** A rule stated in both the Project instructions and a knowledge file leaves neither authoritative, and both are charged for. Single-home every statement and say where it lives.
 - **No credentials, ever.** Not in an instruction block, not in a committed config, not as a filled placeholder. Name the environment variable or secret store; a placeholder is only a placeholder when it cannot be mistaken for live.
-- **No rot.** No dates, versions, or "currently" claims in standing config — those go stale silently and are read as true every session. Point at the source instead.
+- **No rot.** No dates, versions, or "currently" claims in standing config — those go stale silently and are read as true every session. Point at the source instead. A claim about the current state of work — a gate, a milestone, a pause — is the same defect with a shorter fuse: name the one status file that owns it and point at it, never restate what it says (SKILL.md *Placement*).
 - **Neutral by default.** No palette, wordmark, tagline, or house voice. Branding an emitted config is `brandwright apply`, on invoke.
 
 ## Claude Project — instruction block
@@ -110,10 +110,10 @@ Anything that would land in `.claude/skills/` is named and routed to skillwright
 
 Run before handback and report the result — a build that does not show its validation has not been validated.
 
-**Every artifact:** measured size against the surface budget, with reported-vs-published stated · every rule traceable to one layer · no credential in any form · no dates, versions, or "currently" claims · no rule relying on prose compliance where the failure cost is real · no statement duplicated across two artifacts · neutral, no brand applied.
+**Every artifact:** measured size against the surface budget, with reported-vs-published stated · every rule traceable to one layer · no credential in any form · no dates, versions, or "currently" claims, and no status claim restated from the file that owns it · no rule relying on prose compliance where the failure cost is real · no statement duplicated across two artifacts · neutral, no brand applied.
 
 **Project instruction block:** character count reported · knowledge files referenced by exact filename · a stated fallback for questions the knowledge base does not cover · no rule that varies by nothing and belongs in profile preferences instead.
 
 **CLAUDE.md:** line count reported · commands are exact and runnable · enforceability pass run and hook candidates named · no content duplicated from an imported file · imports counted toward the budget, since they load at launch.
 
-**`.claude` / `.mcp.json`:** JSON parses · deny rules present · no bare `Bash` / `Bash(*)` allow · no `ask` rule where the file may serve an unattended run, and the assumption stated · every hook command resolves inside the repo or to a pinned, named tool · no `mcpServers` key inside `settings.json` · server versions pinned · credentials by env-var reference only, variable named, value absent.
+**`.claude` / `.mcp.json`:** JSON parses · deny rules present · no bare `Bash` / `Bash(*)` allow · no `ask` rule where the file may serve an unattended run, and the assumption stated · every hook command resolves inside the repo or to a pinned, named tool · no `mcpServers` key inside `settings.json` · server versions pinned · credentials by env-var reference only, variable named, value absent · where more than one identity can drive this repo's remotes, the config names which surfaces each may drive and which steps that leaves controller- or human-run.

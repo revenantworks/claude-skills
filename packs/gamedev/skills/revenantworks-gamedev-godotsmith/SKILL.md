@@ -4,7 +4,7 @@ description: Godot 4.x project conventions, and the proof that a build is actual
 license: MIT
 compatibility: Ships no code. Reads a repo through the surface's file tools and, where a shell exists, runs the project's own import, test and lint commands to re-derive a figure rather than reading one off a summary. Where no shell exists every check degrades to a read of the committed logs and config, and says so. Godot 4.x with GUT is the worked case throughout; the laws hold for any runner that prints a summary. No packages, no network at runtime.
 metadata:
-  version: "1.0.0"
+  version: "1.0.1"
   profile: standard
   pack: gamedev
   brand: revenantworks
@@ -79,8 +79,9 @@ playing. **Never self-certify**, and never let *parked* decay into *passed*.
 Body-resident for the same reason: each decides how code gets written, so a run that had to
 open a file to find it would already have written the wrong thing.
 
-**C1 — Parse is not run.** A syntax or type check cannot catch an autoload ordering bug, a
-missing node, or a mistyped signal name. Only booting headless for a bounded number of
+**C1 — Parse is not run, and lint is neither.** A linter never reaches a parse error, so a
+clean lint says nothing about whether the file even loads. A syntax or type check, in turn,
+cannot catch an autoload ordering bug, a missing node, or a mistyped signal name. Only booting headless for a bounded number of
 frames, or driving a script that instantiates the real scene and asserts every node and
 signal resolves, surfaces those. **Treat "parses" and "runs" as two separate claims**, and
 ship a headless harness with any change touching a scene file, an `@onready`, an exported
@@ -111,9 +112,11 @@ function" — a claim like that is true the day it is written and unchecked fore
 
 "godotsmith check", or any ask to audit whether a run's result can be believed.
 
-1. **Import first.** Run the headless import before the first headless run, and again
-   immediately after any new script or scene file is added. Godot's headless tooling cannot
-   see an unimported file and reports a false "not found" that reads like a missing symbol.
+1. **Import first.** Run the headless import before the first headless run, and again after
+   **every source change** — not only when a file is added. Godot's headless tooling cannot
+   see an unimported file and reports a false "not found" that reads like a missing symbol,
+   and the import is also the only tool that reports a parse or type-inference error: lint
+   passes it and the suite drops the script silently. `project-hygiene.md` section 1.
 2. **Population.** List every path that executes the code: the test tree, every CI job's own
    script, any tooling harness. A coverage claim with no stated population is not a claim.
 3. **Instrument.** Run the suite; record script count, test count and failure count **as
@@ -121,7 +124,9 @@ function" — a claim like that is true the day it is written and unchecked fore
    the numbers are quoted, not measured.
 4. **Drift.** Compare each number against the repo's own guards and its docs. Report every
    disagreement, including the ones where the guard still passes. `gut-traps.md` says what
-   each disagreement means.
+   each disagreement means. **Read the list of checks off the CI workflow file itself**, not
+   off a brief or a doc that describes it — a copy drifts the moment the workflow grows a
+   step, and a check nobody is told to run is a check nobody runs.
 5. **Baseline before change.** Run the suite unchanged first and record the numbers. One
    stash around a baseline run is the difference between "411 pass" and "411 pass, the floor
    says 404, and it has been four short for a while".
@@ -131,7 +136,10 @@ function" — a claim like that is true the day it is written and unchecked fore
 "godotsmith guard". Shapes and worked bash in `ci-guards.md`. Four rules: assert the script
 count **exactly**, since it is the only check that catches a dropped file; floor the test
 count, print the slack, bound it; fail on the runner's own error marker **before** reading
-any summary line; one guard, one reason.
+any summary line; one guard, one reason. "Green" means **every** step the workflow file
+runs, and that list is derived from the file, never recalled; a push is verified by the
+remote run on that commit, and while an early step is red every step after it is unverified
+rather than passing.
 
 ## Entry — Gate
 
@@ -146,6 +154,12 @@ UNMEASURED, which is neither PASS nor FAIL and must never be written as either.
 files in this order and rank findings by blast radius: `structure-and-wiring.md`,
 `lifecycle-and-safety.md`, `determinism-and-state.md`, `project-hygiene.md`. A review with no
 findings is reported in one line.
+
+Two questions the review always asks, because no test answers them: **did this change add
+work inside a per-entity per-step loop** — if so the stress harness runs at a realistic entity
+count before the task is done, and the figure is reported with its conditions; and **is a
+pinned literal portable** — a number read off a float-driven run after many ticks is a
+per-platform fact and is pinned per platform or replaced by a property.
 
 ## Behavior notes
 

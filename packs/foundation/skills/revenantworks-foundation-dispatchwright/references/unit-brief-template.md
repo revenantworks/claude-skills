@@ -11,6 +11,14 @@ Fill the bracketed fields; do not paraphrase the contract itself.
 **You own this repo for this run.** [Name the repo and worktree/branch, or state "no other unit
 touches this repo in this window."] No other unit writes here while you run.
 
+**Shared content in your file:** [anything in the file you own that also appears, verbatim or by
+reference, in a file another writer owns — a table, a string set, a constant, a task id, anything a
+test pins — and how it was settled: settled centrally (reproduce it exactly as given), owned by
+another unit (quote that file, do not rewrite it), or "none found". The dispatcher enumerates this
+by grepping the whole document set before the split; if you meet shared content this field does not
+name, that is a decomposition defect — report it rather than resolving it yourself, because the
+other writer cannot see your answer (observation #0082).]
+
 **Class:** [mechanical / structured / judgment] · **Model:** [from the tier table] ·
 **Effort:** [from the tier table] — assigned by the dispatcher from dispatchwright's own tier table
 (`references/tier-routing.md`), not chosen by you.
@@ -18,6 +26,20 @@ touches this repo in this window."] No other unit writes here while you run.
 **Tools beyond files and a shell:** [name them — a routine/trigger API, a connector, the artifact
 publisher, a browser. A deferred or session-authenticated tool the parent holds does NOT reach a
 subagent; if this unit needs one and cannot be granted it, the step runs inline instead.]
+
+**Base commit:** [`<base>` must be HEAD **or an ancestor of HEAD**, and `git diff --stat <base>
+HEAD -- <the files this unit edits>` must be empty; if either fails, stop and report. Where this
+unit's correctness depends on other files too — a source file a design cites — list them in that
+diff. Never state the precondition as whole-tree HEAD equality: any unrelated commit, the
+controller's own included, makes it false while the unit's own files are untouched, and a docs-only
+unit that honoured the letter of such a guard cost 59k tokens and a relaunch for a precondition
+satisfied in substance (observation #0083).]
+
+**Account and credential:** [the account each step of this unit's route runs as, and whether this
+unit can act as that account *now* — not whether the credential exists on the machine. A step whose
+route needs an account switch (a pull request on a repo only the other logged-in account may write)
+is a controller step: end at "branch pushed, PR body written" and report. Never improvise around
+it with a token in an env var or a second remote (observation #0088).]
 
 **Expected artifacts:** [what "done" looks like — a file, a commit, a specific report shape]
 
@@ -40,6 +62,14 @@ next unit to discover.]
 window the plan fitted this unit to, copied from the ledger row's `window` cell
 (`references/window-fit.md`). Report your actual tokens and wall time at the end; both feed the
 next plan's calibration.]
+
+**Return shape:** [your structured return carries short facts only — shas, counts, booleans,
+one-line verdicts, and a path. Anything longer than a few lines — probe output, hash tables,
+inventories, your own notes — goes in the commit body or in a file you write beside the ledger
+(`waves/[unit_id]-<stage>.md`), and the field carries that path. Your return is the least durable
+and most fragile thing you produce: a ~6.5 KB structured return failed to parse five times, exceeded
+the harness's retry cap and killed a whole workflow 2.2 hours in — after the commit it was
+reporting had already landed safely (observation #0089).]
 
 **Stop condition:** [what tells you the unit is finished, stated before you start]
 

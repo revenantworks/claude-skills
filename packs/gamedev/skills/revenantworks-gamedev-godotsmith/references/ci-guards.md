@@ -9,6 +9,7 @@ shapes are runner-agnostic, the commands are not.
 2. Why the floor is bounded rather than exact
 3. The honest-red pattern
 4. Guard smells
+5. What "green" means
 
 ---
 
@@ -109,3 +110,31 @@ Never soften the bar itself. A `MIN_HEADS` lowered until the check passes is not
 - **A guard that only runs on one branch.** It is not a guard, it is a preference.
 - **A step that reports a figure it did not compute.** If the step prints a frame rate it
   read from another job's summary, it is repeating a claim, not making one.
+
+## 5. What "green" means
+
+**Green means every step the CI file runs, and the list of those steps is read from the
+workflow file — never from a document that describes it.** A brief, a README, a CLAUDE.md or
+a reviewer's checklist is a copy of the verification contract, and a copy drifts the moment
+the contract grows a step. In one real project the workflow gained a lint step; every brief
+written afterwards restated the older list, three review rounds reported green on every check
+they had been told about — and they were green, for the checks named — while two pushes sat
+red on lint alone over thirty findings in a single new test file. Nobody ran the linter
+because nobody was told to, and the reviewer was reading the same list as the implementer, so
+the gap was invisible from inside the work.
+
+So: derive the checklist by opening `.github/workflows/ci.yml` (or the runner's equivalent)
+at the moment the checklist is written, name that file in it, and quote each step's own
+command rather than a paraphrase. A check nobody is told to run is a check nobody runs.
+
+Two consequences:
+
+- **A push is verified by the remote run on that commit, not by a local pass.** A sha on
+  `origin` says the work arrived, not that it is green.
+- **A red step hides every step after it.** While an early gate is red the later steps never
+  execute, so their results are *unverified*, not passing. In one run that gap ran eight
+  commits deep: the first CI run to reach the test step failed two tests that had been green
+  locally on every one of them, for a reason no local run could have shown
+  (`determinism-and-state.md` section 3). A red gate loses its own signal and the signal of
+  everything downstream, and work that lands on a red base inherits an unknown — say so
+  rather than calling it untested.

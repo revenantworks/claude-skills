@@ -20,13 +20,23 @@ Sources for the borrowed practices are in `SOURCES.md`. Nothing here is copied t
 
 ## 1. Import before anything headless
 
-**Run the headless import immediately after adding any new script or scene file, before any
-headless typecheck, syntax check or test touches it.** Godot's headless tooling cannot see an
-unimported file. It does not say "unimported" — it reports the symbol as not found, which
-reads exactly like a typo or a missing class, and sends the reader hunting in the code.
+**Run the headless import after every source change, not only when a file is added**, and
+always before any headless typecheck, syntax check or test touches the tree. Two separate
+failures make it the cheapest step in the chain:
 
-In CI this is its own step before the first test run, not an assumption. An agent adding
-files in one step and testing in the next will hit this every time otherwise.
+- **An unimported file is invisible.** Godot's headless tooling does not say "unimported" —
+  it reports the symbol as not found, which reads exactly like a typo or a missing class, and
+  sends the reader hunting in the code.
+- **The import is the only tool that reports a parse or type-inference error.** `var x := cx
+  + d.x` inside a loop over an untyped `[Vector2i(...), ...]` literal fails inference; gdlint
+  passes it clean, because a linter never reaches a parse error, and GUT drops the script
+  silently so the suite reports green over a file it could not read. Only the import prints
+  it. A brief that runs the import "when a script is added" leaves that whole class to the
+  silent drop — and it bit one implementer twice in a single wave.
+
+Each tool in the chain sees a different class of error: the linter sees style, the import
+sees parse and inference, the suite sees behaviour, and the chain is only as complete as its
+weakest gap. In CI the import is its own step before the first test run, not an assumption.
 
 ## 2. What is committed and what is not
 

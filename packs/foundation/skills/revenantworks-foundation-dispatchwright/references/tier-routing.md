@@ -2,7 +2,7 @@
 
 > **Last verified: 2026-09-22.** This is the **only** file to edit when the Claude model lineup
 > changes — the routing logic in this file (tiers, the effort ladder, role-based overrides) is
-> durable and never needs touching for a lineup update. To regenerate the model-name row, say
+> durable and never needs touching for a lineup update. To regenerate the model-name row and the default-effort line, say
 > **"dispatchwright refresh"** (SKILL.md — Entry — Refresh). If today is more than 60 days past
 > this stamp, verify the model names against `https://platform.claude.com/docs/en/about-claude/models/overview`
 > before writing one into a ledger row — recommend by tier name ("current balanced tier") if you
@@ -24,6 +24,10 @@
 | **A — flagship** | Opus 5.5 | Hard multi-step reasoning, complex agents, expensive-mistake analysis |
 | **B — balanced** *(default)* | Sonnet 5 | Most writing, coding, analysis, summarization, agent work |
 | **C — fast** | Haiku 4.5 | Classification, extraction, routing, high-volume or latency-bound work |
+
+**API default effort**, verified with the row (lineup data, not doctrine): Fable 5.1 `high` ·
+Opus 5.5 `medium` · Sonnet 5 `high` · Haiku 4.5 has no effort control. A ledger row always states
+its effort; a unit left on the API default inherits whatever the next model ships with.
 
 Start at B. Move up only when B genuinely can't hold the reasoning depth the unit needs; move
 down when the unit is simple, high-volume, or latency-bound.
@@ -66,7 +70,7 @@ rule (SKILL.md §4) requires.
 
 ## Sources
 
-Model names and their tier mapping are copied from `revenantworks-foundation-promptwright`'s
-`references/model-snapshot.md` as of this file's Last-verified stamp — a one-time copy, not a live
-reference. The two files can drift after a refresh on either side; `dispatchwright refresh`
+Model names and their tier mapping were first copied from `revenantworks-foundation-promptwright`'s
+`references/model-snapshot.md` on 2026-09-14 — a one-time copy, not a live reference. Since then
+each refresh verifies this row against the live models overview directly (last: the stamp above). The two files can drift after a refresh on either side; `dispatchwright refresh`
 re-verifies this file's own row independently rather than re-reading promptwright's copy.

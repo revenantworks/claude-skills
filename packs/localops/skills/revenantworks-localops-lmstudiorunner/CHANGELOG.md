@@ -1,5 +1,26 @@
 # Changelog — revenantworks-localops-lmstudiorunner
 
+## [1.1.6] — 2026-09-22
+
+**Two lessons from the task-observer pass of 2026-09-20**, observations #0065 and #0084.
+Body and references only; `description` byte-identical, no entry point moved, the member was
+patch-bumped at install on 2026-09-22 (`release.py` bumps only the pack).
+
+- `SKILL.md` step 3 (#0065): a rule against writing model names *in this file* is not a rule
+  against naming one *in an answer*. When nothing installed fits and the owner's real question
+  is which model to acquire, the pick hands off to a lorewright Selection verdict, carrying the
+  capability shape and the host's memory budget — RAM, VRAM, the largest quantized file that
+  fits with the work class's context headroom — as hard filters, so the verdict screens on
+  published file size per quantization rather than re-deriving fit math this skill already owns.
+  The Behavior notes boundary line now names lorewright alongside promptwright and agentwright;
+  before this the audit ended at "you need a shape like X" and the pick had no stated owner.
+- `references/task-cards.md` rule 5 (#0084): a card that generates data against a written spec
+  enumerates that spec's constraints and encodes every mechanical one — length, count, character
+  class, structure, rhythm, cross-file uniqueness — in `check`, and names the judgement half in
+  `expect` as owed to a reading pass, with who does it. Measured: a gate proving only
+  well-formedness passed a generated pool green twice while 72 of 163 entries violated the
+  spec's own length and syllable rules, which were checkable all along and never written down.
+
 ## [1.1.5] — 2026-09-14
 
 Public-repo path leak closed. The 1.1.4 entry below named the overnight runner by an absolute

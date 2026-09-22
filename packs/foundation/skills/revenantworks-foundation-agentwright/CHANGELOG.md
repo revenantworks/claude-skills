@@ -1,5 +1,26 @@
 # Changelog — revenantworks-foundation-agentwright
 
+## [1.2.10] — 2026-09-22
+
+Doctrine only; the `description` is byte-identical, and no entry point, checklist area, or count
+moved. Content applied from the task-observer review of 2026-09-20, citing observation #0084. It was
+patch-bumped at install on 2026-09-22 (`release.py` bumps only the pack).
+
+- **An unattended generator's contract has two halves, and only one of them fits in the gate
+  (#0084).** `references/design-checklist.md` area 6 (Output contracts): where a run generates
+  data against a written spec, the spec splits the contract — the mechanical half (length, count,
+  character class, structure, format, cross-file uniqueness) is encoded in the gate and runs
+  before the output is kept, and the judgement half is named as owed to a reading pass, with who
+  does it. Measured: a name pool whose written rules covered length, syllables and rhythm ran
+  under a gate that checked only parse, count, uniqueness and a broad pattern, and 72 of 163
+  entries broke the written rules and were kept green. One Anti-patterns bullet in the body
+  points at it — a green gate certifies what it encodes and nothing else.
+- **Entry — Refresh** (2026-09-22, observations #0129 and #0130): the patch bump now names the eval
+  re-anchor it forces — in the source repo `tools/build.py --bump-member` moves the version, the CHANGELOG
+  head and both eval provenance lines in one stroke — and every refresh ends with a **seen, not applied**
+  line: each change on the verified pages that touches doctrine the refresh may not edit, listed for the
+  owner, never acted on.
+
 ## [1.2.9] — 2026-09-13
 
 Applied from the task-observer weekly review staged 2026-09-13 (autonomous mode, owner absent).

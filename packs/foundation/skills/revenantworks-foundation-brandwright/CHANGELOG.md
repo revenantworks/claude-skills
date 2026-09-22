@@ -2,6 +2,27 @@
 
 > Renamed from `revenant-foundation-brandwright` on 2026-08-07 (pack 2.0.0 — the `revenant` → `revenantworks` marketplace migration). Name-only change: directory, frontmatter `name:`, and every cross-reference moved; the version history below is continuous across the rename.
 
+## [1.5.1] — 2026-09-22
+
+Doctrine only; the `description` is byte-identical, and no entry, category, count, or score
+arithmetic moved. Content applied from the task-observer review of 2026-09-20, citing observation
+#0063. It was patch-bumped at install on 2026-09-22 (`release.py` bumps only the pack).
+
+- **Tracked fixtures and control files are inside the audit sweep (#0063).**
+  `references/audit-doctrine.md`, at the head of the per-category sweep notes: `*.controls.json`,
+  `evals/fixtures/**`, recorded stdin and argv, and captured request and response bodies are
+  globbed by name, because a sweep scoped to prose and code never reaches them and their own
+  authoring rule — *real, never invented* — is what puts a real working directory in them. A raw
+  user-profile path, handle, or real name in a tracked fixture reads as the personal-identifier
+  trigger Entry — Audit already names, and the fix is the rewrite to `~/` or an env-var form,
+  never deleting the fixture. Observed: a positive fixture in a public repo carrying a literal
+  expanded `%USERPROFILE%` cwd, account name included, with a failing control quoting it back into
+  a receipt whose own sanitiser could only see what the check wrote, not what it read.
+- Installed 2026-09-22 (claude-skills), with one wording change: the example paths were rewritten
+  from a literal drive-letter form to the `%USERPROFILE%` / `$HOME` form, because the repo's own
+  public-path gate (`tools/test_release_paths.py`) fails any tracked file carrying one — the
+  observation's own lesson, caught by the gate it describes.
+
 ## [1.5.0] — 2026-09-11
 
 Applied by unit L1b (dispatch run `2026-09-10-estate-audit`) from the task-observer weekly

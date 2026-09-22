@@ -77,6 +77,22 @@ Seven rules, each of them the residue of a failed run.
 5. **Put every checkable property in the check, not the prose.** Asking for
    uniqueness in words produces duplicates; asking for it in a check produces
    a rejection you can act on. If a property can be counted, count it.
+   **Where the card generates data against a written spec, enumerate that
+   spec's constraints and encode every mechanical one in the check** — length,
+   count, character class, structure, rhythm or syllable shape, cross-file
+   uniqueness — before the output is kept. A gate proves exactly what it
+   encodes: one that tested only well-formedness (it parses, the count is
+   right, the entries are unique, each matches a broad pattern) passed a
+   generated pool green twice, and a later reading pass found 72 of 163
+   entries violating the spec's own length and syllable rules — rules
+   expressible as the same kind of check that had simply never been written
+   (observation #0084). So split the contract in the card: the mechanical
+   half goes in `check` and runs every time; `expect` names the judgement
+   half — what only a reader or a frontier model can settle, such as "no real
+   brand, place or current given name" — as owed to a reading pass, with who
+   does it. A constraint that lives only in prose beside the gate is a
+   constraint nothing tests, and a green gate then reads as the whole spec
+   met when it certified the format alone.
 6. **Size the ask to the class.** Compositional requests can be large. Atomic
    ones saturate at a few dozen — partition them, or do them another way.
    `work-classes.md` has the measured numbers.

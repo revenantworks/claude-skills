@@ -110,6 +110,14 @@ formality.
 Same rule for the stash itself: **`git stash list` before trusting a clean tree.** A
 continued session or a worktree switch can stash state silently.
 
+**A unit carrying several tasks proves each commit alone**, before the all-together run:
+stash the rest, run the suite against that commit's code, restore. A later task's code can
+mask an earlier task's defect, and the combined run is green over both. In one real wave that
+isolation caught a ramp that stepped at `dt = 0` on the same call that started it — undoing
+its own repaint, so the effect would have frozen after the first flip — and a completed fade
+that never painted at its final colour. The all-together run passed both. The review checks
+that each commit's suite line was taken alone, not copied from the final run.
+
 ## 4. What GUT does not tell you at all
 
 - **Whether an assert was meaningful.** 324,558 asserts and a suite that never exercises
@@ -120,3 +128,8 @@ continued session or a worktree switch can stash state silently.
 - **Whether the thing it measured is the thing that ships.** A headless run proves headless
   behaviour. Anything gated on `DisplayServer.get_name() != "headless"` took the other
   branch.
+- **What a texture actually holds.** Under `--headless` the dummy renderer does not carry an
+  `update()` through: `ImageTexture.get_image()` returns the image from before the call. A
+  test asserting on a baked or painted texture reads the live `Image` the system itself
+  holds, never the texture. It is a limit of the harness, not a defect in the code, and it
+  costs a round of false failures to anyone who trusts the texture first.

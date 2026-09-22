@@ -2,6 +2,44 @@
 
 > Renamed from `revenant-foundation-lorewright` on 2026-08-07 (pack 2.0.0 — the `revenant` → `revenantworks` marketplace migration). Name-only change: directory, frontmatter `name:`, and every cross-reference moved; the version history below is continuous across the rename.
 
+## [1.1.10] — 2026-09-22
+
+Applied from the task-observer review staged 2026-09-20, citing observations #0061, #0064,
+#0065 and #0066. Body and `verdict-mode.md` only; the `description` is byte-identical and no
+entry point, gate, mode or count moved. The member was patch-bumped at install on 2026-09-22 (`release.py` bumps only the pack).
+
+- **Verification doctrine gains "a summarising tool is a second author between you and the
+  source" (#0066).** A figure read out of a search-result summary is `[unverified]` while the
+  page it cites can still be fetched — fetch it, use the page's own number, and name the index
+  or version the page states. Where one page covers several entities and the fetch tool
+  summarises it, read each entity's own page for a deciding cell; where only the combined page
+  exists, cross-check a figure that must agree across two fetches and drop any figure that came
+  back identically for two different entities. `verdict-mode.md` §2 carries a one-line pointer
+  to the rule rather than a second copy of it.
+
+- **Verification doctrine gains "a tool's behaviour is settled by reading the tool" (#0061).**
+  Where a verdict turns on why software behaves as it does and that software can be read or
+  imported from here, read or instrument it; a verdict that stops at black-box trials is graded
+  inference, not observation, and the confidence line says so. A clean control owes the same
+  question an empty result does — could it have fired at all — and where a probe was placed is
+  part of what it tests: text appended at end-of-file exercises the end-of-input path and is not
+  the same probe as the identical text mid-file.
+
+- **`verdict-mode.md` §1 gains "probe the host when the thing under judgement runs on it"
+  (#0064).** For self-hosted software, a local model, a driver or a build toolchain, the
+  environment is a source: measure it live before verification where the session's tools reach
+  it (RAM, CPU and instruction set, GPU vendor and VRAM, OS, free space, the local runtime's
+  installed contents), record what was probed, and grade the readings `[documented]`. Where no
+  tool reaches the host, the deciding specs ride in the one gate batch — "it depends on your
+  hardware" is a hedge, not an answer.
+
+- **`verdict-mode.md` §1 gains "a local-model pick reads its memory budget rather than
+  re-deriving one" (#0065).** Where the ask is which model to acquire for a local server and the
+  sibling owning that runtime is installed, take the capability shape and the memory budget from
+  its discover step as hard filters and screen candidates on published file size per
+  quantization before any quality axis; with that sibling absent, probe the host, derive the
+  budget here, and say so.
+
 ## [1.1.9] — 2026-09-11
 
 Applied by unit L1b (dispatch run `2026-09-10-estate-audit`) from the task-observer weekly
