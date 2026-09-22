@@ -22,6 +22,7 @@ and how a rendered surface is actually checked.
 8. History rows carry hunt targets; dated records freeze
 9. Rig-copy parity
 10. Propagation is its own unit
+11. Palette exploration and refresh
 
 ---
 
@@ -197,3 +198,60 @@ companions, never from invented hexes.** A generator that needs a light variant 
 in the definition stops and says so; it does not mint three plausible values. The correct fix is
 in the definition — a documented light variant — and until it exists, generators keep their
 current theme branches unchanged.
+
+**A change that renames or re-roles tokens publishes a role map beside its retired hexes**
+(observation #0134): each retired token name, the token that now carries its job, and "none —
+the job moved to a neutral" where no successor exists. A list of dead values tells a propagator
+what to delete; only the map tells it what the surviving code should be called. Propagation
+then renames consumer keys against the map, so no legacy name (`gold`, `teal`) is left carrying
+a colour it no longer means — and a stale-string hunt can tell a key kept on purpose from one
+that was missed.
+
+**Two propagation traps, both seen in one pass.** A test that asserts a string never appears in
+a rendered page must strip the page's `<style>` blocks first: an embedded base64 font subset
+contains arbitrary three-letter runs, and one failed a "this acronym never reaches the reader"
+check. And a headless screenshot follows the machine's colour-scheme preference, so a light-mode
+capture is taken with the theme forced (`data-theme`), never assumed from a default run.
+
+**Hold propagation while the palette is still moving.** When the owner revises the palette
+more than once in a session, finish the definition, the guide and the design system first and
+propagate once, on the owner's go — every intermediate rollout is a sweep across N repos that the
+next revision undoes.
+
+---
+
+## 11. Palette exploration and refresh
+
+When the owner asks for a new palette, a refresh, or "more pop", the work is a comparison, not a
+proposal. Six rules, each learned by getting it wrong once.
+
+1. **Draw every option, beside the current design.** A palette described in prose is not a
+   palette the owner can pick: render each option as the same small surface — the wordmark, a
+   card, a status chip pair, a short data series — next to the live palette as the baseline.
+   "I need to see the options" means the prose already failed.
+2. **Start from the owner's themes and hard constraints, and apply the constraints to every
+   option before it is shown.** A from-scratch pass offers around six distinct directions; a
+   constraint the owner states mid-way ("the mark is always X on a ground of Y") is re-applied to
+   all of them and re-measured, never only to the favourite.
+3. **Report each option's usability, not only its separation.** For every accent, print its
+   ratio on the ground *and* its maximum ground (section: the definition's Maximum-ground table);
+   for the set, the minimum ΔE00 pair. An accent that clears the collision floor but fails 3:1 on
+   the raised grounds the product actually uses is not a usable accent — show a usable candidate
+   at the floor beside the maximally separated one, and let the owner see both.
+4. **"Nothing pops" is diagnosed before it is fixed.** Check whether every surface is one neutral
+   and whether the identity accent appears only as thin lines and small text. Tinted washes add
+   depth but can read as clutter; the cheapest reliable fix is often a **highlight token** — one
+   existing accent at a much higher lightness, spent once per view, never a fill, never a state.
+   It adds brightness without adding a hue, so it sits outside the collision floor by construction.
+5. **A wordmark may take its own neutral.** Setting the name in a warm or cool white distinct
+   from body text (ΔE00 ≥ 10 from the text colour) keeps the identity accent singular — the mark
+   carries the colour, the name carries the weight — and is a legitimate identity decision, not
+   a demotion of the accent.
+6. **An owner's pick that lands on the gamut ceiling is recorded, not corrected.** State the 0.0%
+   margin as an exception in the palette section (section 3) with the reason, rather than quietly
+   shifting the hex the owner chose.
+
+**Imagery rules name families, not items.** When a definition sets its imagery, it lists the
+motif families that are on-brand and the ones that are out unless a piece calls for them, and it
+separates *imagery* from *the mark*: a motif that is allowed as illustration (a many-pointed rose,
+say) is never allowed to stand beside the wordmark as if it were the logo.

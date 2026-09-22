@@ -2,6 +2,25 @@
 
 > Renamed from `revenant-foundation-brandwright` on 2026-08-07 (pack 2.0.0 — the `revenant` → `revenantworks` marketplace migration). Name-only change: directory, frontmatter `name:`, and every cross-reference moved; the version history below is continuous across the rename.
 
+## [1.6.1] — 2026-09-22
+
+Doctrine only; the `description` is byte-identical. Lessons from one owner's full brand refresh
+(four palette revisions in a day, a from-scratch exploration of six directions, and a rollout
+across five repos), written neutral.
+
+- **`measurement-doctrine.md` section 11, Palette exploration and refresh** (new): draw every
+  option beside the live palette; apply owner constraints to all options; report each accent's
+  maximum ground and the set's minimum ΔE00, not separation alone; diagnose "nothing pops" before
+  fixing it, with a single-hue highlight token as the low-clutter fix; a wordmark may take its own
+  neutral; an owner's gamut-ceiling pick is recorded as an exception, not corrected; imagery rules
+  name motif families and separate imagery from the mark.
+- **Section 10, propagation:** a re-roling change publishes a role map beside its retired hexes
+  (observation #0134); tests that assert absence of a string strip `<style>` blocks first
+  (embedded font blobs); light-mode captures force the theme; propagation waits until the palette
+  stops moving.
+- `SKILL.md`: one Entry — Build pointer to section 11, one Load budget clause.
+- Case 31 added to `evals/test-cases.md`, authored, not run.
+
 ## [1.6.0] — 2026-09-22
 
 Minor bump: a new reference file and a fifth export payload. The `description` changed (one clause).
