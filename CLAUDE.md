@@ -31,20 +31,11 @@ python tools/release.py <pack>=X.Y.Z -m "..."   # bump, build, check, tests, com
 `--footprint` can WRITE manifest drift — the read-only pair above is what
 report-only passes are allowed to run.)
 
-## The one arming step
-
-The brand firewall (`.claude/hooks/firewall.py`, PreToolUse) **fails closed**:
-with its gitignored `blocklist.txt` absent, every Write/Edit/Bash/PowerShell
-call is blocked. On a fresh clone, recreate `.claude/hooks/blocklist.txt`
-(one `regex-pattern<TAB>label` per line, work-identity tokens only — never a
-name), then verify: `python .claude/hooks/firewall.py --selftest`.
-
 ## Hard rules
 
 - **This repo is public and ships neutral.** No brand styling content here —
   the definition lives in the private brand repo and overlays at package time.
-  No personal, employer, or client name, ever; the firewall's blocklist is the
-  machine layer for the work-identity tokens, judgment holds the rest.
+  No personal, employer, or client name, ever.
 - **A member change ships to the public via a PACK version bump** — the pack
   version is the plugin cache key, so a member-only bump never ships there.
 - **The rig loads by junction, not by plugin** (2026-08-17). The rig junctions
@@ -58,8 +49,8 @@ name), then verify: `python .claude/hooks/firewall.py --selftest`.
   member (member clock vs. pack clock; see
   `packs/foundation/skills/revenantworks-foundation-skillwright/references/release-doctrine.md`).
 - **No `ask` rules** in any tracked `.claude/settings.json`; a committed `ask`
-  freezes an unattended run. Hooks wired here: the brand firewall (PreToolUse)
-  and the post-commit pack-bump nudge (PostToolUse on `git commit`).
+  freezes an unattended run. Hook wired here: the post-commit pack-bump nudge
+  (PostToolUse on `git commit`).
 - **`.claude/hooks/` also stores what it does not arm.** Since 2026-08-21 it
   version-controls dispatchwright's two forcing hooks — `dispatch_gate.py`,
   `dispatch_ledger_guard.py` and their `dispatch_patterns.txt` — which are

@@ -17,6 +17,49 @@ This log starts at the foundation 1.0.0 baseline.
 > because it records what was true when written; read it as a date, not a tag.
 > Live code and runbooks cite dates instead, for exactly this reason.
 
+## [localops-v1.1.3] - 2026-09-22
+
+- lmstudiorunner 1.1.5 → 1.1.6, from the 2026-09-20 task-observer batch. When nothing installed
+  fits and the real question is which model to get, the pick hands off to a lorewright verdict
+  (#0065). A local-model generation gate carries the spec's own constraints, not only the
+  format's (#0084).
+
+## [gamedev-v1.1.0] - 2026-09-22
+
+- godotsmith joins the pack. It was built as 1.0.0 on 2026-09-12 (plugin.json went to 1.1.0 then,
+  but no tag was cut) and ships now at 1.0.1, carrying the 2026-09-20 task-observer batch
+  (observations 0085, 0086, 0087, 0090, 0092).
+
+## [foundation-v2.11.0] - 2026-09-22
+
+Claude Opus 5.5 shipped on 2026-09-22, the 2026-09-20 task-observer batch lands, and brandwright
+learns to export a Claude Design System. Minor: brandwright gains a fifth export payload and a
+description clause, and `tools/build.py` gains `--bump-member`.
+
+- **Opus 5.5 refreshes.** dispatchwright 1.3.0 → 1.3.2 (1.3.1 went out alone as cb73896): tier A
+  names Opus 5.5, a verified default-effort line (Opus 5.5 defaults to `medium`), and the
+  window-fit example updated. promptwright 1.5.13 → 1.5.14: `model-snapshot.md` re-verified
+  across all five vendors (GPT-6 Astra, Gemini 3.8 Flash, Grok 4.7, DeepSeek V4.1-Flash, with a
+  LiteLLM cross-check). tokenwright 1.2.6 → 1.2.7: `measurement.md` restamped — Opus 5.5 cache
+  hits at 0.05× and its 512-token floor, OpenAI caching re-verified, and the skill-listing budget
+  re-confirmed from the raw docs.
+- **Refresh entries** (#0129, #0130): six members' refresh steps name the eval re-anchor the bump
+  forces, and every refresh closes with a seen-not-applied line.
+- **The 2026-09-20 task-observer batch**, 19 observations: agentwright 1.2.10, brandwright 1.5.1,
+  dispatchwright (above), evalwright 1.1.4, lorewright 1.1.10, resumewright 1.1.2, rigwright
+  1.1.10, skillwright 1.4.6. Two fixes at install: brandwright's example paths reworded to pass
+  `tools/test_release_paths.py`, and rigwright's registry budget moved 5300 → 5600 in the number
+  cell, not only in the note.
+- **brandwright 1.6.0**: a Claude Design System export (the fifth payload), eight
+  design-system-readiness rules at Build, and a readiness check at Audit; new
+  `references/design-system-export.md`; one description clause; trigger evals #31–#34 and cases
+  29–30 authored, not run; registry budget 4700 → 5000.
+- **`tools/build.py --bump-member`**: one command moves a member's version, its CHANGELOG head
+  and every eval provenance head. Six new tests, 21 in all.
+- **Repo: the brand firewall hook is retired** (owner, 2026-09-22). `.claude/hooks/firewall.py`
+  and its PreToolUse wiring are removed, the `.gitignore` blocklist line is dropped, and
+  CLAUDE.md loses its arming step. `bump-check.py` is the only hook wired here now.
+
 ## [foundation-v2.10.0] - 2026-09-17
 
 The owner's window-fit request (2026-09-17): before anything is dispatched, show one table per
