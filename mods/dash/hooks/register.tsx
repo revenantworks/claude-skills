@@ -24,8 +24,8 @@ import {
 } from './panels-logic'
 import { actOn, candidates, mergeSuggestions, parseSuggestions, pickNote, serializeSuggestions, type Suggestion } from './suggest-logic'
 import {
-  addTask, changesPrs, estimateFor, isRunActive, lastLineOf, matchLedgerRow, newestLedger, parseEstWall, parseLedger, parsePrList,
-  parseTaskNotification, prChanges, prLine, reconcileFlags, recordDuration, runIdFromPath, sanitizeTaskHistory, settleTask, summariseLedger,
+  addTask, changesPrs, endAgent, estimateFor, isRunActive, lastLineOf, matchLedgerRow, newestLedger, parseEstWall, parseLedger, parsePrList,
+  parseTaskNotifications, prChanges, reconcileAgents, reopenTask, prLine, reconcileFlags, recordDuration, runIdFromPath, sanitizeTaskHistory, settleTask, summariseLedger,
   taskSignature, taskStatusLines, tasksHeadline, visibleTasks,
   type LedgerRow, type PrRow, type TaskHistory, type TaskRecord,
 } from './tasks-logic'
@@ -297,15 +297,7 @@ function dsLedgerLine(): string | null {
 async function dsTaskLines($: EngineInterface): Promise<Line[]> {
   const now = await $.clock.now()
   try {
-    for (const a of await $.agent.list()) {
-      const state = a.status === 'completed' ? 'completed' : a.status === 'failed' ? 'failed' : a.status === 'killed' ? 'killed' : 'running'
-      const known = dsTasks.find(t => t.id === a.id)
-      if (known) {
-        if (known.state === 'running' && state !== 'running') dsTasks = settleTask(dsTasks, a.id, state, now)
-        continue
-      }
-      dsTasks = addTask(dsTasks, { id: a.id, kind: 'agent', label: a.description.slice(0, 60), group: a.parentId ? 'subagent' : 'main', startedAt: now, state, detail: `${a.type}: ${a.description}`, sig: taskSignature('agent', a.description) })
-    }
+    dsTasks = reconcileAgents(dsTasks, await $.agent.list(), now, d => taskSignature('agent', d))
   } catch {
     // No agent list on this host: tasks seen through tool calls still show.
   }
@@ -428,7 +420,7 @@ async function dsLines($: EngineInterface, view: View): Promise<Line[]> {
     case 'skills-all': return skillsLines(feed, th, { all: true, sources: dsSkillSources })
     case 'dupes': return dupesLines(feed, th, dsSkillSources)
     case 'meters': return metersLines(live, feed, now, th)
-    case 'health': return healthLines(feed.health, th, findDupes(feed.skills, dsSkillSources).length)
+    case 'health': return healthLines(feed.health, th, findDupes(feed.skills, dsSkillSources))
     case 'tasks': return dsTaskLines($)
     case 'suggest': return suggestLines(dsSuggest, th)
     case 'theme': return themeLines(dsThemes, dsTheme.name, dsTheme, dsThemeErrors, dsConsole)
@@ -769,11 +761,11 @@ export const register: Register = on => {
     const kind = e.origin?.kind
     const now = await $.clock.now()
     if (kind === 'task-notification') {
-      const n = parseTaskNotification(e.text)
-      if (n) {
+      // A burst carries several notifications in one submission: settle each.
+      for (const n of parseTaskNotifications(e.text)) {
         const t = dsTasks.find(x => x.id === n.id)
-        dsTasks = settleTask(dsTasks, n.id, n.status, now)
-        if (t?.sig && n.status === 'completed') {
+        dsTasks = t?.kind === 'agent' ? endAgent(dsTasks, n.id, n.status, now) : settleTask(dsTasks, n.id, n.status, now)
+        if (t?.sig && t.state === 'running' && n.status === 'completed') {
           dsTaskHist = recordDuration(dsTaskHist, t.sig, now - t.startedAt)
           if (dsRecording()) await $.store.set('taskHistory', dsTaskHist)
         }
@@ -876,7 +868,8 @@ export const register: Register = on => {
       dsMis = r.st
       if (r.misroute) dsPush({ t: now, s: dsSKey, k: 'misroute', skill: r.misroute, why: 'revert' })
     }
-    // F3, F3f: background tasks and agents.
+    // F3, F3f: background tasks and agents. A call from an agent marked ended means it runs again.
+    if (e.agentId && dsTasks.some(t => t.id === e.agentId && t.state !== 'running')) dsTasks = reopenTask(dsTasks, e.agentId)
     if (ok) {
       const result = (ran.result ?? {}) as Record<string, unknown>
       const id = (result.backgroundTaskId ?? result.taskId ?? (result.status === 'async_launched' ? result.agentId : undefined)) as string | undefined
@@ -887,6 +880,7 @@ export const register: Register = on => {
         const timeout = (e as { timeout?: unknown }).timeout
         dsTasks = addTask(dsTasks, {
           id, kind: tk, label, group: e.agentId ? 'subagent' : 'main', startedAt: now, state: 'running', detail, sig: taskSignature(tk, shell?.command ?? label),
+          ...(e.agentId ? { parent: e.agentId } : {}),
           ...(typeof timeout === 'number' ? { timeoutMs: timeout } : {}),
           ...(typeof result.outputFile === 'string' ? { outputFile: result.outputFile } : {}),
         })
@@ -956,6 +950,8 @@ export const register: Register = on => {
   on('turn.complete', async ($, e, next) => {
     await dsEnsure($)
     const now = await $.clock.now()
+    // A subagent's loop runs as one turn: its end is the agent's end signal (a handback included).
+    if (e.agentId) dsTasks = endAgent(dsTasks, e.agentId, e.isAborted ? 'killed' : e.reason === 'answer' ? 'completed' : 'failed', now)
     if (e.usage) {
       const u = e.usage as unknown as Usage
       if (!e.agentId) {

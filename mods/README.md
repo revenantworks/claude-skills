@@ -111,10 +111,12 @@ headers in plain text, never escape codes.
 ```
 
 **Light and dark consoles.** A theme may carry a `dark` and a `light` variant. dash picks the one
-that matches the console's background, in this order: `DASH_THEME_BACKGROUND=light|dark` in your
-environment; your Claude Code theme (the `theme` row of `/config`: a name starting `light` or
-`dark`); for `auto`, the terminal's `COLORFGBG`; else it assumes dark and says it is a guess. The
-VS Code status bar follows the editor's own theme kind. A theme with one palette works as before on
+that matches the console's background. You do not need to set anything: dash reads your Claude
+Code theme first (the `theme` row of `/config`: a name starting `light` or `dark`). For `auto`, it
+reads the terminal's `COLORFGBG`; if that is not set, it uses dark and labels it a guess.
+`DASH_THEME_BACKGROUND=light|dark` is optional. Set it in your environment only to override the
+pick, for example when `auto` guesses wrong; when set, it wins. The VS Code status bar follows the
+editor's own theme kind. A theme with one palette works as before on
 every console; `show` says how it reads on the other one.
 
 **`show` previews; the bare name applies.** `/dash theme show <name>` changes nothing. It lists

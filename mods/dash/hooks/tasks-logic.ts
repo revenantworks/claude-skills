@@ -3,7 +3,11 @@
 
 import { fnv1a } from './lib/util'
 
-export type TaskState = 'running' | 'completed' | 'failed' | 'killed'
+/**
+ * `no-signal`: still open when the agent that started it ended. Its end notification goes to that
+ * agent's loop, which no longer runs, so no end signal reaches dash. It is never shown as running.
+ */
+export type TaskState = 'running' | 'completed' | 'failed' | 'killed' | 'no-signal'
 export type TaskKind = 'bash' | 'monitor' | 'agent'
 export type TaskRecord = {
   id: string
@@ -13,6 +17,10 @@ export type TaskRecord = {
   startedAt: number
   endedAt?: number
   state: TaskState
+  /** The agent whose loop started it; absent for the main loop. */
+  parent?: string
+  /** Why the end is known but the outcome is not. */
+  endNote?: string
   outputFile?: string
   /** What runs: the command, or the agent's type and description. */
   detail?: string
@@ -58,13 +66,82 @@ export function parseTaskNotification(text: string): { id: string; status: TaskS
   return { id, status: notificationState(status ?? 'completed') }
 }
 
+/** Every notification in a submission: the engine delivers a burst of them as one prompt. */
+export function parseTaskNotifications(text: string): Array<{ id: string; status: TaskState }> {
+  const out: Array<{ id: string; status: TaskState }> = []
+  for (const block of text.split(/<task-notification>/).slice(1)) {
+    const n = parseTaskNotification(block)
+    if (n) out.push(n)
+  }
+  return out
+}
+
+/** An agent-list status (AgentStatus) as a task state: pending, waiting and idle agents still run. */
+export function agentState(status: string): TaskState {
+  const s = status.trim().toLowerCase()
+  return s === 'pending' || s === 'running' || s === 'waiting' || s === 'idle' ? 'running' : notificationState(s)
+}
+
 export function addTask(list: TaskRecord[], rec: TaskRecord): TaskRecord[] {
   return [...list.filter(t => t.id !== rec.id), rec].slice(-200)
 }
 
-export function settleTask(list: TaskRecord[], id: string, state: TaskState, now: number): TaskRecord[] {
-  return list.map(t => (t.id === id && t.state === 'running' ? { ...t, state, endedAt: now } : t))
+/** A real end signal settles a running task, or one marked "no end signal". */
+export function settleTask(list: TaskRecord[], id: string, state: TaskState, now: number, endNote?: string): TaskRecord[] {
+  return list.map(t => (t.id === id && (t.state === 'running' || t.state === 'no-signal') ? { ...t, state, endedAt: now, ...(endNote ? { endNote } : {}) } : t))
 }
+
+/** An agent's loop ended: settle it, and mark the tasks it started that are still open as "no end signal". */
+export function endAgent(list: TaskRecord[], agentId: string, state: TaskState, now: number, endNote?: string): TaskRecord[] {
+  return settleTask(list, agentId, state, now, endNote).map(t => (t.parent === agentId && t.state === 'running' ? { ...t, state: 'no-signal' as const, endedAt: now } : t))
+}
+
+/** A finished agent that runs again (a SendMessage resumes it) is running again. */
+export function reopenTask(list: TaskRecord[], id: string): TaskRecord[] {
+  return list.map(t => {
+    if (t.id !== id || t.state === 'running') return t
+    const { endedAt: _e, endNote: _n, ...rest } = t
+    return { ...rest, state: 'running' as const }
+  })
+}
+
+/** How long an agent may be missing from the list before dash counts it as ended. */
+export const AGENT_LIST_GRACE_MS = 60_000
+export type AgentListEntry = { id: string; status: string; description: string; type: string; parentId?: string }
+
+/**
+ * Fold `$.agent.list()` into the records: known agents settle, new ones join, and a running agent the
+ * engine has dropped from the list has ended (the list keeps an agent only until its task is dropped).
+ */
+export function reconcileAgents(list: TaskRecord[], agents: readonly AgentListEntry[], now: number, sig: (description: string) => string | undefined = () => undefined): TaskRecord[] {
+  let out = list
+  for (const a of agents) {
+    const state = agentState(a.status)
+    const known = out.find(t => t.id === a.id)
+    if (known) {
+      if (state !== 'running') out = endAgent(out, a.id, state, now)
+      continue
+    }
+    const s = sig(a.description)
+    out = addTask(out, {
+      id: a.id, kind: 'agent', label: a.description.slice(0, 60), group: a.parentId ? 'subagent' : 'main', startedAt: now, state,
+      detail: `${a.type}: ${a.description}`, ...(a.parentId ? { parent: a.parentId } : {}), ...(state !== 'running' ? { endedAt: now } : {}), ...(s ? { sig: s } : {}),
+    })
+  }
+  const listed = new Set(agents.map(a => a.id))
+  for (const t of out) {
+    if (t.kind === 'agent' && t.state === 'running' && !listed.has(t.id) && now - t.startedAt > AGENT_LIST_GRACE_MS) {
+      out = endAgent(out, t.id, 'completed', now, 'outcome not reported (gone from the agent list)')
+    }
+  }
+  return out
+}
+
+const hhmm = (ms: number): string => `${new Date(ms).toISOString().slice(11, 16)} UTC`
+
+/** What a task with no end signal shows instead of "running". */
+export const noSignalText = (lastOutputAt: number | null): string =>
+  `no end signal — ${lastOutputAt === null ? 'no output seen' : `last output ${hhmm(lastOutputAt)}`}`
 
 /** Rows the band shows: running ones, plus finished ones younger than 90 s. */
 export function visibleTasks(list: TaskRecord[], now: number): TaskRecord[] {
@@ -79,8 +156,10 @@ export function runningCount(list: TaskRecord[]): number {
 export function tasksHeadline(list: TaskRecord[], ledgerLine: string | null): string {
   const running = runningCount(list)
   const failed = list.filter(t => t.state === 'failed').length
+  const silent = list.filter(t => t.state === 'no-signal').length
   const parts: string[] = [`${running} running`]
   if (failed) parts.push(`${failed} failed`)
+  if (silent) parts.push(`${silent} no end signal`)
   if (ledgerLine) parts.push(ledgerLine)
   return `Tasks: ${parts.join(' · ')}`
 }
@@ -414,14 +493,19 @@ export type Progress = { lastLine: string | null; idleMs: number | null; bytes: 
 
 /** One task as a few plain lines: what, who, how long, estimate, progress. */
 export const taskStatusLines = (
-  t: { id: string; kind: string; label: string; group: string; startedAt: number; endedAt?: number; state: string; detail?: string },
+  t: { id: string; kind: string; label: string; group: string; startedAt: number; endedAt?: number; state: string; detail?: string; endNote?: string },
   now: number, est: Estimate, p: Progress | null,
 ): string[] => {
   const ran = (t.endedAt ?? now) - t.startedAt
   const head = `${t.state.padEnd(9)} ${t.kind.padEnd(7)} ${t.label}`
   const lines = [head]
   if (t.detail && t.detail !== t.label) lines.push(`  what      ${t.detail.replace(/\s+/g, ' ').slice(0, 100)}`)
-  lines.push(`  started   ${new Date(t.startedAt).toISOString().slice(11, 16)} UTC by ${t.group === 'main' ? 'this session' : 'a subagent'} · ${t.state === 'running' ? 'running for' : 'ran'} ${dur(ran)}`)
+  const silent = t.state === 'no-signal'
+  lines.push(`  started   ${hhmm(t.startedAt)} by ${t.group === 'main' ? 'this session' : 'a subagent'} · ${t.state === 'running' ? 'running for' : silent ? 'its agent ended after' : 'ran'} ${dur(ran)}`)
+  if (silent) {
+    const idle = p?.idleMs
+    lines.push(`  status    ${noSignalText(idle !== null && idle !== undefined ? now - idle : null)}`)
+  } else if (t.state !== 'running' && t.endedAt !== undefined) lines.push(`  ended     ${hhmm(t.endedAt)}${t.endNote ? `, ${t.endNote}` : ''}`)
   if (t.state === 'running') {
     if (!est) lines.push('  estimate  none yet: no ledger row, timeout or earlier run')
     else {
