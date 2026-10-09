@@ -14,8 +14,8 @@ What separates it from a usage warning hook:
 - **A percent becomes tokens only through measurement.** Calibration pairs each owner reading with
   the harness tokens spent since the last one. With no measured figure the fit says `unfitted`; it
   never reasons a number into being.
-- **Spend has a mode, not only a stop.** Normal, pace, turbo, overnight, owner-away and reset-eve
-  share one base and differ only in their throttle (`references/modes.md`). Turbo starts only on
+- **Spend has a mode, not only a stop.** Normal, pace, turbo, overnight, work day, owner-away and
+  reset-eve share one base and differ only in their throttle (`references/modes.md`). Turbo starts only on
   the user's word.
 - **An unexplained meter jump is investigated.** The UBA (usage reconciliation) compares each
   reading with the known spend and brakes new launches when points go missing.

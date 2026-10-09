@@ -12,6 +12,7 @@ minutes comes from `plan-profiles.md`, never from this file.
 - Pace
 - Turbo
 - Overnight
+- Work day
 - Owner-away
 - Reset-eve
 - Switches (reset-eve and turbo)
@@ -64,8 +65,8 @@ above are the fix; a throttle alone does not remove them.
 
 ## Precedence
 
-Hard stops (95% weekly, the stop band, identity and green-gate rules) > overnight and owner-away
-conduct rules > reset-eve > pace > turbo > normal. A higher line always wins; a mode never lifts a
+Hard stops (95% weekly, the stop band, identity and green-gate rules) > overnight, work-day and
+owner-away conduct rules > reset-eve > pace > turbo > normal. A higher line always wins; a mode never lifts a
 hard stop, with the one exception named under reset-eve's final 3 hours.
 
 ## Pace
@@ -126,6 +127,53 @@ least-allowed command. Before the user leaves:
 - The controller acts only on events, in the fewest calls. Auto-compact carries it through the
   night (base rule 3); no new session until morning.
 - **Morning report:** rows landed, spend, gap, the questions and their recommended answers.
+
+## Work day
+
+The user is around but busy. Between check-ins the run behaves as Overnight; at set times the
+controller checks in with the user. **On** at the user's word ("work day", "check in with me at
+lunch and 5"), never by clock alone.
+
+- **Between check-ins, Overnight's conduct holds.** The same entry gate (every queued command form
+  on the allow list; liveness watched from outside the session), because the gaps between
+  check-ins are hours long. **No blocking question tool** (observation 0348): launch every
+  launchable row first; each question goes to the day's **check-in file** with a recommended
+  answer, stamped from the clock in the writing command (observation 0343), and only the rows that
+  depend on it wait. A reversible fork takes the recommended default and records it there; an
+  irreversible one parks that row until the next check-in. Work never pauses for a question.
+- **The throttle** comes from the gap. Turbo only on the user's word, as in every mode.
+- **Check-ins** at the user's local times, default **12:00 and 17:00**. Launch every launchable
+  row first, then present, in order:
+  1. The queued questions, one at a time with the question tool, the recommended answer first.
+  2. Owner tasks: steps only the user can do, one runnable command each.
+  3. Status in three lines: landed, running, spend against PACE.
+
+  Running units keep running through the check-in; nothing pauses for it. An unanswered question
+  rolls to the next check-in; after the day's last check-in it rolls to the morning file.
+- **Waking at a check-in:** a session cron at each check-in time, the controller's first event
+  after that time, whichever comes first, and a push notification where the surface has one.
+  **Its limit:** a session cron fires only at an idle prompt (observation 0340), so a check-in can
+  arrive late; the next event then runs it.
+- **A user message mid-day** is answered and does not end the mode. "Ask me now" runs a check-in
+  at once.
+- **Ends** on the user's word, at the optional end time, or by handing over to Overnight at its
+  start; open questions then move to the morning file.
+
+**Config** lives in the local overlay, `.dispatch/local.yaml` (`accounting.md`), as owner keys.
+The default needs no entry; to change it, edit the values:
+
+```yaml
+entries:
+  - key: workday.checkins
+    value: ["12:00", "17:00"]   # user-local HH:MM; the default
+    source: owner
+  - key: workday.end            # optional; absent = until Overnight starts
+    value: "18:00"
+    source: owner
+```
+
+Times said in the session ("check in at 11:30 and 16:00") are an owner ruling for that day and
+beat the overlay. A value not in `HH:MM` is ignored and reported, and the default stands.
 
 ## Owner-away
 

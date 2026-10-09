@@ -1,5 +1,11 @@
 # RESULTS — trigger suite and assertion suite runs
 
+## 2026-10-09 — v1.0.0 (unreleased change) — **AUTHORED, NOT RUN** — runner: none
+
+Work-day mode added: trigger rows #30–#31, Case 20 and the native case
+`behaviour-workday-checkin`. Nothing was judged or executed; the cold re-judge of #30–#31 and a
+run of the native case are owed.
+
 ## 2026-09-28 — v1.0.0 — **BLIND RE-JUDGE RUN; PROBES #21–#22 SIMULATED** — runner: one Sonnet judge (listing only) and one Sonnet scenario runner
 
 **Trigger re-judge (the one owed below).** Conditions: one fresh Sonnet subagent (medium effort),

@@ -244,6 +244,10 @@ entries:
   UBA results, baseline scores), at the weekly reset, with one changelog line per changed key in
   the pace log: key, old → new, the evidence. Never from a single reading, a guess or a unit's
   report.
+- **Schedule keys are owner keys, not measurements.** `workday.checkins` (a list of user-local
+  `HH:MM`, default `["12:00", "17:00"]`) and the optional `workday.end` (`HH:MM`) carry
+  `source: owner` and no evidence; the user edits them at any time, and pacewright never writes
+  them. A value not in `HH:MM` is ignored and reported. Rules: `modes.md`, Work day.
 - **Upstream.** A value that holds across three weekly resets is a release candidate for the
   shipped default; the skill itself changes only through a release. Another member that learns
   about its environment (a local-model runner's hit-and-miss ledger, for one) reuses this schema

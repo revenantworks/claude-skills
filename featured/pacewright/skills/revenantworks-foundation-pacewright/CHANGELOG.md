@@ -2,6 +2,8 @@
 
 ## [1.0.0] — 2026-10-01
 
+2026-10-09: work-day mode — overnight conduct between check-ins, questions queued to a check-in file with recommended answers, asked one at a time at user-set check-ins (default 12:00 and 17:00, overlay `workday.checkins`); trigger rows #30–#31, Case 20 and a behaviour case added.
+
 2026-10-08 (K8 fix round): whether a new model should take a job type is scoutwright's `fit` (trigger row #11 is now its near-miss, #29 the baseline pair); compatibility names the run notes as the controller's; the bare reply names `spend`, with `dashboard` folded under it; calibration tables labelled examples (audit K7-2-10, -14, -15, -16, -17).
 
 2026-10-08: description cut to about 600 characters, main use case first; trigger phrases and seams kept (routing proof: K9 evals).
@@ -13,8 +15,12 @@ never runs the work: it says what may launch now.
 
 - Reads the 5-hour, weekly, per-model and CI-minutes meters, from a statusline meter file or one
   line asked of the owner.
-- Spend modes on one shared base: normal, pace, turbo, overnight, owner-away and reset-eve, each
-  differing only in its throttle. Turbo starts only on the owner's word.
+- Spend modes on one shared base: normal, pace, turbo, overnight, work day, owner-away and
+  reset-eve, each differing only in its throttle. Turbo starts only on the owner's word.
+- Work day: the user is busy but around. Overnight conduct runs between check-ins (no blocking
+  question; launch first; questions queued with recommended answers); at user-set local times,
+  default 12:00 and 17:00, the controller asks the queued questions one at a time, lists the
+  user's tasks and gives a three-line status, while the work keeps running.
 - Fits a list of planned units or sessions into what the windows have left, with a margin, and
   re-cuts waves that do not fit.
 - A percent becomes tokens only through measured calibration; with no measured figure the fit says

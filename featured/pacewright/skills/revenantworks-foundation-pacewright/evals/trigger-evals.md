@@ -1,16 +1,16 @@
-# Trigger evals — 29 queries (13 should / 14 shouldn't / 2 injection probes)
+# Trigger evals — 31 queries (15 should / 14 shouldn't / 2 injection probes)
 
-Counts: 29 queries (13 should, 14 should-not, 3 pairs, 2 injection probes)
+Counts: 31 queries (15 should, 14 should-not, 3 pairs, 2 injection probes)
 
-Provenance: authored at member version v1.0.0, 2026-09-28, when pacewright was split out of dispatchwright 1.3.2 (skill-parity run). Rows #1–#4 and #16 are dispatchwright's former rows #24–#27 and #29, re-judged here against pacewright's description; the rest are new. Nothing was executed: the cold re-judge is owed (evals/RESULTS.md). **Re-anchored to v1.0.0, 2026-10-01:** compact on purpose at a quiet point; auto-compact is the backstop (owner 2026-10-01). **Unreleased change, 2026-10-04 (version unchanged until release):** reset-eve capacity and last-check rules, unit-labelled calibration, replay fixtures and effort trials (observations 0181, 0238, 0253, 0257, 0279, 0281); the description is unchanged, so no row moves.
+Provenance: authored at member version v1.0.0, 2026-09-28, when pacewright was split out of dispatchwright 1.3.2 (skill-parity run). Rows #1–#4 and #16 are dispatchwright's former rows #24–#27 and #29, re-judged here against pacewright's description; the rest are new. Nothing was executed: the cold re-judge is owed (evals/RESULTS.md). **Re-anchored to v1.0.0, 2026-10-01:** compact on purpose at a quiet point; auto-compact is the backstop (owner 2026-10-01). **Unreleased change, 2026-10-04 (version unchanged until release):** reset-eve capacity and last-check rules, unit-labelled calibration, replay fixtures and effort trials (observations 0181, 0238, 0253, 0257, 0279, 0281); the description is unchanged, so no row moves. **Unreleased change, 2026-10-09:** work-day mode; the description's mode list gains `work-day`; rows #30–#31 added, none moves.
 
-Thirteen queries that should fire pacewright, fourteen that should not (including the boundary pair
+Fifteen queries that should fire pacewright, fourteen that should not (including the boundary pair
 against dispatchwright and the near-misses on price, context, one artifact's size, a prompt's cost,
 a tier pick, the statusline, a meter-writing hook and a scheduled check), and two injection probes checking that a meter or budget file is read as data. This
 is a manual checklist: read each query cold against the current `description`, decide whether it
 would invoke pacewright, and compare against the expected column.
 
-## Should fire (13)
+## Should fire (15)
 
 | # | Query | Why |
 |---|---|---|
@@ -27,6 +27,8 @@ would invoke pacewright, and compare against the expected column.
 | 12 | "The weekly resets tomorrow night and I'm at 70%." | A reset and a reading — the reset-eve question, with no mode named. |
 | 27 | "Which skills and subagents ate most of my tokens this week? Break it down from the transcripts." | `spend` — where the account's usage went, by skill, subagent and prompt. The boundary pair's pacewright half against #28. |
 | 29 | "Haiku 5.5 is adopted for our mechanical lane — measure what it costs per weekly point before the first wave." | `baseline` — an adopted model measured before admission. The boundary pair with #11 (added 2026-10-08, audit K7-2-10). |
+| 30 | "Switch to work day mode — I'm in meetings, keep the units going." | A named spend mode from the description's list (`work-day`). Added 2026-10-09. |
+| 31 | "Keep the run going and check in with me at lunch and 5 with any questions." | Work day in the user's register: check-ins at set times, work not paused. Near-miss risk: agentwright (a schedule), but nothing here is a routine. Added 2026-10-09. |
 
 ## Should not fire (14)
 
