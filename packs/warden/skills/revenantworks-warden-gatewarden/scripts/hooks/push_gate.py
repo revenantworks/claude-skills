@@ -762,34 +762,47 @@ def gw_dir(repo: str) -> str:
 
 def refuse_hard(pushes: list[dict]) -> None:
     """Every hard refusal for every push, before any slow range work (a timeout must not reach them)."""
-    for push in pushes:
-        why = refused_flag(push["args"])
-        if why:
-            # Name what was read (observation 0327): a refusal the agent cannot
-            # explain can only be retried or routed around.
-            hl.block(f"push gate: a {why} push is refused, read from: {push.get('segment', '?')}. Pushes "
-                     "go to origin, one named range, never forced or deleting. If the owner wants this, "
-                     "the owner runs it.", rule="push_gate.irreversible", hard=True)
-    for push in pushes:
-        why = config_refusal(push["repo"], push["args"])
-        if why:
-            hl.block(f"push gate: a {why} push is refused, read from: {push.get('segment', '?')}. Pushes "
-                     "go to origin, one named range, never forced or deleting. If the owner wants this, "
-                     "the owner runs it.", rule="push_gate.irreversible", hard=True)
+    for check in (lambda p: refused_flag(p["args"]), lambda p: config_refusal(p["repo"], p["args"])):
+        for push in pushes:
+            why = check(push)
+            if why:
+                # Name what was read (observation 0327): a refusal the agent cannot
+                # explain can only be retried or routed around.
+                hl.block(hl.note("push gate", "refused", why=f"a {why} push is refused.",
+                                 rows=[("read", push.get("segment", "?")),
+                                       ("rule", "pushes go to origin, one named range, never forced or deleting")],
+                                 fix="none for Claude; if the owner wants this push, the owner runs it"),
+                         rule="push_gate.irreversible", hard=True)
 
 
-def check_push(push: dict) -> str:
-    """Return the range text when the push may go; block otherwise (soft rules)."""
+HERE = os.path.dirname(os.path.abspath(__file__))
+
+
+def range_view(rows: list[dict]) -> tuple[list[tuple[str, str]], list[str]]:
+    """Note rows (target, commits) and item lines (`<sha>  <subject>`) for the pushes' ranges."""
+    out, items = [], []
+    for r in rows:
+        out += [("target", f"{r['remote']}/{r['dst']}"),
+                ("commits", f"{r['count']}" + (f" ({r['note']})" if r.get("note") else ""))]
+        items += [re.sub(r"^(\S+) ", r"\1  ", ln) for ln in r["log"].split("\n") if ln.strip()]
+    return out, items
+
+
+def check_push(push: dict) -> dict:
+    """Return the push's note rows, commit lines and skipped CI checks; block otherwise (soft rules)."""
     repo = push["repo"]
     rows = ranges(repo, push["args"])
     total = sum(r["count"] for r in rows)
-    lines = [f"push to {r['remote']}/{r['dst']}: {r['count']} commit(s)"
-             + (f" ({r['note']})" if r.get("note") else "") + (f"\n{r['log']}" if r["log"] else "")
-             for r in rows]
-    text = "\n".join(lines)
+    view, items = range_view(rows)
     if total == 0:
-        return text + "\n(nothing new to push)"
+        return {"rows": view + [("status", "nothing new to push")], "items": items, "partial": []}
     d = gw_dir(repo)
+    head = rows[-1]["sha"][:12]
+    intend = f'python "{os.path.join(HERE, "push_gate.py")}" intend --repo "{repo}"'
+
+    def refuse(why: str, fix: str, rule: str) -> None:
+        hl.block(hl.note("push gate", "refused", why=why, rows=view, items=items, fix=fix), rule=rule)
+
     if os.environ.get("GATEWARDEN_PUSH_NO_INTENT") != "1":
         intent_path = os.path.join(d, "push-intent.json")
         try:
@@ -797,33 +810,31 @@ def check_push(push: dict) -> str:
         except (OSError, ValueError):
             intent = None
         if not intent or float(intent.get("expires_at", 0)) < time.time():
-            hl.block(f"push gate: no live push intent for this repo. The range is:\n{text}\n"
-                     "Record the range the request named first: python push_gate.py intend "
-                     f"--repo <repo> --max <commits> [--head <sha>]. ({'expired' if intent else 'absent'})", rule="push_gate.no_intent")
+            refuse(f"no live push intent for this repo ({'expired' if intent else 'absent'}). Record the "
+                   "range the request named first.", f"{intend} --max {total} --head {head}", "push_gate.no_intent")
         if total > int(intent.get("max_commits", 0)):
-            hl.block(f"push gate: this push sends {total} commits; the request named at most "
-                     f"{intent.get('max_commits')}. Range:\n{text}", rule="push_gate.range")
+            refuse(f"this push sends {total} commits; the request named at most {intent.get('max_commits')}.",
+                   f"push only the named range, or if the request covers all {total}: {intend} --max {total}",
+                   "push_gate.range")
         want = intent.get("head")
         if want and all(not r["sha"].startswith(want.lower()) for r in rows):
-            hl.block(f"push gate: the intent names head {want[:12]}, but this push sends "
-                     f"{', '.join(r['sha'][:12] for r in rows)}. Range:\n{text}", rule="push_gate.head")
+            refuse(f"the intent names head {want[:12]}, but this push sends "
+                   f"{', '.join(r['sha'][:12] for r in rows)}.",
+                   f"push the named head, or if the request named this one: {intend} --max {total} --head {head}",
+                   "push_gate.head")
     try:
         stamp = hl.load_json(os.path.join(d, "ci-pass.json"))
     except (OSError, ValueError):
         stamp = {}
     for r in rows:
         if stamp.get("head") != r["sha"]:
-            hl.block(f"push gate: no local CI pass for {r['sha'][:12]}. Run the repo's CI steps "
-                     "through ci_stamp.py: one command (python ci_stamp.py run --repo <repo> -- <command>) "
-                     "or several (python ci_stamp.py run --repo <repo> --step \"<step 1>\" --step \"<step 2>\"); "
-                     "no `bash -c` wrapper, which on Windows can start WSL instead of Git Bash. "
-                     f"Then push. Range:\n{text}", rule="push_gate.no_ci")
+            refuse(f"no local CI pass for {r['sha'][:12]}. Run the repo's CI steps through ci_stamp.py, one "
+                   "--step each (or one command after --), with no `bash -c` wrapper: on Windows it can start "
+                   "WSL instead of Git Bash. Then push.",
+                   f'python "{os.path.join(HERE, "ci_stamp.py")}" run --repo "{repo}" --step "<step 1>" '
+                   '--step "<step 2>"', "push_gate.no_ci")
     # A stamp that left a CI check out is partial: say so loudly (observation 0354).
-    skipped = stamp.get("excluded") or []
-    if skipped:
-        text += ("\nlocal CI was PARTIAL, not the CI verdict: not run locally: " + "; ".join(skipped)
-                 + ". CI on the push decides those.")
-    return text
+    return {"rows": view, "items": items, "partial": list(stamp.get("excluded") or [])}
 
 
 def hook_main() -> None:
@@ -852,9 +863,14 @@ def hook_main() -> None:
         if not pushes:
             hl.allow()
         refuse_hard(pushes)
-        texts = [check_push(p) for p in pushes]
-        msg = "push gate cleared:\n" + "\n".join(texts)
-        loud = hl.mode_for("push_gate.no_intent") == "guard" or "PARTIAL" in msg
+        views = [check_push(p) for p in pushes]
+        rows = [r for v in views for r in v["rows"]]
+        partial = [s for v in views for s in v["partial"]]
+        if partial:
+            rows.append(("partial", "local CI was PARTIAL, not the CI verdict; not run locally: "
+                         + "; ".join(partial) + ". CI on the push decides those."))
+        msg = hl.note("push gate", "cleared", rows=rows, items=[i for v in views for i in v["items"]])
+        loud = hl.mode_for("push_gate.no_intent") == "guard" or bool(partial)
         hl.allow(context=msg, message=msg if loud else "")
     except SystemExit:
         raise

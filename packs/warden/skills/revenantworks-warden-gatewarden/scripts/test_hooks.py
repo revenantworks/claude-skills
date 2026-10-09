@@ -41,7 +41,7 @@ def run_hook(name: str, event: dict, env: dict | None = None, raw: str | None = 
         del full_env[k]
     data = raw if raw is not None else json.dumps(event)
     p = subprocess.run([PY, str(HOOKS / name)], input=data, capture_output=True, text=True,
-                       env=full_env, timeout=60, creationflags=NO_WINDOW)
+                       encoding="utf-8", env=full_env, timeout=60, creationflags=NO_WINDOW)
     return p.returncode, p.stdout, p.stderr
 
 
@@ -123,7 +123,7 @@ class PushGateTests(unittest.TestCase):
         self.assertEqual(code, 0, err)
         self.assertIn("change number 3", out)
         self.assertIn("change number 1", out)
-        self.assertIn("3 commit", out)
+        self.assertIn("commits  3", out)
 
     def test_range_larger_than_intent_is_refused(self):
         self.intend(2)
@@ -139,6 +139,33 @@ class PushGateTests(unittest.TestCase):
         code, _, err = run_hook("push_gate.py", bash("git push", self.work))
         self.assertEqual(code, 2)
         self.assertIn("head", err.lower())
+
+    def test_cleared_note_keeps_an_em_dash_and_its_shape(self):
+        # GW1: git's UTF-8 read as cp1252 printed an em dash as mojibake in the cleared note.
+        Path(self.work, "a.txt").write_text("4\n")
+        git(self.work, "commit", "-am", "fire: wake — then build")
+        self.intend(4)
+        self.assertEqual(self.stamp().returncode, 0)
+        code, out, err = run_hook("push_gate.py", bash("git push origin main", self.work))
+        self.assertEqual(code, 0, err)
+        ctx = json.loads(out)["hookSpecificOutput"]["additionalContext"]
+        self.assertIn("fire: wake — then build", ctx)
+        self.assertNotIn("â€", ctx)
+        lines = ctx.split("\n")
+        self.assertEqual(lines[0], "✓ push gate · cleared")
+        self.assertEqual(lines[1:3], ["  target   origin/main", "  commits  4"])
+        self.assertLessEqual(len(lines), 8)
+
+    def test_refusal_note_has_header_and_one_fix_command(self):
+        self.intend(3)
+        code, _, err = run_hook("push_gate.py", bash("git push", self.work))
+        self.assertEqual(code, 2)
+        lines = err.strip().split("\n")
+        self.assertEqual(lines[0], "✗ push gate · refused")
+        fixes = [ln for ln in lines if ln.startswith("  fix: ")]
+        self.assertEqual(len(fixes), 1)
+        self.assertIn("ci_stamp.py\" run --repo", fixes[0])
+        self.assertLessEqual(len(lines), 8)
 
     def test_intent_naming_no_commit_is_refused_at_intend(self):
         r = self.intend(3, head="0" * 40)
@@ -159,7 +186,7 @@ class PushGateTests(unittest.TestCase):
                      "git push origin main 2> err.txt"):
             code, out, err = run_hook("push_gate.py", bash(line, self.work))
             self.assertEqual(code, 0, f"{line}: {err}")
-            self.assertIn("3 commit", out)
+            self.assertIn("commits  3", out)
 
     def test_stamp_for_older_head_is_refused(self):
         self.intend(4)
@@ -209,7 +236,7 @@ class PushGateTests(unittest.TestCase):
                      "git push origin main || echo failed"):
             code, out, err = run_hook("push_gate.py", bash(line, self.work))
             self.assertEqual(code, 0, f"{line}: {err}")
-            self.assertIn("3 commit", out)
+            self.assertIn("commits  3", out)
 
     def test_message_heredoc_naming_push_is_not_a_push(self):
         cmd = "git commit -F - <<'EOF'\nfix: read a chained git push as a ref\nEOF"
@@ -864,6 +891,20 @@ class HeredocGuardTests(unittest.TestCase):
         code, _, err = run_hook("heredoc_guard.py", bash(cmd))
         self.assertEqual(code, 2)
         self.assertIn("Write tool", err)
+        lines = err.strip().split("\n")  # GW1: the shared note shape
+        self.assertEqual(lines[0], "✗ heredoc guard · refused")
+        self.assertEqual(sum(ln.startswith("  fix: ") for ln in lines), 1)
+        self.assertLessEqual(len(lines), 8)
+
+    def test_note_clips_at_a_word_and_caps_its_lines(self):
+        sys.path.insert(0, str(HOOKS))
+        import hooklib
+        self.assertEqual(hooklib.clip("alpha beta gamma delta", 14), "alpha beta…")
+        text = hooklib.note("push gate", "cleared", rows=[("target", "origin/main")],
+                            items=[f"abc{i}  subject {i}" for i in range(20)])
+        lines = text.split("\n")
+        self.assertEqual(len(lines), 8)
+        self.assertEqual(lines[-1], "  … 15 more")
 
     def test_cat_into_py_file_with_escape_is_blocked(self):
         cmd = f"cat > fix.py <<EOF\nimport re\nPAT = re.compile('{self.BS}bword{self.BS}b')\nEOF"
@@ -1076,7 +1117,7 @@ class PushGateBypassTests(unittest.TestCase):
         for cmd in ('sh -c "git push origin main"', f"pwsh -enc {enc(self.PUSH)}", "env git push origin main"):
             code, out, err = run_hook("push_gate.py", bash(cmd, self.work))
             self.assertEqual(code, 0, f"{cmd}: {err}")
-            self.assertIn("1 commit", out)
+            self.assertIn("commits  1", out)
 
 
 class HyperVBypassTests(unittest.TestCase):
@@ -1262,7 +1303,7 @@ class ModeTests(unittest.TestCase):
             json.dump({"last_at": time.time() - 8 * 86400}, fh)
         code, out, _ = run_hook("warden_digest.py", {"hook_event_name": "SessionStart"}, env=env)
         self.assertEqual(code, 0)
-        self.assertIn("gatewarden weekly", json.loads(out)["systemMessage"])
+        self.assertIn("gatewarden · weekly", json.loads(out)["systemMessage"])
         code, out, _ = run_hook("warden_digest.py", {"hook_event_name": "SessionStart"}, env=env)
         self.assertEqual(out.strip(), "")
 

@@ -38,6 +38,88 @@ import time
 NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
 SHELL_TOOLS = {"Bash", "PowerShell"}
 
+# Claude Code reads hook output as UTF-8. On Windows Python writes the console code page (cp1252) by
+# default, so an em dash printed as `â€”` and a glyph outside cp1252 crashed the write.
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8", errors="replace")
+    except (AttributeError, ValueError):
+        pass
+
+
+# ------------------------------------------------------------ notes (what the person and Claude read)
+# One shape for every note and refusal: a header `<glyph> <hook> · <verdict>`, then indented lines:
+# free text, aligned `label  value` rows, item lines (commits), and on a refusal one `fix:` line.
+GLYPHS = {"cleared": "✓", "refused": "✗", "warning": "!", "nudge": "!", "weekly": "·"}
+NOTE_LINES = 8
+NOTE_WIDTH = 100
+_IMPERATIVE = re.compile(r"^(?:Run|Write|Record|Tell|Print|Split|Use|Hand|Change|Commit|Follow|Give|Put|Pass|"
+                         r"Finish|Stop|Read|Launch|Ask|Re-run|Remove|cd|Check)\b")
+
+
+def clip(text: str, width: int = NOTE_WIDTH) -> str:
+    """One line, at most `width` characters, cut at a word boundary with an ellipsis."""
+    text = re.sub(r"\s*[\r\n]+\s*", " ", str(text)).strip()
+    if len(text) <= width:
+        return text
+    cut = text[:width - 1]
+    space = cut.rfind(" ")
+    return (cut[:space] if space > width // 2 else cut).rstrip(" ,;:") + "…"
+
+
+def note(hook: str, verdict: str, why: str = "", rows=(), items=(), fix: str = "",
+         limit: int = NOTE_LINES) -> str:
+    """A short, aligned note: at most `limit` lines; items (commit lines) give way first."""
+    import textwrap
+    head = f"{GLYPHS.get(verdict, '!')} {hook} · {verdict}"
+    rows = [(str(k), str(v)) for k, v in rows if str(v).strip()]
+    pad = max((len(k) for k, _ in rows), default=0)
+    row_lines = [f"  {k.ljust(pad)}  {clip(v, NOTE_WIDTH - pad - 4)}" for k, v in rows]
+    fix_lines = [f"  fix: {' '.join(fix.split())}"] if fix else []  # never clipped: it is a command
+    why_lines = [f"  {w}" for w in textwrap.wrap(" ".join(why.split()), NOTE_WIDTH - 2,
+                                                 break_on_hyphens=False, break_long_words=False)]
+    room = limit - 1 - len(row_lines) - len(fix_lines)
+    why_lines = why_lines[:max(1, room)] if why_lines else []
+    if why_lines and len(textwrap.wrap(" ".join(why.split()), NOTE_WIDTH - 2)) > len(why_lines):
+        why_lines[-1] = "  " + clip(why_lines[-1].strip() + " …", NOTE_WIDTH - 2)
+    room -= len(why_lines)
+    items = [f"  {clip(i, NOTE_WIDTH - 2)}" for i in items]
+    if len(items) > max(room, 0):
+        keep = max(room - 1, 0)
+        items = items[:keep] + [f"  … {len(items) - keep} more"] if room > 0 else []
+    return "\n".join([head, *why_lines, *row_lines, *items, *fix_lines])
+
+
+def _sentences(text: str) -> list[str]:
+    return [s for s in re.split(r"(?<=[.;])\s+(?=[A-Z`(])", text.strip()) if s]
+
+
+def as_note(text: str, verdict: str) -> str:
+    """A plain `hook: reason. Fix.` text in the note shape. A text already in it passes unchanged."""
+    text = (text or "").strip()
+    if not text or text[:1] in GLYPHS.values():
+        return text
+    m = re.match(r"^([a-z][a-z -]{1,30}?): (.*)$", text, re.S)
+    hook, body = (m.group(1), m.group(2)) if m else (hook_name().replace("_", " "), text)
+    first, _, rest = body.partition("\n")
+    items = [x for x in rest.split("\n") if x.strip()]
+    fix = ""
+    b = re.search(r"\bBlocked(?: to be safe)?[;.]\s*", first)
+    if b:
+        after, first = _sentences(first[b.end():]), first[:b.start()].strip()
+        if after:
+            fix, first = after[0], " ".join([first, *after[1:]]).strip()
+    if not fix:
+        parts = _sentences(first)
+        for k in range(len(parts) - 1, 0, -1):
+            if _IMPERATIVE.match(parts[k]):
+                fix = parts.pop(k)
+                break
+        first = " ".join(parts)
+    if fix and fix[:1].islower():
+        fix = fix[0].upper() + fix[1:]
+    return note(hook, verdict, why=first, items=items, fix=fix)
+
 
 _EVENT: dict = {}
 
@@ -152,7 +234,10 @@ def mask(text: str) -> str:
 
 def scrub(text: str) -> str:
     """One line, no secret-shaped values, nothing after a quoted command."""
-    line = (text or "").strip().split("\n", 1)[0]
+    lines = (text or "").strip().split("\n")
+    line = lines[0]
+    if line[:1] in GLYPHS.values() and len(lines) > 1:  # a note: the header and its first detail line
+        line = f"{line[2:]}: {lines[1].strip()}"
     line = re.split(r",? read from:", line, maxsplit=1)[0]
     return _SECRETISH.sub("[redacted]", line)[:160]
 
@@ -208,12 +293,16 @@ def block(reason: str, rule: str = "", hard: bool = False) -> None:
     mode = mode_for(rule, hard)
     if mode == "guard":
         log_event(rule, mode, "blocked", reason, hard)
-        sys.stderr.write(reason.rstrip() + "\n")
+        sys.stderr.write(as_note(reason, "refused") + "\n")
+        sys.stderr.flush()
         sys.exit(2)
     if mode == "nudge" and not _nudged_before(rule):
         log_event(rule, mode, "nudged", reason, hard)
-        allow(context=f"{reason.rstrip()}\n(gatewarden {rule} is in nudge mode: this call ran. "
-                      "Follow the rule from here unless the owner says otherwise.)")
+        text = as_note(reason, "refused").split("\n")
+        head = text[0].rsplit(" · ", 1)[0] + " · nudge"
+        allow(context="\n".join([GLYPHS["nudge"] + head[1:], *text[1:NOTE_LINES - 1],
+                                 f"  (nudge mode: {rule} let this call run. Follow the rule from here "
+                                 "unless the owner says otherwise.)"]))
     log_event(rule, mode, "logged", reason, hard)
     sys.exit(0)
 
@@ -221,9 +310,10 @@ def block(reason: str, rule: str = "", hard: bool = False) -> None:
 def allow(context: str = "", message: str = "") -> None:
     out: dict = {}
     if context:
-        out["hookSpecificOutput"] = {"hookEventName": "PreToolUse", "additionalContext": context}
+        out["hookSpecificOutput"] = {"hookEventName": "PreToolUse",
+                                     "additionalContext": as_note(context, "warning")}
     if message:
-        out["systemMessage"] = message
+        out["systemMessage"] = as_note(message, "warning")
     if out:
         sys.stdout.write(json.dumps(out) + "\n")
     sys.exit(0)
@@ -330,9 +420,9 @@ def _over_budget() -> None:
     if hit:
         try:
             log_event(_CLOCK["rule"], "guard", "blocked", "time budget", True)
-            sys.stderr.write(f"{_CLOCK['reason'].rstrip()} (the check ran past its {_CLOCK['secs']:g} s time "
-                             "budget on a command that names what this hook guards; blocked to be safe. "
-                             "Split the command.)\n")
+            sys.stderr.write(as_note(f"{_CLOCK['reason'].rstrip()} The check ran past its {_CLOCK['secs']:g} s "
+                                     "time budget on a command that names what this hook guards. Blocked to be "
+                                     "safe; split the command.", "refused") + "\n")
             sys.stderr.flush()
         finally:
             os._exit(2)
@@ -372,8 +462,9 @@ def budget_timeout(timeout: float) -> float:
 
 def run_git(cwd: str, *args: str, timeout: int = 15) -> str:
     check_budget()
-    p = subprocess.run(["git", *args], cwd=cwd or None, capture_output=True, text=True,
-                       timeout=budget_timeout(timeout), creationflags=NO_WINDOW)
+    # git writes UTF-8 (commit subjects with an em dash); the locale decode read it as cp1252 mojibake.
+    p = subprocess.run(["git", *args], cwd=cwd or None, capture_output=True, text=True, encoding="utf-8",
+                       errors="replace", timeout=budget_timeout(timeout), creationflags=NO_WINDOW)
     if p.returncode != 0:
         raise RuntimeError((p.stderr or "").strip() or f"git {' '.join(args)} failed")
     return p.stdout.strip()

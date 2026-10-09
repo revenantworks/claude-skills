@@ -43,8 +43,9 @@ def main() -> None:
         text = wr.report(days)
         n = text.rsplit("\n", 1)[-1].split(" ", 1)[0]
         here = os.path.join(os.path.dirname(os.path.abspath(__file__)), "warden_review.py")
-        msg = (f"gatewarden weekly: {len(rows)} event(s) across {len({r.get('rule') for r in rows})} rule(s), "
-               f"{n} suggestion(s). Review: python \"{here}\"")
+        msg = hl.note("gatewarden", "weekly", rows=[("events", len(rows)),
+                                                     ("rules", len({r.get("rule") for r in rows})),
+                                                     ("suggest", n), ("review", f"python \"{here}\"")])
         sys.stdout.write(json.dumps({"systemMessage": msg}) + "\n")
     except SystemExit:
         raise
