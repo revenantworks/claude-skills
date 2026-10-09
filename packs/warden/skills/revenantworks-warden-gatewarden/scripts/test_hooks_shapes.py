@@ -274,5 +274,39 @@ class B2(PushShapeBase):
         self.each_hook(0, "& .\\build.ps1")
 
 
+RUN_SUBSTITUTION = "a substitution that decodes or fetches the text a shell runs"
+DECODE_B64 = "base" + "64 -d"  # with HELLO above: a substitution whose text is the word hello
+
+
+class B1(PushShapeBase):
+    """V-K8w2 B1: a `$(…)` or backtick substitution that is the program text of an executor (`eval`,
+    `sh -c`, `bash -c`, or the segment's command word) and names a decoder (base64 -d, xxd -r, openssl -d,
+    certutil -decode) or a fetcher (curl, wget, iwr, Invoke-WebRequest, irm) runs a text the hooks never
+    see. hooklib.expand() lists it as a script the hooks cannot read, so every hard-rule hook refuses it; a
+    decode that only prints, a literal `bash -c` and `eval "$(ssh-agent -s)"` still pass."""
+
+    def each_hook(self, code, cmd, reason=None):
+        for hook in ("push_gate.py", "hyperv_lock.py", "golive_block.py"):
+            got, _, err = run_hook(hook, bash(cmd, self.work), env=self.env)
+            self.assertEqual(got, code, f"{hook}: {cmd!r}: {err.strip()}")
+            if reason and hook != "golive_block.py":
+                self.assertIn(reason, err, f"{hook}: {cmd!r}: {err.strip()}")
+
+    def test_refuses_eval_of_a_decoded_command_substitution(self):
+        self.each_hook(2, f"eval \"$(echo {HELLO} | {DECODE_B64})\"", reason=RUN_SUBSTITUTION)
+
+    def test_refuses_bash_c_of_a_decoded_command_substitution(self):
+        self.each_hook(2, f"bash -c \"$(echo {HELLO} | {DECODE_B64})\"", reason=RUN_SUBSTITUTION)
+
+    def test_decode_that_only_prints_passes(self):
+        self.each_hook(0, f"echo {HELLO} | {DECODE_B64}")
+
+    def test_bash_c_of_a_literal_passes(self):
+        self.each_hook(0, "bash -c \"echo hi\"")
+
+    def test_eval_of_ssh_agent_passes(self):
+        self.each_hook(0, "eval \"$(ssh-agent -s)\"")
+
+
 if __name__ == "__main__":
     unittest.main()

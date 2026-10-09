@@ -60,6 +60,11 @@ Description cut to about 600 characters, main use case first (2026-10-08).
   `Invoke-Expression`, `&` or `.` counts as code the hooks cannot read when its argument, or the value
   set on the same line for the variable it names, contains `FromBase64String`, `-join`, `-f ` or
   `[char]`. Plain substrings; nothing is evaluated. Running a script file or a file's text passes.
+- M14c3, 2026-10-09 (V-K8w2 B1): a `$(…)` or backtick substitution that is the program text of
+  `eval`, `sh -c`, `bash -c` or the segment's command word counts as a script the hooks cannot read
+  when its text names a decoder (`base64 -d`, `xxd -r`, `openssl … -d`, `certutil -decode`) or a
+  fetcher (`curl`, `wget`, `iwr`, `Invoke-WebRequest`, `irm`), so every hard-rule hook refuses it.
+  Plain substrings; nothing is evaluated. A decode that only prints and `eval "$(ssh-agent -s)"` pass.
 - Audits allow, deny and ask rules across every settings level: dead rules, bypass shapes, and Bash
   denies with no PowerShell twin on Windows, where the sandbox does not run.
 - Lints the shapes the docs name: absolute paths, `sh -c`, `git -C`, path rules for tools that are
