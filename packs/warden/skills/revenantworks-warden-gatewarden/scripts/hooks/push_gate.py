@@ -42,7 +42,10 @@ url setting on a push line, a script written and run on the same push line, a pu
 at run time (`git push $F origin main`, `"$@"`, `$1`; V-K8w2 B3, B4), a glob in the command word that
 may name git on a push segment (`gi[t] push`; B9), a config include (`-c include.path`, `includeIf`,
 `--config-env`, a GIT_CONFIG_* include) on a line whose git subcommand is not a builtin and so may be
-an alias the gate cannot read (B5; on a push it counts as a redirected config), and a push the gate
+an alias the gate cannot read (B5; on a push it counts as a redirected config), an alias set through
+the environment (GIT_CONFIG_KEY_n=alias.<name>, GIT_CONFIG_VALUE_n) that pushes or whose value cannot be
+read, a config redirect (GIT_CONFIG_GLOBAL, GIT_CONFIG_SYSTEM, GIT_CONFIG_NOSYSTEM, HOME,
+XDG_CONFIG_HOME) on a line whose git subcommand is not a builtin (M14e), and a push the gate
 sees but cannot parse. So is a
 shell script on disk too large or locked to read, a shell script over 256 KB that names push, and a mirror or `+`/`:` push refspec set in git config (K7-4-03, K7-4-07).
 Limits: it binds the commands Claude runs, not the owner's own terminal; it does not read an
@@ -356,6 +359,35 @@ GIT_NAMES = ("git", "git.exe", "git-push", "git-push.exe")
 INCLUDE_KEY = re.compile(r"(?i)^\s*include(?:if)?\.")
 INCLUDE_ENV = re.compile(r"""(?i)(?<![\w])GIT_CONFIG_(?:KEY_\d+\s*=\s*['"]?\s*(?:include(?:if)?\.|\$|%[A-Za-z_])"""
                          r"""|PARAMETERS\s*=[^\n]*?(?:include(?:if)?\.|\$))""")
+# An alias set through the environment (M14e): GIT_CONFIG_KEY_<n>=alias.<name> with GIT_CONFIG_VALUE_<n>,
+# the env twin of `-c alias.<name>=…`. Read line-wide, like INCLUDE_ENV.
+ENV_CONFIG_PAIR = re.compile(r"""(?i)(?<![\w])GIT_CONFIG_(KEY|VALUE)_(\d+)\s*=\s*"""
+                             r"""('[^']*'|"(?:\\.|[^"\\])*"|[^\s;&|)]*)""")
+# A config redirect that swaps the files git reads aliases from (M14e): the gate reads its own.
+CONFIG_HOME_ENV = re.compile(r"(?i)(?<![\w-])(?:GIT_CONFIG_(?:GLOBAL|SYSTEM|NOSYSTEM)|XDG_CONFIG_HOME|HOME)"
+                             r"\s*=(?!=)")
+
+
+def env_aliases(text: str) -> tuple[dict[str, str], set[str]]:
+    """({alias name: literal value}, {alias names whose value cannot be read}) for the aliases the line
+    sets through GIT_CONFIG_KEY_<n>/GIT_CONFIG_VALUE_<n>. A value set at run time (`$V`, `"$V"`, a
+    substitution) or missing cannot be read; a single-quoted value is literal."""
+    keys: dict[str, str] = {}
+    vals: dict[str, str] = {}
+    for m in ENV_CONFIG_PAIR.finditer(text):
+        (keys if m.group(1).upper() == "KEY" else vals)[m.group(2)] = m.group(3)
+    table: dict[str, str] = {}
+    unread: set[str] = set()
+    for n, raw in keys.items():
+        key = hl.unquote(raw).strip()
+        if not key.lower().startswith("alias."):
+            continue
+        name, val = key[len("alias."):].lower(), vals.get(n)
+        if val is None or not val.startswith("'") and (RUN_TIME_ARG.search(val) or "`" in val):
+            unread.add(name)
+        else:
+            table[name] = hl.unquote(val)
+    return table, unread
 
 
 def run_time_args(raw: list[str]) -> None:
@@ -396,6 +428,8 @@ def find_pushes(command: str, cwd: str, resolve: bool = True) -> list[dict]:
     named = bool(PUSH_HINT.search(flat_cmd))
     redirected_line = bool(ENV_REDIRECT.search(flat_cmd))
     include_line = bool(INCLUDE_ENV.search(command))
+    home_line = bool(CONFIG_HOME_ENV.search(command))
+    env_table, env_unread = env_aliases(command)
     ops = hl.split_ops(command)
     # Which pipeline each segment sits in, and which pipelines name push themselves (FP-D).
     line_of, n = [], 0
@@ -466,8 +500,26 @@ def find_pushes(command: str, cwd: str, resolve: bool = True) -> list[dict]:
                                 "include (`-c include.path`, `includeIf`, `--config-env`, GIT_CONFIG_*) or a "
                                 "config key set at run time. Blocked; run the command the alias stands for, "
                                 "or drop the include.")
-            expansion = alias_of(repo, sub) if resolve and sub not in BUILTINS and \
-                re.fullmatch(r"[\w.-]+", sub or "-") else None
+            if resolve and home_line and sub and sub not in BUILTINS:
+                raise PushBlock(f"push gate: a redirected git dir or config (GIT_CONFIG_GLOBAL, GIT_CONFIG_SYSTEM, "
+                                f"GIT_CONFIG_NOSYSTEM, HOME, XDG_CONFIG_HOME) swaps the config git reads "
+                                f"aliases from. `{sub[:40]}` is not a git builtin, so it may be an alias the "
+                                "gate cannot read. Blocked; run the command the alias stands for, or drop "
+                                "the redirect.")
+
+            def lookup(name: str, repo: str = repo) -> str | None:
+                """An alias the line sets in the environment first (M14e), then the repo's own."""
+                if name.lower() in env_unread:
+                    raise PushBlock(f"push gate: a git alias set in the environment cannot be read: "
+                                    f"`GIT_CONFIG_KEY_<n>=alias.{name[:40]}` has a value set at run time or "
+                                    "none. Blocked; run the command the alias stands for.")
+                return env_table[name.lower()] if name.lower() in env_table else alias_of(repo, name)
+
+            from_env = False
+            expansion = None
+            if resolve and sub not in BUILTINS and re.fullmatch(r"[\w.-]+", sub or "-"):
+                from_env = sub.lower() in env_table
+                expansion = lookup(sub)
             if sub not in ("push", "config", "remote", "send-pack", "http-push") and expansion is None:
                 continue  # its arguments are never read: no O(n) copy per word on a long line (V-K8w F5)
             rest = [arg(x) for x in parts[1:]] + [arg(t) for t in toks[j + 1:]]
@@ -496,9 +548,13 @@ def find_pushes(command: str, cwd: str, resolve: bool = True) -> list[dict]:
                     sub, rest = arg(words[0]), [arg(x) for x in words[1:]] + rest
                     if sub in BUILTINS:
                         break
-                    expansion = alias_of(repo, sub)
+                    from_env = from_env or sub.lower() in env_table
+                    expansion = lookup(sub)
             if sub in ("send-pack", "http-push"):
                 raise PushBlock("push gate: a plumbing push (send-pack, http-push) is refused; use git push.")
+            if sub == "push" and from_env:
+                raise PushBlock(f"push gate: a git alias set in the environment runs a push (`{name[:40]}`, "
+                                "GIT_CONFIG_KEY_<n>=alias.…). Blocked; run the push as a plain `git push` line.")
             if sub == "push":
                 if redirected:
                     raise PushBlock("push gate: a push with a redirected git dir or config (GIT_DIR, --git-dir, "
