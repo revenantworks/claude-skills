@@ -89,8 +89,8 @@ describe('meters (F1, F1b)', () => {
   test('the meter file is the fallback reading where no measure event arrives', () => {
     const text = JSON.stringify({ written_at: Math.floor((NOW - 60_000) / 1000), five_hour: { used_percentage: 4, resets_at: 1 }, seven_day: { used_percentage: 50, resets_at: Math.floor((NOW + 3.5 * DAY) / 1000) }, context_used_percentage: 38 })
     const live = liveFromMeterFile(text)
-    expect(statusText(live, NOW)).toBe('5h 4% · W 50% · PACE 48 +3 · ctx 38% · (meter file)')
-    expect(statusText(live, NOW + 20 * 60_000)).toMatch(/^meters \?/)
+    expect(statusText(live, NOW)).toBe('5h 4% · wk 50% · pace 48 +3 · ctx 38% · from meter file')
+    expect(statusText(live, NOW + 20 * 60_000)).toMatch(/^meters stale/)
     expect(liveFromMeterFile(null)).toBe(null)
     expect(liveFromMeterFile('{bad')).toBe(null)
     expect(liveFromMeterFile('{"context_used_percentage": 3}')).toBe(null)

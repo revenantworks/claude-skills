@@ -21,6 +21,7 @@ function paths() {
     budget: path.join(home, '.dispatch', 'budget-decision.json'),
     switches: path.join(home, '.claude', 'revenantworks', 'switches.json'),
     feed: path.join(home, '.claude', 'revenantworks', 'dash', 'feed.json'),
+    theme: path.join(home, '.claude', 'revenantworks', 'theme.json'),
   }
 }
 
@@ -41,7 +42,15 @@ function snapshot() {
     budget: logic.parseBudget(readText(p.budget), now),
     switches: logic.parseSwitches(readText(p.switches)),
     feed: logic.parseFeed(readText(p.feed), now),
+    colors: themeNow(p.theme),
   }
+}
+
+/** The dash theme's hex colours (the same theme the /dash pane paints with). */
+function themeNow(activeFile) {
+  const name = logic.activeThemeName(process.env.DASH_THEME, readText(activeFile))
+  if (!/^[a-z0-9][a-z0-9-]{0,39}$/.test(name)) return logic.themeColors('neutral', null)
+  return logic.themeColors(name, readText(path.join(path.dirname(activeFile), 'themes', `${name}.json`)))
 }
 
 function hover(lines) {
@@ -73,13 +82,16 @@ function activate(context) {
     pace.text = `$(pulse) ${logic.paceText(s.usage)}`
     const look = logic.paceLook(s.usage)
     pace.backgroundColor = look === 'red' ? new vscode.ThemeColor('statusBarItem.errorBackground') : look === 'amber' ? new vscode.ThemeColor('statusBarItem.warningBackground') : undefined
-    pace.color = look === 'stale' ? new vscode.ThemeColor('disabledForeground') : undefined
+    // VS Code allows only its error and warning backgrounds; the theme sets the foreground.
+    const c = s.colors
+    pace.color = look === 'stale' ? c.dim || new vscode.ThemeColor('disabledForeground') : look === 'red' || look === 'amber' ? undefined : c.accent || undefined
     pace.tooltip = tip
     pace.show()
 
     const ft = logic.feedText(s.feed)
     if (ft) {
       dash.text = `$(graph) ${ft}`
+      dash.color = s.feed && s.feed.health.plugins.some(x => !x.loaded) ? c.warn || undefined : c.accent || undefined
       dash.tooltip = tip
       dash.show()
     } else dash.hide()

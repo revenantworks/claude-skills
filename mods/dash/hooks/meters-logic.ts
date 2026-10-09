@@ -66,20 +66,20 @@ export const liveFromMeterFile = (text: string | null): Live | null => {
 }
 
 /** "5h 23% · W 41% · PACE 38 +3 · ctx 38% · cache 92%"; "meters ?" leads when stale. */
-export const statusText = (live: Live | null, now: number): string => {
+export const statusText = (live: Live | null, now: number, sep = ' · '): string => {
   if (!live) return 'dash: no meter reading yet'
   const parts: string[] = []
-  if (now - live.at > STALE_MS) parts.push('meters ?')
+  if (now - live.at > STALE_MS) parts.push('meters stale')
   if (live.five !== null) parts.push(`5h ${Math.round(live.five)}%`)
-  if (live.week !== null) parts.push(`W ${Math.round(live.week)}%`)
+  if (live.week !== null) parts.push(`wk ${Math.round(live.week)}%`)
   if (live.week !== null && live.weekResetMs !== null) {
     const p = paceOf(live.week, live.weekResetMs, now)
-    parts.push(`PACE ${Math.round(p.pace)} ${p.gap >= 0 ? '+' : ''}${Math.round(p.gap)}`)
+    parts.push(`pace ${Math.round(p.pace)} ${p.gap >= 0 ? '+' : ''}${Math.round(p.gap)}`)
   }
   if (live.ctx !== null) parts.push(`ctx ${Math.round(live.ctx)}%`)
   if (live.cacheHit !== null) parts.push(`cache ${Math.round(live.cacheHit * 100)}%`)
-  if (live.fromFile) parts.push('(meter file)')
-  return parts.join(' · ') || 'dash: no meter reading yet'
+  if (live.fromFile) parts.push('from meter file')
+  return parts.join(sep) || 'dash: no meter reading yet'
 }
 
 export type Usage = { input_tokens: number; output_tokens: number; cache_read_input_tokens: number; cache_creation_input_tokens: number }

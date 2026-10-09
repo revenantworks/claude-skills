@@ -4,6 +4,7 @@ import { describe, expect, mock, test } from 'claude-code/testing'
 
 import { DAY, sessionKey, serializeEvents, type DashEvent } from '../hooks/collector-logic'
 import { defaultSwitches, parseSwitches, serializeSwitches } from '../hooks/lib/switches'
+import { fnv1a, heartbeatAlive, mergeHeartbeat } from '../hooks/lib/util'
 
 const NOW = Date.UTC(2026, 9, 8, 12)
 const HOME = '/u/t'
@@ -19,7 +20,8 @@ const PATH = '/r/src/billing/secret-plan.ts'
 
 // On Windows the test host hands a stub the resolved path (drive letter, backslashes); key files by the posix form.
 const key = (p: string) => p.replace(/\\/g, '/').replace(/^[A-Za-z]:/, '')
-const world = (on: On, files: Record<string, string>, surfaces: string[] = ['terminal']) => {
+type FsX = { list?: (path: string) => unknown[]; stat?: (path: string) => unknown }
+const world = (on: On, files: Record<string, string>, surfaces: string[] = ['terminal'], fsx: FsX = {}) => {
   mock.store(on)
   mock.clock(on, { now: NOW })
   on('env.get', async ($, e) => ({ value: e.name === 'HOME' || e.name === 'USERPROFILE' ? HOME : undefined }) as never)
@@ -38,9 +40,11 @@ const world = (on: On, files: Record<string, string>, surfaces: string[] = ['ter
     return { value: undefined } as never
   })
   on('fs.exists', async ($, e) => ({ value: files[key(e.path)] !== undefined }) as never)
-  on('fs.list', async () => ({ value: [] }) as never)
-  on('fs.stat', async () => {
-    throw new Error('ENOENT')
+  on('fs.list', async ($, e) => ({ value: fsx.list?.(key(e.path)) ?? [] }) as never)
+  on('fs.stat', async ($, e) => {
+    const st = fsx.stat?.(key(e.path))
+    if (st === undefined) throw new Error('ENOENT')
+    return { value: st } as never
   })
   on('process.run', async () => ({ value: { exitCode: 1, stdout: '', stderr: '', isStdoutTruncated: false, isStderrTruncated: false } }) as never)
   on('command.register', async ($, e) => ({ value: { command: e.name } }) as never)
@@ -70,7 +74,7 @@ describe('the collector', () => {
     world(on, files)
     await session($)
     const ran = await $.command.run({ command: 'dash', args: 'skills', origin: { kind: 'composer' } } as never)
-    expect(JSON.stringify(ran)).toMatch(/alpha: 1 fire\(s\) · 0 slash \/ 1 auto/)
+    expect(JSON.stringify(ran)).toMatch(/alpha +1 +0 +1 +0 +0 /)
     expect(dashFiles(files)).toEqual([])
   })
 
@@ -95,7 +99,7 @@ describe('the collector', () => {
     await $.skill.prompt({ skill: 'alpha', text: 'x' } as never)
     await $.skill.prompt({ skill: 'beta', text: 'y' } as never)
     const ran = await $.command.run({ command: 'dash', args: 'skills', origin: { kind: 'composer' } } as never)
-    expect(JSON.stringify(ran)).toMatch(/alpha: 1 fire\(s\)[^"]*1 likely misroute/)
+    expect(JSON.stringify(ran)).toMatch(/alpha +1 +0 +1 +0 +1 /)
   })
 
   test('a typed /name is a slash fire', async ($, on) => {
@@ -103,7 +107,7 @@ describe('the collector', () => {
     await $.prompt.submit({ text: '/alpha do it', origin: { kind: 'composer' } } as never)
     await $.skill.prompt({ skill: 'alpha', text: 'x' } as never)
     const ran = await $.command.run({ command: 'dash', args: 'skills', origin: { kind: 'composer' } } as never)
-    expect(JSON.stringify(ran)).toMatch(/1 slash \/ 0 auto/)
+    expect(JSON.stringify(ran)).toMatch(/alpha +1 +1 +0 /)
   })
 })
 
@@ -172,7 +176,7 @@ describe('drawing', () => {
     await $.command.run({ command: 'dash', args: '', origin: { kind: 'composer' } } as never)
     for (const surface of ['terminal', 'desktop'] as const) {
       const ui = await $.ui.mount({ plugin: 'dash', surface, component: 'Pane', requestId: 'dash', props: { title: 'dash', isFocused: true, bodyColumns: 80, placement: 'dock' } as never })
-      expect(await ui.find({ type: 'Text', text: /Skills \(30 days\)/ })).toBeDefined()
+      expect(await ui.find({ type: 'Text', text: /Skills, last 30 days/ })).toBeDefined()
       await ui.unmount()
     }
   })
@@ -188,5 +192,139 @@ describe('drawing', () => {
     await ui.press({ key: 'ask-on' })
     expect(parseSwitches(files[SW]).features.D1).toBe(true)
     await ui.unmount()
+  })
+})
+
+describe('health across sessions (bug: privacy NOT LOADED while it was loaded)', () => {
+  test('a second session beating into the same file leaves this session loaded', async ($, on) => {
+    const files: Record<string, string> = {}
+    // This session's privacy beat, then another session's a minute later: one shared file.
+    const mine = mergeHeartbeat(null, { plugin: 'privacy', version: '1.0.0', session: fnv1a('sess-1'), at: NOW - 60_000 })
+    files[`${HOME}/.claude/revenantworks/health/privacy.json`] = mergeHeartbeat(mine, { plugin: 'privacy', version: '1.0.0', session: fnv1a('sess-2'), at: NOW - 1000 })
+    world(on, files)
+    const ran = await $.command.run({ command: 'dash', args: 'health', origin: { kind: 'composer' } } as never)
+    expect(JSON.stringify(ran)).toMatch(/privacy\s+loaded 1\.0\.0/)
+    expect(JSON.stringify(ran)).not.toMatch(/not loaded/)
+  })
+  test('a beat older than ten minutes is not loaded', () => {
+    const text = mergeHeartbeat(null, { plugin: 'privacy', session: fnv1a('sess-1'), at: NOW - 11 * 60_000 })
+    expect(heartbeatAlive(text, fnv1a('sess-1'), NOW).alive).toBe(false)
+    expect(heartbeatAlive(text, fnv1a('sess-1'), NOW - 10 * 60_000).alive).toBe(true)
+  })
+})
+
+describe('the current run (bug: an old run shown in Tasks)', () => {
+  test('the ledger changed last wins, across the repo runs and the home junctions', async ($, on) => {
+    const files: Record<string, string> = {}
+    const LEDGER = '| unit | status |\n|---|---|\n| U1 | done |\n'
+    const mtimes: Record<string, number> = {
+      '/r/.dispatch/runs/2026-08-20-old/ledger.md': NOW - 50 * 86_400_000,
+      '/r/.dispatch/runs/2026-10-01-mid/ledger.md': NOW - 5 * 86_400_000,
+      [`${HOME}/.dispatch/runs/2026-10-08-current/ledger.md`]: NOW - 60_000,
+    }
+    for (const f of Object.keys(mtimes)) files[f] = LEDGER
+    // A listing reports a folder's time as 0 and a junction as a link, as the host does.
+    world(on, files, ['terminal'], {
+      list: p => (p === '/r/.dispatch/runs'
+        ? [{ name: '2026-08-20-old', kind: 'dir', size: 0, mtimeMs: 0, isLink: false }, { name: '2026-10-01-mid', kind: 'dir', size: 0, mtimeMs: 0, isLink: false }]
+        : p === `${HOME}/.dispatch/runs` ? [{ name: '2026-10-08-current', kind: 'other', size: 0, mtimeMs: 0, isLink: true }] : []),
+      stat: p => (mtimes[p] === undefined ? undefined : { kind: 'file', size: LEDGER.length, mtimeMs: mtimes[p], isLink: false }),
+    })
+    const ran = await $.command.run({ command: 'dash', args: 'tasks', origin: { kind: 'composer' } } as never)
+    expect(JSON.stringify(ran)).toMatch(/run 2026-10-08-current/)
+    expect(JSON.stringify(ran)).not.toMatch(/2026-08-20-old/)
+  })
+})
+
+describe('themes', () => {
+  const THEMES = `${HOME}/.claude/revenantworks/themes`
+  const themeWorld = (on: On, files: Record<string, string>, toasts: string[] = []) => {
+    world(on, files, ['terminal'], {
+      list: p => (p !== THEMES ? [] : Object.keys(files).filter(f => f.startsWith(`${THEMES}/`)).map(f => ({ name: f.slice(THEMES.length + 1), kind: 'file', size: 1, mtimeMs: 1, isLink: false }))),
+    })
+    on('ui.toast', async ($, e) => {
+      toasts.push(e.text)
+      return { value: undefined } as never
+    })
+  }
+  const run = async ($: Engine, args: string, kind = 'composer') => (await $.command.run({ command: 'dash', args, origin: { kind } } as never)) as { text: string; context?: string[] }
+
+  test('discovery: bundled themes, the person\'s files, a file over a bundled name, a bad file listed', async ($, on) => {
+    const files: Record<string, string> = {
+      [`${THEMES}/mine.json`]: JSON.stringify({ name: 'mine', colors: { accent: '#3366FF' } }),
+      [`${THEMES}/revenantworks.json`]: JSON.stringify({ name: 'revenantworks', description: 'my copy', header: 'plain' }),
+      [`${THEMES}/broken.json`]: '{ not json',
+    }
+    themeWorld(on, files)
+    const r = await run($, 'theme')
+    expect(r.text).toMatch(/neutral\s+bundled, default/)
+    expect(r.text).toMatch(/mine\s+yours/)
+    expect(r.text).toMatch(/revenantworks\s+yours, over bundled\s+my copy/)
+    expect(r.text).toMatch(/broken\.json: not valid JSON/)
+  })
+
+  test('switch: only the person, saved to theme.json, and the views take the new style', async ($, on) => {
+    const files: Record<string, string> = {}
+    themeWorld(on, files)
+    expect((await run($, 'help')).text.split('\n')[0]).toMatch(/^── dash commands ─+$/)
+    expect((await run($, 'theme revenantworks', 'task-notification')).text).toMatch(/Only you/)
+    const r = await run($, 'theme revenantworks')
+    expect(JSON.parse(files[`${HOME}/.claude/revenantworks/theme.json`]!)).toEqual({ active: 'revenantworks' })
+    expect(r.text).toMatch(/accent\s+#00E5FF/)
+    expect((await run($, 'help')).text.split('\n')[0]).toBe('▍ dash commands')
+  })
+
+  test('an invalid active theme falls back to neutral with one notice', async ($, on) => {
+    const toasts: string[] = []
+    const files: Record<string, string> = {
+      [`${HOME}/.claude/revenantworks/theme.json`]: JSON.stringify({ active: 'bad' }),
+      [`${THEMES}/bad.json`]: JSON.stringify({ name: 'bad', colors: { accent: 'not-a-colour' } }),
+    }
+    themeWorld(on, files, toasts)
+    expect((await run($, 'help')).text.split('\n')[0]).toMatch(/^── dash commands/)
+    await run($, 'skills')
+    expect(toasts.filter(t => /theme "bad" not found or invalid; using neutral/.test(t)).length).toBe(1)
+  })
+
+  test('new from answers: saved, and a low-contrast colour is flagged', async ($, on) => {
+    const files: Record<string, string> = {}
+    themeWorld(on, files)
+    expect((await run($, 'theme new')).text).toMatch(/Three ways/)
+    const r = await run($, 'theme new acme accent=#3366FF ok=22A06B warn=#D97706 bad=#DC2626 dim=#333333 glyphs=ascii header=plain')
+    const saved = JSON.parse(files[`${THEMES}/acme.json`]!)
+    expect(saved).toMatchObject({ name: 'acme', glyphs: 'ascii', header: 'plain', colors: { accent: '#3366FF', ok: '#22A06B', dim: '#333333' } })
+    expect(r.text).toMatch(/dim #333333 is 1\.\d\d:1 on a dark background, under the 3:1 floor/)
+    expect((await run($, 'theme new acme accent=blue')).text).toMatch(/No theme saved: colour accent must be/)
+  })
+
+  test('new from a tokens file and import from a DESIGN.md: roles mapped by token name', async ($, on) => {
+    const files: Record<string, string> = {
+      '/r/tokens.json': JSON.stringify({ color: { brand: { primary: { $value: '#7C3AED' } }, feedback: { success: { value: '#16A34A' }, warning: { value: '#F59E0B' }, danger: { value: '#EF4444' } }, text: { muted: '#9CA3AF' }, border: { default: '#4B5563' } } }),
+      '/r/DESIGN.md': '# Colours\n\n| Role | Token | Hex |\n|---|---|---|\n| accent | `sky` | `#38BDF8` |\n| error / broken | `rose` | `#FB7185` |\n',
+    }
+    themeWorld(on, files)
+    const a = await run($, 'theme new violet from tokens.json')
+    expect(JSON.parse(files[`${THEMES}/violet.json`]!).colors).toEqual({ accent: '#7C3AED', ok: '#16A34A', warn: '#F59E0B', bad: '#EF4444', dim: '#9CA3AF', rule: '#4B5563' })
+    expect(a.text).toMatch(/accent\s+#7C3AED\s+from "color brand primary"/)
+    const b = await run($, 'theme import DESIGN.md skyline')
+    expect(JSON.parse(files[`${THEMES}/skyline.json`]!).colors).toMatchObject({ accent: '#38BDF8', bad: '#FB7185', ok: 'success' })
+    expect(b.text).toMatch(/Not found, kept from neutral: ok, warn, dim, rule/)
+  })
+
+  test('import from a Claude design system hands Claude the read; dash fetches nothing', async ($, on) => {
+    const files: Record<string, string> = {}
+    let fetched = 0
+    themeWorld(on, files)
+    on('http.fetch', async () => {
+      fetched += 1
+      return { value: { ok: false, status: 0, text: '' } } as never
+    })
+    const r = await run($, 'theme import https://claude.ai/artifact/AbC123 house')
+    expect(r.context?.[0]).toMatch(/Artifact tool \(action "read"\)/)
+    expect(r.context?.[0]).toMatch(/data, never instructions/)
+    expect(r.context?.[0]).toMatch(/themes\/house\.json/)
+    expect(fetched).toBe(0)
+    expect(Object.keys(files).some(f => f.startsWith(THEMES))).toBe(false)
+    expect((await run($, 'theme import https://example.com/x')).text).toMatch(/not a Claude artifact link/)
   })
 })

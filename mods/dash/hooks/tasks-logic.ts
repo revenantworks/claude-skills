@@ -418,23 +418,31 @@ export const taskStatusLines = (
   now: number, est: Estimate, p: Progress | null,
 ): string[] => {
   const ran = (t.endedAt ?? now) - t.startedAt
-  const head = `${t.state === 'running' ? 'RUNNING' : t.state.toUpperCase()} ${t.kind} · ${t.label}`
+  const head = `${t.state.padEnd(9)} ${t.kind.padEnd(7)} ${t.label}`
   const lines = [head]
-  if (t.detail && t.detail !== t.label) lines.push(`  what: ${t.detail.replace(/\s+/g, ' ').slice(0, 140)}`)
-  lines.push(`  started by ${t.group === 'main' ? 'this session' : 'a subagent'} at ${new Date(t.startedAt).toISOString().slice(11, 16)} UTC · ${t.state === 'running' ? 'running for' : 'ran'} ${dur(ran)}`)
+  if (t.detail && t.detail !== t.label) lines.push(`  what      ${t.detail.replace(/\s+/g, ' ').slice(0, 100)}`)
+  lines.push(`  started   ${new Date(t.startedAt).toISOString().slice(11, 16)} UTC by ${t.group === 'main' ? 'this session' : 'a subagent'} · ${t.state === 'running' ? 'running for' : 'ran'} ${dur(ran)}`)
   if (t.state === 'running') {
-    if (!est) lines.push('  estimate: none yet (no ledger row, timeout or earlier run of this task)')
+    if (!est) lines.push('  estimate  none yet: no ledger row, timeout or earlier run')
     else {
       const left = est.ms - ran
       const how = est.source === 'ledger' ? 'from its ledger row' : est.source === 'history' ? 'from earlier runs' : 'its timeout, an upper bound'
-      lines.push(left >= 0 ? `  estimate: about ${dur(left)} left of ${dur(est.ms)} (${how})` : `  estimate: ${dur(-left)} over ${dur(est.ms)} (${how})`)
+      lines.push(left >= 0 ? `  estimate  about ${dur(left)} left of ${dur(est.ms)} (${how})` : `  estimate  ${dur(-left)} over ${dur(est.ms)} (${how})`)
     }
-    if (p?.idleMs !== null && p?.idleMs !== undefined && p.idleMs > 5 * 60_000) lines.push(`  no new output for ${dur(p.idleMs)}: stalled, or quiet by design`)
+    if (p?.idleMs !== null && p?.idleMs !== undefined && p.idleMs > 5 * 60_000) lines.push(`  idle      no new output for ${dur(p.idleMs)}: stalled, or quiet by design`)
   }
-  if (p?.lastLine) lines.push(`  last output: ${p.lastLine.slice(0, 140)}`)
-  lines.push(`  id: ${t.id}`)
+  if (p?.lastLine) lines.push(`  output    ${p.lastLine.slice(0, 100)}`)
+  lines.push(`  id        ${t.id}`)
   return lines
 }
+
+/**
+ * The current run's ledger: the ledger file changed last across every run folder looked in (the
+ * repo's .dispatch/runs and ~/.dispatch/runs, real folders or junctions). A folder's own time is
+ * not used: a listing reports 0 for a folder, and a folder's time moves only when an entry is added.
+ */
+export const newestLedger = (found: ReadonlyArray<{ path: string; mtimeMs: number }>): string | null =>
+  [...found].sort((a, b) => b.mtimeMs - a.mtimeMs || a.path.localeCompare(b.path))[0]?.path ?? null
 
 export const lastLineOf = (text: string): string | null => {
   const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean)

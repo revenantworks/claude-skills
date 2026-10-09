@@ -318,7 +318,36 @@ function panelHtml(args) {
   ].join('\n')
 }
 
+// ---------- the dash theme (mods/dash/hooks/theme-logic.ts) ----------
+// The status bar takes a foreground colour as hex; a theme colour that names a Claude Code theme
+// key has no VS Code meaning, so it stays the editor's own (null). The bundled revenantworks hex
+// values are read from theme-logic.ts by a test, so the two cannot drift apart.
+const HEX = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/
+const BUNDLED_HEX = {
+  neutral: {},
+  revenantworks: { accent: '#00E5FF', warn: '#FF8B00', bad: '#FF0099', dim: '#8D9FA2', rule: '#6C7678' },
+}
+
+/** The active theme's name: DASH_THEME, else theme.json's "active", else neutral. */
+function activeThemeName(envName, activeText) {
+  if (typeof envName === 'string' && envName.trim()) return envName.trim().toLowerCase()
+  const o = parseJson(activeText)
+  return o && typeof o.active === 'string' ? o.active.toLowerCase() : 'neutral'
+}
+
+/** Hex colours by role for the status bar: the person's theme file wins over a bundled one. */
+function themeColors(name, userThemeText) {
+  const out = { accent: null, ok: null, warn: null, bad: null, dim: null }
+  const user = parseJson(userThemeText)
+  const colors = user && user.colors && typeof user.colors === 'object' ? user.colors : BUNDLED_HEX[name] || {}
+  for (const role of Object.keys(out)) if (typeof colors[role] === 'string' && HEX.test(colors[role])) out[role] = colors[role]
+  return out
+}
+
 module.exports = {
+  activeThemeName,
+  BUNDLED_HEX,
+  themeColors,
   AMBER_AT,
   FEED_STALE_MS,
   esc,

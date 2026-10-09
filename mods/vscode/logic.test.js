@@ -239,3 +239,23 @@ test('activate wires the status items and a script-free panel (against a stub of
     fs.rmSync(home, { recursive: true, force: true })
   }
 })
+
+test('theme: DASH_THEME wins, then theme.json, then neutral', () => {
+  assert.equal(L.activeThemeName('RevenantWorks', '{"active":"mine"}'), 'revenantworks')
+  assert.equal(L.activeThemeName(undefined, '{"active":"mine"}'), 'mine')
+  assert.equal(L.activeThemeName(undefined, null), 'neutral')
+})
+
+test('theme: hex colours only; a person\'s file wins over the bundled theme', () => {
+  assert.deepEqual(L.themeColors('neutral', null), { accent: null, ok: null, warn: null, bad: null, dim: null })
+  assert.equal(L.themeColors('revenantworks', null).accent, '#00E5FF')
+  const mine = JSON.stringify({ colors: { accent: '#112233', ok: 'success' } })
+  assert.deepEqual(L.themeColors('revenantworks', mine), { accent: '#112233', ok: null, warn: null, bad: null, dim: null })
+})
+
+test('theme: the bundled revenantworks colours match the dash plugin\'s theme-logic.ts', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'dash', 'hooks', 'theme-logic.ts'), 'utf8')
+  const block = /export const REVENANTWORKS: Theme = \{[\s\S]*?colors: \{([^}]*)\}/.exec(src)
+  assert.ok(block, 'REVENANTWORKS block found')
+  for (const [role, hex] of Object.entries(L.BUNDLED_HEX.revenantworks)) assert.match(block[1], new RegExp(`${role}: '${hex}'`))
+})

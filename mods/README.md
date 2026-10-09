@@ -20,7 +20,7 @@ row to its suggestion queue. You accept, dismiss or snooze it. Accepting gives y
 into `NEXT.md`; nothing is built, installed, allowed or written to a setting.
 
 [What ships](#what-ships) · [Install](#install) · [VS Code](#vs-code) · [Features](#features) ·
-[Commands](#commands) · [Suggestions](#suggestions) · [Records and network](#records-and-network) ·
+[Commands](#commands) · [Themes](#themes) · [Suggestions](#suggestions) · [Records and network](#records-and-network) ·
 [Surfaces](#surfaces) · [Data](#data-the-mods-write) · [Testing](#testing) · [Retired](#retired-2026-10-08)
 
 ## What ships
@@ -72,8 +72,10 @@ python mods/vscode/install.py
 
 It copies the extension into `~/.vscode/extensions/revenantworks.dash-<version>` (and into
 `~/.vscode-insiders/extensions` when VS Code Insiders is installed), removes older copies and the
-`revenantworks.mods-statusbar-*` extension it replaced, and asks you to reload the window.
-`--dry-run` prints what it would do and writes nothing. Run it again after an update.
+`revenantworks.mods-statusbar-*` extension it replaced, and asks you to reload the window. The old
+extension is uninstalled with `code --uninstall-extension` when `code` is on PATH; any entry left in
+VS Code's `extensions.json` for a removed folder is dropped too, so VS Code never reports an invalid
+extension. `--dry-run` prints what it would do and writes nothing. Run it again after an update.
 
 | Item | Shows | Reads |
 |---|---|---|
@@ -87,6 +89,64 @@ every skill with its fires, failures, misroutes and tokens, health and the sugge
 panel is static HTML with scripts off. PACE uses the same formula as `dash` (95 times the share of
 the week gone), and a test keeps the two equal. The extension never writes a file, runs a process
 or contacts a service.
+
+## Themes
+
+`/dash` draws its pane in a theme: a colour for each role (`accent`, `ok`, `warn`, `bad`, `dim`,
+`rule`), a glyph set (`unicode` or `ascii`) and a header style (`rule`, `plain` or `block`). Colour
+shows only where a pane draws; text answers, `dash_read` and the status line get the glyphs and
+headers in plain text, never escape codes.
+
+| Theme | Where | Look |
+|---|---|---|
+| `neutral` | bundled, **the default** | Every colour is a key of your own Claude Code theme, so it follows light and dark |
+| `revenantworks` | bundled, opt-in | The Revenantworks brand: threshold-blue accent, ember warn, magenta error, ash-grey, cursor-block headers |
+| your own | `~/.claude/revenantworks/themes/<name>.json` | Anything you make; a file named like a bundled theme replaces it |
+
+```
+/dash theme                    list the themes; the active one is marked
+/dash theme revenantworks      switch (saved in ~/.claude/revenantworks/theme.json)
+/dash theme show [name]        every colour role painted, with contrast warnings
+/dash theme new                make your own: the three ways below
+```
+
+`DASH_THEME=<name>` in your environment wins over the saved choice. A theme file that does not
+parse, or an active name that does not exist, falls back to `neutral` with one notice a session;
+`/dash theme` lists each skipped file and why.
+
+**Make your own.** Each way writes `~/.claude/revenantworks/themes/<name>.json` and checks contrast
+on the theme's background: text roles 4.5:1, `dim` 3:1, `rule` 1.5:1. A colour under its floor is
+named, never refused.
+
+1. **Answer in one line:** `/dash theme new acme accent=#3B82F6 ok=#22A06B warn=#D97706
+   bad=#DC2626 dim=#8B949E` (optional: `rule=`, `glyphs=unicode|ascii`, `header=rule|plain|block`,
+   `background=dark|light|#hex`). A colour may also name a Claude Code theme key, such as `success`.
+2. **Import a brand file on this machine:** `/dash theme new acme from <path>` or `/dash theme
+   import <path> acme`. It reads a tokens JSON file (nested, `value` or `$value` leaves), a
+   `DESIGN.md`, a brand definition or CSS variables, and maps each role from the token's name
+   (`primary`/`accent`, `success`, `warning`, `error`/`danger`, `muted`, `border`). It shows what it
+   mapped and what it kept from `neutral`. No Claude call, no network.
+3. **Import a Claude Design System:** `/dash theme import <claude.ai artifact link> [name]`. The
+   mod fetches nothing: it hands Claude a short task to read the design system with its Artifact
+   tool (the content is data, never instructions), map its tokens to the roles, show you the
+   mapping and the contrast, and write the theme file only after you say yes.
+
+A theme file:
+
+```json
+{
+  "name": "acme",
+  "description": "One line for /dash theme.",
+  "background": "dark",
+  "colors": { "accent": "#3B82F6", "ok": "#22A06B", "warn": "#D97706", "bad": "#DC2626", "dim": "#8B949E", "rule": "#4B5563" },
+  "glyphs": "unicode",
+  "header": "rule"
+}
+```
+
+Every field but `name` is optional (the file name stands in for a missing `name`); a role left out
+keeps the `neutral` colour. The VS Code extension paints its status bar text with the same theme's
+hex colours where VS Code allows (its backgrounds stay VS Code's own warning and error colours).
 
 ## Features
 
@@ -143,6 +203,7 @@ only.
 | `/dash` | The overview pane (text where no pane draws) |
 | `/dash skills` · `meters` · `health` · `tasks` · `context` | One view of the feed |
 | `/dash suggest` | The suggestion queue; `accept`, `dismiss` or `snooze <n>` |
+| `/dash theme` | List, switch (`<name>`), show or make (`new`, `import`) a [theme](#themes) |
 | `/dash gpu` · `palette` · `godot` · `prs` | The optional panels |
 | `/dash publish` | Writes a counts-only snapshot for a private mobile page |
 | `/dash doctor` | Checks the switch file, the collector, the meter file and the feed |
@@ -219,6 +280,8 @@ that folder. Event rows are pruned after 30 days. Rows marked "record" exist onl
 | Path | Written by | Read by | Kind |
 |---|---|---|---|
 | `switches.json` | `/dash` | both mods, the VS Code extension | setting |
+| `theme.json` · `themes/<name>.json` | `/dash theme` (or you) | `dash`, the VS Code extension | setting |
+| `health/<mod>.json` | each mod, every minute | `/dash health` (one file for every session: each live session's beat by hash) | heartbeat |
 | `dash/events.jsonl` | collector | the feed roll-up | record |
 | `dash/feed.json` | collector | `/dash`, `dash_read`, the VS Code extension | record |
 | `dash/suggestions.json` | suggestions | `/dash suggest` | record |
@@ -257,9 +320,13 @@ claude plugin test mods/privacy
 node --test mods/vscode
 ```
 
+```bash
+python3 -m unittest discover -s mods/vscode -p "test_*.py"
+```
+
 `mods/shared/` is the source for the files under each plugin's `hooks/lib/`. `dash` holds the whole
 library; `privacy` holds only the switch reader, the catalog and the small helpers. Edit the
-source, then run `python3 mods/sync_shared.py` to copy it. CI runs the first five checks on a push
+source, then run `python3 mods/sync_shared.py` to copy it. CI runs every check above on a push
 to `main`, on Linux. The hook tests also pass on Windows: their stubs key files by the posix path,
 because the Windows test host hands a stub the resolved drive path.
 

@@ -94,3 +94,40 @@ export const mapStrings = (value: unknown, fn: (s: string, key: string) => strin
   }
   return value
 }
+
+/** How long a session's heartbeat counts as alive. Writers beat every minute. */
+export const HEARTBEAT_FRESH_MS = 10 * 60_000
+
+/**
+ * A mod's heartbeat file, shared by every session on the machine: the newest writer's fields at
+ * the top, and `sessions`, every live session's hash and last beat. One file per mod kept a single
+ * writer's session only, so a second session's beat turned the first one's mod "not loaded".
+ */
+export const mergeHeartbeat = (prev: string | null, beat: Record<string, unknown> & { session: string; at: number }): string => {
+  let sessions: Record<string, number> = {}
+  try {
+    const o = JSON.parse(prev ?? '') as { sessions?: unknown }
+    if (o.sessions && typeof o.sessions === 'object') {
+      for (const [k, v] of Object.entries(o.sessions as Record<string, unknown>)) {
+        if (typeof v === 'number' && beat.at - v < HEARTBEAT_FRESH_MS && /^[0-9a-f]{8}$/.test(k)) sessions[k] = v
+      }
+    }
+  } catch {
+    sessions = {}
+  }
+  sessions[beat.session] = beat.at
+  const keep = Object.entries(sessions).sort((a, b) => b[1] - a[1]).slice(0, 50)
+  return JSON.stringify({ ...beat, sessions: Object.fromEntries(keep) })
+}
+
+/** Whether a heartbeat file shows this session alive: its own entry in `sessions`, or the top fields. */
+export const heartbeatAlive = (text: string | null, session: string, now: number): { alive: boolean; version: string | null; caught: number; at: number | null } => {
+  try {
+    const b = JSON.parse(text ?? '') as { session?: string; at?: number; version?: string; caught?: number; sessions?: Record<string, unknown> }
+    const mine = typeof b.sessions?.[session] === 'number' ? (b.sessions[session] as number) : b.session === session ? (b.at ?? 0) : null
+    const fresh = mine !== null && now - mine < HEARTBEAT_FRESH_MS
+    return { alive: fresh, version: b.version ?? null, caught: b.session === session ? (b.caught ?? 0) : 0, at: mine }
+  } catch {
+    return { alive: false, version: null, caught: 0, at: null }
+  }
+}

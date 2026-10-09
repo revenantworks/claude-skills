@@ -11,7 +11,7 @@ import {
 } from './privacy-logic'
 import { featuresOf } from './lib/catalog'
 import { isFeatureOn, parseSwitches, type Switches } from './lib/switches'
-import { fnv1a, isWindowsEnv, mapStrings, normPath } from './lib/util'
+import { fnv1a, isWindowsEnv, mapStrings, mergeHeartbeat, normPath } from './lib/util'
 
 const PLUGIN = 'privacy'
 const VERSION = '1.0.0'
@@ -71,7 +71,9 @@ async function pvSay($: EngineInterface, text: string): Promise<void> {
 async function pvHeartbeat($: EngineInterface): Promise<void> {
   const on = featuresOf('privacy').filter(x => pvOn(x.id)).map(x => x.id)
   try {
-    await $.fs.write(pvPath(`health/${PLUGIN}.json`), JSON.stringify({ plugin: PLUGIN, version: VERSION, session: fnv1a(pvSession), at: await $.clock.now(), on, caught: pvCaught, counts: pvCounts }))
+    // One file for every session on the machine: merge this session's beat into it (mergeHeartbeat).
+    const file = pvPath(`health/${PLUGIN}.json`)
+    await $.fs.write(file, mergeHeartbeat(await pvRead($, file), { plugin: PLUGIN, version: VERSION, session: fnv1a(pvSession), at: await $.clock.now(), on, caught: pvCaught, counts: pvCounts }))
   } catch {
     // Health is observe-only.
   }
