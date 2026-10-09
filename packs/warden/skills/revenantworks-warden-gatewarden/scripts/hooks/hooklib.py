@@ -717,6 +717,34 @@ def _built_string_run(seg: str, segs: list[str], out: "Expanded") -> None:
         out.unread.append(BUILT_STRING)
 
 
+# V-K8w2 B1: a `$(…)` or backtick substitution that is the program text of an executor (`eval`, `sh -c`,
+# `bash -c`, or the segment's command word) runs a text the hook never sees when the substitution names a
+# decoder or a fetcher. Plain substrings, matched without case; nothing is evaluated. Each nesting level
+# expand() walks is checked on its own text.
+SUB_DECODERS = ("base64 -d", "base64 --decode", "xxd -r", "certutil -decode")
+SUB_FETCHERS = ("curl", "wget", "iwr", "invoke-webrequest", "irm")
+SUB_RUNNER = re.compile(r"(?is)^(?:eval\b.*|(?:\S*/)?(?:sh|bash)\s+(?:-\w+\s+)*-\w*c\w*\b.*)$")
+RUN_SUBSTITUTION = "a substitution that decodes or fetches the text a shell runs"
+
+
+def _run_substitution(command: str, inner: str, ps: bool, out: "Expanded") -> None:
+    """Fail closed on B1: unread for push_gate, unread_code for the hooks that read code."""
+    low = inner.lower()
+    if not (any(n in low for n in SUB_DECODERS + SUB_FETCHERS) or ("openssl" in low and " -d" in low)):
+        return
+    forms = ["$(" + inner + ")"] + ([] if ps else ["`" + inner + "`"])
+    for form in forms:
+        for m in re.finditer(re.escape(form), command):
+            seg = re.split(r"[;&|\n]", command[:m.start()])[-1]
+            seg = re.sub(r"""['"]""", "", seg).strip()
+            # In PowerShell a `$(…)` command word prints its value; only the executors run it there.
+            if (not seg and not ps) or SUB_RUNNER.match(seg):
+                if RUN_SUBSTITUTION not in out.unread:
+                    out.unread.append(RUN_SUBSTITUTION)
+                    out.unread_code.append(RUN_SUBSTITUTION)
+                return
+
+
 def expand(command: str, cwd: str = "", depth: int = 0, out: Expanded | None = None,
            ps: bool | None = None, files: bool = True) -> Expanded:
     """Every shell text and code body the command runs, as far as text can show it. `ps` says the
@@ -733,6 +761,7 @@ def expand(command: str, cwd: str = "", depth: int = 0, out: Expanded | None = N
     if OPAQUE.search(command):
         out.opaque.append("a command built or invoked at run time")
     for inner in substitutions(command):
+        _run_substitution(command, inner, ps, out)
         expand(inner, cwd, depth + 1, out, ps)
     ops = split_ops(command)
     segs = [s for s, _ in ops]
