@@ -157,7 +157,7 @@ SCRIPT_EXT = re.compile(r"(?i)\.(ps1|psm1|psd1|bat|cmd|py|sh|vbs|js)$")
 REASON = ("hyperv lock: Hyper-V restore and remove commands are not Claude's to run. Removing a VM "
           "goes through hypervrunner's teardown.py (plan, sha256, the owner's OK, soft delete); a "
           "restore is an owner command (vmctl.py owner-command --op restore); only the clean-room "
-          "script may revert its own test VM.")
+          "script may revert its own test VM. Hand the owner the teardown or owner-command line.")
 PIN_OWNER_REASON = ("hyperv lock: the script pins are the owner's. Writing or changing "
                     "hyperv_lock.pins.json, or running `hyperv_lock.py --pin`, is an owner step; hand "
                     "the owner the command from gatewarden's install walkthrough.")
