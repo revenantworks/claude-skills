@@ -38,9 +38,10 @@ mode, since any of them can carry a force push; warden audit K7-4-01, V-K8w): an
 pushing alias or one nested past five levels, a run-time subcommand or program name (`git $x`,
 `$G push`), Start-Process or xargs feeding git, a redirected git dir or config (GIT_DIR, --git-dir,
 GIT_CONFIG_*, HOME, --exec-path), a push in inline code, a git config change to an alias, remote or
-url setting on a push line, a script written and run on the same push line, and a push the gate sees
-but cannot parse. So is a shell script on disk too large or locked to read, a shell script over
-256 KB that names push, and a mirror or `+`/`:` push refspec set in git config (K7-4-03, K7-4-07).
+url setting on a push line, a script written and run on the same push line, a push argument filled in
+at run time (`git push $F origin main`, `"$@"`, `$1`; V-K8w2 B3, B4), a glob in the command word that
+may name git on a push segment (`gi[t] push`; B9), and a push the gate sees but cannot parse. So is a
+shell script on disk too large or locked to read, a shell script over 256 KB that names push, and a mirror or `+`/`:` push refspec set in git config (K7-4-03, K7-4-07).
 Limits: it binds the commands Claude runs, not the owner's own terminal; it does not read an
 interpreter's source file (release tooling pushes by design); a stamp file written by hand defeats
 step 4.
@@ -48,6 +49,7 @@ step 4.
 from __future__ import annotations
 
 import argparse
+import fnmatch
 import os
 import re
 import subprocess
@@ -338,6 +340,40 @@ def _plain_git(seg: str) -> bool:
     return k is not None and hl.prog(toks[k]) == "git" and not re.search(r"\$|`", seg)
 
 
+# A push argument the shell fills in at run time (V-K8w2 B3, B4): `$x`, `${x}`, `$(…)` (flattened to
+# `$__SUB` before this runs, backticks too), `"$@"`, `$*`, `$1`..`$9`, and cmd's `%x%`. Read raw, before
+# hooklib.despliced drops `$@` and `$*` as empty splices.
+RUN_TIME_ARG = re.compile(r"\$[A-Za-z_{(@*#?!0-9]|%[A-Za-z_]\w*%")
+# A git program a glob in the command word may name (V-K8w2 B9: `/usr/bin/gi[t] push`).
+GIT_NAMES = ("git", "git.exe", "git-push", "git-push.exe")
+
+
+def run_time_args(raw: list[str]) -> None:
+    """Refuse a push whose arguments are filled in at run time: the gate would range-check the literal
+    text (`$F` as a remote, `"$@"` as nothing) while the shell pushes what the value holds."""
+    for t in strip_redirections(raw):
+        if RUN_TIME_ARG.search(t):
+            raise PushBlock(f"push gate: push arguments resolved at run time (`{t[:40]}`) cannot be checked. "
+                            "Blocked; write the remote and the branch out.")
+
+
+def glob_git(toks: list[str], seg: str) -> None:
+    """Refuse a glob (`*`, `?`, `[`) in the command word when the pattern may name git and the segment
+    reads as a push: the shell, not the word, picks the program (`gi[t] push`, `g*t push`, `git-p?sh`).
+    A glob in an argument (`grep push *`, `ls *.md`) is not the program and passes."""
+    k = command_index(toks)
+    if k is None:
+        return
+    tok = toks[k]
+    name = re.split(r"[\\/]", hl.unquote(tok))[-1].lower()
+    if not re.search(r"[*?\[]", name):
+        return
+    if any(fnmatch.fnmatchcase(g, name) for g in GIT_NAMES[2:]) or \
+            (PUSH_HINT.search(seg) and any(fnmatch.fnmatchcase(g, name) for g in GIT_NAMES[:2])):
+        raise PushBlock(f"push gate: a glob in the command word (`{tok[:40]}`) lets the shell pick the "
+                        "program on a line that names push. Blocked; write `git` out.")
+
+
 def config_write(rest: list[str]) -> bool:
     if any(a.lower() in CONFIG_READS for a in rest):
         return False
@@ -371,9 +407,11 @@ def find_pushes(command: str, cwd: str, resolve: bool = True) -> list[dict]:
         toks = hl.tokens(hl.IFS.sub(" ", flat))
         if named and resolve:
             shape_checks(toks, line_of[idx] in pushing or not plain)
+        glob_git(toks, seg)
         for i, tok in enumerate(toks):
             p = hl.prog(tok)
             if p == "git-push":
+                run_time_args(toks[i + 1:])
                 pushes.append({"repo": cwd, "args": [arg(t) for t in toks[i + 1:]], "segment": seg.strip()[:160]})
                 continue
             if p != "git":
@@ -445,6 +483,7 @@ def find_pushes(command: str, cwd: str, resolve: bool = True) -> list[dict]:
                     raise PushBlock("push gate: a push with a redirected git dir or config (GIT_DIR, --git-dir, "
                                     "--work-tree, GIT_CONFIG_*, HOME, --exec-path) cannot be range-checked. "
                                     "Blocked; cd into the repo.")
+                run_time_args(toks[j + 1:])
                 pushes.append({"repo": repo, "args": rest, "segment": seg.strip()[:160]})
     return pushes
 

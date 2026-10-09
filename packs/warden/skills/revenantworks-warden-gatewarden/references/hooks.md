@@ -163,8 +163,14 @@ command (`$PYTHON x.py && git push origin main` passes; V-K8w2 FP-D); `Start-Pro
 more than five levels deep; a `git config` change to an `alias.`, `remote.`, `remotes.`, `url.` or
 `include` key, or `git remote add --mirror`, on a line that names push (the gate reads config before
 the line runs); `GIT_CONFIG_GLOBAL`, `GIT_CONFIG_SYSTEM`, `GIT_EXEC_PATH`, `HOME`,
-`XDG_CONFIG_HOME` or `--exec-path=` on a push line; and a shell script that the same push line writes
-and runs. All of these are hard (`push_gate.shape`). Force, delete, mirror, prune and tag flags are
+`XDG_CONFIG_HOME` or `--exec-path=` on a push line; a shell script that the same push line writes
+and runs; a push argument the shell fills in at run time (`git push $F origin main`,
+`git push origin "$(git branch --show-current)"`, a function's `git push "$@"`, `$*`, `$1`..`$9`,
+`${x}`, a backtick substitution, cmd's `%x%`; V-K8w2 B3, B4), since the gate would range-check the
+literal text while git pushes the value (a redirection such as `2>$null` or `> $LOG` is not an
+argument); and a glob in the command word that may name git on a push segment (`/usr/bin/gi[t] push`,
+`g*t push`, `git-p?sh`; V-K8w2 B9), while a glob in an argument (`grep -rn push *`) passes. Write the
+remote and branch out. All of these are hard (`push_gate.shape`). Force, delete, mirror, prune and tag flags are
 caught abbreviated too (`--forc`, `--delet`, `--mir`, `--prun`, `--tag`, `--al`: git accepts any
 unique prefix). Git config can make a plain push a mirror or force push, so before a push the
 gate reads `remote.<name>.mirror` and `remote.<name>.push` (every remote when the line names none,
