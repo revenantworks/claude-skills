@@ -21,10 +21,10 @@ const PATH = '/r/src/billing/secret-plan.ts'
 // On Windows the test host hands a stub the resolved path (drive letter, backslashes); key files by the posix form.
 const key = (p: string) => p.replace(/\\/g, '/').replace(/^[A-Za-z]:/, '')
 type FsX = { list?: (path: string) => unknown[]; stat?: (path: string) => unknown }
-const world = (on: On, files: Record<string, string>, surfaces: string[] = ['terminal'], fsx: FsX = {}) => {
+const world = (on: On, files: Record<string, string>, surfaces: string[] = ['terminal'], fsx: FsX = {}, env: Record<string, string> = {}) => {
   mock.store(on)
   mock.clock(on, { now: NOW })
-  on('env.get', async ($, e) => ({ value: e.name === 'HOME' || e.name === 'USERPROFILE' ? HOME : undefined }) as never)
+  on('env.get', async ($, e) => ({ value: e.name === 'HOME' || e.name === 'USERPROFILE' ? HOME : env[e.name] }) as never)
   on('session.id', async () => ({ value: 'sess-1' }) as never)
   on('session.cwd', async () => ({ value: '/r' }) as never)
   on('session.repo', async () => ({ value: { root: '/r', remote: null } }) as never)
@@ -238,16 +238,47 @@ describe('the current run (bug: an old run shown in Tasks)', () => {
 
 describe('themes', () => {
   const THEMES = `${HOME}/.claude/revenantworks/themes`
-  const themeWorld = (on: On, files: Record<string, string>, toasts: string[] = []) => {
+  const themeWorld = (on: On, files: Record<string, string>, toasts: string[] = [], env: Record<string, string> = {}, ccTheme: string | null = null) => {
     world(on, files, ['terminal'], {
       list: p => (p !== THEMES ? [] : Object.keys(files).filter(f => f.startsWith(`${THEMES}/`)).map(f => ({ name: f.slice(THEMES.length + 1), kind: 'file', size: 1, mtimeMs: 1, isLink: false }))),
-    })
+    }, env)
     on('ui.toast', async ($, e) => {
       toasts.push(e.text)
       return { value: undefined } as never
     })
+    // The /config rows: the Claude Code theme is the row keyed "theme".
+    on('config.list', async () => ({ value: ccTheme === null ? [] : [{ key: 'theme', label: 'Theme', kind: 'choice', value: ccTheme, provider: { kind: 'engine' }, isLocked: false }] }) as never)
   }
   const run = async ($: Engine, args: string, kind = 'composer') => (await $.command.run({ command: 'dash', args, origin: { kind } } as never)) as { text: string; context?: string[] }
+
+  test('show previews and never writes; it says which variant this console gets', async ($, on) => {
+    const files: Record<string, string> = {}
+    themeWorld(on, files, [], {}, 'light')
+    const r = await run($, 'theme show revenantworks')
+    expect(r.text).toMatch(/This console is light: it gets the light variant\./)
+    expect(r.text).toMatch(/Preview only — nothing changed/)
+    // Only the session heartbeat is written; no theme choice, no theme file.
+    expect(Object.keys(files).filter(f => /theme/.test(f))).toEqual([])
+    expect((await run($, 'theme show ghost')).text).toMatch(/No theme "ghost"/)
+  })
+
+  test('apply writes theme.json, picks the variant from the console, warns and gives the undo', async ($, on) => {
+    const files: Record<string, string> = { [`${THEMES}/darkonly.json`]: JSON.stringify({ name: 'darkonly', background: 'dark', colors: { accent: '#00E5FF', dim: '#8D9FA2' } }) }
+    themeWorld(on, files, [], {}, 'light-daltonized')
+    const a = await run($, 'theme revenantworks')
+    expect(a.text.split('\n')[0]).toBe('Applied: revenantworks (light variant — your console is light).')
+    expect(a.text).toMatch(/Undo: \/dash theme neutral/)
+    expect((await run($, 'help')).text.split('\n')[0]).toBe('▍ dash commands')
+    const b = await run($, 'theme darkonly')
+    expect(JSON.parse(files[`${HOME}/.claude/revenantworks/theme.json`]!)).toEqual({ active: 'darkonly' })
+    expect(b.text).toMatch(/accent\s+#00E5FF\s+1\.\d\d:1\s+under 4\.5:1/)
+    expect(b.text).not.toMatch(/Verdict/)
+  })
+
+  test('DASH_THEME_BACKGROUND wins over the Claude Code theme', async ($, on) => {
+    themeWorld(on, {}, [], { DASH_THEME_BACKGROUND: 'dark' }, 'light')
+    expect((await run($, 'theme revenantworks')).text.split('\n')[0]).toBe('Applied: revenantworks (dark variant — your console is dark).')
+  })
 
   test('discovery: bundled themes, the person\'s files, a file over a bundled name, a bad file listed', async ($, on) => {
     const files: Record<string, string> = {
@@ -270,7 +301,7 @@ describe('themes', () => {
     expect((await run($, 'theme revenantworks', 'task-notification')).text).toMatch(/Only you/)
     const r = await run($, 'theme revenantworks')
     expect(JSON.parse(files[`${HOME}/.claude/revenantworks/theme.json`]!)).toEqual({ active: 'revenantworks' })
-    expect(r.text).toMatch(/accent\s+#00E5FF/)
+    expect(r.text).toMatch(/^Applied: revenantworks \(dark variant — your console looks dark\)\./)
     expect((await run($, 'help')).text.split('\n')[0]).toBe('▍ dash commands')
   })
 

@@ -30,11 +30,11 @@ import {
   type LedgerRow, type PrRow, type TaskHistory, type TaskRecord,
 } from './tasks-logic'
 import {
-  NEUTRAL, discoverThemes, headerText, parseActive, pickTheme, serializeTheme, themeFromAnswers, themeFromTokens, contrastWarnings, toneStyle,
-  NAME as THEME_NAME, type Theme, type ThemeEntry,
+  NEUTRAL, consoleBackground, discoverThemes, headerText, parseActive, pickTheme, resolveVariant, serializeTheme, themeFromAnswers, themeFromTokens,
+  contrastWarnings, toneStyle, NAME as THEME_NAME, type ConsoleInfo, type Theme, type ThemeEntry,
 } from './theme-logic'
 import {
-  HELP, head, healthLines, linesText, metersLines, overviewLines, panelLines, parseDashArgs, skillsLines, suggestLines, themeLines, themeSample,
+  HELP, head, healthLines, linesText, metersLines, overviewLines, panelLines, parseDashArgs, skillsLines, suggestLines, themeApplied, themeLines, themePreview, dupesLines, findDupes,
   type Line, type View,
 } from './view-logic'
 
@@ -108,6 +108,11 @@ let dsTheme: Theme = NEUTRAL
 let dsThemes: Record<string, ThemeEntry> = discoverThemes([]).themes
 let dsThemeErrors: string[] = []
 let dsThemeNoticed = ''
+// The console's background (DASH_THEME_BACKGROUND, the Claude Code theme, COLORFGBG) and the picked theme before its variant.
+let dsConsole: ConsoleInfo = consoleBackground(null, null, null)
+let dsThemeBase: Theme = NEUTRAL
+// Each listed skill's source by the engine's word (userSettings, plugin, syncedSkills, built-in), this session only.
+let dsSkillSources: Record<string, string> = {}
 
 function dsOn(id: string): boolean {
   return isFeatureOn(dsSw, id)
@@ -419,12 +424,14 @@ async function dsLines($: EngineInterface, view: View): Promise<Line[]> {
   const th = dsTheme
   const text = (title: string, xs: string[]): Line[] => panelLines(th, title, xs)
   switch (view) {
-    case 'skills': return skillsLines(feed, th)
+    case 'skills': return skillsLines(feed, th, { sources: dsSkillSources })
+    case 'skills-all': return skillsLines(feed, th, { all: true, sources: dsSkillSources })
+    case 'dupes': return dupesLines(feed, th, dsSkillSources)
     case 'meters': return metersLines(live, feed, now, th)
-    case 'health': return healthLines(feed.health, th)
+    case 'health': return healthLines(feed.health, th, findDupes(feed.skills, dsSkillSources).length)
     case 'tasks': return dsTaskLines($)
     case 'suggest': return suggestLines(dsSuggest, th)
-    case 'theme': return themeLines(dsThemes, dsTheme.name, dsTheme, dsThemeErrors)
+    case 'theme': return themeLines(dsThemes, dsTheme.name, dsTheme, dsThemeErrors, dsConsole)
     case 'gpu': return text('GPU', leaseLines(parseLease(await dsRead($, dsLeaseFile)), dsReadings, now))
     case 'palette': return text('Brand palette', await dsPaletteLines($))
     case 'godot': return text('Godot', dsGodot ? dsGodotLines(now) : ['No project.godot here; the Godot panel is for Godot projects.'])
@@ -506,7 +513,17 @@ async function dsLoadTheme($: EngineInterface): Promise<void> {
   dsThemes = d.themes
   dsThemeErrors = d.errors
   const p = pickTheme(d.themes, (await $.env.get('DASH_THEME')) ?? null, parseActive(await dsRead($, dsPath('theme.json'))))
-  dsTheme = p.theme
+  let ccTheme: string | null = null
+  try {
+    // The Claude Code theme is the /config row keyed "theme" (dark, light, dark-daltonized, light-ansi, auto...).
+    const row = (await $.config.list()).find(x => x.key === 'theme')
+    ccTheme = typeof row?.value === 'string' ? row.value : null
+  } catch {
+    // No settings rows on this host: the override and COLORFGBG still decide.
+  }
+  dsConsole = consoleBackground(ccTheme, (await $.env.get('DASH_THEME_BACKGROUND')) ?? null, (await $.env.get('COLORFGBG')) ?? null)
+  dsThemeBase = p.theme
+  dsTheme = resolveVariant(p.theme, dsConsole.bg).theme
   // One notice per problem a session: a bad file falls back to neutral, never stops the dashboard.
   const notice = p.notice ?? (d.errors.length ? `dash: theme file skipped (${d.errors[0]}). /dash theme lists the themes.` : null)
   if (notice && notice !== dsThemeNoticed) {
@@ -526,17 +543,21 @@ const THEME_GUIDE = (t: Theme): string => [
   '  Three ways. Each one saves ~/.claude/revenantworks/themes/<name>.json.',
   '',
   '  1  Answer in one line: a name and five colours as hex',
-  '     /dash theme new <name> accent=#3B82F6 ok=#22A06B warn=#D97706 bad=#DC2626 dim=#8B949E',
-  '     optional: rule=#hex  glyphs=unicode|ascii  header=rule|plain|block  background=dark|light',
+  '     /dash theme new <name> accent=#3B82F6 ok=#22A06B warn=#D97706',
+  '                            bad=#DC2626 dim=#8B949E',
+  '     optional: rule=#hex  glyphs=unicode|ascii  header=rule|plain|block',
+  '               background=dark|light',
   '',
-  '  2  Import a brand file on this machine: tokens JSON, DESIGN.md or CSS variables',
+  '  2  Import a brand file on this machine: tokens JSON, DESIGN.md, CSS',
   '     /dash theme new <name> from <path>',
   '',
-  '  3  Import a Claude Design System (Claude reads it and asks before it saves)',
+  '  3  Import a Claude Design System (Claude reads it, asks before saving)',
   '     /dash theme import <claude.ai artifact link> [name]',
   '',
-  '  Names: lower-case letters, digits and dashes. Yours replaces a bundled theme of the same name.',
-  '  Every save checks contrast: text roles 4.5:1, dim 3:1, rules 1.5:1 on your background.',
+  '  Names: lower-case letters, digits and dashes. Yours replaces a bundled',
+  '  theme of the same name. Every save checks contrast: text 4.5:1, dim 3:1,',
+  '  rules 1.5:1. A light and a dark variant: add "variants" to the file',
+  '  (see mods/README.md, Themes).',
 ].join('\n')
 
 async function dsSaveTheme($: EngineInterface, theme: Theme, mapping: readonly string[], missing: readonly string[]): Promise<string> {
@@ -573,7 +594,8 @@ async function dsTheme_($: EngineInterface, rest: string, isOwner: boolean): Pro
     const n = words[1]?.toLowerCase()
     const e = n ? dsThemes[n] : undefined
     if (n && !e) return { text: `No theme "${n}". /dash theme lists them.` }
-    return { text: linesText(themeSample(e?.theme ?? dsTheme)) }
+    // A preview only: nothing is written, the active theme stays.
+    return { text: linesText(themePreview(e?.theme ?? dsThemeBase, dsTheme, dsConsole)) }
   }
   if (sub === 'new') {
     const name = (words[1] ?? '').toLowerCase()
@@ -611,13 +633,13 @@ async function dsTheme_($: EngineInterface, rest: string, isOwner: boolean): Pro
       context: [task],
     }
   }
-  if (!sub || sub === 'list') return { text: linesText(themeLines(dsThemes, dsTheme.name, dsTheme, dsThemeErrors)) }
+  if (!sub || sub === 'list') return { text: linesText(themeLines(dsThemes, dsTheme.name, dsTheme, dsThemeErrors, dsConsole)) }
   if (!isOwner) return { text: 'Only you can switch the theme, by typing /dash theme <name> yourself.' }
   if (!dsThemes[sub]) return { text: `No theme "${sub.slice(0, 40)}". Themes: ${Object.keys(dsThemes).join(', ')}. /dash theme new makes one.` }
   await dsWrite($, dsPath('theme.json'), `${JSON.stringify({ active: sub })}\n`)
   await dsLoadTheme($)
   const env = await $.env.get('DASH_THEME')
-  return { text: [linesText(themeSample(dsTheme)), ...(env ? ['', `DASH_THEME=${env} is set and wins over this choice until you unset it.`] : [])].join('\n') }
+  return { text: linesText(themeApplied(dsThemes[sub]!.theme, dsTheme, dsConsole, env ?? null)) }
 }
 
 async function dsEnsure($: EngineInterface): Promise<void> {
@@ -960,6 +982,7 @@ export const register: Register = on => {
       try {
         const b = (await $.session.usage({ breakdown: 'summary' })).context.breakdown
         const names = b?.skills?.skillFrontmatter.map(s => s.name) ?? []
+        dsSkillSources = Object.fromEntries((b?.skills?.skillFrontmatter ?? []).filter(s => typeof s.source === 'string').map(s => [s.name, s.source]))
         if (names.length) dsPush({ t: now, s: dsSKey, k: 'listed', skills: names })
       } catch {
         // No listing on this host: skills show once they fire.
@@ -1021,7 +1044,11 @@ export const register: Register = on => {
       case 'overview':
         await dsRoll($)
         return show('overview')
-      case 'skills':
+      case 'skills': {
+        await dsRoll($)
+        const sub = rest.toLowerCase()
+        return show(sub === 'all' ? 'skills-all' : sub === 'dupes' ? 'dupes' : 'skills')
+      }
       case 'meters':
       case 'tasks':
       case 'context':
@@ -1104,7 +1131,7 @@ export const register: Register = on => {
       return (
         <Box flexDirection="column">
           {lines.map((l, i) => {
-            const s = toneStyle(dsTheme, l.tone)
+            const s = l.color ? { color: l.color, bold: false } : toneStyle(dsTheme, l.tone)
             return <Text key={`d${i}`} color={s.color} bold={s.bold} wrap="truncate-end">{l.text || ' '}</Text>
           })}
         </Box>
