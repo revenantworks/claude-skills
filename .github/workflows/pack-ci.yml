@@ -57,6 +57,7 @@ jobs:
       - run: python3 mods/sync_shared.py --check
       # The VS Code extension's own tests (no dependencies; mods/README.md "Testing").
       - run: node --test mods/vscode
+      - run: python3 -m unittest discover -s mods/vscode -p "test_*.py"
       - name: Validate and test every mod plugin
         run: |
           set -e
