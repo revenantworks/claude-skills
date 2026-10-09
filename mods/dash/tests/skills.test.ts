@@ -83,8 +83,14 @@ describe('skills view: duplicates', () => {
     expect(dv).toMatch(/agentwright\s+local, claude\.ai synced/)
     expect(dv).toMatch(/docx\s+local, claude\.ai synced/)
     fit80(dv)
-    const h = linesText(healthLines({ plugins: {}, drift: [], gatewarden: null, pinsChanged: 0 } as never, NEUTRAL, 2))
-    expect(h).toMatch(/2 skills loaded twice: \/dash skills dupes/)
+    const H = { plugins: {}, drift: [], gatewarden: null, pinsChanged: 0 } as never
+    // DM3: one plain sentence with the fix, inside 80 columns.
+    const h = linesText(healthLines(H, NEUTRAL, findDupes(skills)))
+    expect(h.replace(/\s+/g, ' ')).toMatch(/2 skills load twice \(local \+ claude\.ai synced\)\. Fix: turn off claude\.ai skill sync, or delete the synced copies\./)
+    fit80(h)
+    expect(linesText(healthLines(H, NEUTRAL, findDupes([row('a'), row('b:a')]))).replace(/\s+/g, ' ')).toMatch(/1 skill loads twice \(local \+ plugin\)\. Fix: delete one copy of each \(\/dash skills dupes lists them\)\./)
+    expect(linesText(healthLines(H, NEUTRAL, 3)).replace(/\s+/g, ' ')).toMatch(/3 skills load twice\. Fix: delete one copy of each \(\/dash skills dupes lists them\)\./)
+    expect(linesText(healthLines(H, NEUTRAL))).not.toMatch(/twice/)
     expect(linesText(dupesLines(feedOf([row('solo')]), NEUTRAL))).toMatch(/No skill is loaded twice/)
   })
 })

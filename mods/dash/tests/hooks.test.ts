@@ -21,7 +21,9 @@ const PATH = '/r/src/billing/secret-plan.ts'
 // On Windows the test host hands a stub the resolved path (drive letter, backslashes); key files by the posix form.
 const key = (p: string) => p.replace(/\\/g, '/').replace(/^[A-Za-z]:/, '')
 type FsX = { list?: (path: string) => unknown[]; stat?: (path: string) => unknown }
-const world = (on: On, files: Record<string, string>, surfaces: string[] = ['terminal'], fsx: FsX = {}, env: Record<string, string> = {}) => {
+/** Fixture tasks: the agent list the engine returns, and a tool result per call description. */
+type TaskFx = { agents?: unknown[]; results?: Record<string, unknown> }
+const world = (on: On, files: Record<string, string>, surfaces: string[] = ['terminal'], fsx: FsX = {}, env: Record<string, string> = {}, fx: TaskFx = {}) => {
   mock.store(on)
   mock.clock(on, { now: NOW })
   on('env.get', async ($, e) => ({ value: e.name === 'HOME' || e.name === 'USERPROFILE' ? HOME : env[e.name] }) as never)
@@ -49,12 +51,12 @@ const world = (on: On, files: Record<string, string>, surfaces: string[] = ['ter
   on('process.run', async () => ({ value: { exitCode: 1, stdout: '', stderr: '', isStdoutTruncated: false, isStderrTruncated: false } }) as never)
   on('command.register', async ($, e) => ({ value: { command: e.name } }) as never)
   on('tool.register', async () => ({ value: { tool: 'dash_read' } }) as never)
-  on('agent.list', async () => ({ value: [] }) as never)
+  on('agent.list', async () => ({ value: fx.agents ?? [] }) as never)
   on('ui.open', async () => ({ value: { isPlaced: true } }) as never)
   on('prompt.submit', async ($, e) => ({ text: e.text }) as never)
   on('skill.prompt', async ($, e) => ({ text: e.text }) as never)
   on('turn.complete', async () => ({ text: '' }) as never)
-  on('tool.call', async ($, e) => ({ result: { stdout: '', stderr: '', interrupted: false } as never }))
+  on('tool.call', async ($, e) => ({ result: (fx.results?.[String((e as { description?: unknown }).description)] ?? { stdout: '', stderr: '', interrupted: false }) as never }))
 }
 
 /** A short session: a typed prompt, an automatic skill, a command with arguments, an edit, a turn. */
@@ -233,6 +235,49 @@ describe('the current run (bug: an old run shown in Tasks)', () => {
     const ran = await $.command.run({ command: 'dash', args: 'tasks', origin: { kind: 'composer' } } as never)
     expect(JSON.stringify(ran)).toMatch(/run 2026-10-08-current/)
     expect(JSON.stringify(ran)).not.toMatch(/2026-08-20-old/)
+  })
+})
+
+describe('Tasks: finished work shows as done (DM3 bug: 13 items "running" hours after they ended)', () => {
+  const OUT = '/t/tasks/b1.output'
+  const fx: TaskFx = {
+    results: {
+      'M14a build': { status: 'async_launched', agentId: 'aM14a' },
+      'child run': { backgroundTaskId: 'b1', outputFile: OUT },
+      'child watch': { taskId: 'mon1' },
+      'main one': { backgroundTaskId: 'bm1' },
+      'main two': { backgroundTaskId: 'bm2' },
+    },
+  }
+  const note = (id: string, status: string) => `<task-notification>\n<task-id>${id}</task-id>\n<status>${status}</status>\n</task-notification>`
+  test('a subagent turn end, a notification burst, and a child with no end signal', async ($, on) => {
+    const files: Record<string, string> = { [OUT]: 'step 1\nstep 2 ok\n' }
+    world(on, files, ['terminal'], { stat: p => (p === OUT ? { kind: 'file', size: 16, mtimeMs: NOW - 42 * 60_000, isLink: false } : undefined) }, {}, fx)
+    await $.tool.call({ tool: 'Agent', description: 'M14a build', subagent_type: 'opus-medium', prompt: 'p', run_in_background: true } as never)
+    await $.tool.call({ tool: 'Bash', description: 'child run', command: 'npm test', run_in_background: true, agentId: 'aM14a' } as never)
+    await $.tool.call({ tool: 'Monitor', description: 'child watch', agentId: 'aM14a' } as never)
+    await $.tool.call({ tool: 'Bash', description: 'main one', command: 'sleep 1', run_in_background: true } as never)
+    await $.tool.call({ tool: 'Bash', description: 'main two', command: 'sleep 2', run_in_background: true } as never)
+    // The subagent's loop ends: its one turn completes.
+    await $.turn.complete({ answer: 'handed back', durationMs: 10, isAborted: false, turnId: 'ts', reason: 'answer', agentId: 'aM14a' } as never)
+    // Two notifications in one burst.
+    await $.prompt.submit({ text: `${note('bm1', 'completed')}\n${note('bm2', 'failed')}`, origin: { kind: 'task-notification' } } as never)
+    const r = (await $.command.run({ command: 'dash', args: 'tasks', origin: { kind: 'composer' } } as never)) as { text: string }
+    expect(r.text).toMatch(/0 running · 1 failed · 2 no end signal/)
+    expect(r.text).toMatch(/completed agent +M14a build/)
+    expect(r.text).toMatch(/completed bash +main one/)
+    expect(r.text).toMatch(/failed +bash +main two/)
+    expect(r.text).toMatch(/no-signal bash +child run[\s\S]*no end signal — last output 11:18 UTC/)
+    expect(r.text).toMatch(/no-signal monitor +child watch[\s\S]*no end signal — no output seen/)
+    expect(r.text).not.toMatch(/running for/)
+  })
+  test('the agent list: an agent the engine dropped has ended, idle still runs', async ($, on) => {
+    world(on, {}, ['terminal'], {}, {}, { ...fx, agents: [{ id: 'aT', status: 'idle', description: 'teammate', type: 'teammate' }] })
+    await $.tool.call({ tool: 'Agent', description: 'M14a build', subagent_type: 'opus-medium', prompt: 'p', run_in_background: true } as never)
+    // Same clock: inside the grace window the absent agent is not judged yet.
+    const r = (await $.command.run({ command: 'dash', args: 'tasks', origin: { kind: 'composer' } } as never)) as { text: string }
+    expect(r.text).toMatch(/2 running/)
+    expect(r.text).toMatch(/running +agent +teammate/)
   })
 })
 

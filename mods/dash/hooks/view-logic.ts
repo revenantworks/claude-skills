@@ -189,10 +189,26 @@ export const healthSummary = (h: Health, theme: Theme = NEUTRAL): string => {
   return [`${plural(drift, 'hook')} drifted`, gw, ...(h.pinsChanged ? [`${plural(h.pinsChanged, 'instruction file')} changed`] : [])].join(theme.glyphs.sep)
 }
 
-export const healthLines = (h: Health, theme: Theme = NEUTRAL, dupes = 0): Line[] => {
+/**
+ * The duplicate-skills health item: one plain sentence and its fix, wrapped inside 80 columns.
+ * `dupes` is the pairs (their sources name the fix) or, where only a count is known, the count.
+ */
+export const dupesHealth = (t: Theme, dupes: number | readonly Dupe[]): Line[] => {
+  const n = typeof dupes === 'number' ? dupes : dupes.length
+  if (!n) return []
+  const sources = typeof dupes === 'number' ? [] : [...new Set(dupes.flatMap(d => d.sources))].sort((a, b) => SOURCES.indexOf(a) - SOURCES.indexOf(b))
+  const fix = sources.includes('claude.ai synced')
+    ? 'Fix: turn off claude.ai skill sync, or delete the synced copies.'
+    : 'Fix: delete one copy of each (/dash skills dupes lists them).'
+  const what = `${plural(n, 'skill')} ${n === 1 ? 'loads' : 'load'} twice${sources.length ? ` (${sources.join(' + ')})` : ''}.`
+  return [{ text: `  ${t.glyphs.warn} ${what}`, tone: 'warning' }, { text: `    ${fix}`, tone: 'warning' }]
+}
+
+export const healthLines = (h: Health, theme: Theme = NEUTRAL, dupes: number | readonly Dupe[] = 0): Line[] => {
   const t = theme
   const out: Line[] = [head(t, 'Health'), { text: '  Mods loaded in this session', tone: 'bold' }, ...pluginLines(t, h)]
-  if (dupes) out.push(blank, { text: `  ${t.glyphs.warn} ${plural(dupes, 'skill')} loaded twice: /dash skills dupes`, tone: 'warning' })
+  const dh = dupesHealth(t, dupes)
+  if (dh.length) out.push(blank, ...dh)
   out.push(blank, { text: '  Hooks: this repo against ~/.claude/hooks', tone: 'bold' })
   if (h.drift.length === 0) out.push({ text: '  Nothing to compare here.', tone: 'dim' })
   else {
