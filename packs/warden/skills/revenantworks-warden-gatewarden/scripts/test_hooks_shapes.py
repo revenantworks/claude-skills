@@ -209,6 +209,89 @@ class B5(PushShapeBase):
         self.expect_plain_pushes_pass()
 
 
+ENV_ALIAS_PUSH = "a git alias set in the environment runs a push"
+ENV_ALIAS_UNREAD = "a git alias set in the environment cannot be read"
+SHELL_ALIAS = "runs a shell command that pushes"
+ENV1 = "GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=alias.zz GIT_CONFIG_VALUE_0="
+
+
+class B5env(PushShapeBase):
+    """M14b follow-up to V-K8w2 B5: an alias set through the environment on the same line
+    (GIT_CONFIG_COUNT + GIT_CONFIG_KEY_<n>=alias.<name> + GIT_CONFIG_VALUE_<n>) is the env twin of
+    `-c alias.<name>=…`. Before a subcommand that is not a git builtin it is read like an alias: a literal
+    value is resolved (an alias that pushes is refused, one that runs a builtin passes); a value the
+    gate cannot read (set at run time, or missing) is refused."""
+
+    def test_refuses_environment_alias_that_pushes(self):
+        self.expect(2, [f"{ENV1}'{U} origin main' {G} zz",
+                        f'{ENV1}"{U} origin main" {G} zz',
+                        f"export {ENV1}'{U} origin main'; {G} zz",
+                        f"env {ENV1}'{U} origin main' {G} zz",
+                        "GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=alias.ZZ "
+                        f"GIT_CONFIG_VALUE_0='{U} origin main' {G} zz",
+                        "GIT_CONFIG_COUNT=2 GIT_CONFIG_KEY_0=alias.zz GIT_CONFIG_VALUE_0=yy "
+                        f"GIT_CONFIG_KEY_1=alias.yy GIT_CONFIG_VALUE_1='{U} origin main' {G} zz"],
+                    reason=ENV_ALIAS_PUSH)
+        self.expect(2, ["$env:GIT_CONFIG_COUNT=1; $env:GIT_CONFIG_KEY_0='alias.zz'; "
+                        f"$env:GIT_CONFIG_VALUE_0='{U} origin main'; {G} zz"], tool="PowerShell",
+                    reason=ENV_ALIAS_PUSH)
+
+    def test_refuses_environment_shell_alias_that_names_push(self):
+        self.expect(2, [f"{ENV1}'!echo {U}' {G} zz"], reason=SHELL_ALIAS)
+
+    def test_refuses_environment_alias_whose_value_cannot_be_read(self):
+        self.expect(2, [f"{ENV1}$V {G} zz", f'{ENV1}"$V" {G} zz',
+                        f"GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=alias.zz {G} zz origin main"],
+                    reason=ENV_ALIAS_UNREAD)
+        self.expect(2, ["$env:GIT_CONFIG_COUNT=1; $env:GIT_CONFIG_KEY_0='alias.zz'; "
+                        f'$env:GIT_CONFIG_VALUE_0="$v"; {G} zz'], tool="PowerShell", reason=ENV_ALIAS_UNREAD)
+
+    def test_environment_alias_to_a_builtin_and_other_lines_pass(self):
+        self.expect(0, [f"{ENV1}status {G} zz", f"{ENV1}'log --oneline -1' {G} zz",
+                        f"{ENV1}$V {G} status",
+                        "GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=alias.yy GIT_CONFIG_VALUE_0=$V " f"{G} zz",
+                        f"{G} -c user.name=x commit -m y",
+                        f"GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=core.autocrlf GIT_CONFIG_VALUE_0=false {G} zz"])
+
+    def test_repo_aliases_still_resolve(self):
+        git(self.work, "config", "alias.st", "status")
+        self.expect(0, [f"{G} st", f"{ENV1}status {G} st"])
+
+    def test_plain_pushes_still_pass(self):
+        self.expect_plain_pushes_pass()
+
+
+class B5redirect(PushShapeBase):
+    """M14b follow-up to V-K8w2 B5: GIT_CONFIG_GLOBAL, GIT_CONFIG_SYSTEM, GIT_CONFIG_NOSYSTEM, HOME or
+    XDG_CONFIG_HOME set on the line swaps the config files git reads aliases from, while the gate reads
+    its own. A subcommand that is not a git builtin may then be an alias the gate cannot see, so the line
+    is refused with the push line's redirected-config reason. A builtin with a redirect passes."""
+
+    def test_refuses_config_redirect_on_a_non_builtin_subcommand(self):
+        self.expect(2, [f"HOME=/tmp/x {G} zz", f"GIT_CONFIG_GLOBAL=extra.cfg {G} zz origin main",
+                        f"GIT_CONFIG_SYSTEM=extra.cfg {G} zz", f"GIT_CONFIG_NOSYSTEM=1 {G} zz",
+                        f"XDG_CONFIG_HOME=/tmp/x {G} zz", f"export HOME=/tmp/x; {G} zz",
+                        f"env HOME=/tmp/x {G} -C . zz"], reason=REDIRECTED)
+        self.expect(2, [f"$env:HOME='C:\\tmp\\x'; {G} zz", f"$env:GIT_CONFIG_GLOBAL='extra.cfg'; {G} zz"],
+                    tool="PowerShell", reason=REDIRECTED)
+
+    def test_refuses_config_redirect_on_a_known_alias(self):
+        git(self.work, "config", "alias.st", "status")
+        self.expect(2, [f"HOME=/tmp/x {G} st"], reason=REDIRECTED)
+
+    def test_config_redirect_on_a_builtin_passes(self):
+        self.expect(0, [f"HOME=/tmp/x {G} status", f"GIT_CONFIG_NOSYSTEM=1 {G} log",
+                        f"XDG_CONFIG_HOME=x {G} diff", f"GIT_CONFIG_GLOBAL=extra.cfg {G} log --oneline -1",
+                        f"cd $HOME && {G} zz", f'[ "$HOME" == /tmp ] && {G} zz'])
+        self.expect(0, [f"$env:HOME='C:\\tmp\\x'; {G} status"], tool="PowerShell")
+
+    def test_redirect_on_a_push_keeps_its_reason(self):
+        self.expect(2, [f"HOME=/tmp/x {G} {U} origin main"], reason=REDIRECTED)
+
+    def test_plain_pushes_still_pass(self):
+        self.expect_plain_pushes_pass()
+
+
 DECODE_AND_RUN = "inline code that decodes text and runs it"
 HELLO = "aGVsbG8="  # the base64 of the word hello: a harmless literal
 B64D, SYSTEM = "b64" + "decode", "os." + "system"
