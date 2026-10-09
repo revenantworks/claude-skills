@@ -1,6 +1,6 @@
 ---
 name: revenantworks-foundation-pacewright
-description: Paces a Claude subscription's usage — how fast to spend this week, what can still run at N% weekly, whether planned work fits before a reset. Reads the 5-hour, weekly, per-model and CI-minutes meters, sets a spend mode (normal, pace, turbo, overnight, owner-away, reset-eve) and re-cuts waves that don't fit. Also when something ate usage overnight, CI minutes run low, a new model needs a measured baseline, or which skill or subagent used tokens; or say pacewright (check, mode, fit, uba, baseline, spend, refresh). The plan table is dispatchwright's; one artifact's cost, skillwright's slim; the meter statusline, rigwright's; a scheduled check, agentwright's.
+description: Paces a Claude subscription's usage — how fast to spend this week, what can still run at N% weekly, whether planned work fits before a reset. Reads the 5-hour, weekly, per-model and CI-minutes meters, sets a spend mode (normal, pace, turbo, overnight, work-day, owner-away, reset-eve) and re-cuts waves that don't fit. Also when something ate usage overnight, CI minutes run low, a new model needs a measured baseline, or which skill or subagent used tokens; or say pacewright (check, mode, fit, uba, baseline, spend, refresh). The plan table is dispatchwright's; one artifact's cost, skillwright's slim; the meter statusline, rigwright's; a scheduled check, agentwright's.
 license: Apache-2.0
 compatibility: Ships no code. Reads ~/.claude/usage-windows.json when a statusline writes it; otherwise asks for the reading in one line. Writes three files only — ~/.dispatch/budget-decision.json, ~/.dispatch/usage-calibration.json and the overlay .dispatch/local.yaml; run notes (pace log, dashboard, digest) are the controller's; check --dry writes nothing; without file tools it prints the fields. A dispatchwright ledger is optional input. Web search only for refresh. No packages.
 metadata:
@@ -23,11 +23,9 @@ so a plan change is a data edit, not a rule rewrite.
 **Workflow:** Read the meters → Reconcile the reading (UBA) → Pick the mode → Fit → Write the
 budget decision → Check again (every 2 hours, and whenever a unit finishes)
 
-Dependencies (standalone profile): ships no executable code. A meter file written by a statusline
-command (`~/.claude/usage-windows.json`) makes a reading automatic; without it the skill asks the
-owner, one line. A fan-out ledger (dispatchwright's) sharpens the reconcile; without it the skill
-uses the session's own record and the user's readings. File tools let it write the budget
-decision file; without them it prints the same fields in chat. None is required.
+Dependencies (standalone profile): no executable code, none required. A statusline meter file
+(`~/.claude/usage-windows.json`) makes a reading automatic, else one line is asked; a
+dispatchwright ledger sharpens the reconcile; without file tools the budget fields print in chat.
 
 ## Load budget
 
@@ -50,7 +48,7 @@ Optional mods: `references/mods.md`, only when their data is present.
 
 **Bare invocation** ("pacewright", no task): reply exactly — *"pacewright here. I pace your
 usage meters (`check` reads them and says what may run now; `mode` sets normal, pace, turbo,
-overnight, owner-away or reset-eve; `fit` fits planned work into the windows; `uba` checks a
+overnight, work-day, owner-away or reset-eve; `fit` fits planned work into the windows; `uba` checks a
 reading against known usage; `baseline` measures a model before it takes a job type; `spend`
 says where tokens went; `refresh`
 re-verifies the plan numbers). Fan-outs are dispatchwright's; they read my budget file as data.
@@ -138,9 +136,12 @@ Weekly 80–94%: one unit. Weekly 95%: stop.
 - **Turbo**: **only on the user's word**, for a stated period. Up to 5 units, each passing four
   launch gates. No launch at 5-hour 85% or more. Ends at PACE + 15, and drops to normal after two
   checks in a row below the baseline rows-per-point rate.
-- **Overnight** (22:00–09:00 owner time, by clock): entry is a gate — every queued command on the
-  allow list, liveness watched from outside the session; throttle from the gap, never turbo; no
+- **Overnight** (22:00–09:00 user time, by clock): entry is a gate — every queued command
+  allowed, liveness watched from outside the session; throttle from the gap, never turbo; no
   blocking question — launch first, questions to a morning file; a morning report.
+- **Work day** (on the user's word): overnight conduct, questions to a check-in file; each
+  check-in (default 12:00 and 17:00, overlay `workday.checkins`) asks them one at a time, then
+  owner tasks and a three-line status. Work never pauses.
 - **Owner-away**: overnight for several days, plus a daily digest; no design rounds; no top-tier
   unit except an escalation.
 - **Reset-eve**: on when the projected close misses the target (else 36 hours out under 85%);

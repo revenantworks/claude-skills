@@ -12,7 +12,7 @@ from the foundation pack, version 1.0.0.
 
 pacewright paces a Claude subscription's usage across sessions, runs and projects. It reads the
 5-hour, weekly, per-model and CI-minutes meters, picks a spend mode (normal, pace, turbo, overnight,
-owner-away, reset-eve), fits planned work into what the windows have left, and checks each reading
+work day, owner-away, reset-eve), fits planned work into what the windows have left, and checks each reading
 against known usage for leaks. It never runs the work: it says what may launch now, in one line and
 in one small data file any fan-out can read.
 

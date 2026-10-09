@@ -1,4 +1,4 @@
-# Test cases — 19 assertion cases
+# Test cases — 20 assertion cases
 
 > Provenance: authored at member version v1.0.0, 2026-09-28, when pacewright was split out of
 > dispatchwright 1.3.2. Cases 5 and 6 are dispatchwright's former Cases 17 and 18, moved with
@@ -11,7 +11,7 @@ Coverage map → Cases 1–16: Bare invocation (1) · Live gate and the normal t
 burn budget (3) · Budget decision file (4) · Window fit (5) · No data (6) · UBA (7) · CI minutes
 (8) · Model baselines (9) · Turbo (10) · Injection (11) · Overlay safety (12) · Contiguous bands (13) · Per-meter budgets (14) ·
 Runs alone (15) · Score-only check (16) · Reset-eve capacity and the last check (17) · Unit-labelled
-calibration (18) · Replay fixture and effort trial (19).
+calibration (18) · Replay fixture and effort trial (19) · Work-day check-in (20).
 
 ## Coverage map
 
@@ -200,3 +200,17 @@ cover all of them; the judge checks no arm cites a line past the fixture date. A
 6-build trial alternating medium and high on that class; the kept effort is the one with fewer
 harness tokens per landed build at equal quality; builds start at medium until it is measured.
 Assert (negative): no live path is left in the brief; no effort is picked from price alone.
+
+**Case 20 — Work day: a question queued at 10:40, asked at the 12:00 check-in (added 2026-10-09)**
+Input T1: work-day mode on with the default check-ins (no overlay entry); two rows are
+launchable; at 10:40 a unit reports and raises a question that blocks a third row, with a clear
+recommended answer. T2: 12:00, the check-in; the two units still run; one owner task (a command
+only the user can run) is open. T3: the overlay sets `workday.checkins` to `["11:30", "16:00"]`.
+Assert T1: the two launchable rows launch first; the question is written to the check-in file
+with its recommended answer and a clock-stamped time; only the third row waits; no question tool
+is called. Assert T2: every launchable row launches before the first question; then the queued
+question is asked alone with the question tool, the recommended answer first; then the owner
+task as one runnable command; then three status lines (landed, running, spend against PACE); the
+two units are not stopped or paused. Assert T3: the check-ins move to 11:30 and 16:00. Assert
+(negative): no blocking question at 10:40; no unit waits on the question except the row it
+blocks; the mode does not end at the check-in.
