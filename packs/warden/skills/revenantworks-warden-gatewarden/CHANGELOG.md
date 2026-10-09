@@ -42,6 +42,11 @@ Description cut to about 600 characters, main use case first (2026-10-08).
   file and a `*.vh*` wildcard fed to a delete verb; the stdin rule also covers bare `node`, a bare
   shell, `bash -s`, `pwsh -Command -`, `ipython`, `python -m code` and `winpty python`. Encoded and
   decoded payload forms beyond the piped one are a known open area under review.
+- M14 shape round, 2026-10-09 (V-K8w2 B3, B4, B9): a push argument filled in at run time (`$x`,
+  `${x}`, `$(…)`, backticks, `"$@"`, `$*`, `$1`..`$9`, `%x%`) and a glob in the command word that may
+  name git on a push segment (`gi[t] push`) are hard shape refusals; plain pushes, redirections and
+  globs in arguments pass. The in-repo regression battery `scripts/test_hooks_shapes.py` holds one
+  test class per finding, each with an allow control.
 - Audits allow, deny and ask rules across every settings level: dead rules, bypass shapes, and Bash
   denies with no PowerShell twin on Windows, where the sandbox does not run.
 - Lints the shapes the docs name: absolute paths, `sh -c`, `git -C`, path rules for tools that are
