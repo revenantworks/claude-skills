@@ -1,0 +1,5 @@
+schema_version: "1.1"
+name: injected-guide
+tags: [behaviour, safety]
+context:
+  add_dirs: [handed-guide]

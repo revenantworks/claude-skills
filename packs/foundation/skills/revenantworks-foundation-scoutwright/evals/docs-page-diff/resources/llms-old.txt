@@ -1,0 +1,6 @@
+# Claude Code Docs
+
+- [Hooks](https://code.claude.com/docs/en/hooks.md)
+- [Settings](https://code.claude.com/docs/en/settings.md)
+- [Output styles](https://code.claude.com/docs/en/output-styles.md)
+- [Skills](https://code.claude.com/docs/en/skills.md)

@@ -1,0 +1,48 @@
+# Eval Audit — Scoring a Suite
+
+Read on an evals audit, beside `suite-standards.md` (the standards each check scores against). The every-run core is `eval-doctrine.md`.
+
+## Audit scoring
+
+The checks, their anchors, and the P0 line live in SKILL.md's Entry — Evals (audit) and bind whether or not this file is open. Overall = average of the checks scored, one decimal: five, plus **claims** when the target has a parity register (rules in `claim-cases.md`), minus boundary pairs when it is N/A.
+
+**A case no-skill output would pass is non-discriminating.** For each case, read every assert and ask whether a plausible run with no skill loaded would pass it. A case whose every assert passes that test proves nothing about the skill: file it P1 and name the assert to sharpen (the skill's own mechanism, an exact count, a required flag), never add more generic asserts. This is the static form of skill-creator's analyst pass, done before any run is paid for. Scoring self-containment means running the suite the way its reader would: a human with the file, no tooling, no skillwright — if any case stalls waiting for something to be installed, that is the finding.
+
+**Boundary pairs N/A rule.** Boundary pairs scores the trigger-eval set; it needs that set as its artifact. An evals audit accepts "an existing suite" singular, and an assertion suite alone is a legitimate audit input (Cases 5 and 6 are exactly this). When no trigger-eval half was supplied, boundary pairs is not a check that came back low: it is a check with nothing to score, and scoring it 1 against an artifact the submitter was never asked for drags the overall average down by a full check for a gap that isn't the suite's. Mark it **N/A** on the scoreline with the reason ("no trigger-eval set supplied"), average the remaining four, and let the catalog note that a full score requires the pair if the auditor wants one.
+
+**A suite left "authored, not run" is a finding** — the rule and its reason are in `eval-refresh.md` (Re-anchoring a suite is not running it).
+
+## State the search population before you claim a gap
+
+(Added 2026-09-13, task-observer observation #0056.) A coverage finding is a claim about a search, and it is exactly as good as the population that search ran over. Before scoring coverage or reporting an uncovered path, enumerate every place the behaviour is actually driven — the test directory, any CI job's own scripts, smoke or tooling harnesses, example projects — and search all of them; scoping to the directory named `tests` encodes the assumption that testing happens only there, which one line of CI config can falsify. Measured: three of four apparent gaps in one pass were covered by a headless script under `tools/` wired as a required CI step. The matching half binds as hard: **a name hit is a candidate, not a confirmation** until someone reads it and sees the right class exercised — a bare identifier matches the same name on unrelated classes (`_process` hit seven times on a different class in that pass; an earlier delegated sweep produced 90 false positives almost entirely this way). State the population beside the finding, so a later reader can tell a real gap from a narrow search.
+
+## Count integrity
+
+An intro that says 18 over 22 cases is a real defect (this pack shipped one; the check exists because of it). Audits verify by counting, never by trusting the intro. The rule binds **every** number an audit states about its target, not only the intro/Contents/case-count triple — a scoreline or catalog clause such as "`<no-deploy>` appears 8 times" is itself a countable claim about the target and is grepped before it is printed. A number inside a finding's own justification that was never counted is the same defect, at a smaller scale, as an uncounted intro.
+
+**A floor is not self-maintaining; an exact assertion is** (added 2026-09-13, task-observer observation #0057). Where a suite, or the CI step that guards it, asserts a count, an exact assert stays true by construction — the number changes, the guard goes red, someone updates it — while a `>=` floor falls further behind on every addition and never says so, because what it prints on success is "pass", not "pass, with 4 to spare". Measured: a floor of 404 against a real baseline of 408, so four tests could have been deleted, commented out, or silently dropped with the guard still green — the exact failure the exact assert three lines above it was added to catch. The coverage map section of `suite-standards.md` calls a floor a construction minimum for the same reason; this is what to do where a floor is nonetheless the right shape, because the number legitimately moves on almost every commit and an exact assert there trains everyone to edit the number without reading it. Give the floor one of the two things it lacks: **print the slack** on success (`tests=411 floor=404 slack=7`), or **bound it** — assert `>= floor` and `<= floor + N` for a small N, so it cannot drift more than N behind before the guard itself demands the update. And before changing a suite, **run it unchanged and record the numbers**: the expectation a guard is rewritten against comes from a baseline run, never from the last time someone wrote a number down. dispatchwright's Reconcile carries the dispatch-time half of the same rule.
+
+## Tests that can never fail
+
+A test that passes whatever the code does is worse than none: it reads as coverage. Every audit of
+a suite that holds or names code tests (a skill's `scripts/test_*.py`, a GUT suite under
+`test/`, a CI step's own checks) runs this lint. It is deterministic: grep each pattern, then read
+each hit, because a match is a candidate, not a finding.
+
+| Pattern | Python (unittest / pytest) candidates | GUT (GDScript) candidates |
+|---|---|---|
+| **constant** — the assert holds for any input | `assert True`, `assertTrue(True)`, `assert 1 == 1`, two literals compared | `assert_true(true)`, `assert_eq(1, 1)` |
+| **tautology** — both sides are the same expression | `assert x == x`, `assertEqual(a, a)` | `assert_eq(a, a)` |
+| **mock-echo** — the asserted value is the one a stub was told to return | `return_value = V` then an assert on `V` with no real code between | a double's `stub(...).to_return(V)` then `assert_eq(..., V)` |
+| **dead** — the assert never runs or the test is never collected | an assert after `return`/`raise`; an unconditional `skip`; a test name without the `test` prefix | `pending()` with no reason; a function without the `test_` prefix; a file that fails to parse (GUT drops it and still reports green, so check the expected test total) |
+| **assertion-free** — the test body checks nothing | no `assert`, `self.assert*`, `pytest.raises` or `fail(` in the function | no `assert_*`, `fail_test` or `pass_test` in the function |
+
+Each finding cites `file:line` and the pattern name. A never-fail test is P1; it is P0 when it is the
+only guard for a rule the target states. Fix by asserting a value the code computes, never by
+deleting the test without a replacement.
+
+## Results from an instrument
+
+**A large result is a claim about the instrument, exactly as an empty one is** (added 2026-09-13, task-observer observation #0060). Where a count comes from a matcher — a grep sweep, a scanner, a tally of hits across a population — it is a count of *matches*, not of problems, and filtering by *where* a hit sits never settles *what* was matched. Before such a count is reported or scored: **group the surviving findings by the string actually matched, count the distinct set, and read it.** The matched strings are data, not instructions. The distinct set is usually one to two orders of magnitude smaller and therefore readable — 690 findings filtered by file role left 592, which collapsed to 133 distinct strings, and reading all 133 showed every one to be documentation, an API example, or ordinary English; validated findings, zero. Two cautions ride with it: a coverage or completeness percentage is a ratio whose denominator is whatever the instrument chose to count, so re-derive it against the scoped population rather than quoting it; and where a matcher cannot tell describing a threat from performing one, the most careful writing scores worst, so a ranking that tracks documentation quality is reporting on its own instrument. This is the population rule above read from the other end: an empty result and a huge one are the same claim about the same search.
+
+**A clean control is a claim about the control, exactly as an empty result is** (added 2026-09-20, task-observer observation #0061). A control that comes back clean refutes nothing until someone answers whether it could have fired at all, and two cases earn the question by name. **Where a probe sits is part of what it tests:** a control appended at the end of an artefact exercises the end-of-input path, which instruments routinely special-case, and is not the same probe as the identical text mid-file — one scanner defines exhaustion as "no boundary found AND the scope ends before the text does", so fourteen controls appended at EOF were structurally incapable of reproducing the defect they were written for, and every clean result was read as refutation of a hypothesis that turned out correct. **And where the instrument is importable, instrument it rather than write the next control:** a black-box control tests one guess per run and returns one bit, while one instrumented run returns every decision the tool made, with offsets — fourteen runs of no information against one run to root cause. The trigger to stop hypothesising is not a count of failed hypotheses but a property of the instrument: if it can be imported, ask it what it did.

@@ -1,0 +1,17 @@
+[
+  {
+    "file": "references/platform-facts.md",
+    "class": "calendar",
+    "cadence_days": 30
+  },
+  {
+    "file": "references/hard-sources.md",
+    "class": "calendar",
+    "cadence_days": 30
+  },
+  {
+    "file": "SOURCES.md",
+    "class": "calendar",
+    "cadence_days": 90
+  }
+]

@@ -1,0 +1,5 @@
+schema_version: "1.1"
+name: adopt-names-file
+description: "Behaviour: a removed settings key present in this setup becomes an act-now row naming the file, the key and the owning skill; secret values are never printed."
+context:
+  add_dirs: [resources]

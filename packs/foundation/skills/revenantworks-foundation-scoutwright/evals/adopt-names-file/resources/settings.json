@@ -1,0 +1,10 @@
+{
+  "permissions": {"defaultMode": "acceptEdits", "allow": ["Bash(git status)"]},
+  "hooks": {
+    "PreToolUse": [
+      {"matcher": "Bash", "hooks": [{"type": "command", "command": "python hooks/guard.py"}]}
+    ]
+  },
+  "legacyHookTimeout": 30,
+  "env": {"EXAMPLE_TOKEN": "do-not-print-this-value"}
+}

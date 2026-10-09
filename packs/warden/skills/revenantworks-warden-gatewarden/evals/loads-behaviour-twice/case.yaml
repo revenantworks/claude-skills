@@ -1,0 +1,10 @@
+schema_version: "1.1"
+name: loads-behaviour-twice
+description: >-
+  Behaviour, the loads check (test case T18). A scratch Claude config holds one local skill that
+  also syncs from claude.ai with an older body, and one twin already switched off. The run must
+  use the skill's script, name the open twin, give the complete skillOverrides block, report the
+  switched-off twin as handled, and never edit a settings file itself. Needs --scaffold and
+  --allow-tools Bash; without them the case cannot run.
+context:
+  scaffold_script: scaffold.sh

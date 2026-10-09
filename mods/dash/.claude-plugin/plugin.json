@@ -1,0 +1,10 @@
+{
+  "name": "dash",
+  "version": "1.0.0",
+  "description": "Revenantworks dashboard mod for Claude Code 2.1.287+: which skills are enabled and how each fires (slash or automatic), failures, likely misroutes, tokens and cost by skill; the 5-hour, weekly, context and cache meters on the status line; health (mods loaded, hook drift, gatewarden's event counts); background tasks; optional research, GPU-lease, Godot and PR panels; and a suggestion queue that proposes, never builds. /dash opens it; Claude reads it only through dash_read. Counts only, never text; counts stay in this session until /dash records on.",
+  "author": {
+    "name": "Revenantworks"
+  },
+  "repository": "https://github.com/revenantworks/claude-skills",
+  "license": "Apache-2.0"
+}

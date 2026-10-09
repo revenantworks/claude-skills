@@ -1,0 +1,8 @@
+schema_version: "1.1"
+name: behaviour-check-tracked-cache
+description: >-
+  Behaviour, margin 1. A repo with a committed Parquet cache. check must fail and name it, and
+  hand the user the untrack command without running it. Needs --scaffold and
+  --allow-tools Bash; without them the case cannot run.
+context:
+  scaffold_script: scaffold.sh

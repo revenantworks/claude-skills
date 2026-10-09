@@ -1,0 +1,12 @@
+[
+  {
+    "file": "references/surface-notes.md",
+    "class": "calendar",
+    "cadence_days": 60
+  },
+  {
+    "file": "SOURCES.md",
+    "class": "calendar",
+    "cadence_days": 90
+  }
+]

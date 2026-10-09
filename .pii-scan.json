@@ -1,0 +1,29 @@
+{
+  "_comment": "Scan policy for tools/pii_scan.py and shieldwarden's shield_scan.py (--config). Accept a deliberate hit by rule and file, only where the file must hold the shape: a test fixture, a detector's own pattern, an eval prompt, or a doc naming a red flag. Never add a real value here.",
+  "accepted": [
+    {"rule": "drive-path", "file": "packs/warden/skills/revenantworks-warden-gatewarden/scripts/test_hooks.py"},
+    {"rule": "drive-path", "file": "packs/localops/skills/revenantworks-localops-hypervrunner/scripts/test_hypervrunner.py"},
+    {"rule": "drive-path", "file": "packs/localops/skills/revenantworks-localops-hypervrunner/scripts/test_teardown.py"},
+    {"rule": "drive-path", "file": "packs/warden/skills/revenantworks-warden-shieldwarden/scripts/test_signposts.py"},
+    {"rule": "generic-api-key", "file": "mods/privacy/tests/privacy.test.ts"},
+
+    {"rule": "directive-in-data", "file": "packs/*/skills/*/evals/*"},
+    {"rule": "directive-in-data", "file": "featured/*/skills/*/evals/*"},
+    {"rule": "directive-in-data", "file": "packs/*/pack-evals/*"},
+    {"rule": "directive-in-data", "file": "mods/privacy/tests/privacy.test.ts"},
+    {"rule": "directive-in-data", "file": "mods/dash/tests/collector.test.ts"},
+    {"rule": "directive-in-data", "file": "tools/test_blind_queries.py"},
+    {"rule": "directive-in-data", "file": "packs/gamedev/skills/revenantworks-gamedev-soundsmith/scripts/test_audio_post.py"},
+    {"rule": "directive-in-data", "file": "packs/localops/skills/revenantworks-localops-whisperrunner/scripts/transcript_check.py"},
+    {"rule": "directive-in-data", "file": "featured/whisperrunner/skills/revenantworks-localops-whisperrunner/scripts/transcript_check.py"},
+    {"rule": "directive-in-data", "file": "packs/foundation/skills/revenantworks-foundation-rigwright/SOURCES.md"},
+    {"rule": "directive-in-data", "file": "packs/localops/skills/revenantworks-localops-hypervrunner/SOURCES.md"},
+
+    {"rule": "pipe-to-shell", "file": "packs/warden/skills/revenantworks-warden-trustwarden/references/red-flags.md"},
+    {"rule": "pipe-to-shell", "file": "featured/trustwarden/skills/revenantworks-warden-trustwarden/references/red-flags.md"},
+    {"rule": "pipe-to-shell", "file": "packs/warden/skills/revenantworks-warden-gatewarden/references/hooks.md"},
+    {"rule": "pipe-to-shell", "file": "packs/localops/skills/revenantworks-localops-lmstudiorunner/references/api-surface.md"},
+
+    {"rule": "secret-in-log", "file": "packs/warden/skills/revenantworks-warden-keywarden/scripts/test_keywarden.py"}
+  ]
+}

@@ -1,0 +1,68 @@
+// The one switch file both Revenantworks mods read: ~/.claude/revenantworks/switches.json.
+// Owner 2026-10-08: two plugins (dash, privacy) and one on/off file. Pure logic only.
+
+/** Owner 2026-10-06: mods show (lens), note (assist), mask (privacy) or write a file (feed); none blocks. */
+export const MOD_TYPES = ['privacy', 'lens', 'assist', 'feed'] as const
+export type ModType = (typeof MOD_TYPES)[number]
+
+export type Switches = {
+  version: 1
+  /** The kill switch: true turns every feature off, whatever else says. */
+  off: boolean
+  /** Per-feature override by id ("D1", "W3"). Missing means the shipped default. */
+  features: Record<string, boolean>
+  updated: string
+}
+
+export const defaultSwitches = (): Switches => ({ version: 1, off: false, features: {}, updated: '' })
+
+const isRecord = (v: unknown): v is Record<string, unknown> =>
+  typeof v === 'object' && v !== null && !Array.isArray(v)
+
+/** Tolerant parse: anything malformed reads as the shipped defaults; retired fields (types, reminders, theme) are dropped. */
+export const parseSwitches = (text: string | null | undefined): Switches => {
+  const base = defaultSwitches()
+  if (!text) return base
+  let raw: unknown
+  try {
+    raw = JSON.parse(text)
+  } catch {
+    return base
+  }
+  if (!isRecord(raw)) return base
+  const features: Record<string, boolean> = {}
+  if (isRecord(raw.features)) for (const [k, x] of Object.entries(raw.features)) if (typeof x === 'boolean') features[k] = x
+  return { version: 1, off: raw.off === true, features, updated: typeof raw.updated === 'string' ? raw.updated : '' }
+}
+
+export const serializeSwitches = (sw: Switches): string => `${JSON.stringify(sw, null, 2)}\n`
+
+/**
+ * Owner 2026-10-06, kept 2026-10-08: a mod keeps no record of the person's work on disk, and contacts
+ * no service, until they say yes. These features exist to keep a record, so each waits for its own
+ * switch: D1 the counts-only collector, D6 the meter-file writer, D7 the ledger sidecar, D8 the pins.
+ */
+export const DATA_OPT_IN: ReadonlySet<string> = new Set(['D1', 'D6', 'D7', 'D8'])
+
+/** Features whose whole job is a network read (D12 reads GitHub through the gh login). */
+export const NETWORK_OPT_IN: ReadonlySet<string> = new Set(['D12'])
+
+export const KEEPS_RECORDS: ReadonlySet<string> = DATA_OPT_IN
+export const NETWORK: ReadonlySet<string> = NETWORK_OPT_IN
+export const OPT_IN: ReadonlySet<string> = new Set([...DATA_OPT_IN, ...NETWORK_OPT_IN])
+
+/** Kill switch, then the feature's own switch, then the shipped default (on, unless opt-in). */
+export const isFeatureOn = (sw: Switches, id: string): boolean => {
+  if (sw.off) return false
+  const own = sw.features[id]
+  if (own !== undefined) return own
+  return !OPT_IN.has(id)
+}
+
+/** May this feature keep a record on disk? Only when its own switch says yes. */
+export const isRecordingOn = (sw: Switches, id: string): boolean =>
+  KEEPS_RECORDS.has(id) && !sw.off && sw.features[id] === true
+
+/** May this feature contact a service? Only when its own switch says yes. */
+export const isNetworkOn = (sw: Switches, id: string): boolean =>
+  NETWORK.has(id) && !sw.off && sw.features[id] === true

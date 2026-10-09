@@ -1,0 +1,17 @@
+[
+  {
+    "file": "references/scanner-matrix.md",
+    "class": "calendar",
+    "cadence_days": 90
+  },
+  {
+    "file": "references/install-terms.md",
+    "class": "calendar",
+    "cadence_days": 90
+  },
+  {
+    "file": "SOURCES.md",
+    "class": "calendar",
+    "cadence_days": 90
+  }
+]

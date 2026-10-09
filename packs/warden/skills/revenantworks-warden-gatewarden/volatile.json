@@ -1,0 +1,17 @@
+[
+  {
+    "file": "references/rule-grammar.md",
+    "class": "calendar",
+    "cadence_days": 60
+  },
+  {
+    "file": "references/evidence-sources.md",
+    "class": "calendar",
+    "cadence_days": 60
+  },
+  {
+    "file": "SOURCES.md",
+    "class": "calendar",
+    "cadence_days": 90
+  }
+]

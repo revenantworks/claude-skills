@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fixture</title>
+<style>
+.wrap { width: min(100% - 2.5rem, 1140px); margin-inline: auto; }
+.panel { width: 1200px; }
+.panel { max-width: 100%; }
+.hero { width: 900px; }
+@media (max-width: 960px) { .hero { width: auto; } }
+@layer layout {
+  .sheet { min-width: 640px; }
+  @media (max-width: 700px) { .sheet { min-width: 0; } }
+}
+</style>
+</head>
+<body>
+<div class="wrap">Capped by min()</div>
+<div class="panel">Capped by a max-width in another rule</div>
+<div class="hero">Covered by a max-width media query</div>
+<div class="sheet">Covered inside a layer</div>
+</body>
+</html>

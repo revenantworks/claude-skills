@@ -1,0 +1,205 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
+  "name": "revenantworks",
+  "description": "The Revenantworks skills marketplace — every Revenantworks Agent Skill pack. Each pack installs as one plugin; every skill inside stands alone.",
+  "owner": {
+    "name": "Revenantworks"
+  },
+  "plugins": [
+    {
+      "name": "foundation",
+      "source": "./packs/foundation",
+      "description": "Nine standalone wrights: skillwright (skills & packs, their eval suites, slims and trigger diagnosis), promptwright (prompts & model tiers), grillwright (the interview before any build), agentwright (agent systems), rigwright (standing Claude config), dispatchwright (fan-out dispatch), handoffwright (committed session handoffs), pacewright (usage pacing), scoutwright (Claude platform change watch). Each routes on its own description and works alone; together they cover the full build-audit-ship loop.",
+      "version": "1.0.0",
+      "license": "Apache-2.0",
+      "category": "productivity",
+      "keywords": [
+        "agent-skills",
+        "skills",
+        "prompts",
+        "evals",
+        "token-optimization",
+        "pack"
+      ],
+      "repository": "https://github.com/revenantworks/claude-skills"
+    },
+    {
+      "name": "gamedev",
+      "source": "./packs/gamedev",
+      "description": "Game-development skills on the -smith motif. Four members: pixelsmith — art direction for pixel art that must read at several zoom scales at once, including a pixelated-3D band; godotsmith — Godot 4.x project conventions, the proof that a build is actually green, and asset intake (import settings and the render precondition); soundsmith — game audio direction judged by numbers (palette, SFX lists, licence-gated briefs, a stdlib measuring script); slicesmith — the coding loop for game code: spec, plan, thin slices, red first, a Godot verify ladder, one commit per slice. Each routes on its own description and works alone.",
+      "version": "1.0.0",
+      "license": "Apache-2.0",
+      "category": "productivity",
+      "keywords": [
+        "agent-skills",
+        "skills",
+        "game-development",
+        "pixel-art",
+        "art-direction",
+        "game-audio",
+        "godot",
+        "pack"
+      ],
+      "repository": "https://github.com/revenantworks/claude-skills"
+    },
+    {
+      "name": "localops",
+      "source": "./packs/localops",
+      "description": "Skills for running work on this machine, on the -runner motif, one program per runner. Seven members: lmstudiorunner (local LM Studio models, verified), comfyrunner (ComfyUI renders behind GPU guards), dockerrunner (Docker Desktop and WSL), duckrunner (DuckDB over a repo's data files), whisperrunner (local transcripts with whisper.cpp), hypervrunner (Hyper-V VMs and Windows Sandbox), obsrunner (OBS Studio, read-only by default, and FFmpeg post-processing). Each routes on its own description and works alone.",
+      "version": "1.0.0",
+      "license": "Apache-2.0",
+      "category": "productivity",
+      "keywords": [
+        "agent-skills",
+        "local-llm",
+        "lm-studio",
+        "delegation",
+        "offline",
+        "comfyui",
+        "docker",
+        "duckdb",
+        "whisper",
+        "hyper-v",
+        "obs",
+        "privacy",
+        "pack"
+      ],
+      "repository": "https://github.com/revenantworks/claude-skills"
+    },
+    {
+      "name": "scribe",
+      "source": "./packs/scribe",
+      "description": "Skills on the -scribe motif for words and knowledge. Four members: researchscribe (graded research verdicts, playbooks and reports), brandscribe (brand definitions, design systems and voice files), commscribe (messages and docs shaped to their channel, with a fact check), lorescribe (a fiction project's story bible and canon checks). Each routes on its own description and works alone.",
+      "version": "1.0.0",
+      "license": "Apache-2.0",
+      "category": "productivity",
+      "keywords": [
+        "agent-skills",
+        "skills",
+        "research",
+        "branding",
+        "writing",
+        "worldbuilding",
+        "pack"
+      ],
+      "repository": "https://github.com/revenantworks/claude-skills"
+    },
+    {
+      "name": "warden",
+      "source": "./packs/warden",
+      "description": "Skills that guard what Claude writes or manages, on the -warden motif. Four members: shieldwarden (leak and injection scans, the naming and identity policy per surface, names that advertise secrets, gated history rewrites that never push), trustwarden (pre-install vets of third-party code), keywarden (credential lifecycle, fingerprints only), gatewarden (runtime permission policy, owner-installed hooks, a settings map, and disk space and Claude's reach from evidence). Each routes on its own description and works alone.",
+      "version": "1.0.0",
+      "license": "Apache-2.0",
+      "category": "productivity",
+      "keywords": [
+        "agent-skills",
+        "skills",
+        "security",
+        "privacy",
+        "permissions",
+        "pack"
+      ],
+      "repository": "https://github.com/revenantworks/claude-skills"
+    },
+    {
+      "name": "pacewright",
+      "source": "./featured/pacewright",
+      "description": "Paces a Claude subscription's usage — how fast to spend this week, what can still run at N% weekly, whether planned work fits before a reset. Reads the 5-hour, weekly, per-model and CI-minutes meters, sets a spend mode (normal, pace, turbo, overnight, owner-away, reset-eve) and re-cuts waves that don't fit. Also when something ate usage overnight, CI minutes run low, a new model needs a measured baseline, or which skill or subagent used tokens; or say pacewright (check, mode, fit, uba, baseline, spend, refresh). The plan table is dispatchwright's; one artifact's cost, skillwright's slim; the meter statusline, rigwright's; a scheduled check, agentwright's.",
+      "version": "1.0.0",
+      "license": "Apache-2.0",
+      "category": "productivity",
+      "keywords": [
+        "agent-skills",
+        "skills",
+        "featured"
+      ],
+      "repository": "https://github.com/revenantworks/claude-skills"
+    },
+    {
+      "name": "whisperrunner",
+      "source": "./featured/whisperrunner",
+      "description": "Transcribes local audio and video to txt, srt, vtt and json with timestamps using whisper.cpp, and proves which backend ran. Trigger to transcribe, caption or subtitle a recording, meeting, podcast or video locally; to pick a Whisper model for this GPU or estimate a batch; when a transcript is empty, cut short or repeating; when Whisper ran on the CPU or a pasted log must prove the GPU ran; when it shares the GPU with LM Studio or ComfyUI; or say whisperrunner (audit, check, plan, run, status, refresh). Never a cloud API or a download. Voice-overs are comfyrunner's; clips and burned-in captions obsrunner's; game audio soundsmith's; summarising transcripts lmstudiorunner's.",
+      "version": "1.0.0",
+      "license": "Apache-2.0",
+      "category": "productivity",
+      "keywords": [
+        "agent-skills",
+        "skills",
+        "featured"
+      ],
+      "repository": "https://github.com/revenantworks/claude-skills"
+    },
+    {
+      "name": "trustwarden",
+      "source": "./featured/trustwarden",
+      "description": "Vets third-party skills, plugins, MCP servers and GitHub Actions before install, with a verdict (PASS, CONDITIONAL, HOLD, FAIL) and install terms. Trigger on any should-I-install question, even with its files or hooks pasted in or a scan already clean; is this skill safe, vet this MCP server, check this GitHub Action, what does this installer write, a licence check before a fold-in, what changed in a plugin update; or say trustwarden (vet, revet, terms, refresh). Uses skillspector, zizmor, pinact and Scorecard when present; lists files no scanner read. Runtime permissions are gatewarden's; secrets shieldwarden's; your own skills skillwright's; sandboxing a download hypervrunner's.",
+      "version": "1.0.0",
+      "license": "Apache-2.0",
+      "category": "productivity",
+      "keywords": [
+        "agent-skills",
+        "skills",
+        "featured"
+      ],
+      "repository": "https://github.com/revenantworks/claude-skills"
+    },
+    {
+      "name": "brandscribe",
+      "source": "./featured/brandscribe",
+      "description": "Keeps brand definitions, several side by side, and turns one into a Claude Design System, DESIGN.md, VOICE.md or guide. Trigger to define a brand, palette, type or voice; turn a style guide or site into tokens; make, connect or sync a design system; audit for brand drift (off-palette colours, old names); pass or fail a page against a brand, or apply one to a README or generated output; critique or check a built UI (hierarchy, spacing, states, generic look); or say brandscribe (setup, build, export, sync, audit, gate, ui). Microcopy and messages are commscribe's; React libraries design-sync's; charts dataviz's; canon lorescribe's; no logos.",
+      "version": "1.0.0",
+      "license": "Apache-2.0",
+      "category": "productivity",
+      "keywords": [
+        "agent-skills",
+        "skills",
+        "featured"
+      ],
+      "repository": "https://github.com/revenantworks/claude-skills"
+    },
+    {
+      "name": "pixelsmith",
+      "source": "./featured/pixelsmith",
+      "description": "Directs pixel art that must read at several zoom scales at once — per-scale palette and silhouette rules, terrain-versus-unit contrast, a one-scene look test, and briefs for an artist or image generator. Trigger when a game renders one world through zoom bands or levels of detail, a pixelated 3D or 2.5D band with billboards included; when a sprite, unit or icon vanishes against terrain zoomed out; for a cross-band look test or pixel-art style guide; or say pixelsmith (test, brief, audit, 3d). Works from a described scene. Drawing is an art tool's job; rendering and LOD code the game's engineering; a brand palette brandscribe's; game audio soundsmith's.",
+      "version": "1.0.0",
+      "license": "Apache-2.0",
+      "category": "productivity",
+      "keywords": [
+        "agent-skills",
+        "skills",
+        "featured"
+      ],
+      "repository": "https://github.com/revenantworks/claude-skills"
+    },
+    {
+      "name": "privacy",
+      "source": "./mods/privacy",
+      "description": "Revenantworks privacy mod for Claude Code 2.1.287+: masks secrets and stream keys before Claude reads them (restoring a value only into the gitignored file it came from), flags a credential keywarden marked for rotation, and marks web, MCP and mail results and messages from routines or other sessions as data. Kept apart from the dash plugin, so safety never depends on the dashboard. Never blocks your work; keeps no record; contacts no service.",
+      "version": "1.0.0",
+      "license": "Apache-2.0",
+      "category": "productivity",
+      "keywords": [
+        "mods",
+        "hooks",
+        "claude-code",
+        "optional"
+      ],
+      "repository": "https://github.com/revenantworks/claude-skills"
+    },
+    {
+      "name": "dash",
+      "source": "./mods/dash",
+      "description": "Revenantworks dashboard mod for Claude Code 2.1.287+: which skills are enabled and how each fires (slash or automatic), failures, likely misroutes, tokens and cost by skill; the 5-hour, weekly, context and cache meters on the status line; health (mods loaded, hook drift, gatewarden's event counts); background tasks; optional research, GPU-lease, Godot and PR panels; and a suggestion queue that proposes, never builds. /dash opens it; Claude reads it only through dash_read. Counts only, never text; counts stay in this session until /dash records on.",
+      "version": "1.0.0",
+      "license": "Apache-2.0",
+      "category": "productivity",
+      "keywords": [
+        "mods",
+        "hooks",
+        "claude-code",
+        "optional"
+      ],
+      "repository": "https://github.com/revenantworks/claude-skills"
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(git push:*)",
+      "PowerShell(git push:*)"
+    ],
+    "ask": [],
+    "deny": [
+      "Bash(git push --force:*)",
+      "PowerShell(git push --force:*)",
+      "Bash(git push -f:*)",
+      "PowerShell(git push -f:*)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "if": "Bash(git commit *)",
+            "command": "python \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/bump-check.py\"",
+            "timeout": 30,
+            "statusMessage": "Pack bump check"
+          }
+        ]
+      }
+    ]
+  }
+}

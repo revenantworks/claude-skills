@@ -1,0 +1,10 @@
+{
+  "name": "pixelsmith",
+  "version": "1.0.0",
+  "description": "Directs pixel art that must read at several zoom scales at once — per-scale palette and silhouette rules, terrain-versus-unit contrast, a one-scene look test, and briefs for an artist or image generator. Trigger when a game renders one world through zoom bands or levels of detail, a pixelated 3D or 2.5D band with billboards included; when a sprite, unit or icon vanishes against terrain zoomed out; for a cross-band look test or pixel-art style guide; or say pixelsmith (test, brief, audit, 3d). Works from a described scene. Drawing is an art tool's job; rendering and LOD code the game's engineering; a brand palette brandscribe's; game audio soundsmith's.",
+  "author": {
+    "name": "Revenantworks"
+  },
+  "repository": "https://github.com/revenantworks/claude-skills",
+  "license": "Apache-2.0"
+}

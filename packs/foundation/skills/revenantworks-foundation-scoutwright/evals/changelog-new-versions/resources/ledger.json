@@ -1,0 +1,9 @@
+{
+  "schema": 1,
+  "last_sweep": "2026-09-24",
+  "sources": {
+    "O1": {"last_version": "9.4.1", "first_seen": {"9.4.0": "2026-09-17", "9.4.1": "2026-09-24"}}
+  },
+  "down": {},
+  "captures_waiting": []
+}

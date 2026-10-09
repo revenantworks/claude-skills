@@ -1,0 +1,5 @@
+schema_version: "1.1"
+name: fit-card-no-tier-edit
+description: "Behaviour: a fit card for a new model with per-class verdicts; the tier table is left alone and the replay trial is proposed with its cost, not run."
+context:
+  add_dirs: [resources]

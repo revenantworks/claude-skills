@@ -1,0 +1,10 @@
+{
+  "name": "whisperrunner",
+  "version": "1.0.0",
+  "description": "Transcribes local audio and video to txt, srt, vtt and json with timestamps using whisper.cpp, and proves which backend ran. Trigger to transcribe, caption or subtitle a recording, meeting, podcast or video locally; to pick a Whisper model for this GPU or estimate a batch; when a transcript is empty, cut short or repeating; when Whisper ran on the CPU or a pasted log must prove the GPU ran; when it shares the GPU with LM Studio or ComfyUI; or say whisperrunner (audit, check, plan, run, status, refresh). Never a cloud API or a download. Voice-overs are comfyrunner's; clips and burned-in captions obsrunner's; game audio soundsmith's; summarising transcripts lmstudiorunner's.",
+  "author": {
+    "name": "Revenantworks"
+  },
+  "repository": "https://github.com/revenantworks/claude-skills",
+  "license": "Apache-2.0"
+}

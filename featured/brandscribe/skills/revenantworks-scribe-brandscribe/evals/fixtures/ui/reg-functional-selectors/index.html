@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fixture</title>
+<style>
+body { background-color: #ffffff; }
+:where(.prose) p { color: #222222; }
+.prose :is(li, dd) { color: #333333; }
+.t-dark\:soft:is(.theme-dark *) { color: #fafafa; }
+.prose :where(p):not(:where([class~=not-prose], [class~=not-prose] *)) { font-size: 1rem; }
+</style>
+</head>
+<body>
+<article class="prose">
+<p>Paragraph text inside the prose block.</p>
+<ul><li>A list item inside the prose block.</li></ul>
+<p class="t-dark:soft">Text with an escaped variant class outside the dark theme.</p>
+</article>
+</body>
+</html>

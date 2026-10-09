@@ -1,0 +1,10 @@
+schema_version: "1.1"
+name: layout-behaviour-read-only
+description: >-
+  Behaviour, the layout map (test case 15). A scratch project wires dispatchwright's dispatch_gate
+  hook in its tracked settings while a scratch home wires it too, holds an ask rule in the project
+  file and an env canary in the user file. The run must use the skill's script, name the hook wired
+  twice with one proposed home, write no settings file, and never print the canary. Needs --scaffold
+  and --allow-tools Bash; without them the case cannot run.
+context:
+  scaffold_script: scaffold.sh

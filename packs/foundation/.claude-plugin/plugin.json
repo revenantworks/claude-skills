@@ -1,0 +1,13 @@
+{
+  "name": "foundation",
+  "version": "1.0.0",
+  "description": "revenantworks-foundation — nine standalone wrights for building, auditing, and maintaining skills (with their eval suites, slims and trigger diagnosis), prompts and model tiers, pre-build interviews, agent systems, standing Claude configuration, multi-agent fan-out dispatch, committed session handoffs, subscription usage pacing, and the Claude platform change watch.",
+  "author": {
+    "name": "Revenantworks"
+  },
+  "repository": "https://github.com/revenantworks/claude-skills",
+  "license": "Apache-2.0",
+  "experimental": {
+    "evals": "pack-evals"
+  }
+}

@@ -1,0 +1,5 @@
+schema_version: "1.1"
+name: slim-audit-tail
+description: "Behaviour: an audit with the optional machine-readable tail writes one machine-readable line per finding and rewrites nothing."
+context:
+  add_dirs: [resources]

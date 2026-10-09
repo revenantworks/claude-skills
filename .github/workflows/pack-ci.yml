@@ -1,0 +1,84 @@
+name: pack-ci
+
+on:
+  push:
+    branches: [main]
+    tags: ["*-v*", "v*"]
+  # Pull requests run check and mods too, so a PR shows red before it merges (CI-1, 2026-10-06).
+  pull_request:
+
+# Three jobs from one script:
+#   check  — every push/PR/tag: registry↔manifest drift + per-skill validation, no writes
+#   release — on tag v*: sync + build dist zips, attach every member zip to the release
+#   mods   — every push/PR/tag: the mod-only plugins validate and pass their tests
+#
+# check runs on tags too and release needs it. It used to skip itself on tags —
+# the one event that publishes — so every release since attached 11 member zips
+# to a public Release with neither the unit tests nor --check ever run on the
+# tagged ref (verified against the ossuary-v2.2.4 run: check skipped, release
+# success). It is a sub-minute job; there is no ref it is not worth running on.
+
+permissions:
+  contents: read
+
+# Minute budget: a newer push to the same ref cancels the older run, main
+# included (owner 2026-10-03). A tag is its own ref and is never cancelled, so a
+# release run always finishes.
+# No paths-ignore: SKILL.md and the other .md files ARE what `check` validates.
+concurrency:
+  group: pack-ci-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with: { python-version: "3.12" }
+      - run: pip install pyyaml
+      - run: python3 -m unittest discover -s tools -p "test_*.py" -v
+      - run: python3 tools/build.py --check
+      # The name-leak check is local only: its list stays on the maintainer's
+      # machine and is never uploaded, so CI has nothing to run it with.
+      # It runs before every push instead (RUNBOOK.md, "Name-leak check").
+
+  # The mod-only plugins under mods/: the shared library in step, every plugin valid under
+  # --strict, and every plugin's tests green, on a pinned Claude Code (CI-1, 2026-10-06).
+  mods:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with: { node-version: "22" }
+      - run: npm install -g @anthropic-ai/claude-code@2.1.290
+      - run: python3 mods/sync_shared.py --check
+      # The VS Code extension's own tests (no dependencies; mods/README.md "Testing").
+      - run: node --test mods/vscode
+      - name: Validate and test every mod plugin
+        run: |
+          set -e
+          for p in mods/*/.claude-plugin/plugin.json; do d="${p%/.claude-plugin/plugin.json}"
+            echo "::group::$d"
+            claude plugin validate --strict "$d"
+            if [ -f "$d/hooks/hooks.json" ]; then claude plugin test "$d"; fi
+            echo "::endgroup::"
+          done
+
+  release:
+    if: contains(github.ref, '-v') || startsWith(github.ref, 'refs/tags/v')
+    needs: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions: { contents: write }
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with: { python-version: "3.12" }
+      - run: pip install pyyaml
+      - run: python3 tools/build.py
+      - name: Attach member zips to the release
+        env: { GH_TOKEN: "${{ github.token }}" }
+        run: gh release create "${GITHUB_REF_NAME}" dist/*.zip --generate-notes || gh release upload "${GITHUB_REF_NAME}" dist/*.zip --clobber

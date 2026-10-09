@@ -1,0 +1,30 @@
+{
+  "positive": [
+    {
+      "name": "the documented statusline payload (code.claude.com/docs/en/statusline.md, read 2026-09-17, trimmed to the keys this script reads plus their neighbours; values are the docs' own: Opus, ctx 8%, 5h 23.5%, 7d 41.2%, spend 62.8%) -- exercises the real atomic write path and prints the one-line status. Written to the throwaway fixtures/window-fit/.control-usage-windows.json through the hook's own --out override (relative path, resolved beside the hook; gitignored in the repo), NEVER to ~/.claude/usage-windows.json: the gate and the guard treat that file as ground truth, and a control that wrote the docs' invented percentages there with a fresh written_at would have the next plan turn fit against fiction (unit-brief-template.md's #0062 clause: use the hook's own test-override for the state it writes). No `touches` entry: the throwaway file is not state anything reads.",
+      "argv": [
+        "--out",
+        "fixtures/window-fit/.control-usage-windows.json"
+      ],
+      "stdin": "{\"cwd\": \"/current/working/directory\", \"session_id\": \"abc123...\", \"model\": {\"id\": \"claude-opus-5\", \"display_name\": \"Opus\"}, \"workspace\": {\"current_dir\": \"/current/working/directory\", \"project_dir\": \"/original/project/directory\"}, \"version\": \"2.1.90\", \"cost\": {\"total_cost_usd\": 0.01234, \"total_duration_ms\": 45000}, \"context_window\": {\"total_input_tokens\": 15500, \"total_output_tokens\": 1200, \"context_window_size\": 200000, \"used_percentage\": 8, \"remaining_percentage\": 92}, \"rate_limits\": {\"five_hour\": {\"used_percentage\": 23.5, \"resets_at\": 1738425600}, \"seven_day\": {\"used_percentage\": 41.2, \"resets_at\": 1738857600}, \"spend_limit\": {\"used_percentage\": 62.8, \"resets_at\": 1740787200}}}",
+      "expect_exit_in": [
+        0
+      ],
+      "expect_contains": "5h 23.5%"
+    }
+  ],
+  "negative": [
+    {
+      "name": "the same documented payload before the session's first API response: rate_limits absent (the docs state the field appears only after the first response) and context_window percentages null (may be null early in the session). Must print only the model name, never a placeholder, and must leave the output file alone -- a windowless refresh from one session must not blank another session's good reading. Same --out override as the positive control, so neither control ever touches ~/.claude/usage-windows.json.",
+      "argv": [
+        "--out",
+        "fixtures/window-fit/.control-usage-windows.json"
+      ],
+      "stdin": "{\"cwd\": \"/current/working/directory\", \"session_id\": \"abc123...\", \"model\": {\"id\": \"claude-opus-5\", \"display_name\": \"Opus\"}, \"workspace\": {\"current_dir\": \"/current/working/directory\", \"project_dir\": \"/original/project/directory\"}, \"version\": \"2.1.90\", \"cost\": {\"total_cost_usd\": 0.01234, \"total_duration_ms\": 45000}, \"context_window\": {\"total_input_tokens\": 15500, \"total_output_tokens\": 1200, \"context_window_size\": 200000, \"used_percentage\": null, \"remaining_percentage\": null}}",
+      "expect_exit_in": [
+        0
+      ],
+      "expect_not_contains": "5h"
+    }
+  ]
+}

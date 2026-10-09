@@ -1,0 +1,17 @@
+[
+  {
+    "file": "references/tier-routing.md",
+    "class": "calendar",
+    "cadence_days": 60
+  },
+  {
+    "file": "references/meters.md",
+    "class": "calendar",
+    "cadence_days": 60
+  },
+  {
+    "file": "SOURCES.md",
+    "class": "calendar",
+    "cadence_days": 90
+  }
+]

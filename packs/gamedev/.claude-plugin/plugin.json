@@ -1,0 +1,13 @@
+{
+  "name": "gamedev",
+  "version": "1.0.0",
+  "description": "revenantworks-gamedev — game-development skills on the -smith motif. Four members: pixelsmith, art direction for pixel art that must read at several zoom scales at once; godotsmith, Godot 4.x project conventions, the proof that a build is actually green, and asset intake; soundsmith, game audio direction judged by numbers; slicesmith, the test-first coding loop for game code. Standard-library scripts are allowed when declared.",
+  "author": {
+    "name": "Revenantworks"
+  },
+  "repository": "https://github.com/revenantworks/claude-skills",
+  "license": "Apache-2.0",
+  "experimental": {
+    "evals": "pack-evals"
+  }
+}

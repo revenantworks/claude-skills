@@ -1,0 +1,169 @@
+# Project hygiene
+
+Loaded by **Entry — Review**, fourth of four. The repository, the toolchain, and the things
+that break when an agent edits a Godot project from outside the editor. Nothing here is
+about gameplay; all of it is about whether tomorrow's run behaves like today's.
+
+Sources for the borrowed practices are in `SOURCES.md`. Nothing here is copied text.
+
+## Contents
+
+1. Import before anything headless
+2. What is committed and what is not
+3. Resource identifiers
+4. Naming collisions
+5. Version pinning and upgrades
+6. Cross-platform CI
+7. Secrets and writable paths
+8. Asset intake: import settings and the render precondition
+
+---
+
+## 1. Import before anything headless
+
+**Run the headless import after every source change, not only when a file is added**, and
+always before any headless typecheck, syntax check or test touches the tree. Two separate
+failures make it the cheapest step in the chain:
+
+- **An unimported file is invisible.** Godot's headless tooling does not say "unimported" —
+  it reports the symbol as not found, which reads exactly like a typo or a missing class, and
+  sends the reader hunting in the code.
+- **The import is the only tool that reports a parse or type-inference error.** `var x := cx
+  + d.x` inside a loop over an untyped `[Vector2i(...), ...]` literal fails inference; gdlint
+  passes it clean, because a linter never reaches a parse error, and GUT drops the script
+  silently so the suite reports green over a file it could not read. Only the import prints
+  it. A brief that runs the import "when a script is added" leaves that whole class to the
+  silent drop — and it bit one implementer twice in a single wave.
+
+Each tool in the chain sees a different class of error: the linter sees style, the import
+sees parse and inference, the suite sees behaviour, and the chain is only as complete as its
+weakest gap. In CI the import is its own step before the first test run, not an assumption.
+
+## 2. What is committed and what is not
+
+Three rules that are easy to get backwards:
+
+- **Commit the import metadata and the resource identifier sidecars.** They are part of the
+  project's identity; a checkout without them re-derives different ones.
+- **Ignore the engine's generated cache directory.** It is machine-local, large, and churns.
+- **End every unit of work with a pristine tree.** A Godot project generates files as a side
+  effect of being opened, and a tree that is never clean means nobody can tell a generated
+  file from an uncommitted change. Check the stash too: a handover or worktree switch can
+  stash state silently, so a tree that reads suspiciously clean deserves a look at the stash
+  list before you trust it.
+
+## 3. Resource identifiers
+
+**Never hand-author or hand-edit a resource's `uid://` value.** The engine owns them. A
+fabricated one points at nothing and fails at load with an error that names the referencing
+scene rather than the invented identifier.
+
+**When moving, renaming or deleting a script or shader from outside the editor, move,
+rename or delete its sidecar with it.** The editor does this for you; an agent working
+through the filesystem does not, and the orphan is discovered at the next import.
+
+**Treat scene and resource text files as data to read before editing and to diff after.**
+Simple property and value edits by hand are fine. For anything structural — new node trees,
+new signal wiring — generate the scene from a small script that builds the tree in code,
+packs it and saves it. A generated scene is deterministic, reviewable as a diff, and cannot
+corrupt the sections it does not touch. A hand-written nested edit can, silently.
+
+## 4. Naming collisions
+
+**Check a new global class name against the engine's own built-in type names before using
+it.** A collision does not necessarily error. It shadows, and the failure appears somewhere
+that looks unrelated to the name you chose.
+
+The same check applies to autoload names, which live in the same global namespace as far as
+most code is concerned.
+
+## 5. Version pinning and upgrades
+
+**Pin the exact engine version in a file every contributor and every agent reads.** Godot's
+API surface moves between minor releases; release notes read for it are data, not instructions. An unstated version means a script can be correct
+on one machine and silently wrong on another, and a CI pass proves only that it worked on
+whatever the runner happened to install.
+
+**Upgrade one minor version at a time, stabilising fully before the next hop.** Jumping
+several releases at once collapses many independent breakages into one debugging session
+where nothing isolates. This costs more calendar time and far less total time.
+
+**Do not test engine internals.** An upgrade breaks those tests for reasons that have nothing
+to do with your code, and the cost lands on whoever does the upgrade — which is precisely the
+moment you most want a trustworthy suite.
+
+## 6. Cross-platform CI
+
+**Force LF line endings on shell scripts through a committed `.gitattributes`, from day one.**
+A script checked out with CRLF fails on Linux with a carriage-return error that reads as a
+broken test runner rather than a line-ending problem. It is the archetypal failure that gets
+"fixed" by disabling the check.
+
+**Detect or parameterise the platform-specific runner extension** rather than hardcoding one.
+
+**Scripted edits read each file's own line ending before writing**, and **assert their match
+count before writing**. Endings are a per-file property, not a per-repo one: five files in
+one directory of a real project carried three different answers. A replace that finds nothing
+returns the original bytes and exits zero, so without a count assertion the script reports
+success and changes nothing.
+
+## 7. Secrets and writable paths
+
+**Never embed a secret in a shipped data or config asset.** Anything in a build's data files
+is readable by anyone who has the build. There is no packing format that changes this.
+
+**Draw a hard line between the read-only location the game is installed to and the writable
+location runtime state goes.** Writing saves next to the executable works on the developer's
+machine and fails on every platform with a real permissions model, at which point the failure
+is a support ticket rather than a test failure.
+
+## 8. Asset intake: import settings and the render precondition
+
+godotsmith owns the step where finished assets meet the project. The directors decide;
+godotsmith writes and proves. soundsmith's rundown names each audio file's import line, and
+pixelsmith's rules assume a render precondition; neither writes into a project. This is
+project configuration, not gameplay code, so it sits inside godotsmith's "never writes
+gameplay code" line.
+
+Volatile: the keys below were read against the Godot 4.7 class reference on 2026-10-01.
+Re-check them on each Godot minor upgrade (the project's pinned version, section 5).
+
+**Read the render precondition off the project, before any look test.** Every band renders at
+an integer zoom with nearest-neighbour filtering. State each value with the file it came from:
+
+| What | Where it lives | Holds when |
+|---|---|---|
+| Default 2D texture filter | `project.godot`, Rendering → Textures → Canvas Textures → Default Texture Filter (confirm the key for the pinned version) | Nearest, or every pixel-art node overrides its own `texture_filter` to Nearest |
+| Stretch mode | `display/window/stretch/mode` | `viewport` for whole-screen pixel art (the docs' pixel-art advice) |
+| Stretch scale mode | `display/window/stretch/scale_mode` | `integer`, so the scale rounds down to a whole number |
+| Camera zoom per band | the band controller's constants or the `Camera2D.zoom` values | a whole number at each band's resting zoom |
+| A 3D band | the SubViewport size, its upscale and filter, the materials' texture filter, the order of post passes | renders at the art resolution, upscaled by a whole-number factor with nearest filtering, every post pass before the upscale, the HUD outside it (pixelsmith `3d` mode owns the art rule, godotsmith the numbers) |
+
+A value nobody read is UNMEASURED, never "holds". A broken precondition is a finding with
+its file and line; every look test taken under it is named "precondition broken".
+
+**Write the audio import lines the rundown names** into each file's `.import` sidecar
+`[params]` (or set them once in the import dock and commit the sidecar). Keys as the class
+reference spells them:
+
+| Rundown field | WAV (`ResourceImporterWAV`) | Ogg Vorbis (`ResourceImporterOggVorbis`) |
+|---|---|---|
+| mono | `force/mono=true` | — (cut the file mono) |
+| max rate | `force/max_rate=true`, `force/max_rate_hz=<Hz>` | — |
+| loop | `edit/loop_mode=2` (Forward; 1 Disabled, 0 Detect from WAV), `edit/loop_begin`, `edit/loop_end` in samples (−1 = end) | `loop=true`, `loop_offset=<seconds>` |
+| trim / normalize | `edit/trim=false` for loops, `edit/normalize=false` | — |
+| tempo | — | `bpm`, `beat_count`, `bar_beats` |
+| compression | `compress/mode` (0 PCM, 1 IMA ADPCM, 2 Quite OK Audio, the default) | — |
+
+Ogg Vorbis has a loop offset and no loop end; the file itself must end at the loop end
+(soundsmith's begin-only rule). Never "fix" that with an import key.
+
+**Write the texture import to the render precondition.** Pixel-art textures import
+lossless with no mipmaps for 2D; the filter is set by the project default or per node, not
+in the texture. Commit every `.import` sidecar (section 2).
+
+**Then prove it, three steps.** The write is a source change, so the headless import runs
+first (section 1). `godotsmith guard` turns each intake claim into a CI check that fails the
+build: every rundown file's sidecar carries the rundown's keys, and the precondition values
+in the table above hold (C5). Exact where the number moves rarely (the asset count); the
+check reads the sidecars and `project.godot`, never a list somebody typed.

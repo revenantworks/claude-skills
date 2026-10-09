@@ -1,0 +1,10 @@
+{
+  "name": "trustwarden",
+  "version": "1.0.0",
+  "description": "Vets third-party skills, plugins, MCP servers and GitHub Actions before install, with a verdict (PASS, CONDITIONAL, HOLD, FAIL) and install terms. Trigger on any should-I-install question, even with its files or hooks pasted in or a scan already clean; is this skill safe, vet this MCP server, check this GitHub Action, what does this installer write, a licence check before a fold-in, what changed in a plugin update; or say trustwarden (vet, revet, terms, refresh). Uses skillspector, zizmor, pinact and Scorecard when present; lists files no scanner read. Runtime permissions are gatewarden's; secrets shieldwarden's; your own skills skillwright's; sandboxing a download hypervrunner's.",
+  "author": {
+    "name": "Revenantworks"
+  },
+  "repository": "https://github.com/revenantworks/claude-skills",
+  "license": "Apache-2.0"
+}

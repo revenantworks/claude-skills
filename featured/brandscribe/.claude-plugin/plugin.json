@@ -1,0 +1,10 @@
+{
+  "name": "brandscribe",
+  "version": "1.0.0",
+  "description": "Keeps brand definitions, several side by side, and turns one into a Claude Design System, DESIGN.md, VOICE.md or guide. Trigger to define a brand, palette, type or voice; turn a style guide or site into tokens; make, connect or sync a design system; audit for brand drift (off-palette colours, old names); pass or fail a page against a brand, or apply one to a README or generated output; critique or check a built UI (hierarchy, spacing, states, generic look); or say brandscribe (setup, build, export, sync, audit, gate, ui). Microcopy and messages are commscribe's; React libraries design-sync's; charts dataviz's; canon lorescribe's; no logos.",
+  "author": {
+    "name": "Revenantworks"
+  },
+  "repository": "https://github.com/revenantworks/claude-skills",
+  "license": "Apache-2.0"
+}

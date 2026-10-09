@@ -1,0 +1,5 @@
+schema_version: "1.1"
+name: ms-self-contra
+tags: [behaviour, margin, manuscript]
+context:
+  add_dirs: [novel]
