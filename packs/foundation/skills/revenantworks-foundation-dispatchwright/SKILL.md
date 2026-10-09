@@ -231,7 +231,7 @@ catalog calls. A figure names the exact property and where it was measured; one 
 another check is re-measured first. Questions a prep brief depends on are asked before it is
 written; with the user away, those sections are conditional, each option with its delta.
 **Launch every launchable row before any blocking question**; overnight, questions go to the
-morning file (#0348, meters.md). Times come from the clock in the writing command, never typed
+morning file; in work day, to the check-in file (#0348, meters.md). Times come from the clock in the writing command, never typed
 (#0343).
 
 **Meters, fit and live gate** (`references/meters.md`). The plan names every meter its units will

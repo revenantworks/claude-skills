@@ -100,7 +100,8 @@ planned rows (observation 0347):
 - **No blocking question while a row is launchable** (observation 0348). Before a question tool
   call that waits for the user, list the launchable rows and launch them first. In overnight or
   owner-away mode, never call a blocking question tool: write the questions to the morning file
-  (pacewright `modes.md`) and let only the rows that depend on them wait.
+  (pacewright `modes.md`) and let only the rows that depend on them wait. In work-day mode they go
+  to the check-in file and are asked at the next check-in (pacewright `modes.md`, Work day).
 
 ## Liveness in an unattended stretch
 
