@@ -40,7 +40,10 @@ pushing alias or one nested past five levels, a run-time subcommand or program n
 GIT_CONFIG_*, HOME, --exec-path), a push in inline code, a git config change to an alias, remote or
 url setting on a push line, a script written and run on the same push line, a push argument filled in
 at run time (`git push $F origin main`, `"$@"`, `$1`; V-K8w2 B3, B4), a glob in the command word that
-may name git on a push segment (`gi[t] push`; B9), and a push the gate sees but cannot parse. So is a
+may name git on a push segment (`gi[t] push`; B9), a config include (`-c include.path`, `includeIf`,
+`--config-env`, a GIT_CONFIG_* include) on a line whose git subcommand is not a builtin and so may be
+an alias the gate cannot read (B5; on a push it counts as a redirected config), and a push the gate
+sees but cannot parse. So is a
 shell script on disk too large or locked to read, a shell script over 256 KB that names push, and a mirror or `+`/`:` push refspec set in git config (K7-4-03, K7-4-07).
 Limits: it binds the commands Claude runs, not the owner's own terminal; it does not read an
 interpreter's source file (release tooling pushes by design); a stamp file written by hand defeats
@@ -346,6 +349,13 @@ def _plain_git(seg: str) -> bool:
 RUN_TIME_ARG = re.compile(r"\$[A-Za-z_{(@*#?!0-9]|%[A-Za-z_]\w*%")
 # A git program a glob in the command word may name (V-K8w2 B9: `/usr/bin/gi[t] push`).
 GIT_NAMES = ("git", "git.exe", "git-push", "git-push.exe")
+# A config include loads a file the gate never reads (V-K8w2 B5), so an alias defined there cannot be
+# resolved: `-c include.path=…`, `-c includeIf.<cond>.path=…`, `--config-env include.path=ENV`, and
+# a GIT_CONFIG_KEY_n or GIT_CONFIG_PARAMETERS assignment that sets one. A key filled in at run time
+# (`-c "$CFG"`, `GIT_CONFIG_KEY_0=$K`) may be an include, so it counts as one.
+INCLUDE_KEY = re.compile(r"(?i)^\s*include(?:if)?\.")
+INCLUDE_ENV = re.compile(r"""(?i)(?<![\w])GIT_CONFIG_(?:KEY_\d+\s*=\s*['"]?\s*(?:include(?:if)?\.|\$|%[A-Za-z_])"""
+                         r"""|PARAMETERS\s*=[^\n]*?(?:include(?:if)?\.|\$))""")
 
 
 def run_time_args(raw: list[str]) -> None:
@@ -385,6 +395,7 @@ def find_pushes(command: str, cwd: str, resolve: bool = True) -> list[dict]:
     flat_cmd = hl.despliced(command)
     named = bool(PUSH_HINT.search(flat_cmd))
     redirected_line = bool(ENV_REDIRECT.search(flat_cmd))
+    include_line = bool(INCLUDE_ENV.search(command))
     ops = hl.split_ops(command)
     # Which pipeline each segment sits in, and which pipelines name push themselves (FP-D).
     line_of, n = [], 0
@@ -416,11 +427,15 @@ def find_pushes(command: str, cwd: str, resolve: bool = True) -> list[dict]:
                 continue
             if p != "git":
                 continue
-            repo, j, redirected = cwd, i + 1, redirected_line
+            repo, j, redirected, include = cwd, i + 1, redirected_line, include_line
             while j < len(toks) and hl.despliced(toks[j]).startswith("-"):
                 o = hl.despliced(toks[j])
                 opt = o.split("=", 1)[0]
                 val = o.split("=", 1)[1] if "=" in o else (arg(toks[j + 1]) if j + 1 < len(toks) else "")
+                if opt in ("-c", "--config-env"):
+                    raw = toks[j].split("=", 1)[1] if "=" in toks[j] else (toks[j + 1] if j + 1 < len(toks) else "")
+                    if INCLUDE_KEY.match(val) or RUN_TIME_ARG.search(raw.split("=", 1)[0]):
+                        include = redirected = True  # B5: an included file may set anything, push too
                 if opt in ("-c", "--config-env") and val.lower().lstrip().startswith("alias."):
                     raise PushBlock("push gate: an inline git alias (`-c alias.…`) can hide a push. Blocked; "
                                     "run the git command it stands for as a plain line.")
@@ -445,6 +460,12 @@ def find_pushes(command: str, cwd: str, resolve: bool = True) -> list[dict]:
                                 "write the subcommand out.")
             parts = [x for x in re.split(r"[,\s]+", w) if x]
             sub = parts[0] if parts else ""
+            if resolve and include and sub and sub not in BUILTINS:
+                raise PushBlock(f"push gate: an alias from an included config file cannot be read. `{sub}` is "
+                                "not a git builtin, so it may be an alias, and this line loads a config "
+                                "include (`-c include.path`, `includeIf`, `--config-env`, GIT_CONFIG_*) or a "
+                                "config key set at run time. Blocked; run the command the alias stands for, "
+                                "or drop the include.")
             expansion = alias_of(repo, sub) if resolve and sub not in BUILTINS and \
                 re.fullmatch(r"[\w.-]+", sub or "-") else None
             if sub not in ("push", "config", "remote", "send-pack", "http-push") and expansion is None:
