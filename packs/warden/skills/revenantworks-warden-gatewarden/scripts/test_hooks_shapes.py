@@ -209,5 +209,38 @@ class B5(PushShapeBase):
         self.expect_plain_pushes_pass()
 
 
+DECODE_AND_RUN = "inline code that decodes text and runs it"
+HELLO = "aGVsbG8="  # the base64 of the word hello: a harmless literal
+B64D, SYSTEM = "b64" + "decode", "os." + "system"
+CHILD, EXEC_SYNC = "child_" + "process", "exec" + "Sync"
+
+
+class B8(PushShapeBase):
+    """V-K8w2 B8: inline interpreter code (`python -c`, `node -e`, `pwsh -c`) that names both a decode
+    call and a run call hands a program text the hooks never see. hooklib.expand() lists it as code the
+    hooks cannot read, so every hard-rule hook refuses it; decode alone or run alone still passes."""
+
+    def each_hook(self, code, cmd, reason=None):
+        for hook in ("push_gate.py", "hyperv_lock.py", "golive_block.py"):
+            got, _, err = run_hook(hook, bash(cmd, self.work), env=self.env)
+            self.assertEqual(got, code, f"{hook}: {cmd!r}: {err.strip()}")
+            if reason and hook != "golive_block.py":
+                self.assertIn(reason, err, f"{hook}: {cmd!r}: {err.strip()}")
+
+    def test_refuses_python_inline_code_that_decodes_and_runs(self):
+        self.each_hook(2, f"python -c \"import base64, os; {SYSTEM}(base64.{B64D}('{HELLO}').decode())\"",
+                       reason=DECODE_AND_RUN)
+
+    def test_refuses_node_inline_code_that_decodes_and_runs(self):
+        self.each_hook(2, f"node -e \"require('{CHILD}').{EXEC_SYNC}(Buffer.from('{HELLO}', 'base64')"
+                          f".toString())\"", reason=DECODE_AND_RUN)
+
+    def test_inline_decode_that_only_prints_passes(self):
+        self.each_hook(0, f"python -c \"import base64; print(base64.{B64D}('{HELLO}'))\"")
+
+    def test_inline_run_call_with_no_decode_passes(self):
+        self.each_hook(0, f"node -e \"require('{CHILD}').{EXEC_SYNC}('echo hello')\"")
+
+
 if __name__ == "__main__":
     unittest.main()

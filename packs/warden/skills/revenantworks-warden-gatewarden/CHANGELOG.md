@@ -52,6 +52,10 @@ Description cut to about 600 characters, main use case first (2026-10-08).
   config key set at run time) on a line whose git subcommand is not a builtin is a hard shape
   refusal: an alias from an included config file cannot be read. A builtin with an include passes;
   on a push an include counts as a redirected config and is refused.
+- M14c1, 2026-10-09 (V-K8w2 B8): inline interpreter code (`python -c`, `node -e`, `pwsh -c`) whose
+  text names both a decode call and a run call counts as code the hooks cannot read, so every
+  hard-rule hook refuses it. Matching is on the call names as plain substrings; nothing is decoded.
+  Decode alone, or a run call alone, passes.
 - Audits allow, deny and ask rules across every settings level: dead rules, bypass shapes, and Bash
   denies with no PowerShell twin on Windows, where the sandbox does not run.
 - Lints the shapes the docs name: absolute paths, `sh -c`, `git -C`, path rules for tools that are
