@@ -671,6 +671,28 @@ class Expanded:
 
 QUOTED_VALUE = re.compile(r"""^[\w.:-]+=(['"])(.*)\1$""", re.S)
 
+# V-K8w2 B8: inline interpreter code (`python -c`, `node -e`, `pwsh -c`) that names both a decode call
+# and a run call hands a program text the hook never sees. Plain substrings of the call names, matched
+# without case; nothing is decoded or evaluated.
+DECODE_CALLS = ("b64decode", "base64.decode", "frombase64string")
+RUN_CALLS = ("os.system", "subprocess", "exec(", "eval(", "execsync", "child_process", "invoke-expression",
+             "iex")
+DECODE_AND_RUN = "inline code that decodes text and runs it"
+
+
+def decodes_and_runs(code: str) -> bool:
+    """True when inline code names a decode call and a run call (B8)."""
+    low = code.lower()
+    decodes = any(n in low for n in DECODE_CALLS) or ("buffer.from" in low and "base64" in low)
+    return decodes and any(n in low for n in RUN_CALLS)
+
+
+def _inline_code(code: str, out: "Expanded") -> None:
+    """Fail closed on B8 inline code: unread_code for the hooks that read code, unread for push_gate."""
+    if decodes_and_runs(code):
+        out.unread_code.append(DECODE_AND_RUN)
+        out.unread.append(DECODE_AND_RUN)
+
 
 def expand(command: str, cwd: str = "", depth: int = 0, out: Expanded | None = None,
            ps: bool | None = None, files: bool = True) -> Expanded:
@@ -732,6 +754,8 @@ def expand(command: str, cwd: str = "", depth: int = 0, out: Expanded | None = N
                         _run_file(rest[k + 1], cur, depth, out, shell=True)
                     elif t.lower() in ("-c", "-command") and (k + 1 >= len(rest) or rest[k + 1] == "-"):
                         stdin_runner = True
+                    elif t.lower() in ("-c", "-command"):
+                        _inline_code(unquote(rest[k + 1]), out)
                     elif t in ("-",):
                         stdin_runner = True
                 if i == 0 and not rest:
@@ -758,6 +782,7 @@ def expand(command: str, cwd: str = "", depth: int = 0, out: Expanded | None = N
                 flag = next((k for k, t in enumerate(rest) if t in CODE_FLAGS), None)
                 if flag is not None and flag + 1 < len(rest):
                     out.code.append((unquote(rest[flag + 1]), ""))
+                    _inline_code(unquote(rest[flag + 1]), out)
                 else:
                     args = [t for t in rest if not t.startswith("-")]
                     module = any(t == "-m" for t in rest[:rest.index(args[0])]) if args else "-m" in rest
