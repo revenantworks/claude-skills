@@ -50,7 +50,10 @@ function snapshot() {
 function themeNow(activeFile) {
   const name = logic.activeThemeName(process.env.DASH_THEME, readText(activeFile))
   if (!/^[a-z0-9][a-z0-9-]{0,39}$/.test(name)) return logic.themeColors('neutral', null)
-  return logic.themeColors(name, readText(path.join(path.dirname(activeFile), 'themes', `${name}.json`)))
+  // The editor's own theme decides the ground; DASH_THEME_BACKGROUND wins, as in the /dash pane.
+  const o = (process.env.DASH_THEME_BACKGROUND || '').trim().toLowerCase()
+  const bg = o === 'light' || o === 'dark' ? o : logic.consoleKind(vscode.window.activeColorTheme && vscode.window.activeColorTheme.kind)
+  return logic.themeColors(name, readText(path.join(path.dirname(activeFile), 'themes', `${name}.json`)), bg)
 }
 
 function hover(lines) {

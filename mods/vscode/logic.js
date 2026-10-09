@@ -327,6 +327,15 @@ const BUNDLED_HEX = {
   neutral: {},
   revenantworks: { accent: '#00E5FF', warn: '#FF8B00', bad: '#FF0099', dim: '#8D9FA2', rule: '#6C7678' },
 }
+// The light variant (the brand's ink values), for a light VS Code theme; also checked against theme-logic.ts.
+const BUNDLED_HEX_LIGHT = {
+  revenantworks: { accent: '#006D7B', warn: '#A65700', bad: '#D0007A', dim: '#415154', rule: '#A0ACAE' },
+}
+
+/** VS Code's ColorThemeKind (1 Light, 2 Dark, 3 HighContrast, 4 HighContrastLight) as a console ground. */
+function consoleKind(kind) {
+  return kind === 1 || kind === 4 ? 'light' : 'dark'
+}
 
 /** The active theme's name: DASH_THEME, else theme.json's "active", else neutral. */
 function activeThemeName(envName, activeText) {
@@ -335,11 +344,17 @@ function activeThemeName(envName, activeText) {
   return o && typeof o.active === 'string' ? o.active.toLowerCase() : 'neutral'
 }
 
-/** Hex colours by role for the status bar: the person's theme file wins over a bundled one. */
-function themeColors(name, userThemeText) {
+/**
+ * Hex colours by role for the status bar: the person's theme file wins over a bundled one. `bg`
+ * ('dark' or 'light') picks the theme's variant for that ground when it has one.
+ */
+function themeColors(name, userThemeText, bg = 'dark') {
   const out = { accent: null, ok: null, warn: null, bad: null, dim: null }
   const user = parseJson(userThemeText)
-  const colors = user && user.colors && typeof user.colors === 'object' ? user.colors : BUNDLED_HEX[name] || {}
+  const obj = v => (v && typeof v === 'object' ? v : null)
+  const variant = user && obj(user.variants) && obj(user.variants[bg]) && obj(user.variants[bg].colors)
+  const bundled = (bg === 'light' && BUNDLED_HEX_LIGHT[name]) || BUNDLED_HEX[name] || {}
+  const colors = variant || (user && obj(user.colors)) || bundled
   for (const role of Object.keys(out)) if (typeof colors[role] === 'string' && HEX.test(colors[role])) out[role] = colors[role]
   return out
 }
@@ -347,6 +362,8 @@ function themeColors(name, userThemeText) {
 module.exports = {
   activeThemeName,
   BUNDLED_HEX,
+  BUNDLED_HEX_LIGHT,
+  consoleKind,
   themeColors,
   AMBER_AT,
   FEED_STALE_MS,

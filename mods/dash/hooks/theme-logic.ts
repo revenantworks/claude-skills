@@ -9,7 +9,15 @@ export const ROLES = ['accent', 'ok', 'warn', 'bad', 'dim', 'rule'] as const
 export type Role = (typeof ROLES)[number]
 export type HeaderStyle = 'rule' | 'plain' | 'block'
 export type Glyphs = { ok: string; warn: string; bad: string; on: string; off: string; sep: string; rule: string; mark: string; full: string; empty: string }
-export type Theme = { name: string; description: string; background: string; colors: Record<Role, string>; glyphs: Glyphs; header: HeaderStyle }
+export type ConsoleBg = 'dark' | 'light'
+/** One set of colours for one console background. */
+export type Palette = { background: string; colors: Record<Role, string> }
+/**
+ * `background` and `colors` are the palette in use. A theme may also carry `variants`, one palette
+ * for dark consoles and one for light; dash then picks the one that matches the console
+ * (resolveVariant). A theme without variants has one palette for every console.
+ */
+export type Theme = { name: string; description: string; background: string; colors: Record<Role, string>; glyphs: Glyphs; header: HeaderStyle; variants?: Partial<Record<ConsoleBg, Palette>> }
 
 export const GLYPHS: Record<'unicode' | 'ascii', Glyphs> = {
   unicode: { ok: '✓', warn: '!', bad: '✗', on: '●', off: '○', sep: ' · ', rule: '─', mark: '▍', full: '█', empty: '░' },
@@ -28,10 +36,12 @@ export const NEUTRAL: Theme = {
   header: 'rule',
 }
 
-// The one brand theme in this repo (owner decision 2026-10-09): opt-in, never the default. Colours
-// are the brand's published dark-ground tokens: threshold-blue, ember-orange (warn / live),
-// glitch-magenta (error / broken), ash-grey (muted text) and the high-contrast border. The brand
-// names no success colour, so `ok` keeps the person's theme key.
+// The one brand theme in this repo (owner decision 2026-10-09): opt-in, never the default. The
+// dark variant is the brand's published dark-ground tokens: threshold-blue, ember-orange (warn /
+// live), glitch-magenta (error / broken), ash-grey (muted text) and the high-contrast border. The
+// light variant is the brand's base/ink rule: each accent's `ink` companion (computed to clear
+// 4.5:1 on bone-white) and the light-role neutrals (muted text #415154, border #A0ACAE). The brand
+// names no success colour, so `ok` keeps the person's theme key in both.
 export const REVENANTWORKS: Theme = {
   name: 'revenantworks',
   description: 'Brand colours, cursor-block headers',
@@ -39,6 +49,10 @@ export const REVENANTWORKS: Theme = {
   colors: { accent: '#00E5FF', ok: 'success', warn: '#FF8B00', bad: '#FF0099', dim: '#8D9FA2', rule: '#6C7678' },
   glyphs: GLYPHS.unicode,
   header: 'block',
+  variants: {
+    dark: { background: 'dark', colors: { accent: '#00E5FF', ok: 'success', warn: '#FF8B00', bad: '#FF0099', dim: '#8D9FA2', rule: '#6C7678' } },
+    light: { background: 'light', colors: { accent: '#006D7B', ok: 'success', warn: '#A65700', bad: '#D0007A', dim: '#415154', rule: '#A0ACAE' } },
+  },
 }
 
 export const BUNDLED: Record<string, Theme> = { neutral: NEUTRAL, revenantworks: REVENANTWORKS }
@@ -58,15 +72,38 @@ export const parseTheme = (text: string | null, fallbackName = ''): { theme: The
   }
   const name = typeof o.name === 'string' ? o.name : fallbackName
   if (!NAME.test(name)) return { theme: null, error: `name "${String(name).slice(0, 40)}" must be lower-case letters, digits and dashes` }
-  const colors = { ...NEUTRAL.colors }
-  if (o.colors !== undefined) {
-    if (!o.colors || typeof o.colors !== 'object') return { theme: null, error: '"colors" must be an object' }
-    for (const [k, v] of Object.entries(o.colors as Record<string, unknown>)) {
-      if (!(ROLES as readonly string[]).includes(k)) return { theme: null, error: `unknown colour role "${k.slice(0, 20)}" (roles: ${ROLES.join(', ')})` }
-      if (!isColor(v)) return { theme: null, error: `colour ${k} must be #rgb, #rrggbb or a Claude Code theme key` }
+  const readColors = (raw: unknown, base: Record<Role, string>, where: string): { colors: Record<Role, string> } | { error: string } => {
+    const colors = { ...base }
+    if (raw === undefined) return { colors }
+    if (!raw || typeof raw !== 'object') return { error: `${where}"colors" must be an object` }
+    for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+      if (!(ROLES as readonly string[]).includes(k)) return { error: `${where}unknown colour role "${k.slice(0, 20)}" (roles: ${ROLES.join(', ')})` }
+      if (!isColor(v)) return { error: `${where}colour ${k} must be #rgb, #rrggbb or a Claude Code theme key` }
       colors[k as Role] = v
     }
+    return { colors }
   }
+  const isBg = (b: unknown): boolean => b === 'dark' || b === 'light' || (typeof b === 'string' && HEX.test(b))
+  let variants: Partial<Record<ConsoleBg, Palette>> | undefined
+  if (o.variants !== undefined) {
+    if (!o.variants || typeof o.variants !== 'object' || Array.isArray(o.variants)) return { theme: null, error: '"variants" must be an object with dark and/or light' }
+    variants = {}
+    for (const [k, v] of Object.entries(o.variants as Record<string, unknown>)) {
+      if (k !== 'dark' && k !== 'light') return { theme: null, error: `variant "${k.slice(0, 20)}" must be dark or light` }
+      const vo = (v && typeof v === 'object' ? v : {}) as Record<string, unknown>
+      const c = readColors(vo.colors, NEUTRAL.colors, `${k}: `)
+      if ('error' in c) return { theme: null, error: c.error }
+      const vb = vo.background ?? k
+      if (!isBg(vb)) return { theme: null, error: `${k}: "background" must be dark, light or a hex colour` }
+      variants[k] = { background: vb as string, colors: c.colors }
+    }
+    if (!variants.dark && !variants.light) variants = undefined
+  }
+  // The top-level palette: its own colours, else the dark variant's (or the light one's).
+  const fallback = variants?.dark ?? variants?.light
+  const top = readColors(o.colors, o.colors === undefined && fallback ? fallback.colors : NEUTRAL.colors, '')
+  if ('error' in top) return { theme: null, error: top.error }
+  const colors = top.colors
   let glyphs = GLYPHS.unicode
   if (o.glyphs === 'ascii' || o.glyphs === 'unicode') glyphs = GLYPHS[o.glyphs]
   else if (o.glyphs && typeof o.glyphs === 'object') {
@@ -78,15 +115,46 @@ export const parseTheme = (text: string | null, fallbackName = ''): { theme: The
   } else if (o.glyphs !== undefined) return { theme: null, error: '"glyphs" must be "unicode", "ascii" or an object' }
   const header = o.header ?? 'rule'
   if (header !== 'rule' && header !== 'plain' && header !== 'block') return { theme: null, error: '"header" must be rule, plain or block' }
-  const background = o.background ?? 'dark'
-  if (background !== 'dark' && background !== 'light' && !(typeof background === 'string' && HEX.test(background))) return { theme: null, error: '"background" must be dark, light or a hex colour' }
+  const background = o.background ?? (o.colors === undefined && fallback ? fallback.background : 'dark')
+  if (!isBg(background)) return { theme: null, error: '"background" must be dark, light or a hex colour' }
   const description = typeof o.description === 'string' ? o.description.slice(0, 120) : ''
-  return { theme: { name, description, background: background as string, colors, glyphs, header }, error: null }
+  return { theme: { name, description, background: background as string, colors, glyphs, header, ...(variants ? { variants } : {}) }, error: null }
 }
 
 export const serializeTheme = (t: Theme): string => {
   const glyphs = t.glyphs === GLYPHS.ascii || JSON.stringify(t.glyphs) === JSON.stringify(GLYPHS.ascii) ? 'ascii' : JSON.stringify(t.glyphs) === JSON.stringify(GLYPHS.unicode) ? 'unicode' : t.glyphs
-  return `${JSON.stringify({ name: t.name, description: t.description, background: t.background, colors: t.colors, glyphs, header: t.header }, null, 2)}\n`
+  return `${JSON.stringify({ name: t.name, description: t.description, background: t.background, colors: t.colors, glyphs, header: t.header, ...(t.variants ? { variants: t.variants } : {}) }, null, 2)}\n`
+}
+
+/** The palette a console gets: the matching variant when the theme has one, else the theme as it is. */
+export const resolveVariant = (t: Theme, bg: ConsoleBg): { theme: Theme; variant: ConsoleBg | null } => {
+  const v = t.variants?.[bg]
+  if (!v) return { theme: t, variant: null }
+  return { theme: { ...t, background: v.background, colors: v.colors }, variant: bg }
+}
+
+/** Which ground a one-palette theme was made for. */
+export const madeFor = (background: string): ConsoleBg => (background === 'light' ? 'light' : background === 'dark' ? 'dark' : lum(background) < 0.2 ? 'dark' : 'light')
+
+export type ConsoleInfo = { bg: ConsoleBg; sure: boolean; source: string }
+
+/**
+ * The console's background. DASH_THEME_BACKGROUND wins; then the Claude Code theme setting (the
+ * `theme` row of /config: `dark`, `light`, `dark-daltonized`, `light-ansi`...); for `auto`, the
+ * terminal's COLORFGBG ("fg;bg", bg 7 or 15 is a light ground); else dark, marked as a guess.
+ */
+export const consoleBackground = (ccTheme: string | null, override: string | null, colorfgbg: string | null): ConsoleInfo => {
+  const o = (override ?? '').trim().toLowerCase()
+  if (o === 'dark' || o === 'light') return { bg: o, sure: true, source: `DASH_THEME_BACKGROUND=${o}` }
+  const cc = (ccTheme ?? '').trim().toLowerCase()
+  if (cc.startsWith('light')) return { bg: 'light', sure: true, source: `Claude Code theme "${cc.slice(0, 24)}"` }
+  if (cc.startsWith('dark')) return { bg: 'dark', sure: true, source: `Claude Code theme "${cc.slice(0, 24)}"` }
+  const m = /(\d+)\s*$/.exec(colorfgbg ?? '')
+  if (m) {
+    const n = Number(m[1])
+    return { bg: n === 7 || n === 15 ? 'light' : 'dark', sure: true, source: 'the terminal (COLORFGBG)' }
+  }
+  return { bg: 'dark', sure: false, source: `a guess; set DASH_THEME_BACKGROUND=light|dark to say` }
 }
 
 export type ThemeEntry = { theme: Theme; source: 'bundled' | 'user'; overrides: boolean }
@@ -155,6 +223,61 @@ export const contrastWarnings = (t: Theme): string[] => {
     if (ratio < FLOORS[r]) out.push(`${r} ${c} is ${ratio.toFixed(2)}:1 on a ${t.background} background, under the ${FLOORS[r]}:1 floor: hard to read`)
   }
   return out
+}
+
+export type Grade = 'pass' | 'borderline' | 'fail' | 'follows'
+/** A ratio against its floor: under it fails; within 0.3 above it is borderline; null (a theme key) follows the terminal. */
+export const grade = (ratio: number | null, floor: number): Grade => (ratio === null ? 'follows' : ratio < floor ? 'fail' : ratio < floor + 0.3 ? 'borderline' : 'pass')
+
+export type RoleCheck = { role: Role; color: string; ratio: number | null; floor: number; grade: Grade }
+
+/** Every role's contrast on a console ground (#121212 dark, #FFFFFF light, or a hex). */
+export const roleChecks = (colors: Record<Role, string>, bg: ConsoleBg | string): RoleCheck[] => {
+  const ground = bg === 'dark' || bg === 'light' ? BACKGROUNDS[bg] : bg
+  return ROLES.map(role => {
+    const color = colors[role]
+    const ratio = HEX.test(color) ? contrast(color, ground) : null
+    return { role, color, ratio, floor: FLOORS[role], grade: grade(ratio, FLOORS[role]) }
+  })
+}
+
+export type ConsoleVerdict = { works: boolean; summary: string; roles: string; line: string; checks: RoleCheck[]; variant: ConsoleBg | null }
+const ratioText = (c: RoleCheck): string => `${c.role} ${(c.ratio ?? 0).toFixed(2)}:1`
+
+/** How the theme reads on one console type: the palette it gets there and the roles under or near a floor. */
+export const consoleVerdict = (t: Theme, bg: ConsoleBg): ConsoleVerdict => {
+  const r = resolveVariant(t, bg)
+  const checks = roleChecks(r.theme.colors, bg)
+  const fails = checks.filter(c => c.grade === 'fail')
+  const thin = checks.filter(c => c.grade === 'borderline')
+  const what = r.variant ? `${bg} variant` : checks.every(c => c.grade === 'follows') ? 'follows your theme' : madeFor(t.background) === bg ? `one palette, made for ${bg}` : `no ${bg} variant`
+  let summary: string
+  let roles = ''
+  if (fails.length) {
+    summary = `${what} — ${fails.some(c => (c.ratio ?? 0) < 2) ? 'unreadable' : 'hard to read'}`
+    roles = fails.map(ratioText).join(', ')
+  } else if (thin.length) {
+    summary = `works, thin in places (${what})`
+    roles = thin.map(ratioText).join(', ')
+  } else summary = `works (${what})`
+  return { works: fails.length === 0, summary, roles, line: roles ? `${summary}: ${roles}` : summary, checks, variant: r.variant }
+}
+
+/** A verdict per console type and the one recommendation that follows from them. */
+export const themeVerdict = (t: Theme): { dark: ConsoleVerdict; light: ConsoleVerdict; recommendation: string } => {
+  const dark = consoleVerdict(t, 'dark')
+  const light = consoleVerdict(t, 'light')
+  const keysOnly = [...dark.checks, ...light.checks].every(c => c.grade === 'follows')
+  const recommendation = keysOnly
+    ? 'It follows your Claude Code theme, so it fits any console.'
+    : dark.works && light.works
+      ? t.variants?.dark && t.variants?.light ? 'Use it on any console: dash picks the dark or light variant for you.' : 'Use it on any console.'
+      : dark.works
+        ? 'Use it on dark consoles; on light ones use neutral or add a light variant.'
+        : light.works
+          ? 'Use it on light consoles; on dark ones use neutral or add a dark variant.'
+          : 'Use neutral instead, or fix the roles under their floor and save it again.'
+  return { dark, light, recommendation }
 }
 
 // ---------- making a theme ----------

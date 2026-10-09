@@ -100,15 +100,29 @@ headers in plain text, never escape codes.
 | Theme | Where | Look |
 |---|---|---|
 | `neutral` | bundled, **the default** | Every colour is a key of your own Claude Code theme, so it follows light and dark |
-| `revenantworks` | bundled, opt-in | The Revenantworks brand: threshold-blue accent, ember warn, magenta error, ash-grey, cursor-block headers |
+| `revenantworks` | bundled, opt-in | The Revenantworks brand, cursor-block headers. Two variants: **dark** (threshold-blue, ember warn, magenta error, ash-grey) and **light** (each accent's `ink` companion and the brand's light muted text and border) |
 | your own | `~/.claude/revenantworks/themes/<name>.json` | Anything you make; a file named like a bundled theme replaces it |
 
 ```
-/dash theme                    list the themes; the active one is marked
-/dash theme revenantworks      switch (saved in ~/.claude/revenantworks/theme.json)
-/dash theme show [name]        every colour role painted, with contrast warnings
+/dash theme                    list the themes: the active one marked, what each carries
+/dash theme show [name]        preview only: every role, its contrast, a verdict per console
+/dash theme revenantworks      apply (saved in ~/.claude/revenantworks/theme.json)
 /dash theme new                make your own: the three ways below
 ```
+
+**Light and dark consoles.** A theme may carry a `dark` and a `light` variant. dash picks the one
+that matches the console's background, in this order: `DASH_THEME_BACKGROUND=light|dark` in your
+environment; your Claude Code theme (the `theme` row of `/config`: a name starting `light` or
+`dark`); for `auto`, the terminal's `COLORFGBG`; else it assumes dark and says it is a guess. The
+VS Code status bar follows the editor's own theme kind. A theme with one palette works as before on
+every console; `show` says how it reads on the other one.
+
+**`show` previews; the bare name applies.** `/dash theme show <name>` changes nothing. It lists
+each variant's roles with a swatch, the hex, the contrast on that console (#121212 dark, #FFFFFF
+light), the floor and a grade (`pass`; `borderline`, within 0.3 above the floor; `fail`, under it;
+`follows`, a Claude Code theme key), then a verdict for dark and for light consoles and one
+recommendation. `/dash theme <name>` applies it in one line, which variant this console gets, only
+the roles under or near a floor, and `Undo: /dash theme neutral`.
 
 `DASH_THEME=<name>` in your environment wins over the saved choice. A theme file that does not
 parse, or an active name that does not exist, falls back to `neutral` with one notice a session;
@@ -145,8 +159,21 @@ A theme file:
 ```
 
 Every field but `name` is optional (the file name stands in for a missing `name`); a role left out
-keeps the `neutral` colour. The VS Code extension paints its status bar text with the same theme's
-hex colours where VS Code allows (its backgrounds stay VS Code's own warning and error colours).
+keeps the `neutral` colour. For both consoles, add variants (each takes `colors` and an optional
+`background`, which defaults to its own name); the top-level `colors` then default to the dark one:
+
+```json
+{
+  "name": "acme",
+  "variants": {
+    "dark": { "colors": { "accent": "#3B82F6", "dim": "#8B949E" } },
+    "light": { "colors": { "accent": "#1D4ED8", "dim": "#4B5563" } }
+  }
+}
+```
+
+The VS Code extension paints its status bar text with the same theme's hex colours (the variant
+for the editor's light or dark theme) where VS Code allows (its backgrounds stay VS Code's own warning and error colours).
 
 ## Features
 
@@ -201,9 +228,11 @@ only.
 | Command | Does |
 |---|---|
 | `/dash` | The overview pane (text where no pane draws) |
-| `/dash skills` · `meters` · `health` · `tasks` · `context` | One view of the feed |
+| `/dash skills` | The skills that fired or failed in 30 days, grouped by source (local, plugin, claude.ai synced, built-in); one line for the rest and one for skills loaded twice |
+| `/dash skills all` · `skills dupes` | Every skill; the skills loaded from two sources (also a Health item) |
+| `/dash meters` · `health` · `tasks` · `context` | One view of the feed |
 | `/dash suggest` | The suggestion queue; `accept`, `dismiss` or `snooze <n>` |
-| `/dash theme` | List, switch (`<name>`), show or make (`new`, `import`) a [theme](#themes) |
+| `/dash theme` | List, apply (`<name>`), preview (`show`) or make (`new`, `import`) a [theme](#themes) |
 | `/dash gpu` · `palette` · `godot` · `prs` | The optional panels |
 | `/dash publish` | Writes a counts-only snapshot for a private mobile page |
 | `/dash doctor` | Checks the switch file, the collector, the meter file and the feed |
