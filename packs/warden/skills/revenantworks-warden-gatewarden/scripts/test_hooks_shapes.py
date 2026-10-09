@@ -147,5 +147,67 @@ class B9(PushShapeBase):
         self.expect_plain_pushes_pass()
 
 
+INCLUDE = "an alias from an included config file cannot be read"
+REDIRECTED = "redirected git dir or config"
+
+
+class B5(PushShapeBase):
+    """V-K8w2 B5: a config include on the git line (`-c include.path`, `-c includeIf.*`, `--config-env`
+    naming an include, or a GIT_CONFIG_KEY_n / GIT_CONFIG_PARAMETERS assignment that sets one) loads a
+    file the gate never reads, so a subcommand that is not a git builtin may be an alias defined there.
+    Refused on a non-builtin subcommand; a builtin with an include passes (a builtin cannot be an
+    alias), except push, where an include is a redirected config like GIT_CONFIG_*."""
+
+    def test_refuses_inline_include_on_a_non_builtin_subcommand(self):
+        self.expect(2, [f"{G} -c include.path=extra.cfg zz origin main",
+                        f"{G} -c includeIf.gitdir:./.path=extra.cfg zz origin main",
+                        f"{G} -c Include.Path=extra.cfg -C . zz origin main",
+                        f'{G} -c "include.path=extra.cfg" zz'], reason=INCLUDE)
+
+    def test_refuses_config_env_include_on_a_non_builtin_subcommand(self):
+        self.expect(2, [f"{G} --config-env include.path=CFG zz origin main",
+                        f"{G} --config-env=include.path=CFG zz origin main",
+                        f"{G} --config-env=includeif.onbranch:main.path=CFG zz"], reason=INCLUDE)
+
+    def test_refuses_environment_include_on_a_non_builtin_subcommand(self):
+        self.expect(2, [f"GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=include.path GIT_CONFIG_VALUE_0=extra.cfg "
+                        f"{G} zz origin main",
+                        f"export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=includeIf.onbranch:main.path "
+                        f"GIT_CONFIG_VALUE_0=extra.cfg; {G} zz",
+                        f"GIT_CONFIG_PARAMETERS=\"'include.path'='extra.cfg'\" {G} zz origin main",
+                        f"env GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=include.path GIT_CONFIG_VALUE_0=x {G} zz"],
+                    reason=INCLUDE)
+        self.expect(2, ["$env:GIT_CONFIG_COUNT=1; $env:GIT_CONFIG_KEY_0='include.path'; "
+                        f"$env:GIT_CONFIG_VALUE_0='extra.cfg'; {G} zz origin main"], tool="PowerShell",
+                    reason=INCLUDE)
+
+    def test_refuses_config_key_set_at_run_time_on_a_non_builtin_subcommand(self):
+        self.expect(2, [f'{G} -c "$CFG" zz origin main', f"{G} --config-env $KEY=CFG zz",
+                        f"GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=$K GIT_CONFIG_VALUE_0=x {G} zz"], reason=INCLUDE)
+
+    def test_refuses_include_on_a_known_alias(self):
+        git(self.work, "config", "alias.st", "status")
+        self.expect(2, [f"{G} -c include.path=extra.cfg st"], reason=INCLUDE)
+
+    def test_refuses_include_on_a_push_as_a_redirected_config(self):
+        self.expect(2, [f"{G} -c include.path=extra.cfg {U} origin main",
+                        f"{G} --config-env=includeIf.onbranch:main.path=CFG {U} origin main",
+                        f"GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=include.path GIT_CONFIG_VALUE_0=x "
+                        f"{G} {U} origin main"], reason=REDIRECTED)
+
+    def test_ordinary_config_and_builtins_with_an_include_pass(self):
+        self.expect(0, [f"{G} -c user.name=x commit -m y", f"{G} -c core.autocrlf=false status",
+                        f"{G} -c include.path=extra.cfg log --oneline -1",
+                        f"{G} --config-env=include.path=CFG status",
+                        f"{G} -c user.name=x zz origin main",
+                        f"GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=core.autocrlf GIT_CONFIG_VALUE_0=false {G} status",
+                        f"GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=include.path GIT_CONFIG_VALUE_0=x {G} log -1",
+                        f'{G} -c "user.name=$NAME" zz', "echo include.path"])
+        self.expect(0, [f"{G} -c core.autocrlf=false status"], tool="PowerShell")
+
+    def test_plain_pushes_still_pass(self):
+        self.expect_plain_pushes_pass()
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -169,8 +169,14 @@ and runs; a push argument the shell fills in at run time (`git push $F origin ma
 `${x}`, a backtick substitution, cmd's `%x%`; V-K8w2 B3, B4), since the gate would range-check the
 literal text while git pushes the value (a redirection such as `2>$null` or `> $LOG` is not an
 argument); and a glob in the command word that may name git on a push segment (`/usr/bin/gi[t] push`,
-`g*t push`, `git-p?sh`; V-K8w2 B9), while a glob in an argument (`grep -rn push *`) passes. Write the
-remote and branch out. All of these are hard (`push_gate.shape`). Force, delete, mirror, prune and tag flags are
+`g*t push`, `git-p?sh`; V-K8w2 B9), while a glob in an argument (`grep -rn push *`) passes; and a
+config include on a line whose git subcommand is not a builtin (`git -c include.path=f zz`,
+`-c includeIf.<cond>.path=f`, `--config-env include.path=ENV`, a `GIT_CONFIG_KEY_n` or
+`GIT_CONFIG_PARAMETERS` assignment that sets an include, or a config key filled in at run time;
+V-K8w2 B5), since a non-builtin may be an alias defined in the included file, which the gate never
+reads. A builtin with an include passes (`git -c include.path=f log`: a builtin cannot be an alias),
+except push, where an include counts as a redirected config; ordinary `-c` settings
+(`git -c user.name=x commit`) pass. Write the remote and branch out. All of these are hard (`push_gate.shape`). Force, delete, mirror, prune and tag flags are
 caught abbreviated too (`--forc`, `--delet`, `--mir`, `--prun`, `--tag`, `--al`: git accepts any
 unique prefix). Git config can make a plain push a mirror or force push, so before a push the
 gate reads `remote.<name>.mirror` and `remote.<name>.push` (every remote when the line names none,

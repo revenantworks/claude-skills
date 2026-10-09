@@ -47,6 +47,11 @@ Description cut to about 600 characters, main use case first (2026-10-08).
   name git on a push segment (`gi[t] push`) are hard shape refusals; plain pushes, redirections and
   globs in arguments pass. The in-repo regression battery `scripts/test_hooks_shapes.py` holds one
   test class per finding, each with an allow control.
+- M14b, 2026-10-09 (V-K8w2 B5): a config include (`-c include.path`, `-c includeIf.*`,
+  `--config-env` naming an include, a `GIT_CONFIG_KEY_n` or `GIT_CONFIG_PARAMETERS` include, or a
+  config key set at run time) on a line whose git subcommand is not a builtin is a hard shape
+  refusal: an alias from an included config file cannot be read. A builtin with an include passes;
+  on a push an include counts as a redirected config and is refused.
 - Audits allow, deny and ask rules across every settings level: dead rules, bypass shapes, and Bash
   denies with no PowerShell twin on Windows, where the sandbox does not run.
 - Lints the shapes the docs name: absolute paths, `sh -c`, `git -C`, path rules for tools that are
