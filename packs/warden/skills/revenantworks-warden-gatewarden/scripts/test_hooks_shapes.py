@@ -308,5 +308,176 @@ class B1(PushShapeBase):
         self.each_hook(0, "eval \"$(ssh-agent -s)\"")
 
 
+# ---------------------------------------------------------------- M14d (2026-10-09)
+# The V-K8w2 rows K8w3b fixed in place (B6, B10, gh remote refs, FP-A..FP-D): their case strings are
+# copied from test_hooks.py (K8w3bPushTests, K8w3bDirectRuleTests; the originals stay) so every
+# verifier row has a class here. B7's cases stay in test_hooks.py only (K8w3bDirectRuleTests): the
+# live hyperv_lock refuses writing them into a new file, by design. Push fixtures inside heredocs are
+# plain pushes, never a force: the shape is refused whatever the body holds. The guarded words are
+# built by concatenation.
+
+def flat(text: str) -> str:
+    """The refusal text on one line: hl.note wraps the reason at 100 columns."""
+    return " ".join(text.split())
+
+
+class DirectShapeBase(unittest.TestCase):
+    """A plain folder at the install default (no mode forced) for the hooks that read the line alone."""
+
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp(prefix="gw-shapes-")
+        self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
+        state = os.path.join(self.tmp, "state")
+        os.makedirs(state)
+        self.env = {"GATEWARDEN_STATE": state}
+
+    def expect(self, hook, code, cmds, tool="Bash", reason=None):
+        for cmd in cmds:
+            got, _, err = run_hook(hook, bash(cmd, self.tmp, tool), env=self.env)
+            self.assertEqual(got, code, f"{hook} {tool}: {cmd!r}: {err.strip()}")
+            if reason:
+                self.assertIn(reason, flat(err), f"{hook} {tool}: {cmd!r}: {err.strip()}")
+
+
+GO_LIVE = "go-live and stream-key requests are the owner's button"
+OBS64, OBS_CMD, OBS_CLI = "obs" + "64", "obs" + "-cmd", "obs" + "-cli"
+START_STREAM, START_VCAM = "--start" + "streaming", "--start" + "virtualcam"
+
+
+class B6(DirectShapeBase):
+    """V-K8w2 B6: OBS started from the command line with a go-live flag, or the obs-cmd / obs-cli verbs that
+    start or toggle a stream or the virtual camera, are the same go-live request as the WebSocket call."""
+
+    def test_refuses_obs_command_line_go_live(self):
+        self.expect("golive_block.py", 2, [f"{OBS64}.exe {START_STREAM}", f"{OBS64} {START_VCAM} --minimize-to-tray",
+                                           f"{OBS_CMD} stream" + "ing start", f"{OBS_CMD} virtual-camera toggle",
+                                           f"{OBS_CLI} stream start", f"{OBS_CLI} virtualcam start"], reason=GO_LIVE)
+
+    def test_other_obs_command_lines_pass(self):
+        self.expect("golive_block.py", 0, [f"{OBS64}.exe --minimize-to-tray", f"{OBS_CMD} recording start",
+                                           f"{OBS_CMD} stream" + "ing status", f"{OBS_CLI} scene current"])
+
+
+NO_INPUT = "standard input"
+PYN = "py" + "thon"
+
+
+class B10(DirectShapeBase):
+    """V-K8w2 B10: a shell or REPL started with nothing on standard input (`node -`, bare `node` / `sh`,
+    `bash -s`, `pwsh -Command -`, ipython, `python -m code`, a winpty launcher) waits until the call times
+    out. Refused by heredoc_guard's stdin rule; a fed, scripted or inline call still passes."""
+
+    def test_refuses_shells_and_repls_with_no_input(self):
+        self.expect("heredoc_guard.py", 2, ["node", "node -", "node -i", "sh", "bash -s", "bash -i",
+                                            "pwsh -Command -", "ipython", f"{PYN} -m code", f"winpty {PYN}"],
+                    reason=NO_INPUT)
+        self.expect("heredoc_guard.py", 2, ["node"], tool="PowerShell", reason=NO_INPUT)
+
+    def test_fed_or_scripted_calls_pass(self):
+        self.expect("heredoc_guard.py", 0, ["node x.js", "node -e 1", "node --test", "node --version", "echo 1 | node",
+                                            "node < x.js", "bash x.sh", "bash -c 'echo hi'", "bash -s < x.sh",
+                                            "cat x.sh | bash -s", "bash <<'EOF'\necho hi\nEOF", "ipython x.py",
+                                            f"winpty {PYN} x.py", "which sh", "bash --version",
+                                            "pwsh -Command Get-Date", "pwsh -File x.ps1", f"{PYN} -m json.tool x.json"])
+
+
+class FlatPushBase(PushShapeBase):
+    def expect(self, code, cmds, tool="Bash", reason=None):
+        for cmd in cmds:
+            got, _, err = run_hook("push_gate.py", bash(cmd, self.work, tool), env=self.env)
+            self.assertEqual(got, code, f"{tool}: {cmd!r}: {err.strip()}")
+            if reason:
+                self.assertIn(reason, flat(err), f"{tool}: {cmd!r}: {err.strip()}")
+
+
+GH_API, GH_SYNC = "`gh api ", "`gh repo sync --force` resets a remote branch"
+
+
+class GhRefs(FlatPushBase):
+    """V-K8w2 scope row: `gh api` DELETE on a git ref, a PATCH with force=true, and `gh repo sync --force`
+    move or drop a remote ref without git push. Refused as push_gate.irreversible; reads and a PATCH with
+    force=false pass."""
+
+    def test_refuses_gh_api_remote_ref_delete_or_force(self):
+        self.expect(2, ["gh api -X DELETE repos/o/r/git/refs/heads/main",
+                        "gh api --method=DELETE /repos/o/r/git/refs/tags/v1",
+                        "gh api -X PATCH repos/o/r/git/refs/heads/main -f sha=abc -F force=true"], reason=GH_API)
+
+    def test_refuses_gh_repo_sync_force(self):
+        self.expect(2, ["gh repo sync --force", "gh repo sync o/r --force"], reason=GH_SYNC)
+
+    def test_gh_remote_ref_reads_pass(self):
+        self.expect(0, ["gh api repos/o/r/git/refs/heads/main", "gh repo sync",
+                        "gh api -X PATCH repos/o/r/git/refs/heads/main -f sha=abc -F force=false"])
+
+
+WRITE_AND_RUN = "a script this line writes and runs"
+CANNOT_PARSE = "this line holds a push the gate cannot parse"
+
+
+class FP_A(FlatPushBase):
+    """V-K8w2 FP-A: a cat/tee heredoc written to a notes file whose body names a push is prose, not a push
+    (push_gate.inert_writer_bodies). A heredoc written to a file the same line then runs is still read."""
+
+    def test_notes_heredoc_naming_a_push_passes(self):
+        self.expect(0, [f"cat <<'EOF' > README.md\nRun {G} {U} origin main when done.\nEOF",
+                        f"cat >> RESUME.md <<EOF\nthen {G} {U} origin main\nEOF",
+                        f"tee notes.md <<'EOF'\n{G} {U} is refused here when forced\nEOF",
+                        f"cat > notes.md <<'EOF'\n{G} {U} origin main\nEOF\n{G} add notes.md"])
+
+    def test_refuses_heredoc_written_and_run_on_the_same_line(self):
+        self.expect(2, [f"cat > t.sh <<'EOF'\n{G} {U} origin main\nEOF\nbash t.sh",
+                        f"cat > notes.md <<'EOF'\n{G} {U} origin main\nEOF\nsh notes.md"], reason=WRITE_AND_RUN)
+
+
+class FP_B(FlatPushBase):
+    """V-K8w2 FP-B: prose naming a push redirected into a data file (.txt .md .json …) or written by
+    Set-Content / Add-Content / Out-File passes; the same text into a runnable file is still refused."""
+
+    def test_prose_into_a_data_file_passes(self):
+        self.expect(0, [f'echo "{G} {U} later" >> todo.txt', f"printf '%s\\n' 'then {G} {U} origin main' > notes.md",
+                        f'echo "{G} {U} after review" > plan.json'])
+        self.expect(0, [f'Set-Content notes.md "remember to {G} {U}"',
+                        f'Add-Content -Path todo.txt -Value "{G} {U} later"',
+                        f'"{G} {U} later" | Out-File todo.txt'], tool="PowerShell")
+
+    def test_refuses_push_text_into_a_script_file(self):
+        self.expect(2, [f'echo "{G} {U} origin main" > x.sh'], reason=CANNOT_PARSE)
+        self.expect(2, [f'Set-Content run.ps1 "{G} {U} origin main"'], tool="PowerShell", reason=CANNOT_PARSE)
+
+
+class FP_C(FlatPushBase):
+    """V-K8w2 FP-C: `git push origin $BR` (a loop variable, `"$(git branch --show-current)"`) names a branch
+    known only at run time. M14a decided it stays refused by design, with the B3 run-time reason, not
+    resolved or nudged; write the branch out. The literal push passes."""
+
+    def test_refuses_branch_known_only_at_run_time(self):
+        self.expect(2, [f"{G} {U} origin $BR", f"for b in main; do {G} {U} origin $b; done",
+                        f'{G} {U} origin "$({G} branch --show-current)"'], reason=RUN_TIME)
+
+    def test_literal_branch_push_passes(self):
+        self.expect(0, [f"{G} {U} origin main", f"{G} {U} -u origin feat/x"])
+
+
+BUILT_PROGRAM = "a program name built at run time"
+
+
+class FP_D(FlatPushBase):
+    """V-K8w2 FP-D: a variable program (`$PYTHON`) in an earlier `&&` / `;` segment does not make a plain
+    `git push` unreadable. A variable in the push segment itself is still refused, and so is a run-time
+    push argument behind the same earlier segment (the disguised-input control K8w3b left open): the
+    exemption holds only when the push segment is a plain `git …` with no `$` or backtick, so the
+    line-wide rule refuses it first."""
+
+    def test_variable_program_in_an_earlier_segment_passes(self):
+        self.expect(0, [f"$PYTHON x.py && {G} {U} origin main", f"$py tools/release.py; {G} {U} origin main"])
+
+    def test_refuses_variable_program_in_the_push_segment(self):
+        self.expect(2, [f"$PYTHON x.py && $G {U} origin main", f"G={G}; $G {U} origin main"], reason=BUILT_PROGRAM)
+
+    def test_refuses_run_time_argument_after_an_earlier_variable_program(self):
+        self.expect(2, [f"$PYTHON x.py && {G} {U} $OPT origin main"], reason=BUILT_PROGRAM)
+
+
 if __name__ == "__main__":
     unittest.main()

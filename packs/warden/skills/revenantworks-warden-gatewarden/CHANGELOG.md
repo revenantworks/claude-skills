@@ -65,6 +65,17 @@ Description cut to about 600 characters, main use case first (2026-10-08).
   when its text names a decoder (`base64 -d`, `xxd -r`, `openssl … -d`, `certutil -decode`) or a
   fetcher (`curl`, `wget`, `iwr`, `Invoke-WebRequest`, `irm`), so every hard-rule hook refuses it.
   Plain substrings; nothing is evaluated. A decode that only prints and `eval "$(ssh-agent -s)"` pass.
+- M14 round closed, 2026-10-09 (M14a-M14e, attended): every V-K8w2 row now has a class in
+  `scripts/test_hooks_shapes.py` (B1-B6, B8-B10, GhRefs, FP_A-FP_D; B7's cases stay in
+  `test_hooks.py`, since the live hyperv_lock refuses writing them into a new file), each with its
+  refusal reason asserted and an allow control. M14e reads an alias set through
+  `GIT_CONFIG_KEY_<n>=alias.<name>` like an inline `-c alias.` and refuses a config redirect
+  (`GIT_CONFIG_GLOBAL`, `GIT_CONFIG_SYSTEM`, `GIT_CONFIG_NOSYSTEM`, `HOME`, `XDG_CONFIG_HOME`) on a
+  line whose git subcommand is not a builtin. `references/hooks.md` documents the run-time-argument
+  (B3, B4), include (B5), decode-then-execute (B1, B2, B8) and glob (B9) rules with their allow
+  controls, replaces the "known open area" text, says how to run the battery, and states that B11
+  (malformed events Claude Code never sends) is out of scope. FP-C (`git push origin $BR`) stays
+  refused by design.
 - Audits allow, deny and ask rules across every settings level: dead rules, bypass shapes, and Bash
   denies with no PowerShell twin on Windows, where the sandbox does not run.
 - Lints the shapes the docs name: absolute paths, `sh -c`, `git -C`, path rules for tools that are

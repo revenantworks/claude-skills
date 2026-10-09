@@ -116,9 +116,33 @@ interpreter runs (`node`, `python`, `perl`) refuses in `hyperv_lock` and `golive
 `push_gate` never reads interpreter source (K7-4-03, V-K8w FP2). The same holds for a script whose
 text never shows: one piped into a shell from anything but a file the hook reads, a heredoc or a plain
 `echo` literal (`… | base64 -d | bash`, `curl … | sh`, `$s | iex`), and one the same line copies,
-downloads or redirects over a file before running it (`cp x run.sh && bash run.sh`). That covers the
-piped form only: other encoded or decoded payload forms are a known open area under review (see
-push_gate's limits). A shell script over 256 KB, and a
+downloads or redirects over a file before running it (`cp x run.sh && bash run.sh`).
+
+**Decode-then-execute (V-K8w2 B1, B2, B8, 2026-10-09).** Three more forms of a script that never
+shows count as code the hooks cannot read, so `push_gate`, `hyperv_lock` and `golive_block` all
+refuse them in every mode. Matching is on plain, case-insensitive substrings; nothing is decoded,
+fetched or evaluated.
+
+- **B1, a decoded or fetched substitution a shell runs:** a `$(…)` or backtick substitution that is
+  the program text of `eval`, `sh -c`, `bash -c` or the segment's command word, whose text names a
+  decoder (`base64 -d`, `base64 --decode`, `xxd -r`, `openssl … -d`, `certutil -decode`) or a fetcher
+  (`curl`, `wget`, `iwr`, `Invoke-WebRequest`, `irm`): `eval "$(… | base64 -d)"`,
+  `bash -c "$(curl …)"`. In PowerShell a bare `$(…)` command word prints its value, so only the
+  `eval` / `sh -c` / `bash -c` forms count there. Allow controls: `echo … | base64 -d` (a decode that
+  only prints), `bash -c "echo hi"`, `eval "$(ssh-agent -s)"`, and an assignment or argument
+  (`x=$(curl …)`, `echo $(curl …)`).
+- **B2, a PowerShell run of a built string:** a segment whose command word is `iex`,
+  `Invoke-Expression`, `&` or `.` whose argument, or the value set on the same line for the variable
+  it names, holds `FromBase64String`, `-join`, `-f ` or `[char]`: `iex ([Text.Encoding]::…
+  FromBase64String('…'))`, `$x = (…) -join ''; iex $x`. Allow controls: `iex (Get-Content .\setup.ps1
+  -Raw)` and `& .\build.ps1`.
+- **B8, inline code that decodes and runs:** `python -c`, `node -e` or `pwsh -c` code that names both
+  a decode call (`b64decode`, `base64.decode`, `FromBase64String`, or `Buffer.from` with `base64`)
+  and a run call (`os.system`, `subprocess`, `exec(`, `eval(`, `execSync`, `child_process`,
+  `Invoke-Expression`, `iex`). Allow controls: a decode that only prints, and a run call with no
+  decode.
+
+A shell script over 256 KB, and a
 command over 256 KB, are matched with each hook's regexes instead of parsed word by word, and refused
 on a hit. Each hard-rule hook has a 20-second time budget (`GATEWARDEN_BUDGET`; the hook timeout is
 30 s and Claude Code reads a timeout as allow): past it the hook refuses when the command or a file it
@@ -127,6 +151,26 @@ a script piped in from a source the hook cannot read, an unclosed `$(`) is block
 carries that hook's hint words (`push`; a VM, disk, snapshot or checkpoint word beside a remove or
 restore verb; `stream`, `virtualcam`, `hotkey` or `obs`). The test battery in `test_hooks.py`
 (`PushGateBypassTests`, `HyperVBypassTests`, `GoLiveBypassTests`) runs each shape above.
+
+**The shape regression battery.** `scripts/test_hooks_shapes.py` holds one test class per row of the
+2026-10-09 verifier pass (V-K8w2): `B1`, `B2`, `B3`, `B4`, `B5` (with M14e's `B5env` and
+`B5redirect`), `B6`, `B8`, `B9`, `B10`, `GhRefs` and `FP_A`..`FP_D`. Each class refuses its shape
+(exit 2 at the install default, with the refusal reason asserted) and keeps an allow control: a
+normal daily command of the same family that must still pass. B7's cases (disk-file writes, moves
+and wildcard deletes) stay in `test_hooks.py` (`K8w3bDirectRuleTests`): the live `hyperv_lock`
+refuses writing them into a new file, by design. Every fixture is benign (a plain push, `echo hello`,
+a harmless base64 literal) and is held as string data only. Run the whole suite from the skill's
+`scripts` folder, never with `discover -s packs/warden` (no `__init__.py`: it finds 0 tests and
+exits 0):
+
+```
+cd packs/warden/skills/revenantworks-warden-gatewarden/scripts
+python -m unittest discover -p "test_*.py"
+python -m unittest test_hooks_shapes        # the shape battery alone
+```
+
+B11 (malformed hook events, shapes Claude Code never sends) is out of scope for the hooks and the
+battery.
 
 ## push_gate
 
@@ -176,7 +220,20 @@ config include on a line whose git subcommand is not a builtin (`git -c include.
 V-K8w2 B5), since a non-builtin may be an alias defined in the included file, which the gate never
 reads. A builtin with an include passes (`git -c include.path=f log`: a builtin cannot be an alias),
 except push, where an include counts as a redirected config; ordinary `-c` settings
-(`git -c user.name=x commit`) pass. Write the remote and branch out. All of these are hard (`push_gate.shape`). Force, delete, mirror, prune and tag flags are
+(`git -c user.name=x commit`) pass. Two siblings of the include rule (M14e, 2026-10-09): an alias set
+through the environment on the same line (`GIT_CONFIG_COUNT` with `GIT_CONFIG_KEY_<n>=alias.<name>` and
+`GIT_CONFIG_VALUE_<n>`) is read like an inline `-c alias.<name>=…` when a non-builtin subcommand
+follows (a literal value is resolved and checked; a value set at run time, or none, is refused:
+"a git alias set in the environment cannot be read"); and a config redirect (`GIT_CONFIG_GLOBAL`,
+`GIT_CONFIG_SYSTEM`, `GIT_CONFIG_NOSYSTEM`, `HOME`, `XDG_CONFIG_HOME`) assigned on a line whose git
+subcommand is not a builtin is refused with the push line's reason ("a redirected git dir or
+config"), since it swaps the config git reads aliases from. Builtins under a redirect pass:
+`HOME=/tmp/x git status`, `GIT_CONFIG_NOSYSTEM=1 git log`, `XDG_CONFIG_HOME=x git diff`. Allow
+controls for the run-time and glob rules: `git push origin main`, `git push -u origin feat/x`,
+`$PYTHON x.py && git push origin main`, `echo "$BR" && git push origin main`,
+`git commit --allow-empty -m "$MSG"`, `git push origin main 2>&1`, `ls *.md && git push origin main`
+and `git log -- '*.md'`. `git push origin $BR` (V-K8w2 FP-C) stays refused by design under the
+run-time rule: write the branch out. Write the remote and branch out. All of these are hard (`push_gate.shape`). Force, delete, mirror, prune and tag flags are
 caught abbreviated too (`--forc`, `--delet`, `--mir`, `--prun`, `--tag`, `--al`: git accepts any
 unique prefix). Git config can make a plain push a mirror or force push, so before a push the
 gate reads `remote.<name>.mirror` and `remote.<name>.push` (every remote when the line names none,
@@ -209,8 +266,9 @@ other program may run is still counted, and refused when the gate cannot parse i
 interpreter's source file for a push (`python release.py` runs; release tooling pushes by design),
 or a push the owner runs in their own terminal. A shell script written on the same line that names
 push is refused unread; one written in an earlier call is read when it runs. Encoded and decoded
-payload forms beyond the piped one (see "What the command hooks read") are a known open area under
-review in every command hook (V-K8w2; the work is held for an attended session). It makes the range and the CI pass explicit and visible; it does not stop a model
+payload forms are covered in the shapes the 2026-10-09 rounds named (piped, and B1, B2, B8 in "What
+the command hooks read"); the matching is on plain substrings, so a decoder or run call spelled some
+other way is not caught. It makes the range and the CI pass explicit and visible; it does not stop a model
 set on getting round it. Scanning the range for secrets before a push to a public repo is
 shieldwarden's.
 
