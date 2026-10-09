@@ -56,6 +56,10 @@ Description cut to about 600 characters, main use case first (2026-10-08).
   text names both a decode call and a run call counts as code the hooks cannot read, so every
   hard-rule hook refuses it. Matching is on the call names as plain substrings; nothing is decoded.
   Decode alone, or a run call alone, passes.
+- M14c2, 2026-10-09 (V-K8w2 B2): a PowerShell segment whose command word is `iex`,
+  `Invoke-Expression`, `&` or `.` counts as code the hooks cannot read when its argument, or the value
+  set on the same line for the variable it names, contains `FromBase64String`, `-join`, `-f ` or
+  `[char]`. Plain substrings; nothing is evaluated. Running a script file or a file's text passes.
 - Audits allow, deny and ask rules across every settings level: dead rules, bypass shapes, and Bash
   denies with no PowerShell twin on Windows, where the sandbox does not run.
 - Lints the shapes the docs name: absolute paths, `sh -c`, `git -C`, path rules for tools that are

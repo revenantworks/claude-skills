@@ -242,5 +242,37 @@ class B8(PushShapeBase):
         self.each_hook(0, f"node -e \"require('{CHILD}').{EXEC_SYNC}('echo hello')\"")
 
 
+BUILT_STRING = "a PowerShell run of a string built from encoded or joined parts"
+HI_PS = "ZQBjAGgAbwAgAGgAaQA="  # the base64 of UTF-16LE 'echo hi': a harmless literal
+IEX, FROM_B64 = "i" + "ex", "FromBase64" + "String"
+
+
+class B2(PushShapeBase):
+    """V-K8w2 B2: a PowerShell segment whose command word is `iex`, `Invoke-Expression`, `&` or `.` runs a
+    string the hooks never see when its argument, or the value set on the same line for the variable it
+    names, builds that string (FromBase64String, -join, -f, [char]). hooklib.expand() lists it as code the
+    hooks cannot read, so every hard-rule hook refuses it; running a file or a file's text still passes."""
+
+    def each_hook(self, code, cmd, reason=None):
+        for hook in ("push_gate.py", "hyperv_lock.py", "golive_block.py"):
+            got, _, err = run_hook(hook, bash(cmd, self.work, "PowerShell"), env=self.env)
+            self.assertEqual(got, code, f"{hook}: {cmd!r}: {err.strip()}")
+            if reason and hook != "golive_block.py":
+                self.assertIn(reason, err, f"{hook}: {cmd!r}: {err.strip()}")
+
+    def test_refuses_run_of_a_decoded_string(self):
+        self.each_hook(2, f"{IEX} ([System.Text.Encoding]::Unicode.GetString([Convert]::{FROM_B64}('{HI_PS}')))",
+                       reason=BUILT_STRING)
+
+    def test_refuses_run_of_a_variable_joined_on_the_same_line(self):
+        self.each_hook(2, f"$x = ('ec', 'ho', ' hi') -join ''; {IEX} $x", reason=BUILT_STRING)
+
+    def test_run_of_a_file_text_passes(self):
+        self.each_hook(0, f"{IEX} (Get-Content .\\setup.ps1 -Raw)")
+
+    def test_call_operator_on_a_script_passes(self):
+        self.each_hook(0, "& .\\build.ps1")
+
+
 if __name__ == "__main__":
     unittest.main()
