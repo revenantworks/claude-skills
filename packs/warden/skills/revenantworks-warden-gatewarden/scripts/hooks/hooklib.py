@@ -694,6 +694,29 @@ def _inline_code(code: str, out: "Expanded") -> None:
         out.unread.append(DECODE_AND_RUN)
 
 
+# V-K8w2 B2: a PowerShell segment whose command word is `iex`, `Invoke-Expression`, `&` or `.` runs a string
+# the hook never sees when its argument text, or the value set on the same line for the variable it names,
+# builds that string. Plain substrings, matched without case; nothing is evaluated.
+STRING_BUILDERS = ("frombase64string", "-join", "-f ", "[char]")
+STRING_RUN_WORD = re.compile(r"(?i)^\s*(?:iex|invoke-expression|&|\.)(?=[\s(\"'$]|$)")
+BUILT_STRING = "a PowerShell run of a string built from encoded or joined parts"
+
+
+def _built_string_run(seg: str, segs: list[str], out: "Expanded") -> None:
+    """Fail closed on B2: unread_code for the hooks that read code, unread for push_gate."""
+    m = STRING_RUN_WORD.match(seg)
+    if not m:
+        return
+    arg = seg[m.end():]
+    texts = [arg]
+    for name in re.findall(r"\$([A-Za-z_][\w:]*)", arg):
+        assign = re.compile(r"(?i)^\s*\$" + re.escape(name) + r"\s*=(?!=)(.*)$", re.S)
+        texts += [a.group(1) for a in (assign.match(s) for s in segs) if a]
+    if any(b in t.lower() for t in texts for b in STRING_BUILDERS):
+        out.unread_code.append(BUILT_STRING)
+        out.unread.append(BUILT_STRING)
+
+
 def expand(command: str, cwd: str = "", depth: int = 0, out: Expanded | None = None,
            ps: bool | None = None, files: bool = True) -> Expanded:
     """Every shell text and code body the command runs, as far as text can show it. `ps` says the
@@ -733,6 +756,8 @@ def expand(command: str, cwd: str = "", depth: int = 0, out: Expanded | None = N
             cur = resolve(target, cur)
             prev_sep, prev_vis = sep, False
             continue
+        if ps:
+            _built_string_run(seg, segs, out)
         progs = [prog(t) for t in toks]
         vis = _visible(seg, toks, progs)
         if out.files:
