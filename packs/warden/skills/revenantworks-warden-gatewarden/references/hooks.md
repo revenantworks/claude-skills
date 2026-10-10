@@ -259,6 +259,10 @@ A chained line is split on `&&`, `||`, `;`, `|` and newlines before the push's o
 so `git push origin main && git status -sb` reads `origin main` only (observation 0355). The body of a
 heredoc on a line that runs only `git` or `gh`, with no pipe or redirect (`git commit -F - <<'EOF'`),
 is message text and is not read for a push; a heredoc a shell runs (`bash <<'EOF'`, `... | sh`) is.
+The same holds per segment when the heredoc's own segment is `git commit -F -` (or `-F /dev/stdin`,
+`--file=-`, `--file -`) with no pipe or redirect on that segment: `cd <dir> && git add -- <paths> &&
+git commit -F - <<'EOF'` keeps its message out of the parse whatever the other segments run
+(observation 0381). `cd x && cat <<'EOF' > s.sh && sh s.sh` and `cd x && bash <<'EOF'` are still read.
 Quoted prose that names `git push` passes when only a prose pipeline reads it (V-K8w FP1): `echo`,
 `printf`, `Write-Host`, `grep`, `rg`, `findstr`, `Select-String`, `gh` (not `gh alias`), and git's
 `commit`, `log`, `tag`, `notes`, `stash`, `show`, piped only into `head`, `sort`, `wc` and the like,

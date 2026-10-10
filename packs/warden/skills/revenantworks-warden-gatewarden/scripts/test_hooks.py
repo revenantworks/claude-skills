@@ -250,6 +250,29 @@ class PushGateTests(unittest.TestCase):
             code, _, err = run_hook("push_gate.py", bash(cmd, self.work))
             self.assertEqual(code, 2, cmd)
 
+    def test_commit_message_heredoc_after_cd_is_not_a_push(self):
+        # Observation 0381: a cd segment before `git commit -F - <<'EOF'` kept the message body as a script.
+        cd = "cd " + self.work.replace("\\", "/")
+        body = "\nci: sync marketplace.json, then git push origin main\nEOF"
+        for head in (f"{cd} && git diff --stat && git add -- a.txt && git commit -F - <<'EOF'",
+                     f"{cd} && git commit --file=- <<'EOF'",
+                     f"{cd}; git commit -F /dev/stdin <<'EOF'",
+                     f"{cd} && git -C . commit -q --file - <<'EOF'"):
+            code, out, err = run_hook("push_gate.py", bash(head + body, self.work))
+            self.assertEqual((code, out.strip()), (0, ""), f"{head}: {err}")
+
+    def test_script_heredoc_after_cd_is_still_read(self):
+        # Negative controls for 0381: only a heredoc that git commit reads is blanked, cd or not.
+        cd = "cd " + self.work.replace("\\", "/")
+        for cmd, why in ((f"{cd} && cat <<'EOF' > s.sh && sh s.sh\ngit push origin main\nEOF",
+                          "a script this line writes and runs"),
+                         (f"{cd} && bash <<'EOF'\ngit push --force origin main\nEOF", "force"),
+                         (f"{cd} && git commit -F - <<'EOF' | sh\ngit push --force origin main\nEOF", "force"),
+                         (f"{cd} && git log -1 <<'EOF'\ngit push --force origin main\nEOF", "force")):
+            code, _, err = run_hook("push_gate.py", bash(cmd, self.work))
+            self.assertEqual(code, 2, cmd)
+            self.assertIn(why, err, cmd)
+
     def test_recreated_empty_remote_counts_the_whole_branch(self):
         # Observation 0356: origin/main still names the old tip; the new remote is empty.
         fresh = os.path.join(self.tmp, "recreated.git")
