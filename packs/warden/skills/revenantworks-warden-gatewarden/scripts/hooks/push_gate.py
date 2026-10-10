@@ -27,7 +27,8 @@ word `push` is blocked with the reason; anything else passes. Pushes are found a
 unwraps the command (line continuations, splices, `sh -c`, `pwsh -Command`, `eval`, `iex`,
 substitutions, -EncodedCommand, script files, piped scripts, a `cd` earlier on the line). The body of
 a heredoc that only feeds text to git or gh (a commit message, a PR body) is prose, not a command, and
-is not read for a push (observation 0355); nor is a quoted string that a prose command (echo, grep,
+is not read for a push (observation 0355; per segment for `git commit -F -` after a `cd`, observation
+0381); nor is a quoted string that a prose command (echo, grep,
 rg, git commit -m, gh, Set-Content, Out-File) only prints, searches or writes to a file no shell or
 interpreter runs (`.md`, `.txt`, `.json`; V-K8w FP1, V-K8w2 FP-B); nor is a heredoc that cat or tee
 only writes to a file the line never runs (V-K8w2 FP-A). A program name built at run time counts in
@@ -132,8 +133,9 @@ def without_message_heredocs(cmd: str) -> str:
             continue
         head = line[:marks[0].start()] + line[marks[0].end():]
         segs = hl.segments(head.replace("&&", ";").replace("||", ";"))
-        if "|" in head.replace("||", "") or ">" in head or not segs or \
-                any(hl.prog((hl.tokens(s) or [""])[0]) not in MESSAGE_PROGS for s in segs):
+        if ("|" in head.replace("||", "") or ">" in head or not segs or
+                any(hl.prog((hl.tokens(s) or [""])[0]) not in MESSAGE_PROGS for s in segs)) and \
+                not commit_stdin_segment(line):
             continue
         end = marks[0].group(2)
         j = i
@@ -144,6 +146,35 @@ def without_message_heredocs(cmd: str) -> str:
         out += [""] * (j - i)
         i = j
     return "\n".join(out)
+
+
+COMMIT_STDIN = {"-F-", "--file=-", "--file=/dev/stdin", "-F/dev/stdin"}
+GIT_HEAD_OPTS = {"-C"}  # a git option before the subcommand that takes a value (`git -C dir commit`)
+
+
+def commit_stdin_segment(line: str) -> bool:
+    """The heredoc on this line feeds `git commit -F -` (or `-F /dev/stdin`, `--file=-`, `--file -`) in its
+    own segment, with no pipe into or out of that segment and no redirect in it (observation 0381). The
+    other segments of the line (a `cd`, a `git add`) do not read the body, so they do not keep it."""
+    ops = hl.split_ops(line)
+    at = next((k for k, (s, _) in enumerate(ops) if HEREDOC.search(s)), None)
+    if at is None or ops[at][1] == "|" or (at and ops[at - 1][1] == "|"):
+        return False
+    seg = HEREDOC.sub(" ", ops[at][0], count=1)
+    if ">" in seg or "<" in seg or HEREDOC.search(seg):
+        return False
+    toks = [arg(t) for t in hl.tokens(seg)]
+    if not toks or hl.prog(toks[0]) != "git":
+        return False
+    n = 1
+    while n < len(toks) and toks[n] in GIT_HEAD_OPTS:
+        n += 2
+    if n >= len(toks) or toks[n] != "commit":
+        return False
+    rest = toks[n + 1:]
+    return any(t in COMMIT_STDIN or (t in ("-F", "--file") and k + 1 < len(rest) and
+                                     rest[k + 1] in ("-", "/dev/stdin"))
+               for k, t in enumerate(rest))
 
 
 # A file named on another segment of the line by one of these is read or staged, not run (FP-A).

@@ -30,6 +30,9 @@ Allowed (owner decision 2026-10-02):
     text (a disk path in an argument is fine).
   - Read-only searches (grep, rg, findstr, Select-String, git grep) that only name a cmdlet,
     and everything else, including Checkpoint-VM and Get-VMSnapshot.
+  - Writing gatewarden's hook-test batteries, any `test_hooks*.py` directly in gatewarden's
+    `scripts/` folder (hooklib.hook_test_file, observation 0375): their fixtures are data. Running
+    one as a script is still checked like any other code file.
 
 Pinned scripts (owner brief HV2): a Python call of teardown.py, cleanroom.py or vmctl.py
 inside a hypervrunner scripts folder runs only when the file at that path matches the sha256
@@ -350,6 +353,8 @@ def write_reason(path: str, body: str) -> str | None:
     if PIN_NAME.search(os.path.basename(path.replace("\\", "/"))):
         return PIN_OWNER_REASON
     if not path or DOC_EXT.search(path):
+        return None
+    if hl.hook_test_file(path):  # gatewarden's hook-test batteries hold fixtures as data (observation 0375)
         return None
     script = own_script(path.replace("\\", "/"))
     if not SCRIPT_EXT.search(path) and "revenantworks-localops-hypervrunner" in path.replace("\\", "/"):

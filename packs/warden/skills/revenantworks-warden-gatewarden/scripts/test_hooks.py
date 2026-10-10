@@ -250,6 +250,29 @@ class PushGateTests(unittest.TestCase):
             code, _, err = run_hook("push_gate.py", bash(cmd, self.work))
             self.assertEqual(code, 2, cmd)
 
+    def test_commit_message_heredoc_after_cd_is_not_a_push(self):
+        # Observation 0381: a cd segment before `git commit -F - <<'EOF'` kept the message body as a script.
+        cd = "cd " + self.work.replace("\\", "/")
+        body = "\nci: sync marketplace.json, then git push origin main\nEOF"
+        for head in (f"{cd} && git diff --stat && git add -- a.txt && git commit -F - <<'EOF'",
+                     f"{cd} && git commit --file=- <<'EOF'",
+                     f"{cd}; git commit -F /dev/stdin <<'EOF'",
+                     f"{cd} && git -C . commit -q --file - <<'EOF'"):
+            code, out, err = run_hook("push_gate.py", bash(head + body, self.work))
+            self.assertEqual((code, out.strip()), (0, ""), f"{head}: {err}")
+
+    def test_script_heredoc_after_cd_is_still_read(self):
+        # Negative controls for 0381: only a heredoc that git commit reads is blanked, cd or not.
+        cd = "cd " + self.work.replace("\\", "/")
+        for cmd, why in ((f"{cd} && cat <<'EOF' > s.sh && sh s.sh\ngit push origin main\nEOF",
+                          "a script this line writes and runs"),
+                         (f"{cd} && bash <<'EOF'\ngit push --force origin main\nEOF", "force"),
+                         (f"{cd} && git commit -F - <<'EOF' | sh\ngit push --force origin main\nEOF", "force"),
+                         (f"{cd} && git log -1 <<'EOF'\ngit push --force origin main\nEOF", "force")):
+            code, _, err = run_hook("push_gate.py", bash(cmd, self.work))
+            self.assertEqual(code, 2, cmd)
+            self.assertIn(why, err, cmd)
+
     def test_recreated_empty_remote_counts_the_whole_branch(self):
         # Observation 0356: origin/main still names the old tip; the new remote is empty.
         fresh = os.path.join(self.tmp, "recreated.git")
@@ -630,6 +653,37 @@ class HyperVLockTests(unittest.TestCase):
                                                     "content": "Remove-VM -VM $v -Force"}}
         code, _, err = run_hook("hyperv_lock.py", ev)
         self.assertEqual(code, 0, err)
+
+
+class HookTestFileExemptionTests(unittest.TestCase):
+    """Observation 0375: one rule exempts gatewarden's hook-test batteries (any `test_hooks*.py` directly in
+    the member's scripts folder) from the write checks of hyperv_lock and golive_block; nothing else is."""
+    GW = "packs/warden/skills/revenantworks-warden-gatewarden/scripts/"
+    # Fixtures are joined at run time, so this file's own source names no blocked command.
+    BODIES = {"hyperv_lock.py": "-".join(("Remove", "VM")) + " -Name lab -Force",
+              "golive_block.py": "req = '" + "Start" + "Stream" + "'"}
+    EXEMPT = (GW + "test_hooks.py", GW + "test_hooks_shapes.py",
+              "C:\\work\\" + GW.replace("/", "\\") + "test_hooks_shapes.py")
+    NOT_EXEMPT = ("packs/warden/skills/revenantworks-warden-keywarden/scripts/test_hooks.py",
+                  "copy/revenantworks-warden-gatewarden-old/scripts/test_hooks_shapes.py",
+                  GW + "hooks/test_hooks.py", "elsewhere/test_hooks.py",
+                  GW + "test_hook.py", GW + "hooks_test.py", GW + "test_hooks.ps1", GW + "my_test_hooks.py")
+
+    def write(self, hook, path):
+        ev = {"tool_name": "Write", "tool_input": {"file_path": path, "content": self.BODIES[hook]}}
+        return run_hook(hook, ev)
+
+    def test_both_battery_files_are_exempt(self):
+        for hook in self.BODIES:
+            for path in self.EXEMPT:
+                code, _, err = self.write(hook, path)
+                self.assertEqual(code, 0, f"{hook}: {path}: {err}")
+
+    def test_lookalikes_and_other_names_are_not_exempt(self):
+        for hook in self.BODIES:
+            for path in self.NOT_EXEMPT:
+                code, _, _ = self.write(hook, path)
+                self.assertEqual(code, 2, f"{hook}: {path}")
 
 
 # ---------------------------------------------------------------- go-live block
