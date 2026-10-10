@@ -109,6 +109,16 @@ plain reading (the native permission matcher already sees through most of them):
 | a `cd` earlier on the line | `cd ../other && git push` | the folder the command really runs in |
 | line continuations | `git push \` then `--force` on the next line; PowerShell's backtick at a line end | the joined line, before any split or match |
 
+A shell or interpreter name counts as a program only where a program runs (observation 0377). In
+`grep -n dash x.json` or `echo node`, the command word is a plain reader or printer (`PLAIN_PROGS`:
+`grep`, `rg`, `echo`, `ls`, `cat`, `head` and kin), so `dash` is a search word and `x.json` is not
+read as a dash script. The command word is found past `NAME=value` assignments and launchers
+(`sudo`, `env`, `nohup`, `timeout 5`, `xargs`, `then`, `do`, `!` and the rest of `LAUNCHERS`). A
+flag that hands on a program (`find -exec`, `-execdir`, `-ok`, `rg --pre`, any `--…command`,
+`--…program` or `--…shell` flag) ends the plain stretch. When the command word is anything else, a
+launcher carries its own flags (`sudo -u root bash x.sh`), or the name is built at run time, the
+position cannot be decided and every runner name on the segment counts, as before.
+
 **Fail closed.** An `-EncodedCommand` that does not decode, or nesting deeper than four levels, is
 blocked by every command hook. So is a script file on disk the hook cannot read (over 8 MB, or
 locked): a shell script refuses in `push_gate`, `hyperv_lock` and `golive_block`; a file an

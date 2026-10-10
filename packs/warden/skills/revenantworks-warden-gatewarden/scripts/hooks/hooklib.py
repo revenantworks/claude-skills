@@ -563,6 +563,44 @@ def prog(tok: str) -> str:
     return w[:-4] if w.endswith(".exe") else w
 
 
+# Observation 0377: a shell or interpreter name is a program only where a program runs. `grep -n dash
+# x.json` reads x.json; it does not run it as a dash script. A runner name past the command word counts
+# only when that command word is a plain reader or printer from PLAIN_PROGS, reached past assignments and
+# launchers, and no flag between them hands a program on (find -exec, rg --pre). Anything else (an unknown
+# program, a launcher with its own flags, a run-time name) cannot be decided and keeps the old reading:
+# every runner name on the segment counts, so the hooks fail closed as before.
+LAUNCHERS = {"sudo", "doas", "env", "nohup", "time", "exec", "nice", "ionice", "timeout", "command", "builtin",
+             "xargs", "stdbuf", "chrt", "setsid", "strace", "then", "do", "else", "elif", "if", "while", "until",
+             "!", "&", "call", "winpty"}
+PLAIN_PROGS = {"grep", "egrep", "fgrep", "rg", "ag", "ack", "findstr", "select-string", "sls", "echo", "printf",
+               "write-output", "write-host", "ls", "dir", "cat", "head", "tail", "wc", "uniq", "cut", "nl",
+               "which", "stat"}
+COUNT_ARG = re.compile(r"^\d+(?:\.\d+)?[smhd]?$")
+HANDS_ON = re.compile(r"(?i)^(?:-exec|-execdir|-ok|-okdir|--?pre|--?[\w-]*(?:program|command|cmd|exec|shell)[\w-]*)$")
+
+
+def plain_args(toks: list[str]) -> tuple[int, int] | None:
+    """(start, end): toks[start:end] are words the segment's plain program only reads, so a runner name
+    there is no program. None when that cannot be decided (observation 0377)."""
+    k, launched = 0, False
+    while k < len(toks):
+        t = toks[k]
+        p = prog(t)
+        if re.match(r"^[A-Za-z_]\w*=", t):
+            k += 1
+        elif t in LAUNCHERS or p in LAUNCHERS:
+            launched = True
+            k += 1
+        elif launched and COUNT_ARG.match(t):
+            k += 1  # timeout 5, nice 10: a count, not the program
+        elif p in PLAIN_PROGS and word(t) != "\x00" and not t.startswith("-"):
+            end = next((j for j in range(k + 1, len(toks)) if HANDS_ON.match(unquote(toks[j]))), len(toks))
+            return k + 1, end
+        else:
+            return None  # a launcher's own flag, an unknown program, a run-time name
+    return None
+
+
 def tokens(segment: str) -> list[str]:
     """Shell words, with `"a" + "b"` concatenation and ${IFS} word splits applied first."""
     segment = CONCAT.sub("", IFS.sub(" ", segment))
@@ -794,9 +832,12 @@ def expand(command: str, cwd: str = "", depth: int = 0, out: Expanded | None = N
                 key = os.path.normcase(os.path.abspath(resolve(path, cur)))
                 out.written[key] = out.written.get(key, False) or hidden
         stdin_runner = False
+        plain = plain_args(toks) if any(p in RUNS for p in progs) else None
         for i, p in enumerate(progs):
             if p not in RUNS:
                 continue  # no O(n) copy per word on a long line (V-K8w F5)
+            if plain and plain[0] <= i < plain[1]:
+                continue  # a word grep or echo reads, not a program it runs (observation 0377)
             rest = toks[i + 1:]
             if p in PS:
                 for k, t in enumerate(rest):
