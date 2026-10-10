@@ -16,7 +16,8 @@ Blocked:
   - reading an OBS profile's service.json (it holds the stream key) through a shell command or
     the Read tool;
   - writing any of the above into a script file outside obsrunner's scripts folder (in gatewarden,
-    only this hook and test_hooks.py by exact name);
+    only this hook by exact name, and the hook-test batteries: any `test_hooks*.py` in its scripts
+    folder, hooklib.hook_test_file, observation 0375);
   - the unwrapped forms (hooklib.expand): spliced or concatenated names, -EncodedCommand, and a
     script file run or piped into an interpreter that holds a name.
 
@@ -57,10 +58,15 @@ SERVICE_JSON = re.compile(r"(?i)obs-studio[\\/].*service\.json")
 LISTING = re.compile(r"(?i)^\s*(?:ls|dir|get-childitem|gci|test-path)\b")
 SEARCH = re.compile(r"(?i)^\s*(?:grep|egrep|rg|findstr|select-string|sls|git\s+grep|git\s+log)\b")
 CLASSIFY = re.compile(r"(?i)^\s*(?:python3?|py)(?:\s+-\S+)*\s+\S*obs_ws\.py\s+classify\s+[A-Za-z]+\s*$")
-# obsrunner's scripts folder, and gatewarden's own hook and its test file by exact name; nothing else
-# under gatewarden (warden audit G-4: a new file there was a way around the write check).
+# obsrunner's scripts folder, gatewarden's own hook by exact name, and gatewarden's hook-test batteries by
+# one rule (hooklib.hook_test_file, observation 0375); nothing else under gatewarden (warden audit G-4: a
+# new file there was a way around the write check).
 OWN_FOLDER = re.compile(r"(?i)revenantworks-localops-obsrunner[\\/]scripts[\\/]"
-                        r"|revenantworks-warden-gatewarden[\\/]scripts[\\/](?:hooks[\\/]golive_block|test_hooks)\.py$")
+                        r"|revenantworks-warden-gatewarden[\\/]scripts[\\/]hooks[\\/]golive_block\.py$")
+
+
+def own_file(path: str) -> bool:
+    return bool(OWN_FOLDER.search(path)) or hl.hook_test_file(path)
 SCRIPT_EXT = re.compile(r"(?i)\.(ps1|psm1|psd1|bat|cmd|py|sh|vbs|js|ts|mjs)$")
 HINT = re.compile(r"(?i)stream|virtualcam|virtual_cam|hotkey|obs")
 
@@ -121,7 +127,7 @@ def command_blocked(cmd: str, cwd: str = "") -> bool:
             if segment_blocked(s) or path_blocked(s, cur) or (PROFILE_GLOB.search(s) and not LISTING.search(s)):
                 return True
     for body, path in ex.code:
-        if (NAMES.search(body) or CLI.search(body) or SERVICE_JSON.search(body)) and not (path and OWN_FOLDER.search(path)):
+        if (NAMES.search(body) or CLI.search(body) or SERVICE_JSON.search(body)) and not (path and own_file(path)):
             return True
     return bool(ex.opaque) and bool(HINT.search(hl.despliced(cmd)))
 
@@ -162,7 +168,7 @@ def main() -> None:
             for e in ti.get("edits") or []:
                 body += " " + str((e or {}).get("new_string") or "")
             flat = hl.despliced(body)
-            if path and not OWN_FOLDER.search(path) and SCRIPT_EXT.search(path) \
+            if path and not own_file(path) and SCRIPT_EXT.search(path) \
                     and (NAMES.search(body) or CLI.search(body) or SERVICE_JSON.search(body) or NAMES.search(flat)):
                 hl.block(REASON + " Writing it into a script file is the same request.", rule="golive_block", hard=True)
         hl.allow()

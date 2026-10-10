@@ -319,6 +319,17 @@ def allow(context: str = "", message: str = "") -> None:
     sys.exit(0)
 
 
+# gatewarden's own hook-test batteries (observation 0375): any `test_hooks*.py` directly in the member's
+# `scripts/` folder holds fixtures that name what the hooks block. One rule, not a file list, so a new
+# battery file needs no hook change. A lookalike folder, `scripts/hooks/`, or another name is not exempt.
+HOOK_TESTS = re.compile(r"(?i)(?:^|[\\/])revenantworks-warden-gatewarden[\\/]+scripts[\\/]+test_hooks[^\\/]*\.py$")
+
+
+def hook_test_file(path: str) -> bool:
+    """True when `path` is one of gatewarden's hook-test battery files (HOOK_TESTS)."""
+    return bool(path) and bool(HOOK_TESTS.search(path.strip()))
+
+
 def segments(command: str) -> list[str]:
     """Split a shell line on ; && || | and newlines. Quotes are respected
     roughly (a separator inside quotes does not split).

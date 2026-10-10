@@ -655,6 +655,37 @@ class HyperVLockTests(unittest.TestCase):
         self.assertEqual(code, 0, err)
 
 
+class HookTestFileExemptionTests(unittest.TestCase):
+    """Observation 0375: one rule exempts gatewarden's hook-test batteries (any `test_hooks*.py` directly in
+    the member's scripts folder) from the write checks of hyperv_lock and golive_block; nothing else is."""
+    GW = "packs/warden/skills/revenantworks-warden-gatewarden/scripts/"
+    # Fixtures are joined at run time, so this file's own source names no blocked command.
+    BODIES = {"hyperv_lock.py": "-".join(("Remove", "VM")) + " -Name lab -Force",
+              "golive_block.py": "req = '" + "Start" + "Stream" + "'"}
+    EXEMPT = (GW + "test_hooks.py", GW + "test_hooks_shapes.py",
+              "C:\\work\\" + GW.replace("/", "\\") + "test_hooks_shapes.py")
+    NOT_EXEMPT = ("packs/warden/skills/revenantworks-warden-keywarden/scripts/test_hooks.py",
+                  "copy/revenantworks-warden-gatewarden-old/scripts/test_hooks_shapes.py",
+                  GW + "hooks/test_hooks.py", "elsewhere/test_hooks.py",
+                  GW + "test_hook.py", GW + "hooks_test.py", GW + "test_hooks.ps1", GW + "my_test_hooks.py")
+
+    def write(self, hook, path):
+        ev = {"tool_name": "Write", "tool_input": {"file_path": path, "content": self.BODIES[hook]}}
+        return run_hook(hook, ev)
+
+    def test_both_battery_files_are_exempt(self):
+        for hook in self.BODIES:
+            for path in self.EXEMPT:
+                code, _, err = self.write(hook, path)
+                self.assertEqual(code, 0, f"{hook}: {path}: {err}")
+
+    def test_lookalikes_and_other_names_are_not_exempt(self):
+        for hook in self.BODIES:
+            for path in self.NOT_EXEMPT:
+                code, _, _ = self.write(hook, path)
+                self.assertEqual(code, 2, f"{hook}: {path}")
+
+
 # ---------------------------------------------------------------- go-live block
 
 class GoLiveBlockTests(unittest.TestCase):

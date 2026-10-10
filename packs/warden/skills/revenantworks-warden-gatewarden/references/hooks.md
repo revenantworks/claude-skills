@@ -167,8 +167,11 @@ restore verb; `stream`, `virtualcam`, `hotkey` or `obs`). The test battery in `t
 `B5redirect`), `B6`, `B8`, `B9`, `B10`, `GhRefs` and `FP_A`..`FP_D`. Each class refuses its shape
 (exit 2 at the install default, with the refusal reason asserted) and keeps an allow control: a
 normal daily command of the same family that must still pass. B7's cases (disk-file writes, moves
-and wildcard deletes) stay in `test_hooks.py` (`K8w3bDirectRuleTests`): the live `hyperv_lock`
-refuses writing them into a new file, by design. Every fixture is benign (a plain push, `echo hello`,
+and wildcard deletes) stay in `test_hooks.py` (`K8w3bDirectRuleTests`). `hyperv_lock` and
+`golive_block` exempt the hook-test batteries from their write checks by one rule, any
+`test_hooks*.py` directly in this member's `scripts/` folder (`hooklib.hook_test_file`, observation
+0375); a lookalike folder, `scripts/hooks/`, or another name is still checked. Once the live hooks
+carry that rule, B7 can move into this file. Every fixture is benign (a plain push, `echo hello`,
 a harmless base64 literal) and is held as string data only. Run the whole suite from the skill's
 `scripts` folder, never with `discover -s packs/warden` (no `__init__.py`: it finds 0 tests and
 exits 0):
@@ -539,7 +542,8 @@ start or stop a stream, the virtual camera or an output, or to read or change th
   stop or toggle the stream or the virtual camera (`obs-cmd streaming start`, `obs-cmd virtual-camera
   toggle`, `obs-cli stream start`, `obs-cli virtualcam start`); recording, scene and status verbs pass;
 - writing any of these into a script file outside obsrunner's `scripts/` folder (in gatewarden, only
-  `golive_block.py` and `test_hooks.py` by exact name may hold them);
+  `golive_block.py` by exact name and the hook-test batteries, any `test_hooks*.py` in `scripts/`,
+  may hold them; observation 0375);
 - the unwrapped forms: a spliced or concatenated name (`Start""Stream`, `"Start" + "Stream"`), an
   encoded command, and a script file run or piped into an interpreter that holds a name.
 
