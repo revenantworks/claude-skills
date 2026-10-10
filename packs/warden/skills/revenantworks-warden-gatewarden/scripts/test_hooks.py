@@ -1815,5 +1815,48 @@ class K8w3bDirectRuleTests(InstallDefaultBase):
                                             "pwsh -Command Get-Date", "pwsh -File x.ps1", f"{PYN} -m json.tool x.json"])
 
 
+class RunnerPositionTests(InstallDefaultBase):
+    """Observation 0377: a shell or interpreter name is a program only where a program runs. `grep -n dash
+    x.json` reads x.json; it does not run it, so its "$schema" key is no run-time program name."""
+
+    def setUp(self):
+        super().setUp()
+        self.repo = os.path.join(self.tmp, "repo")
+        os.makedirs(os.path.join(self.repo, ".claude-plugin"))
+        os.makedirs(os.path.join(self.repo, "mods", "dash", ".claude-plugin"))
+        Path(self.repo, ".claude-plugin", "marketplace.json").write_text(
+            '{\n  "$schema": "https://example.invalid/marketplace.schema.json",\n  "name": "x",\n'
+            f'  "description": "every {G} {U} goes through the gate",\n'
+            '  "plugins": [{"name": "dash", "source": "./mods/dash", "version": "1.0.0"}]\n}\n')
+        Path(self.repo, "mods", "dash", ".claude-plugin", "plugin.json").write_text('{"version": "1.0.0"}\n')
+        Path(self.repo, "mods", "dash", "CHANGELOG.md").write_text("# Changelog\n\n## 1.0.0\n")
+        Path(self.repo, "notes.txt").write_text(f"{G} {U} -f origin main\n")
+        Path(self.repo, "evil.sh").write_text(f"{G} {U} -f origin main\n")
+        git(self.repo, "init", "-b", "main")
+
+    def expect(self, code, cmds):
+        for cmd in cmds:
+            got, _, err = self.hook("push_gate.py", cmd, cwd=self.repo)
+            self.assertEqual(got, code, f"{cmd!r}: {err.strip()}")
+
+    def test_0377_read_only_line_is_allowed(self):
+        repo = self.repo.replace("\\", "/")
+        self.expect(0, [f'cd "{repo}" && {G} status --porcelain -uno; grep -rn --include=*.json -E \'"version"\' '
+                        ".claude-plugin/ mods/dash/.claude-plugin/ 2>/dev/null; grep -n -B2 -A2 '\"dash\"' "
+                        ".claude-plugin/marketplace.json | head; ls mods/dash/CHANGELOG.md 2>&1; "
+                        "head -12 mods/dash/CHANGELOG.md 2>/dev/null",
+                        "grep -n dash .claude-plugin/marketplace.json"])
+
+    def test_runner_names_as_arguments_are_allowed(self):
+        self.expect(0, ["grep -n bash notes.txt", "rg sh src/", "echo node", "ls fish/", "echo sh evil.sh",
+                        "grep -c python notes.txt evil.sh"])
+
+    def test_runners_in_program_position_are_still_refused(self):
+        self.expect(2, ["bash evil.sh", "sudo bash evil.sh", "env FOO=1 dash evil.sh", "xargs sh evil.sh",
+                        "find . -exec sh evil.sh \\;", "find . -execdir bash evil.sh {} +", "nohup sh evil.sh",
+                        "timeout 5 bash evil.sh", "sudo -u root bash evil.sh", "rg --pre bash evil.sh",
+                        "FOO=1 sh evil.sh", "grep x notes.txt; sh evil.sh", "cat notes.txt | sh"])
+
+
 if __name__ == "__main__":
     unittest.main()
