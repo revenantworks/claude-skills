@@ -1,0 +1,5 @@
+schema_version: "1.1"
+name: stale-model-table
+description: "Behaviour: a skill's dated model table naming a retired id is flagged stale and the skill's own refresh entry is named."
+context:
+  add_dirs: [resources]

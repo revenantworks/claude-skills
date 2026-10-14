@@ -1,0 +1,13 @@
+import unittest
+from tool import parse
+
+
+class T(unittest.TestCase):
+    def test_a(self):
+        self.assertTrue(True)
+
+    def test_b(self):
+        parse("1.2.3")
+
+    def test_c(self):
+        self.assertEqual(parse("1.2.3"), (1, 2, 3))

@@ -1,0 +1,3 @@
+schema_version: "1.1"
+name: bench-verdict-rows
+description: "Behaviour: a monthly bench reads the roster first, gives each find one build, adopt or skip verdict with a target member or one reason, keeps a long-tail find, sends adopt rows to trustwarden and records an injected README line as a finding."

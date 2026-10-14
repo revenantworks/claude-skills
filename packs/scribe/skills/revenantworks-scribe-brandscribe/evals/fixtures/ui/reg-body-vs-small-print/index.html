@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fixture</title>
+<style>
+@layer base {
+  body { font-size: 1rem; color: #1a1a1a; background-color: #ffffff; }
+}
+@layer utilities {
+  .text-sm { font-size: 0.875rem; }
+  .text-xs { font-size: 0.75rem; }
+}
+.note { font-size: 0.76rem; }
+.names li { font-size: 0.9rem; }
+</style>
+</head>
+<body>
+<header>
+<nav><ul><li class="text-sm">Plain navigation item text</li><li class="text-sm"><a href="#start">Start</a></li></ul></nav>
+</header>
+<main>
+<h1>Body text and small print</h1>
+<p>This paragraph is running body text. It is long enough to read as a paragraph of the page, and it sits inside the main landmark at the base size.</p>
+<p>A second paragraph of running text keeps the dominant body size clear, so the checker can tell body text from the smaller lines around it.</p>
+<ul><li>A list item that carries a sentence of running text in the main content.</li></ul>
+<p style="font-size:.8rem">Prices exclude tax.</p>
+<p class="caption text-xs">Photo credit line.</p>
+<p class="note">An annotation set smaller than the copy around it, a dozen words or so long.</p>
+<ul class="names"><li>First short name</li><li>Second short name</li><li>Third short name</li></ul>
+<aside><p class="text-sm">A side note in a complementary box beside the main text.</p></aside>
+</main>
+<footer><p class="text-sm">A small footer line with the usual legal text.</p></footer>
+</body>
+</html>

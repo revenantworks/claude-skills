@@ -1,0 +1,33 @@
+{
+  "color": {
+    "surface": {
+      "$type": "color",
+      "$value": "#ffffff",
+      "$description": "Page ground."
+    },
+    "ink": {
+      "$type": "color",
+      "$value": "#1a1a1a",
+      "$description": "Text on surface."
+    },
+    "brand": {
+      "accent": {
+        "$type": "color",
+        "$value": "#0f6e6e",
+        "$description": "Links."
+      }
+    },
+    "link": {
+      "$type": "color",
+      "$value": "{color.brand.accent}",
+      "$description": "Link text."
+    }
+  },
+  "spacing": {
+    "md": {
+      "$type": "dimension",
+      "$value": "16px",
+      "$description": "Card padding."
+    }
+  }
+}

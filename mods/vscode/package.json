@@ -1,0 +1,31 @@
+{
+  "name": "dash",
+  "displayName": "Revenantworks dash",
+  "description": "The Revenantworks dash in VS Code: pace, skills fired and flagged, budget mode and the mods kill switch in the status bar, and a read-only panel over the dash feed. Reads local files only; never writes, runs a process or contacts a service.",
+  "version": "1.0.0",
+  "publisher": "revenantworks",
+  "license": "Apache-2.0",
+  "repository": "https://github.com/revenantworks/claude-skills",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "revenantworksDash.openPanel",
+        "title": "Revenantworks dash: open the panel"
+      },
+      {
+        "command": "revenantworksDash.showReadout",
+        "title": "Revenantworks dash: show the readout"
+      }
+    ]
+  }
+}

@@ -1,0 +1,59 @@
+{
+  "positive": [
+    {
+      "name": "a pace decision with a 90-minute ttl, run with --dry-run so the hook prints the JSON it would write and writes nothing. --file names a throwaway path under fixtures/window-fit/ that does not exist, so no kept fields are read and the control never reads or writes ~/.dispatch/budget-decision.json, which the gate and the ledger guard treat as ground truth. Proves the clock-stamp path runs and the given fields land. No `touches` entry: nothing is written.",
+      "argv": [
+        "--dry-run",
+        "--mode",
+        "pace",
+        "--parallel",
+        "3",
+        "--ttl",
+        "90m",
+        "--file",
+        "fixtures/window-fit/.control-budget-decision.json"
+      ],
+      "stdin": "",
+      "expect_exit_in": [
+        0
+      ],
+      "expect_contains": "\"parallel_ceiling\": 3"
+    }
+  ],
+  "negative": [
+    {
+      "name": "a typed written_at stamp (observation 0343: a controller once typed a planned launch time into written_at). The hook must refuse with exit 2 before parsing anything else and print no budget JSON. Same --dry-run and throwaway --file as the positive control, so nothing is read from or written to ~/.dispatch even if the refusal regressed.",
+      "argv": [
+        "--dry-run",
+        "--mode",
+        "pace",
+        "--written-at",
+        "2026-01-01T00:00:00Z",
+        "--file",
+        "fixtures/window-fit/.control-budget-decision.json"
+      ],
+      "stdin": "",
+      "expect_exit_in": [
+        2
+      ],
+      "expect_not_contains": "\"written_at\":"
+    },
+    {
+      "name": "a ttl past the 5-hour ceiling (6h): the file must never outlive one 5-hour window, so the hook refuses with exit 2 and prints no budget JSON. Same --dry-run and throwaway --file as above.",
+      "argv": [
+        "--dry-run",
+        "--mode",
+        "pace",
+        "--ttl",
+        "6h",
+        "--file",
+        "fixtures/window-fit/.control-budget-decision.json"
+      ],
+      "stdin": "",
+      "expect_exit_in": [
+        2
+      ],
+      "expect_not_contains": "\"expires_at\":"
+    }
+  ]
+}

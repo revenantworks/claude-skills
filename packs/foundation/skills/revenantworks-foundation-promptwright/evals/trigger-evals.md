@@ -1,0 +1,62 @@
+# Trigger Evals — description tuning
+
+- Provenance: derived from revenantworks-foundation-promptwright v1.0.0; last re-anchored to v1.0.0, 2026-10-01. Full re-anchor history moved to evals/RESULTS.md. P1 apply 2026-10-01 (no version bump): rows 16 and 20 reworded to drop other-vendor products (decision 35), expected verdicts unchanged; the description changed only lorewright → researchscribe, so no row moved; retired sibling names updated in the reasons. Count unchanged at 43. Authored, not run. 2026-10-08 (no version bump): rows 35-36 flipped to should-not when the grill moved to grillwright.
+- Counts: 51 queries (22 should, 29 should-not, 16 pairs), judged cold against name + description only (method notes moved to evals/RESULTS.md).
+- 2026-10-08 (no version bump, owner-approved consolidation): tokenwright retired and this skill gained `slim`; rows 44-49 added (the slim seam by object), row 23 re-pointed. Authored, not run.
+- Owed: the cold re-judge owed since 1.5.9 is still owed, now against the current text (description byte-identical since).
+
+| # | Query | Should trigger? | Why |
+|---|---|---|---|
+| 1 | "Write me a prompt that turns meeting notes into action items." | ✅ yes | Build-from-scratch, the core case |
+| 2 | "Can you improve this prompt? It keeps ignoring the word limit." | ✅ yes | Improve-existing + debug |
+| 3 | "promptwright" | ✅ yes | Bare invocation |
+| 4 | "I need a system prompt for a customer-support bot." | ✅ yes | System / agent prompt |
+| 5 | "Why isn't my prompt returning valid JSON?" | ✅ yes | Prompt debugging |
+| 6 | "Rewrite this meta-prompt so it works on GPT instead of Claude." | ✅ yes | Multi-model + improve |
+| 7 | "Give me a prompt template for writing cold emails." | ✅ yes | Prompt template build |
+| 8 | "Which model should I run this extraction prompt on?" | ✅ yes | Model-tier recommendation |
+| 9 | "Turn this rough idea into a proper prompt: summarize legal docs for clients." | ✅ yes | Rough-idea → artifact |
+| 10 | "promptwright refresh" | ✅ yes | Maintenance mode |
+| 11 | "What's the capital of France?" | ❌ no | General knowledge |
+| 12 | "Summarize this article for me." | ❌ no | Wants the task done, not a prompt built |
+| 13 | "Write a birthday poem for my mom." | ❌ no | Content creation, not prompt-building |
+| 14 | "Explain how transformers work." | ❌ no | Explanation, no prompt artifact |
+| 15 | "Debug this Python function." | ❌ no | Code debugging, not prompt debugging |
+| 16 | "Compare the three leading AI assistants for my team, with sources." | ❌ no | Product comparison, no prompt to build — researchscribe |
+| 17 | "Book me a flight to Denver." | ❌ no | Task automation, unrelated |
+| 18 | "Translate this paragraph into Spanish." | ❌ no | Direct task |
+| 19 | "Draft an email to my landlord about a repair." | ❌ no | Content drafting, not a reusable prompt |
+| 20 | "Which model does the Claude mobile app use by default?" | ❌ no | Factual lookup, no prompt-building intent |
+| 21 | "Build me a skill that reviews pull requests." | ❌ no | Skill-package build → skillwright |
+| 22 | "Audit this SKILL.md against best practices." | ❌ no | Skill audit → skillwright (a SKILL.md contains instructions, but the deliverable is a skill, not a prompt) |
+| 23 | "Build the assertion suite for this prompt card." | ❌ no | Suite authoring for an existing artifact — skillwright evals (since 2026-10-08) |
+| 24 | "Write a prompt that grades essays, and include a short eval rubric with it." | ✅ yes | In-flow eval rubric rides the prompt build |
+| 25 | "Which model should I use for triaging ~500 support emails a day?" | ✅ yes | Entry — Model: tier + model for a live task, no prompt in play |
+| 26 | "Use CO-STAR to write me a prompt for our launch email." | ✅ yes | Prompt build with a framework named — the name is honored, not judged |
+| 27 | "Red-team this prompt — could a model follow it exactly and still miss the point?" | ✅ yes | Hostile read on a prompt in play; a prompt audit, not a security review |
+| 28 | "Quick one: a prompt that turns a list of URLs into a markdown table." | ✅ yes | Small build — the Fast path is a route inside promptwright, never a different skill |
+| 29 | "What does CO-STAR stand for?" | ❌ no | Definitional lookup — no prompt to build, no artifact wanted |
+| 30 | "Red-team my nightly scan agent's tool permissions and add a kill switch." | ❌ no | Agent design and guardrails → agentwright; the shared "red-team" verb is the seam, the object decides |
+| 31 | "Here's the build plan for the importer — assign each subtask a model tier so the routine steps stop running on the flagship." | ✅ yes | Plan grain: a task list with a targets ask → per-subtask target table |
+| 32 | "Mid-project we've added a data-migration subtask — what tier should that one run at?" | ✅ yes | Living table: an emergent subtask is a live-task tier pick, no prompt in play |
+| 33 | "Break this project into subtasks for me." | ❌ no | Decomposition with no targets ask — planning is the caller's; promptwright targets the subtasks it is handed |
+| 34 | "Set up a .claude/agents roster — a haiku scout, a sonnet executor, an opus architect." | ❌ no | Standing config a session opens with → rigwright; promptwright picks targets, never emits the tree |
+| 35 | "promptwright grill" | ❌ no | The grill moved to grillwright on 2026-10-08; the shared verb routes there (grillwright row 2) |
+| 36 | "Grill me on this before you write the prompt — I don't want you guessing at the output format." | ❌ no | The grill is grillwright's since 2026-10-08; its record then replaces Phase 4 here |
+| 37 | "Grill my nightly backup agent on what it's allowed to delete." | ❌ no | What a running agent may delete is its runtime blast radius → gatewarden's scan (agentwright only for the kill-switch and guardrail design around it; route re-judged by J1 S1, FX1); the shared "grill" verb is the seam, the object decides |
+| 38 | "Interview me about my product and then write the launch copy." | ❌ no | The interview is incidental to content the user wants produced — no prompt artifact wanted |
+| 39 | "Give me a prompt to hand off to a fresh session to do this work later." | ❌ no | A handoff request fires handoffwright directly, not this skill — handoffwright calls Entry — Model internally for the tier line (owner ruling, observation #0072; supersedes #0071's direct trigger, which made this a should-fire) |
+| 40 | "Write the handoff — commit it before I close this out." | ❌ no | This session's own already-done state, verified against git → handoffwright; no live task or plan needs a tier |
+| 41 | "Optimize this classification prompt against these six labelled test cases and keep whichever version passes most." | ✅ yes | Entry — Optimize: a prompt tuned by measured runs |
+| 42 | "Which of the models I have installed in LM Studio should run this summarization prompt?" | ❌ no | Picking among installed local models → lmstudiorunner; the description's exclusion sentence names it |
+| 43 | "Tier the eight units in my dispatch run before the fan-out launches." | ❌ no | Units a fan-out dispatches are tiered from dispatchwright's own table; plan grain covers only plans no fan-out dispatches |
+| 44 | "promptwright slim — this system prompt is about 3,000 tokens and goes out on every request; get it under 1,500 without changing what it does." | ✅ yes | Entry — Slim by keyword; pair-mate of #47 |
+| 45 | "This system prompt costs too many tokens per call. Cut its token count without changing its behavior at all." | ✅ yes | Slim on a cost cue, behavior held constant; pair-mate of #48 |
+| 46 | "Would caching this 400-token prompt pay off, and what does it cost per call?" | ✅ yes | Slim: measurement and the cache floor on a prompt |
+| 47 | "Get this SKILL.md under 300 lines without changing what it does." | ❌ no | A skill package's slim → skillwright |
+| 48 | "My CLAUDE.md costs too much per session — slim it, but keep every rule." | ❌ no | Standing config's slim → rigwright |
+| 49 | "Shorten this email to a client to three sentences." | ❌ no | A human-facing message → commscribe; pair-mate of #44 |
+| 50 | "Write a system prompt for our benefits Q&A bot, and have it tell staff where to double-check each answer." | ✅ yes | Build with the optional discernment note (`discernment.md`); pair-mate of #51 |
+| 51 | "Check these five claims in my article and give me a source for each." | ❌ no | Fact-checking with sources is a research task → researchscribe; no prompt to build |
+
+**Edge notes.** #12 vs #1 is the sharpest boundary — "summarize this" wants output; "write a prompt that summarizes" wants an artifact. #8, #25, and #16 all mention models — #8 (a prompt in play) and #25 (a live task, no prompt) both route to promptwright via the Model line and Entry — Model respectively; #16 stays out because a sourced product comparison is researchscribe's verdict, not a run-target pick. If real usage shows the skill firing on #12–#19, tighten the description's build-intent language; if it misses #1–#10, make the trigger list pushier. #21–#22 vs #4/#6 mark the pack boundary: prompts and system prompts (even for agents) are promptwright; anything whose deliverable is a skill, SKILL.md, or pack routes to skillwright. #24 vs #23 marks the evals line — a rubric delivered inside a prompt build is promptwright; a standalone suite for an existing card is skillwright's `evals` entry (evalwright retired 2026-10-08). The 1.2.0 rows add two seams: #26 vs #29 — naming a framework inside a build request is promptwright, asking what an acronym stands for is a lookup no skill needs to fire for; and #27 vs #30 — "red-team" is now vocabulary promptwright uses, so the object has to carry the routing: a prompt's wording is promptwright's hostile read, an agent's tool permissions and kill switch are agentwright's. **v1.2.2 (2026-07-25) put that vocabulary in the description** — "red-teams LLM prompts" in the head clause and "red-team" in the trigger verb list, each carrying the prompt object, which is the remediation this note asked for. #27 should now fire on the verb as well as the object; **#30 is the row that pays for it** — its recorded pass rests on agentwright's verbatim "kill switches" and on promptwright's red-team verb contributing nothing, and the second half of that is no longer true. Both were re-judged cold 2026-07-25 (`RESULTS.md`): #27 now fires on the verb as well as the object; **#30 held** — its agent object keeps it with agentwright while promptwright's red-team stays prompt-bound. If a future description edit ever states `red-team` without the prompt object, #30 is the row that flips first — push the object harder still or narrow the trigger-list verb. A negative boundary sentence needs a recorded false fire first, and #30's verdict is still a pass. The 1.1.0 rows add the plan-grain seams: #31 vs #33 splits on the **targets ask** — a plan handed in *for tiering* is Entry — Model at plan grain, while a bare "break this down" carries no tier question and wants planning promptwright doesn't do; #32 is #25's shape at project scale, riding the living-table clause ("also binds subtasks added mid-session"); and #34 vs #31 is the rigwright seam — tier vocabulary inside a config-tree build doesn't move the object, which is standing config a session opens with, so rigwright's named-surface claim wins the same way #30's agent object beats the shared red-team verb. The 1.5.0 rows add the grill seam, built on the same object rule the red-team pair established: #35 is the bare subcommand, #36 escalates a live build, and **#37 is the row that pays for the new verb** — "grill" now appears in the description, so only the agent object keeps it with agentwright, exactly as #30 rests on its own object. If a later edit ever states `grill` without the request object, #37 flips first. #38 is the softer boundary: "interview me" without a prompt artifact at the end is a working style, not an entry — the grill interviews a request *a prompt is about to be built from*, and content the user wants produced is #12's case in a longer coat. The 1.6.0 rows pay for the exclusion sentence: #42 vs #8 splits on *installed local* models (lmstudiorunner) against a run-target tier pick, and #43 vs #31 splits on a fan-out that dispatches the units (dispatchwright) against a plan handed in for a target table. If #31 or #25 flips to AMBIGUOUS again, the exclusion sentence is not carrying the seam.

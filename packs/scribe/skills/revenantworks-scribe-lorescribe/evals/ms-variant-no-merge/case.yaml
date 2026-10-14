@@ -1,0 +1,5 @@
+schema_version: "1.1"
+name: ms-variant-no-merge
+tags: [behaviour, margin, manuscript]
+context:
+  add_dirs: [novel]

@@ -1,0 +1,17 @@
+[
+  {
+    "file": "references/design-system.md",
+    "class": "calendar",
+    "cadence_days": 30
+  },
+  {
+    "file": "references/repo-files.md",
+    "class": "calendar",
+    "cadence_days": 60
+  },
+  {
+    "file": "SOURCES.md",
+    "class": "calendar",
+    "cadence_days": 90
+  }
+]

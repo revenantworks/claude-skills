@@ -1,0 +1,32 @@
+{
+  "note": "Pack-shared sources. Edit the file here, never a member's copy; tools/build.py writes every holder's copy and --check fails on drift (owner Q2, 2026-10-01).",
+  "files": {
+    "references/gpu-seam.md": [
+      "lmstudiorunner",
+      "comfyrunner",
+      "whisperrunner",
+      "obsrunner"
+    ],
+    "scripts/gpu_preflight.py": [
+      "lmstudiorunner",
+      "comfyrunner",
+      "whisperrunner",
+      "obsrunner"
+    ],
+    "scripts/test_gpu_preflight.py": [
+      "lmstudiorunner",
+      "comfyrunner",
+      "whisperrunner",
+      "obsrunner"
+    ],
+    "references/mods.md": [
+      "comfyrunner",
+      "dockerrunner",
+      "duckrunner",
+      "hypervrunner",
+      "lmstudiorunner",
+      "obsrunner",
+      "whisperrunner"
+    ]
+  }
+}

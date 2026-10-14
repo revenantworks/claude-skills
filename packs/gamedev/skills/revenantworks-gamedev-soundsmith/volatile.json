@@ -1,0 +1,21 @@
+[
+  {
+    "file": "references/model-briefs.md",
+    "class": "calendar",
+    "cadence_days": 60
+  },
+  {
+    "file": "references/godot-import.md",
+    "class": "calendar",
+    "cadence_days": 90
+  },
+  {
+    "file": "SOURCES.md",
+    "class": "calendar",
+    "cadence_days": 90
+  },
+  {
+    "file": "references/loudness.md",
+    "class": "event-driven"
+  }
+]

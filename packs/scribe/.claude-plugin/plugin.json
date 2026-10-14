@@ -1,0 +1,14 @@
+{
+  "name": "scribe",
+  "version": "1.0.0",
+  "description": "revenantworks-scribe — skills for words and knowledge on the -scribe motif (standard profile). Four members: researchscribe, brandscribe, commscribe and lorescribe. Declared scripts are allowed. researchscribe's saved research workflow ships as /scribe:research.",
+  "author": {
+    "name": "Revenantworks"
+  },
+  "repository": "https://github.com/revenantworks/claude-skills",
+  "license": "Apache-2.0",
+  "workflows": "./skills/revenantworks-scribe-researchscribe/workflows/",
+  "experimental": {
+    "evals": "pack-evals"
+  }
+}

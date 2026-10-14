@@ -1,0 +1,8 @@
+schema_version: "1.1"
+name: map-behaviour-treemap-local
+description: >-
+  Behaviour, the local-only treemap rule (test case T5). The run must write the page with the
+  skill's script, never publish it, and say it is a local file that lists private paths. Needs
+  --scaffold and --allow-tools Bash; without them the case cannot run.
+context:
+  scaffold_script: scaffold.sh

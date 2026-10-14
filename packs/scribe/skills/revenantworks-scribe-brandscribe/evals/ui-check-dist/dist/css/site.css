@@ -1,0 +1,4 @@
+@font-face { font-family: "Body Face"; src: url("../fonts/body.woff2") format("woff2"); }
+body { font-family: "Body Face", system-ui, sans-serif; }
+::selection { background: #dbeafe; }
+:focus-visible { outline: 2px solid #1d4ed8; }

@@ -1,0 +1,22 @@
+[
+  {
+    "file": "references/obs-settings.md",
+    "class": "calendar",
+    "cadence_days": 90
+  },
+  {
+    "file": "references/platform-notes.md",
+    "class": "calendar",
+    "cadence_days": 90
+  },
+  {
+    "file": "references/websocket-allowlist.md",
+    "class": "calendar",
+    "cadence_days": 90
+  },
+  {
+    "file": "SOURCES.md",
+    "class": "calendar",
+    "cadence_days": 90
+  }
+]

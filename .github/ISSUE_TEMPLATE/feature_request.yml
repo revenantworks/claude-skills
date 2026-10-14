@@ -1,0 +1,42 @@
+name: Feature request
+description: Suggest a change or a new skill.
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the idea. Do not paste secrets, real names, personal paths, or email
+        addresses. Use placeholders such as `<name>`.
+  - type: input
+    id: component
+    attributes:
+      label: Skill, pack, or mod
+      description: Name the part this change is for, or write "new skill".
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What can you not do today, or what is hard?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Your proposal
+      description: What should change? Give an example if you can.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you tried
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy check
+      options:
+        - label: I removed personal data (names, paths, emails, keys) from this request.
+          required: true

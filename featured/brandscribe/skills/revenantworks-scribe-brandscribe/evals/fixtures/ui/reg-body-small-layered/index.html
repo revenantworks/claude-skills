@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fixture</title>
+<style>
+@layer base {
+  body { font-size: 1rem; color: #1a1a1a; background-color: #ffffff; }
+}
+@layer utilities {
+  .copy { font-size: 0.9375rem; }
+}
+</style>
+</head>
+<body>
+<main class="copy">
+<h1>Body text set small by a layer</h1>
+<p>This paragraph is running body text. A utility class in a cascade layer sets the whole main column a little under the sixteen pixel floor.</p>
+<p>A second paragraph of running text at the same reduced size, so the reduced size is the dominant body size of the page.</p>
+<p style="font-size:.8rem">Short note.</p>
+</main>
+</body>
+</html>

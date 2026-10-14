@@ -1,0 +1,29 @@
+name: pii-scan
+
+# The CI half of the PII barrier (the other half is .githooks/pre-commit). Runs the same
+# scanner over every tracked file and every commit identity on each push to main.
+# Push on main only, no pull_request trigger: the merged push runs the same check.
+# No paths-ignore: the scan reads every tracked file, so every path can carry a leak.
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pii-scan-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pii-scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with: { python-version: "3.12" }
+      # Generic rules only here: the private names list never leaves a maintainer's machine.
+      - run: python3 tools/pii_scan.py --tree --identities

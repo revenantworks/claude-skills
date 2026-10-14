@@ -1,0 +1,10 @@
+{
+  "note": "Pack-shared sources. Edit the file here, never a member's copy; tools/build.py writes every holder's copy and --check fails on drift (owner Q2, 2026-10-01). The private-file convention: owner 2026-10-02. warden_fs.py (path redaction and link helpers) is shared since 2026-10-08, when gatewarden's map and shieldwarden's signposts scan both came to need it.",
+  "files": {
+    "references/private-files.md": ["shieldwarden"],
+    "scripts/warden_private.py": ["shieldwarden"],
+    "scripts/test_warden_private.py": ["shieldwarden"],
+    "scripts/warden_fs.py": ["gatewarden", "shieldwarden"],
+    "scripts/test_warden_fs.py": ["gatewarden", "shieldwarden"]
+  }
+}

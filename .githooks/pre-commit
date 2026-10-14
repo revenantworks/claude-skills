@@ -1,0 +1,31 @@
+#!/bin/sh
+# PII barrier: blocks a commit whose staged diff holds personal data.
+# Runs tools/pii_scan.py --staged (emails, home and drive paths, secret shapes, the commit
+# identity, and your private names list when you have one). Fails closed: no usable Python,
+# no commit.
+#
+# Arm once per clone (every worktree of that clone shares it):
+#     git config core.hooksPath .githooks
+# Never bypass it with --no-verify; fix the file instead (CONTRIBUTING.md).
+
+top=$(git rev-parse --show-toplevel) || exit 1
+
+py=""
+for cand in python3 python py; do
+    if "$cand" -c "import sys; sys.exit(0 if sys.version_info >= (3, 9) else 1)" >/dev/null 2>&1; then
+        py=$cand
+        break
+    fi
+done
+if [ -z "$py" ]; then
+    echo "pre-commit: no Python 3.9+ found; the PII barrier cannot run, so the commit is blocked." >&2
+    exit 1
+fi
+
+"$py" "$top/tools/pii_scan.py" --staged
+rc=$?
+if [ "$rc" -ne 0 ]; then
+    echo "pre-commit: PII barrier blocked this commit (pii_scan exit $rc). Fix the listed lines and stage again." >&2
+    exit 1
+fi
+exit 0

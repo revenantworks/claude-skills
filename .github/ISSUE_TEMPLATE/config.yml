@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Ask a question
+    url: https://github.com/revenantworks/claude-skills/discussions
+    about: Questions and ideas that are not bugs go here.
+  - name: Report a security problem (private)
+    url: https://github.com/revenantworks/claude-skills/security/advisories/new
+    about: Do not open a public issue for a security problem. Use this private form.

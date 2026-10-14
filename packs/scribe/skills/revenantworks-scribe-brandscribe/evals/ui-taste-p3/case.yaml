@@ -1,0 +1,5 @@
+schema_version: "1.1"
+name: ui-taste-p3
+tags: [behaviour]
+context:
+  add_dirs: [page]

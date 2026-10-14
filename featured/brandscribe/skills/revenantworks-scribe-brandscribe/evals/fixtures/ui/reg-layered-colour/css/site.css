@@ -1,0 +1,13 @@
+@layer base, utilities;
+
+@layer base {
+  :root { --ink: #1f2328; --ink-soft: #9a9a9a; --paper: #ffffff; }
+  body { color: var(--ink); background-color: var(--paper); }
+  main p.lede { color: #1f2328; }
+}
+
+@layer utilities {
+  .text-soft { color: var(--ink-soft); }
+}
+
+.plain { color: #111111; }

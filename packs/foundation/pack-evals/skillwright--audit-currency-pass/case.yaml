@@ -1,0 +1,5 @@
+schema_version: "1.1"
+name: audit-currency-pass
+description: "Behaviour: the currency pass flags a model version in the body and leaves the dated file and the changelog alone."
+context:
+  add_dirs: [resources]

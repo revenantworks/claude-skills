@@ -1,0 +1,16 @@
+[
+  {
+    "file": "references/rubrics.md",
+    "class": "calendar",
+    "cadence_days": 60
+  },
+  {
+    "file": "SOURCES.md",
+    "class": "calendar",
+    "cadence_days": 90
+  },
+  {
+    "file": "references/pack-registry.md",
+    "class": "event-driven"
+  }
+]

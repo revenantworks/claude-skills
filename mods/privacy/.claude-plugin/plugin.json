@@ -1,0 +1,10 @@
+{
+  "name": "privacy",
+  "version": "1.0.0",
+  "description": "Revenantworks privacy mod for Claude Code 2.1.287+: masks secrets and stream keys before Claude reads them (restoring a value only into the gitignored file it came from), flags a credential keywarden marked for rotation, and marks web, MCP and mail results and messages from routines or other sessions as data. Kept apart from the dash plugin, so safety never depends on the dashboard. Never blocks your work; keeps no record; contacts no service.",
+  "author": {
+    "name": "Revenantworks"
+  },
+  "repository": "https://github.com/revenantworks/claude-skills",
+  "license": "Apache-2.0"
+}

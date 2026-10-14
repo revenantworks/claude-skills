@@ -1,0 +1,47 @@
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+desktop.ini
+*~
+.*.swp
+.idea/
+.vscode/
+
+# Python (skills ship no code, but keep local scratch out)
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Packaging artifacts — built on release, never committed
+*.skill
+*.zip
+/dist/
+/build/
+
+# `claude plugin eval <pack>` run output; the generated packs/<pack>/pack-evals/<short>--<case>/
+# folders themselves are tracked so a public install can run the suite (unit EVG; renamed K8e)
+packs/*/pack-evals/results/
+packs/*/evals/results/
+# Local environment
+.env
+*.log
+
+# Claude Code: track the hooks and neutral settings; local-only permissions
+# (settings.local.json) never ship
+.claude/*
+!.claude/settings.json
+!.claude/hooks/
+.claude/settings.local.json
+
+# dispatchwright run ledgers are committed (ledger-schema.md, "Committed, not gitignored");
+# only the fetched-document cache beside them is working state (observation 0191)
+.dispatch/**/cache/
+.claude/hooks/fixtures/window-fit/.control-usage-windows.json
+.claude/hooks/fixtures/window-fit/.selftest-usage-windows.json
+packs/*/skills/*/evals/results/
+.unit-out/
+
+# Claude Code mods: engine-generated type files
+mods/*/.claude-plugin/types/
+mods/*/tsconfig.json
