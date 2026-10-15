@@ -9,6 +9,9 @@ red, and group F adds three claims an incumbent approach fails, for 34 cases. Th
 owed — see `RESULTS.md`. **Re-anchored to v1.0.0, 2026-10-01:** provenance only; one line added to `references/gdscript-invariants.md` section 3, and no case moved.
 **Re-judged 2026-10-01 (pack split P1d):** group G adds eight cases for the design-and-balance
 reference, asset intake and the new perf rules, for 42 cases; D6 stands (design authoring still declines).
+**Group G extended 2026-10-15** (observations 0432, 0422, 0373, 0379, 0409, 0423): G9-G14 add the
+single-script GUT form, the deferred re-pin and its control, the summary parser, the perf window,
+`.import` churn and the migration re-read, for 48 cases.
 
 Each case names the behaviour asserted, the input, and what a pass looks like. A case fails
 if the run produces the right answer for the wrong reason, so every expectation names the
@@ -94,3 +97,9 @@ stamp). godotsmith must fail it, for the named reason.
 | G6 | "Do the bands hold integer zoom?" with no `project.godot` read yet | Reads the stretch mode, scale mode, default texture filter and per-band zoom off the files, each value with its file; a value not read is UNMEASURED. Does not judge the art. |
 | G7 | A unit stops on a +0.78 ms/tick breach measured against a figure from that morning | Requires the base re-timed in the same session, interleaved, before the breach blocks; reports shared drift as rig drift. Cites `perf-figures.md` section 3. |
 | G8 | A perf parser's first summary reads exactly the bar's figure | Treats it as suspect; checks the parser against a known value first (`perf-figures.md` section 6). |
+| G9 | A one-file GUT run with `-gtest=` took 25 minutes; `.gutconfig.json` names `dirs` *(native case `behaviour-single-script-gconfig`)* | Says the config's dirs were still loaded, gives a command with `-gconfig=` (empty or a scratch config), and confirms the narrowing by the Scripts count. Cites `gut-traps.md` section 4. |
+| G10 | Three stacked changes with OFF switches; with all switches on 4 of 9 pins still differ; "copy the failure-line hashes and re-pin" *(native case `behaviour-deferred-repin`)* | Refuses: the controls are incomplete, the moved rows are unattributed; finds the leak first; asks for the per-control table. Cites `determinism-and-state.md` section 3a. |
+| G11 | A parser reads `Tests` from a GUT summary that also has `Passing Tests` and `Pending 1`; two platforms differ by 1 | Suspects the parser before the platform; asks for the line-anchored pattern CI uses and a fixture with Pending above zero (`gut-traps.md` section 1). |
+| G12 | A perf A/B of a night-only change timed 600 ticks from tick 0, "within noise" | Asks for the tick window the changed path runs in, shows the timed window misses it, and re-times in a window that contains it (`perf-figures.md` section 9). |
+| G13 | 59 worktrees show the same `.import` files modified with an empty diff; cleanup proposes `git worktree remove --force` | Names the headless-import churn, normalises it at the source (`.gitattributes` or re-stat), and refuses to force over worktrees until real changes are separated (`project-hygiene.md` section 2). |
+| G14 | A change returns the village group to old sizes while the landscape still doubles; the save migration doubles every position | Re-reads the migration, requires a load test on a pre-change fixture asserting a group-relative invariant (`determinism-and-state.md` section 2). |

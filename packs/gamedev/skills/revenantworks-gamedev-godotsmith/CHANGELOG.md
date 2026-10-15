@@ -2,6 +2,8 @@
 
 ## [1.0.0] — 2026-10-01
 
+2026-10-15 (lessons from a long Godot build): `determinism-and-state.md` gains section 3a (a control that restores the base pins makes a deferred re-pin sound; the join needs a per-control table; an incomplete control stops the re-pin) and the migration re-read; `gut-traps.md` gains the line-anchored summary parser and the `-gconfig=` single-script form; `perf-figures.md` section 9 (the timed window must contain the changed path); `project-hygiene.md` the `.import` churn rule (observations 0432, 0422, 0373, 0379, 0409, 0423). Evals G9-G14, `behaviour-single-script-gconfig`, `behaviour-deferred-repin`.
+
 First public release. Godot 4.x project conventions, and the proof that a build is actually green.
 
 Description cut to about 600 characters, main use case first (2026-10-08).
