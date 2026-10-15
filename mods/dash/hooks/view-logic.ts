@@ -20,10 +20,29 @@ export type Line = { text: string; tone?: Tone; color?: string; press?: Press; b
 export type Press =
   | { kind: 'drill'; group: string | null }
   | { kind: 'act'; verb: 'dismiss' | 'snooze'; label: string; ids: readonly string[] }
+  | { kind: 'view'; view: View }
 export type LineButton = { label: string; press: Press }
 
 export const VIEWS = ['overview', 'skills', 'skills-all', 'dupes', 'meters', 'health', 'tasks', 'suggest', 'context', 'gpu', 'palette', 'godot', 'prs', 'theme'] as const
 export type View = (typeof VIEWS)[number]
+
+/** The pane's view bar, two rows: every view a bare /dash <verb> opens. Palette takes a brand name, so it stays typed. */
+const NAV: readonly (readonly [View, string])[][] = [
+  [['overview', 'Overview'], ['skills', 'Skills'], ['meters', 'Meters'], ['health', 'Health'], ['tasks', 'Tasks'], ['suggest', 'Suggest']],
+  [['context', 'Context'], ['gpu', 'GPU'], ['godot', 'Godot'], ['prs', 'PRs'], ['theme', 'Theme']],
+]
+/** The view a pane view belongs to on the bar: skills' all and dupes lists sit under Skills. */
+const navOf = (v: View): View => (v === 'skills-all' || v === 'dupes' ? 'skills' : v)
+
+/** The pane's view bar: a press opens that view in place, so no /dash <verb> is typed. The open view is bracketed. */
+export const navLines = (current: View): Line[] => {
+  const on = navOf(current)
+  return NAV.map((row, i) => ({
+    text: i === 0 ? '  view' : '      ',
+    tone: 'dim' as const,
+    buttons: row.map(([view, label]) => ({ label: view === on ? `[${label}]` : label, press: { kind: 'view' as const, view } })),
+  }))
+}
 
 /** `/dash <verb> <rest>`: the verb lower-cased, the rest as typed. */
 export const parseDashArgs = (args: string): { verb: string; rest: string } => {
