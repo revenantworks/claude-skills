@@ -891,6 +891,19 @@ def all_open_rows_next(path: Path) -> bool:
     return all(_norm(r.get("window", "")).startswith("next") for r in rows)
 
 
+HARD_CEILING_PCT = 99.0   # no launch at or above this, override or not (owner 2026-10-14)
+
+
+def is_owner_override(data: dict) -> bool:
+    """The owner's override of the stop band, read off the call: any string value
+    in tool_input carries the phrase 'owner-override'. Claude adds it only when the
+    owner said so in the conversation (owner 2026-10-14 18:33Z: a soft guard)."""
+    ti = data.get("tool_input")
+    if not isinstance(ti, dict):
+        return False
+    return any(isinstance(v, str) and re.search(r"\bowner-override\b", v, re.I) for v in ti.values())
+
+
 def is_resume_call(data: dict) -> bool:
     """The owner's explicit resume, read off the call itself: any string
     value in tool_input carries the word 'resume'. Coarse by design."""
@@ -995,6 +1008,14 @@ def window_step(ledger: Path, data: dict, fixture_windows: Path | None = None,
         # Deferred wave, explicit resume: the stop-band reading is stale by construction.
         if all_open_rows_next(ledger) and is_resume_call(data):
             continue
+        # Soft band (owner 2026-10-14): the owner's override, said in chat and carried
+        # on the call as "owner-override", passes the stop band below the hard ceiling.
+        if is_owner_override(data) and used < HARD_CEILING_PCT:
+            return 0, None, (
+                f"dispatch_ledger_guard: OWNER OVERRIDE -- the {name} window is {used:g}% used "
+                f"(stop band {stop:g}%, {stop_src}); launching on the owner's word. The unit must "
+                "commit after every green step: it may stop mid-run at the limit."
+            )
         fmt = "%H:%M" if key == "five_hour" else "%a %H:%M"
         when = _local((windows.get(key) or {}).get("resets_at"), fmt) or "unknown"
         return 2, (
