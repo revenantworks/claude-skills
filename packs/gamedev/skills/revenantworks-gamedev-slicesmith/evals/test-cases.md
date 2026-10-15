@@ -1,8 +1,8 @@
 # Test Cases — revenantworks-gamedev-slicesmith
 
 - Provenance: derived from revenantworks-gamedev-slicesmith v1.0.0, 2026-10-08.
-- Counts: 18 cases, assertion-only. Every case authored, not run. C15–C18 added 2026-10-13 (plain lens runner discovery, fix method, done gate).
-- Coverage: spec (C1), plan (C2), slice (C3, C4, C6, C7, C9), fix (C5, C16), exit (C10, C11, C14), verify ladder (C8), degradation (C12), plain lens (C13, C15), done gate (C17, C18).
+- Counts: 20 cases, assertion-only. Every case authored, not run. C15–C18 added 2026-10-13 (plain lens runner discovery, fix method, done gate). C19–C20 added 2026-10-15 (stacked pin round; narrow while building, wide once; observation 0432).
+- Coverage: spec (C1), plan (C2, C19), slice (C3, C4, C6, C7, C9, C20), fix (C5, C16), exit (C10, C11, C14), verify ladder (C8), degradation (C12), plain lens (C13, C15), done gate (C17, C18).
 
 ## Cases
 
@@ -77,3 +77,11 @@ Assert: states the expected total 294 · says the slice is not done · names the
 **C18 — Done gate: the new test was never seen red**
 Input: a slice whose new test passed on its first run, suite total equal to the expected figure + "slicesmith slice — commit it".
 Assert: the slice is not called done · the test is made to fail for the expected reason (or rewritten) before the commit · the reply cites the red line once it exists.
+
+**C19 — Plan: a stacked pin round** *(native case `behaviour-stacked-pin-round`)*
+Input: three sim features, each moving about 15 pinned hashes and each shipping a tests-only OFF switch + "slicesmith plan — propose the build order and when to re-pin".
+Assert: one integration branch · each feature proved with its switch on (suite equals the old pins) · each reviewed in a fresh context · ONE re-pin at a join row with an old -> new table per row and per-switch attribution · names when not to stack (a switch that cannot return the old pins, an arc over about four units).
+
+**C20 — Slice: narrow while building, wide once**
+Input: a GUT project whose full suite takes 30 minutes, a slice touching two test scripts + "slicesmith slice".
+Assert: red/green runs name only the touched scripts and confirm the narrowed run by its Scripts count · the whole suite runs once at the done gate with the expected total stated first · the reply does not run the full suite after every edit.

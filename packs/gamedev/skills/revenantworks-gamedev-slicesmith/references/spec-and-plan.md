@@ -8,6 +8,7 @@ Read by `spec` and `plan`. Templates are shapes, not quotas: drop a section that
 - The spec
 - Spikes
 - The plan
+- Stacked pin round: units that move determinism pins
 - Where the files live
 
 ## Weight classes
@@ -104,6 +105,39 @@ invariant (joints closed, distances from an anchor), not only that it loads. A m
 applied one factor to everything is wrong once a later change scales only part of the world.
 
 Never overwrite an unfinished plan: append a dated revision section instead.
+
+## Stacked pin round: units that move determinism pins
+
+A **pin** is a literal the suite compares a simulated run against: a trajectory hash, a
+fingerprint, a state hash. A unit that moves pins costs a re-pin, a review, a platform measure
+and a CI run. Paid once per unit, an arc of four units pays it four times, and each rebase onto
+a moved main pays the re-pin again (one unit re-pinned 14 rows a second time after another unit
+landed first). When every unit in the arc ships an `*_OFF` control, plan the arc as a **stack**:
+
+1. **One integration branch per design arc.** Units build on it in dependency order.
+2. **Every unit proves itself with all controls on.** With each control on, the suite equals the
+   base pins, so the unit is green without a re-pin. A unit that cannot show that is not
+   stackable (see below).
+3. **Every unit gets its own fresh review** before the next stacks on it. The stack saves the
+   re-pin, never the review.
+4. **Re-pin once, at the join, as its own unit.** It measures with all controls off, writes an
+   old -> new table per pin row, and attributes every moved row by switching one control at a
+   time (godotsmith `determinism-and-state.md`, pin rounds). One platform measure, one land,
+   one CI run.
+5. **Put the join row in the plan**, after the last unit. Its test is the pin table itself and
+   its verify line is "controls on = base pins; controls off = new pins".
+
+**Do not stack** when:
+
+- a control cannot return the base pins exactly. Its stub covers only part of the unit's
+  behaviour: in one stack, eleven stubs applied together returned none of nine rows to base,
+  so no row could be attributed;
+- the arc is longer than about four units, where blame for an interaction between two units
+  costs more than the saved rounds;
+- a unit's design is still open, or likely to change another unit's control;
+- a unit must land alone first (a hotfix, or a figure only CI can produce).
+
+Units that move no pins (view, UI, tooling) are not part of the stack. They land freely.
 
 ## Where the files live
 

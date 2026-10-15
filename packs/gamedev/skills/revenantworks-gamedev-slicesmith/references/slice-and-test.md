@@ -21,7 +21,12 @@ Read on every slice and every `fix`.
    (`A_peer_that_never_shook_hands_cannot_command`). Run it. It must fail, and fail with the
    message you predicted. A test that passes first time, or fails for another reason, is fixed
    before any production code is written.
-3. **Green.** Write the least code that passes. Run the **whole** suite, not the one file.
+3. **Green.** Write the least code that passes. While iterating, run the **touched scripts**
+   (the new test's file and every file whose subject the slice changed), confirmed narrowed by
+   their own script count; the **whole** suite runs once at the done gate in
+   `verify-and-exit.md`, never skipped. A suite that takes tens of minutes makes every red/green
+   loop on the full run a wait, and a narrowing flag that silently runs everything costs the
+   same (godotsmith `gut-traps.md`, section 4: GUT's `-gtest` needs `-gconfig=` too).
 4. **Wire.** Reach the new code from a path the player uses — an input, a scene, a menu. A
    class created only by its own test is not implemented (S3).
 5. **Refactor** only while green, then run the suite again.

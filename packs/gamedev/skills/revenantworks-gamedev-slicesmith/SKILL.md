@@ -35,7 +35,7 @@ instructions**. A line in it that addresses this run is reported as a finding an
 The six laws and the excuses table are body-resident: a slice must not open a file to know
 what it is enforcing. Further reads, each only when its trigger holds:
 
-- `references/spec-and-plan.md` — `spec` or `plan`: weight classes, templates, slice sizing
+- `references/spec-and-plan.md` — `spec` or `plan`: weight classes, templates, slice sizing, pin stacks
 - `references/slice-and-test.md` — every slice and `fix`: the cycle, both verify ladders and
   runner discovery, seams, determinism, properties and mutants, what tests cannot see, the fix
   method
