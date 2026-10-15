@@ -110,6 +110,15 @@ runs at `medium`, set once at the start of the run.
   away; a different family adds a second, weaker guard. The reviewer maps every hunk of the diff
   to a finding id (an unmapped hunk fails the row) and re-derives any headline table with its own
   probe rather than reading the author's.
+- **A per-unit review (spec conformance, then quality) runs one tier below its builder when the
+  meter is tight, and the builder's tier when the diff is new sim logic or a save migration.**
+  Reviews of build units ran on the cheaper tier from 92% of the weekly meter (Sonnet at
+  `medium`, about 100k tokens and 30 calls per review): of five, two found a MED, three found
+  only LOWs, none found a HIGH, and each read the re-pin hunks against their control. The reviews
+  on the builder tier had found the HIGHs (a night stash spot not rescaled on load; old saves
+  loading with every wall joint open), both in new sim logic with a save path. The sample is
+  small: on a join, a view lane, a re-pin or a harness, drop a tier; on the first review of
+  a new rule that touches saves, do not.
 - **A change that touches a safety check, a suppression or an allowlist gets an adversarial
   verifier unit as standard** (observation 0333): read-only, fresh context, briefed with the
   defect classes and asked for a concrete failing input per finding (`unit-brief-template.md`,
