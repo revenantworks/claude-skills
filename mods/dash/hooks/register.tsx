@@ -35,7 +35,7 @@ import {
   contrastWarnings, toneStyle, NAME as THEME_NAME, type ConsoleInfo, type Theme, type ThemeEntry,
 } from './theme-logic'
 import {
-  HELP, head, healthLines, linesText, metersLines, overviewLines, panelLines, parseDashArgs, skillsLines, suggestLines, themeApplied, themeLines, themePreview, dupesLines, findDupes,
+  HELP, head, healthLines, linesText, metersLines, navLines, overviewLines, panelLines, parseDashArgs, skillsLines, suggestLines, themeApplied, themeLines, themePreview, dupesLines, findDupes,
   type Line, type Press, type View,
 } from './view-logic'
 
@@ -59,6 +59,8 @@ let dsBuffer: DashEvent[] = []
 /** This session's rows: what the views read before the records yes. */
 /** The pane's revision in $.state (types/index.d.ts): the pane reads it, a press bumps it. */
 const dsPaneRev = atom({ plugin: 'dash', key: 'paneRev' } as const, 0)
+/** The band's revision, the same way: the band above the prompt reads it, a band press bumps it. */
+const dsBandRev = atom({ plugin: 'dash', key: 'bandRev' } as const, 0)
 let dsMem: DashEvent[] = []
 let dsMis: MisrouteState = emptyMisroute()
 let dsLastSlash: { name: string; at: number } | null = null
@@ -425,6 +427,16 @@ async function dsPanelLines($: EngineInterface): Promise<string[]> {
  * stays a typed command, since its reply is the NEXT.md line to copy.
  */
 async function dsPress($: EngineInterface, p: Press): Promise<void> {
+  if (p.kind === 'view') {
+    // The same refresh the typed /dash <verb> does, so a press and a command show the same view.
+    if (p.view === 'health') await dsRoll($, true)
+    else if (p.view === 'gpu') { if (dsOn('D10')) await dsPollGpu($) }
+    else if (p.view === 'prs') await dsRefreshPrs($)
+    else if (p.view !== 'godot' && p.view !== 'theme' && p.view !== 'palette') await dsRoll($)
+    if (p.view === 'suggest') dsSuggestDrill = null
+    dsView = p.view
+    return
+  }
   if (p.kind === 'drill') {
     dsSuggestDrill = p.group
     return
@@ -1067,6 +1079,9 @@ export const register: Register = on => {
     const show = async (view: View): Promise<{ text: string }> => {
       dsView = view
       const lines = await dsLines($, view)
+      // An open pane is already up, so opening it again draws nothing new: bump its revision so a
+      // typed /dash <verb> switches the view at once (the hit-or-miss switch, 2026-10-15).
+      await update($, dsPaneRev, n => (n ?? 0) + 1)
       if (dsOn('D3') && (await dsCanDraw($))) await $.ui.open({ id: 'dash', title: 'dash' })
       return { text: linesText(lines) }
     }
@@ -1163,7 +1178,7 @@ export const register: Register = on => {
       // Reading the revision subscribes this pane; a press bumps it, which redraws it at once. An
       // invalidate alone could be folded away, so a press only showed on the next click (2026-10-13).
       await read($, dsPaneRev)
-      const lines = await dsLines($, dsView)
+      const lines = [...navLines(dsView), ...(await dsLines($, dsView))]
       const onPress = (p: Press) => async () => {
         await dsPress($, p)
         await update($, dsPaneRev, n => (n ?? 0) + 1)
@@ -1190,7 +1205,7 @@ export const register: Register = on => {
               return (
                 <Box key={`d${i}`} columnGap={1}>
                   {text}
-                  {l.buttons.map((b, j) => <Button key={b.press.kind === 'act' ? `${b.press.verb}:${b.press.label}` : `d${i}b${j}`} label={b.label} plain dimColor onPress={onPress(b.press)} />)}
+                  {l.buttons.map((b, j) => <Button key={b.press.kind === 'act' ? `${b.press.verb}:${b.press.label}` : b.press.kind === 'view' ? `view:${b.press.view}` : `d${i}b${j}`} label={b.label} plain dimColor onPress={onPress(b.press)} />)}
                 </Box>
               )
             }
@@ -1201,6 +1216,10 @@ export const register: Register = on => {
     }
     if (e.component !== 'AbovePrompt' || e.props.hasSurvey) return next(e)
     const { Box, Button, Text } = $.ui.resolve(e)
+    // Reading the band's revision subscribes it; every band press bumps it, so the press shows at
+    // once rather than on the next unrelated redraw (the dead Later button, 2026-10-15).
+    await read($, dsBandRev)
+    const bump = () => update($, dsBandRev, n => (n ?? 0) + 1)
     const now = await $.clock.now()
     const rows: JSX.Element[] = []
     if (dsAskRecords) {
@@ -1213,13 +1232,15 @@ export const register: Register = on => {
             await $.store.set('recordsAnswered', true)
             await dsSaveSwitches($, applySwitchCommand(dsSw, 'records on', true, new Date(await $.clock.now()).toISOString()).sw)
             dsBuffer = [...dsMem]
+            await bump()
           }} />
           <Button key="ask-off" label="Keep off" onPress={async () => {
             dsAskRecords = false
             await $.store.set('recordsAnswered', true)
             await dsSaveSwitches($, applySwitchCommand(dsSw, 'records off', true, new Date(await $.clock.now()).toISOString()).sw)
+            await bump()
           }} />
-          <Button key="ask-later" label="Ask me later" onPress={() => { dsAskRecords = false }} />
+          <Button key="ask-later" label="Ask me later" onPress={async () => { dsAskRecords = false; await bump() }} />
         </Box>,
       )
     }
@@ -1229,8 +1250,8 @@ export const register: Register = on => {
         <Box key="note" columnGap={1}>
           <Text bold color={dsTheme.colors.accent}>dash suggests</Text>
           <Text wrap="truncate-end">{`${note.title} (${note.evidence})`}</Text>
-          <Button key="note-show" label="Show" onPress={async () => { dsNote = null; dsView = 'suggest'; dsSuggestDrill = null; await $.ui.open({ id: 'dash', title: 'dash' }) }} />
-          <Button key="note-later" label="Later" onPress={() => { dsNote = null }} />
+          <Button key="note-show" label="Show" onPress={async () => { dsNote = null; dsView = 'suggest'; dsSuggestDrill = null; await bump(); await update($, dsPaneRev, n => (n ?? 0) + 1); await $.ui.open({ id: 'dash', title: 'dash' }) }} />
+          <Button key="note-later" label="Later" onPress={async () => { dsNote = null; await bump() }} />
         </Box>,
       )
     }
