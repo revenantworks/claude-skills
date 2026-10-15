@@ -64,6 +64,14 @@ codes against the installed runner version before wiring a guard to them.
 | GdUnit4 (CLI tool) | the overall summary: test cases, errors, failures, orphans | the same engine markers | 0 passed · 100 failures or errors · 101 warnings only (orphans) |
 | Any wrapper emitting JSON | a normalised object: tests, passed, failed, errors, skipped | whatever it forwards; check it forwards the engine markers | the wrapper's own; read its source |
 
+**Parse the block the way CI parses it.** `Tests` and `Passing Tests` both end in "Tests": an
+unanchored `Tests\s+(\d+)` that takes the last match reads the Passing line, and the two differ
+whenever a `Pending` line appears. One project read 2255 on one platform against 2256 on CI for
+two days, wrote it into its floor and its handoffs as a platform conflict, and the cause was the
+reader. Use the line-anchored pattern CI's own check uses, and keep a fixture summary with
+Pending above zero in the parser's tests. When two platforms disagree by exactly the pending
+or skipped number, suspect the parser before the platform.
+
 A wrapper's JSON is still a summary line. Check its own identity (the parts sum to the
 total) and then reconcile the total with disk, exactly as for the raw runner.
 
@@ -170,10 +178,16 @@ that each commit's suite line was taken alone, not copied from the final run.
   this; `Scripts` does not.
 - **Whether `-gtest` narrowed anything.** When `.gutconfig.json` names directories, GUT
   still loads them and `-gtest` does not reduce the run to one file: the "single-file" run
-  is the whole suite. Narrow with the directory, the file and the test name together:
+  is the whole suite, at tens of minutes a run. The single-script form passes an empty config
+  with it: `-gconfig= -gtest=res://tests/unit/test_camp.gd` (a comma list takes several
+  scripts, in list order); or narrow with the directory, the file and the test name together:
   `-gdir=res://tests/unit -gselect=test_camp.gd -gunit_test_name=test_winter` (check the
-  flag names against the installed GUT version). Confirm the narrowing worked by reading
-  `Scripts` — a narrowed run says 1.
+  flag names against the installed GUT version). A scratch config file with a `"tests"` list
+  and no `dirs`, passed as `-gconfig=<absolute path>`, also works and makes a batch split.
+  Confirm the narrowing worked by reading `Scripts` — a narrowed run says the number you
+  asked for, and any larger count is the wrong command: kill it by its own pid. A target that
+  fails to parse is dropped with exit 0 and "Could not find script", so the Scripts count and
+  a grep for `SCRIPT ERROR` are the witnesses, not the exit code.
 - **Whether the thing it measured is the thing that ships.** A headless run proves headless
   behaviour. Anything gated on `DisplayServer.get_name() != "headless"` took the other
   branch.

@@ -15,6 +15,7 @@ it means something. Every rule here came from a real figure that misled a real d
 6. Check the instrument against a known value
 7. Renderer questions, and paired cameras
 8. Noise band and baseline age
+9. The timed window must contain the changed path
 
 ---
 
@@ -129,3 +130,22 @@ So a perf gate names its method and its floor:
 **A baseline has an age.** A baseline taken before the last engine, renderer, driver or rig
 change is re-taken in the same session, never compared. A comparison against it is
 UNMEASURED (`gate-doctrine.md` section 2), not a regression and not a pass.
+
+## 9. The timed window must contain the changed path
+
+**A perf comparison proves nothing about code its timed window never executes.** Before reading
+the delta, name the ticks (or frames) the changed path runs in, and show the timed window covers
+them: a day or night phase, a grace period before the feature starts, an entity count that only
+a late save reaches. A brief that says a cost is "only at night" or "only after day N" names the
+window the perf run covers.
+
+- In one build a night-only change was timed over 600 ticks from tick 0, which were all daylight
+  and inside the grace days. The A/B read "within noise" and the commit said so. A run timed from
+  shortly before dusk on a day past the grace period read +15%, and found a gate that opened the
+  combat round every night tick.
+- A second change, briefed with this rule, found the harness's camp and away windows were still
+  all daylight (end-of-window state hashes on the changed branch equal to the base's byte for
+  byte) and added its own night window. Equal end-of-window hashes are a fast test of the
+  window: if the hashes match, the changed path did not run.
+- A harness with no mode for the window every time re-derives it; add the mode (a `--night`
+  flag) rather than a note.

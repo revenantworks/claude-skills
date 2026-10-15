@@ -158,6 +158,9 @@ those worlds did.
 
 - **Run the control before predicting it.** A prediction written before the control arm
   ran is an expectation, and a figure compared against it inherits the guess.
+- **A deferred re-pin needs a complete control and a per-control table.** The rules are in
+  `determinism-and-state.md` section 3a; a gate that rests on a re-pinned stack asks for that
+  table before it reads the new values.
 - **Prove a pin round's claimed cause by reverting it in memory.** State the cause as a
   revertible transformation (a field value, a format line, a rule branch). In a probe on
   the new tree, revert exactly that and hash the result: landing byte-for-byte on the old

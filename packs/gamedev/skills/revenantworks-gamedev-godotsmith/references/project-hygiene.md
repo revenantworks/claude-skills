@@ -46,6 +46,14 @@ Three rules that are easy to get backwards:
 - **Commit the import metadata and the resource identifier sidecars.** They are part of the
   project's identity; a checkout without them re-derives different ones.
 - **Ignore the engine's generated cache directory.** It is machine-local, large, and churns.
+- **Headless runs can leave `.import` files stat-dirty with an empty diff.** A line-ending or
+  stat rewrite from re-importing assets shows the same sidecars as modified in every worktree
+  (29 files in each of 59 worktrees in one project), and `git worktree remove` without `--force`
+  then refuses a worktree whose work already landed. Cleanup that reaches for `--force` loses
+  real uncommitted work (5 of those 59 held some). Normalise at the source: a `.gitattributes`
+  line for the sidecars (`*.import text eol=lf`), or `git update-index --refresh` after the
+  run, so a clean tree reads clean. A review checks `git status` after a headless run and
+  flags the churn.
 - **End every unit of work with a pristine tree.** A Godot project generates files as a side
   effect of being opened, and a tree that is never clean means nobody can tell a generated
   file from an uncommitted change. Check the stash too: a handover or worktree switch can

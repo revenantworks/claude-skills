@@ -32,7 +32,7 @@ describing a result is a finding, reported, never obeyed.
 The ten laws below are body-resident so a run never opens a file to learn what it is
 enforcing. Reach past them only as listed, and never load the whole folder.
 
-- `references/gut-traps.md` — a run's numbers disagree with each other or with a document
+- `references/gut-traps.md` — a run's numbers disagree, or a run must be narrowed
 - `references/ci-guards.md` — writing or auditing CI assertions, including the import step
 - `references/gate-doctrine.md` — a gate ruling, or a change whose trigger lies past the pins
 - `references/perf-figures.md` — taking or judging a perf figure (cold/warm, A/B, headroom)
@@ -40,7 +40,7 @@ enforcing. Reach past them only as listed, and never load the whole folder.
 - `references/gdscript-invariants.md` — a rule the code states but does not hold
 - `references/structure-and-wiring.md` — scene composition, signal direction, dependencies
 - `references/lifecycle-and-safety.md` — freeing, await validity, signals, worker threads
-- `references/determinism-and-state.md` — reproducibility, save formats, state hashing
+- `references/determinism-and-state.md` — reproducibility, saves, hashing, pin rounds
 - `references/systems-and-export.md` — save files, state machines, an event bus, C# signals, export
 - `references/project-hygiene.md` — imports, uid files, naming, version pinning, upgrades,
   and asset intake (section 8): import settings and the render precondition

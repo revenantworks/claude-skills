@@ -13,6 +13,7 @@ Sources for the borrowed practices are in `SOURCES.md`. Nothing here is copied t
 2. Save formats and the canonical form, and unsaved fields
    2a. Lazy caches
 3. State hashing, round trips and fingerprints
+   3a. Pin rounds, controls and deferred re-pins
 4. Fixed tick versus render tick, and per-entity work
 5. Typed state containers
 6. Perceived fairness
@@ -56,6 +57,15 @@ write happens between two closes (mid-day) and a read happens at the close, the 
 state and is saved — as an additive key with a default, so no version bump. A counter that
 must survive a load but is not saved reads **−1 = unknown** after a load, and every reader
 treats −1 as "promise nothing" (a ticker does not print "nobody hunted").
+
+**A migration encodes an assumption about how the world changed.** When a later change narrows
+that assumption (a scale factor that used to apply to everything now applies to a group), the
+migration is silently wrong until a test loads old data under the new rules. In one build a
+load migration doubled every saved position; a later change put the village group back at its
+old sizes, the migration still doubled it, and every wall joint of a loaded camp opened while
+the suite stayed green. Re-read every migration when a change splits a shared factor, and add a
+load test on a pre-change fixture that asserts a group-relative invariant (joints closed,
+distances from an anchor), not only that the file loads.
 
 ## 2a. Lazy caches
 
@@ -109,6 +119,39 @@ the alternative is finding out from a CI run that reaches the test step days lat
 The harness that runs this belongs in the coverage population (L2). It drives real functions
 with real assertions, and a search scoped to the test directory will report those functions
 as untested.
+
+## 3a. Pin rounds, controls and deferred re-pins
+
+A **pin round** re-derives the literals a change moved. A **control** is a tests-only switch
+(`*_OFF`) that turns the change's behaviour off; its one job is "control on = the base's pins".
+
+- **A control that restores the base pins is what makes a deferred re-pin sound.** With it, a
+  unit shows it is neutral where it should be neutral, and every moved row is the unit's own
+  doing. Without it, "these rows moved because of my change" is a guess, and the re-pin has to
+  happen at once, unit by unit. With it, a stack of units can be built first and re-pinned once
+  (slicesmith `spec-and-plan.md`, stacked pin round).
+- **The control must return every row, not most of them.** Run it over the whole pin set and
+  count: 15 of 15 is a control; 7 of 9 is a leak. The control keeps the base's figures too: a
+  constant the change rescaled stays at its base value under the switch, or the pins cannot come
+  back.
+- **A control that leaves rows moved is incomplete, and the stack is unattributable.** In one
+  join, eleven stubs applied together returned none of nine rows to the base, so a residual move
+  sat outside every stub (candidates: an enum that grew inside loops over it, shared code a unit
+  touched). Stop and complete the control before re-pinning; never re-pin from the failure lines
+  and call it attributed.
+- **The join's re-pin carries a per-control table, not a bare hash swap.** One row per pin:
+  `row | base value | new value | moved alone by (control names) | all controls on`. Take the
+  new values from the failure lines of one run on the joined tree, the "moved alone by" column
+  from one run per control with only that control off, and the last column from one run with all
+  on. State the base sha the old values belong to.
+- **Make the suite assert the control.** A second table (`PINS_<CONTROL>`, equal to the base's)
+  that the pin reader returns under the switch keeps "control on = base pins" a failing test
+  rather than a claim in a report.
+- **Re-measure after every merge of a moved main.** A merge that brings in another unit's
+  re-pin invalidates the old column. Re-run before the table is written (one join re-pinned 14
+  rows a second time because another arc landed first).
+- **One platform per measurement.** Pins that are per-platform facts (section 3) take the other
+  platform's values from the CI image's log once, at the join, not once per unit.
 
 ## 4. Fixed tick versus render tick, and per-entity work
 
