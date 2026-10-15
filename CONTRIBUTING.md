@@ -30,6 +30,9 @@ The hook blocks a commit whose author or committer email is not a no-reply addre
 - **Pre-commit hook** (`.githooks/pre-commit`): runs `python tools/pii_scan.py --staged` on the
   added lines of the staged diff and blocks the commit on any hit. It fails closed: with no
   Python 3.9+ it blocks too.
+- **Your own global guard, if you have one:** `core.hooksPath` above makes git skip a
+  machine-wide hooks folder, so `.githooks/pre-commit` and `.githooks/pre-push` also call the
+  `pii_guard.py` found in your global `core.hooksPath`. Without one, nothing extra runs.
 - **CI** (`.github/workflows/pii-scan.yml`): runs `python tools/pii_scan.py --tree --identities`
   over every tracked file and every commit identity on each push to `main`.
 
