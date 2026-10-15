@@ -28,4 +28,11 @@ if [ "$rc" -ne 0 ]; then
     echo "pre-commit: PII barrier blocked this commit (pii_scan exit $rc). Fix the listed lines and stage again." >&2
     exit 1
 fi
+# Machine-wide privacy guard (owner 2026-10-15): a repo-local core.hooksPath skips the
+# global hooks, so call the guard here. Absent on a machine without it: nothing to do.
+g=$(git config --global --get core.hooksPath)
+if [ -n "$g" ] && [ -f "$g/pii_guard.py" ]; then
+  PY=$(command -v python || command -v python3 || command -v py)
+  if [ -n "$PY" ]; then "$PY" "$g/pii_guard.py" pre-commit || exit 1; fi
+fi
 exit 0
