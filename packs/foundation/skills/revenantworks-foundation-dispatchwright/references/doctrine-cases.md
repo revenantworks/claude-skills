@@ -17,6 +17,9 @@ standing load.
 - §6 Meters beyond the Claude windows
 - §6 Wave execution — agents not rows (#0022); base window (#0083); last reviewer (#0091); visible
   commit (#0089); helpers (#0043, #0044); silence; cancelling (#0051)
+- §3 Pin arcs — one round per arc, a complete control, view lanes free (#0432)
+- §7 Review tier and brief age — cheaper reviews, briefs written ahead (#0432, observations on
+  a long game build)
 - §8 Reconcile — gate figures; test totals (#0057); CI green (#0087, #0090); reversal (#0045)
 - Load budget — handed-in data
 
@@ -197,6 +200,27 @@ CI sat red on lint for eight commits and never reached its test step, hiding two
 failures the first green-lint run found at once. A trajectory hash reproduced twice on the
 controller's machine failed on the Linux runner: local runs prove determinism on one machine,
 not portability.
+
+## §3 · Pin arcs: one round per arc, a complete control, view lanes free (#0432)
+
+A build landed each pin-moving unit alone: build, re-pin every row, review, merge main,
+re-measure after the merge (one unit re-pinned 14 rows a second time because another arc landed
+first), measure the second platform, local CI, push, CI. Each unit already carried an `*_OFF`
+control that returned the base pins, so the repeated work bought nothing the control had not
+already proved. A combined round with two controls worked once; a unit with a fully switchable
+change returned 15 of 15 rows to base. A join without complete controls failed the other way:
+eleven stubs together returned none of nine rows to base, and the rows stayed unattributed.
+So the cadence is per arc for pin-moving lanes, with the controls proven complete first. Lanes
+that move no pins (a view layer, a window or HUD fix) have nothing to re-pin and land when
+ready.
+
+## §7 · Review tier and brief age (#0432)
+
+Reviews moved from the builder's tier to the cheaper one once the weekly meter passed 92%, and
+found real defects (a MED in two of five, no HIGH). The HIGHs in the same run came from the
+builder-tier reviews of new sim logic with a save path. Briefs written while the previous unit ran
+kept the build lanes full, but each one cited code that had since moved; a join check against the
+finished unit's head fixed the wrong facts before they reached a builder.
 
 ## §8 · A non-git landing carries its own reversal (#0045)
 

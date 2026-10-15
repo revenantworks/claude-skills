@@ -1,7 +1,7 @@
 # Assertion Suite — revenantworks-foundation-dispatchwright
 
 - Provenance: target `revenantworks-foundation-dispatchwright` v1.2.0 (suite authored 2026-09-09); last re-anchored to v1.0.0, 2026-10-01. Full re-anchor history moved to evals/RESULTS.md.
-- Counts: 29 cases, assertion-only (format, coverage and fixture notes moved to evals/RESULTS.md). Cases 23–26 added 2026-10-01 (P1: meters, run records, replan gate, retriever); Cases 27–29 added 2026-10-04 (observations 0182, 0283, 0285, 0333: land gate and write order, thin pass, adversarial verifier); authored, not run.
+- Counts: 31 cases, assertion-only (format, coverage and fixture notes moved to evals/RESULTS.md). Cases 23–26 added 2026-10-01 (P1: meters, run records, replan gate, retriever); Cases 27–29 added 2026-10-04 (observations 0182, 0283, 0285, 0333: land gate and write order, thin pass, adversarial verifier); Cases 30–31 added 2026-10-15 (observations 0432, 0417: pin-arc land cadence, report carrier); authored, not run.
 - Owed: suite authored 2026-09-09 and not executed per this header; the coverage debt from the 1.2.4 re-anchor is in the moved history.
 
 ## Contents
@@ -280,3 +280,12 @@ Assert: the plan carries a read-only, fresh-context verifier row whose brief lis
 readers of the removed value) and asks for a concrete failing input per finding. Assert: the
 brief asks for a test per reachable consumer of the removed value, found by grepping its name.
 Assert (negative): the author's passing suite is not treated as the verification.
+
+**Case 30 — Land cadence is per arc for pin-moving lanes** *(native case `behaviour-pin-arc-cadence`)*
+Input: `dispatchwright plan` for three sim units that each move determinism pins and each ship an OFF switch, plus one HUD layout unit that moves no pin; today each lands alone.
+Assert: the three sim units are reviewed units that each prove neutral with their switch on · ONE pin-arc join row follows them (re-pin once with an old -> new table per row, one platform measure, one push and CI run) · the HUD unit lands on its own when ready · the plan stops for the go.
+Assert (negative): a re-pin and a land per sim unit is not accepted; the three units are not merged into one.
+
+**Case 31 — A refused report file does not lose the report**
+Input: a dispatched unit's brief names `waves/<unit>.md` as its report; the unit's file write is refused by the subagent harness.
+Assert: the brief tells the unit to put the full report in its final message and not retry · the controller writes the durable file from the hand-back and records that path in the ledger row's report column.

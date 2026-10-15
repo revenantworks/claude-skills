@@ -21,7 +21,7 @@ Fill the bracketed fields; do not paraphrase the contract itself.
   skills
 - Brief variants — design, prep ahead of a ruling, sim build, amendment, review (with design
   close), fix round, measurement, blind comparison, verifier, adversarial verifier, eval run,
-  research, join-check
+  research, join-check, pin-arc join, briefs written ahead
 - Observations — return them, do not log them
 - On resume
 
@@ -175,7 +175,10 @@ edit that failed. Where a hook enforces the cap, it is the barrier; this line is
 
 **Return shape:** [short facts only — shas, counts, booleans, one-line verdicts, and a path.
 Anything longer goes in the commit body or in `waves/[unit_id]-<stage>.md`, and the field carries
-that path (observation #0089). **Retriever variant** (tier-routing.md, retriever role): one
+that path (observation #0089). **If the file write is refused** (a subagent harness can refuse a
+report `.md`, intermittently, and three units in one night lost theirs), do not retry: put the full
+report in the final message. The controller writes the durable file from the hand-back at
+reconcile and records that path in the ledger's report column (observation 0417). **Retriever variant** (tier-routing.md, retriever role): one
 answer, at most `[40]` lines, each claim cited `file:line`, one signature or call site per line,
 out-of-scope matches excluded; past about 300 lines read, write the report file and return its
 path.]
@@ -332,6 +335,23 @@ Add the block that matches the unit's job; leave the others out.
   re-derives from (seed, id, day) is not saved. A gate added to a shared function names the one
   helper that earlier tick-pinned tests route through, so the next gate is a one-place edit; where
   no helper exists yet, the brief creates it.
+- **Narrow while building, wide once** (observation 0422 and a long game build's unit reports):
+  a build brief tells the unit to run only the test scripts it touched while it works, and to
+  confirm each narrowed run by its own script count (GUT with a config file that names
+  directories needs `-gconfig=` beside `-gtest=`, or the run is the whole suite at 26-45
+  minutes; at least fifteen unit reports re-learned this). The full suite runs once, at the end
+  of the unit, or once at the join of a stack. The unit never edits the files that hold suite
+  counts or status (the CI script's count literals, a status doc, a suite history): it reports
+  count deltas and the controller sets them at the land. Two units that both edit those lines
+  conflict at every join.
+- **A perf line names its window** (observation 0379): a brief that says a cost runs "only at
+  night" or "only after day N" names the tick window the perf run must cover, and asks for the
+  base and tree end-of-window state hashes. Equal hashes mean the changed path never ran in that
+  window and the A/B measured nothing.
+- **A pin-moving unit in a stack** (observation 0432): the brief requires an `*_OFF` control
+  that returns the base pins on every row, a table of the rows the unit moves (old -> new,
+  marked "not re-pinned" when the join does the re-pin), and the control-on run as its proof.
+  The pin round itself belongs to the join row (below).
 - **Design amendment** (observation 0262): a **breaks** list — each base test whose expectation
   the amendment changes, and whether its re-pin is pre-authorised — plus every new save key.
 - **Design review** (observations 0098, 0119): re-measure by name, never by reading the design's
@@ -381,6 +401,23 @@ Add the block that matches the unit's job; leave the others out.
   scheduled job reads (a routine prompt, a CI job, a cron script) is `blocked_by` the row that moves
   the schedule off that path. Its brief says "hold the branch: do not merge until <schedule row> is
   verified". A green CI on the move proves nothing about the next scheduled fire.
+- **Pin-arc join row** (observation 0432): the last row of an arc of pin-moving units, run after
+  the units are reviewed. It merges the current main, measures every pin row with all controls
+  off, writes the old -> new table per row and the "moved alone by" column from one run per
+  control, checks that all controls on returns the base on every row, then re-pins once,
+  measures the second platform once in the CI image, and lands once (one push, one CI run). It
+  stops without re-pinning when any row stays moved with all controls on: the controls are
+  incomplete, and that is a finding for the unit that owns the control, not a table to fill by
+  hand. Its brief cites godotsmith `determinism-and-state.md` section 3a. Rows that move no pins
+  (view lanes, tooling) are not in the arc and land when ready.
+- **Briefs written ahead**: write the next unit's brief while the current unit runs (a
+  read-only prep unit or the controller), so a finishing unit is followed at once by its
+  successor. A brief written ahead goes stale: before launch, run a join check against the
+  head the finished unit left (every named symbol by name, `file:line` cites as hints,
+  test counts as deltas, bases by ancestry). One join check of ten briefs found wrong
+  facts about code that had since changed, and a later one fixed 46 findings, four of them
+  blocking. A brief is not edited while its unit runs; a correction goes in the launch prompt
+  and the brief is fixed after.
 
 ### Observations — return them, do not log them
 
