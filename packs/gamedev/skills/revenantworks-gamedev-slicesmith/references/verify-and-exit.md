@@ -23,6 +23,8 @@ slice and every fix, before the word "done" or a commit.
    added, subtract any it deleted on purpose. Write the expected figure in the reply **before**
    running the suite.
 2. **Run the whole suite**, every step the CI file runs (`slice-and-test.md`, runner discovery).
+   This is the run that counts. It happens once, at the end of the slice, or once at the join of
+   a stacked pin round (`spec-and-plan.md`), not after every red/green step.
 3. **Prove the run covered the change.** The new test's name appears in this run's output or
    in a listing of the collected tests, it is inside the count, and the reply cites its red line
    from earlier in the slice. A test that never failed proves nothing about the change.

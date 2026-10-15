@@ -5,6 +5,8 @@ version follows Semantic Versioning.
 
 ## [1.0.0] — 2026-10-08
 
+2026-10-15 (lessons from a long Godot build): `spec-and-plan.md` gains the stacked pin round (one integration branch per arc, every unit proved with its OFF control on, one re-pin at a join row, and when not to stack); the cycle and the done gate run touched scripts while building and the whole suite once (observation 0432, 0422). Evals C19-C20 and `behaviour-stacked-pin-round`.
+
 First release. Runs the loop that writes code test-first: spec, plan, thin vertical slices, a
 failing test first, verify, commit — for a Godot 4 game, or any repo with its own test command.
 
