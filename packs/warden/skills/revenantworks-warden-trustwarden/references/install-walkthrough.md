@@ -30,6 +30,11 @@ candidate's provenance is in doubt, through its Docker image. snyk agent-scan st
 
 - **Install:** from the tool's own install page (PyPI, cargo or Homebrew packages are listed
   there), pinned to a version, for example `uv tool install zizmor==<version>`.
+- **Without uv:** `pip install --user zizmor==<version>` puts `zizmor.exe` in the Python user
+  Scripts folder, which Windows leaves off PATH. Print the folder with
+  `python -c "import sysconfig;print(sysconfig.get_path('scripts','nt_user'))"` and add it to PATH.
+  `trust_vet.py` looks there too and names the folder when it finds the scanner off PATH.
+  zizmor ships a binary, not a module: `python -m zizmor` fails on a good install.
 - **Check:** `zizmor --version`, then `zizmor --offline --format json <a clone with workflows>`
   returns 0 or 11–14.
 - **Way back:** the same package manager's uninstall (`uv tool uninstall zizmor`).

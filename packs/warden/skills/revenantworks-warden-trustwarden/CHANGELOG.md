@@ -7,6 +7,11 @@ are installed, and ends with a verdict and the terms to install under, never a b
 
 Description cut to about 600 characters, main use case first (2026-10-08).
 
+2026-10-16 (observation 0445): scanner discovery looks on PATH, then in the Python user Scripts
+folder (`pip install --user`), and names that folder when the scanner was found there; the
+install walkthrough gives the pip form, the PATH line, and says `python -m zizmor` is not a check.
+One test.
+
 ### What it does
 
 - Clones the candidate to scratch at one commit SHA and inventories every file with the readers that

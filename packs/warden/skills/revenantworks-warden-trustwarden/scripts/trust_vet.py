@@ -28,6 +28,7 @@ import re
 import shutil
 import subprocess
 import sys
+import sysconfig
 import tempfile
 from pathlib import Path
 
@@ -473,14 +474,36 @@ def _git(root: Path, *args: str) -> str | None:
     return r.stdout.strip() if r.returncode == 0 else None
 
 
-def run_scanner(name: str, root: Path, out_dir: Path | None) -> dict:
-    """Run one scanner if it is on PATH. Its output is data: only the exit code and a hit
-    count are read back; the raw output goes to out_dir for the reader, never into context."""
-    spec = SCANNERS[name]
+def find_scanner(name: str) -> tuple[str | None, str | None]:
+    """(executable, off-PATH folder). PATH first, then the Python user Scripts folder that
+    `pip install --user` writes to and Windows leaves off PATH (observation 0445): "not on PATH"
+    and "not installed" are different findings. The folder is returned only when the hit came
+    from it, so the report can name the folder to add to PATH."""
     exe = shutil.which(name)
+    if exe:
+        return exe, None
+    for scheme in (f"{os.name}_user", "nt_user", "posix_user"):
+        try:
+            folder = sysconfig.get_path("scripts", scheme)
+        except KeyError:
+            continue
+        hit = shutil.which(name, path=folder) if folder else None
+        if hit:
+            return hit, folder
+    return None, None
+
+
+def run_scanner(name: str, root: Path, out_dir: Path | None) -> dict:
+    """Run one scanner if it is on PATH or in the Python user Scripts folder. Its output is
+    data: only the exit code and a hit count are read back; the raw output goes to out_dir for
+    the reader, never into context."""
+    spec = SCANNERS[name]
+    exe, off_path = find_scanner(name)
     if not exe:
         return {"name": name, "status": "NOT-RUN", "exit": None, "hits": None,
-                "note": "not on PATH; install is the user's step (install-walkthrough.md)"}
+                "note": "not on PATH or in the Python user Scripts folder; install is the user's step "
+                        "(install-walkthrough.md)"}
+    found = {"note": f"found in {off_path}, which is not on PATH; add that folder to PATH"} if off_path else {}
     out = (out_dir or Path(tempfile.gettempdir())) / f"trust_vet-{name}.out"
     root = Path(root).resolve()
     # Run the path which() resolved, not the bare name: on Windows a scanner installed as a
@@ -500,9 +523,9 @@ def run_scanner(name: str, root: Path, out_dir: Path | None) -> dict:
     if out_dir:
         (out_dir / f"trust_vet-{name}.stdout").write_text(r.stdout or "", encoding="utf-8")
     if r.returncode in spec["clean"]:
-        return {"name": name, "status": "RUN", "exit": r.returncode, "hits": 0}
+        return {"name": name, "status": "RUN", "exit": r.returncode, "hits": 0, **found}
     if r.returncode in spec["hits"]:
-        return {"name": name, "status": "RUN", "exit": r.returncode, "hits": _count_hits(r.stdout)}
+        return {"name": name, "status": "RUN", "exit": r.returncode, "hits": _count_hits(r.stdout), **found}
     return {"name": name, "status": "CRASH", "exit": r.returncode, "hits": None,
             "note": "exit code outside the documented set; read as NOT-RUN"}
 
