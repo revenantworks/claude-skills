@@ -89,6 +89,10 @@ Clause, PolyForm, Elastic, SSPL, a custom "project licence") can forbid derivati
 use; no licence at all means all rights reserved. Either way the adoption is **ideas only**: no
 code or text is folded in, and the idea is cited in SOURCES.
 
+Model weights carry their own licence, in the model card rather than the repo: run
+`trust_vet.py licence` for each weight (`model-weights.md`). Two cards that disagree hold the
+verdict until the licence text settles it.
+
 ## 6. Terms of a data route
 
 Before adopting any route that fetches data (an API, an MCP server for a site, a scraper, a
@@ -114,9 +118,10 @@ FAIL on sight, whatever the scanners say:
 
 | Rule | Severity | Meaning |
 |---|---|---|
-| `hook-network`, `hook-network-internal`, `fetch-pipe-shell`, `safety-bypass`, `skill-shell` (with a network call) | fail | Section 7 |
-| `hidden-text`, `link-in-tree`, `installer-writes-config`, `exfil-shape`, `command-source`, `ships-settings`, `lockfile-foreign-source` | hold | The user reads before any terms |
+| `hook-network`, `hook-network-internal`, `fetch-pipe-shell`, `safety-bypass`, `skill-shell` (with a network call), `pickle-dangerous-global` | fail | Section 7; a pickle that imports `os`, `subprocess`, `eval` and the like runs code on load |
+| `hidden-text`, `link-in-tree`, `installer-writes-config`, `exfil-shape`, `command-source`, `ships-settings`, `lockfile-foreign-source`, `pickle-global-unknown`, `pickle-global-unresolved`, `pickle-unparsed`, `torchscript-code`, `weights-bad-header` | hold | The user reads before any terms (weights: `model-weights.md`) |
 | `hook-present`, `skill-shell`, `skill-allowed-tools`, `skill-hooks`, `mcp-stdio`, `mcp-remote`, `mcp-local-url`, `network-external`, `network-internal`, `bin-on-path`, `installer-present`, `install-scripts`, `unpinned-source`, `unpinned-action`, `no-lockfile`, `lockfile-no-integrity`, `unpinned-requirement` | conditional | A term answers it (`install-terms.md`) |
+| `licence-restricts`, `no-licence`, `safety-bypass-mention`, `weights-licence` | note | Recorded; a licence note adds the ideas-only term, a weights note the licence-per-weight term |
 
 **Lockfile checks** (`trust_vet.py`): a `package.json` with runtime dependencies and no lockfile
 beside it (`no-lockfile`); a lockfile entry or a requirements line that resolves outside the
@@ -126,4 +131,3 @@ with no exact `==` pin (`unpinned-requirement`). A lockfile over 1 MB is UNREAD 
 file, so its checks did not run: say so. By hand, for an MCP server or plugin that installs
 packages: a dependency name one letter off a popular one, a package published days ago, or a
 maintainer change on a dependency since the last release.
-| `licence-restricts`, `no-licence`, `safety-bypass-mention` | note | Recorded; a licence note adds the ideas-only term |

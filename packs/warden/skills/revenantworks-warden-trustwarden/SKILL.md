@@ -2,7 +2,7 @@
 name: revenantworks-warden-trustwarden
 description: Vets third-party skills, plugins, MCP servers and GitHub Actions before install, with a verdict (PASS, CONDITIONAL, HOLD, FAIL) and install terms. Trigger on any should-I-install question, even with its files or hooks pasted in or a scan already clean; is this skill safe, vet this MCP server, check this GitHub Action, what does this installer write, a licence check before a fold-in, what changed in a plugin update; or say trustwarden (vet, revet, terms, refresh). Uses skillspector, zizmor, pinact and Scorecard when present; lists files no scanner read. Runtime permissions are gatewarden's; secrets shieldwarden's; your own skills skillwright's; sandboxing a download hypervrunner's.
 license: Apache-2.0
-compatibility: Python 3 (stdlib) for scripts/trust_vet.py, and git for the scratch clone and revet. Optional and never installed by the skill - skillspector, zizmor, pinact, OpenSSF Scorecard via Docker, cisco skill-scanner; snyk agent-scan opt-in only. The claude CLI for plugin details. Without a shell it walks the vet list by hand and marks every scanner NOT-RUN. Network only to clone the candidate and read its GitHub metadata. Siblings are named, never required.
+compatibility: Python 3 (stdlib) for scripts/trust_vet.py, and git for the scratch clone and revet. Optional and never installed by the skill - skillspector, zizmor, pinact, OpenSSF Scorecard via Docker, cisco skill-scanner; snyk agent-scan opt-in only. The claude CLI for plugin details. Without a shell it walks the vet list by hand and marks every scanner NOT-RUN. Network only to clone the candidate and read its GitHub, Civitai or Hugging Face metadata (read-only). Siblings are named, never required.
 metadata:
   version: "1.0.0"
   profile: standard
@@ -14,8 +14,8 @@ metadata:
 
 *history in CHANGELOG.md · sources and parity register in SOURCES.md · Apache-2.0 (LICENSE)*
 
-Decides **whether, and on what terms,** a third-party skill, plugin, MCP server or GitHub Action
-gets installed. Existing scanners do the pattern work; trustwarden drives them, then adds two
+Decides **whether, and on what terms,** a third-party skill, plugin, MCP server, GitHub Action or
+set of model weights gets installed. Existing scanners do the pattern work; trustwarden drives them, then adds two
 things none of them gives:
 
 - **A coverage ledger.** Every file in the candidate gets a row: who read it, or UNREAD. Scanners
@@ -57,6 +57,7 @@ or CONDITIONAL, and `terms`, read `references/install-terms.md`. A missing scann
 `references/install-walkthrough.md`. `revet` reads only `scanner-matrix.md` unless the diff needs a
 fresh vet. `references/pack.md` only on boundary doubt.
 
+A candidate with weight files (pickle, torch, safetensors, GGUF) opens `references/model-weights.md`.
 Optional mods: `references/mods.md`, only when their data is present.
 
 ## 1. Fetch — one commit, in scratch
@@ -85,10 +86,14 @@ and the vet did not read is UNREAD.
 into context). It walks every file (links are not followed: a link inside the candidate is a
 finding), runs its red-flag rules over every text file up to 1 MB, runs each named scanner that is
 on PATH, and prints JSON: verdict, SHA, tree hash, the coverage ledger, findings by rule id, scanner
-status, terms. Exit 0 PASS, 1 CONDITIONAL/HOLD/FAIL, 3 nothing to vet, 4 crash.
+status, terms. Weight files are read by format, never loaded: a pickle's opcodes are parsed and
+every import it would make is named against a tensor allow-list (`model-weights.md`). In a git
+checkout each row says whether it is tracked, so bytecode compiled on this host is not counted as
+shipped. Exit 0 PASS, 1 CONDITIONAL/HOLD/FAIL, 3 nothing to vet, 4 crash.
 
 Scanners by kind (flags and known skips in `scanner-matrix.md`): **skillspector** `--no-llm` for
 skills, plugins and MCP server source; **zizmor** `--offline` and **pinact** `--check` for Actions;
+**fickling**, **modelscan** or **picklescan** by hand for weights, recorded with `--reader`;
 **Scorecard** through its Docker image only when provenance is in doubt; **cisco skill-scanner**
 (static analyzers) or **Sentry's skill-scanner** as an optional second opinion, each vetted here
 first and never required. The script also checks lockfiles: dependencies with no lockfile, entries
@@ -120,7 +125,9 @@ Then the hand checks in `red-flags.md`: provenance and maintainer signals (`gh a
 **a copied name whose install count outruns its history** (find the original; HOLD a look-alike),
 **what the installer writes** (a global `CLAUDE.md` block, hooks, git hooks, settings), **whether a
 claimed feature is released or only an open pull request**, **the licence before any fold-in**
-(source-available terms can forbid derivatives: ideas only), and **the terms of any data route**
+(source-available terms can forbid derivatives: ideas only), **the licence of every weight**, which
+lives in its model card, not the repo (`trust_vet.py licence`: Civitai and Hugging Face fields plus
+the upstream text; sources that disagree hold), and **the terms of any data route**
 before it is adopted (a reseller or proxy API is rejected).
 
 ## 5. Verdict
@@ -162,8 +169,8 @@ Hand the user one command to remove the scratch clone.
   a stored licence is a dated claim. Changes nothing.
 - **`trustwarden terms`** — the terms and gatewarden rules for a vet already done in this session,
   or from a pasted vet report.
-- **`trustwarden refresh`** — re-read every tool and control in `scanner-matrix.md` and
-  `install-terms.md` against the tools' docs and the Claude Code docs, re-pin every pinned tool version and image tag
+- **`trustwarden refresh`** — re-read every tool and control in `scanner-matrix.md`,
+  `install-terms.md` and `model-weights.md` against the tools' docs and the Claude Code docs, re-pin every pinned tool version and image tag
   (snyk agent-scan, the Scorecard image) to the release read that day, then restamp. A control the
   docs no longer carry is dropped.
 

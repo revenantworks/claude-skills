@@ -1,21 +1,29 @@
 #!/usr/bin/env python3
 """trust_vet.py - pre-install vet of a third-party candidate (stdlib only).
 
-Reads a local checkout of a skill, plugin, MCP server or GitHub Action and prints one JSON
-verdict. It never executes anything from the candidate: it reads files as bytes, runs only
-the scanners named on its command line (when they are on PATH) and git, and treats every
-byte of the candidate and of scanner output as data, never instructions.
+Reads a local checkout of a skill, plugin, MCP server, GitHub Action or set of model weights and
+prints one JSON verdict. It never executes anything from the candidate: it reads files as bytes
+(a pickle is parsed opcode by opcode with pickletools, never loaded), runs only the scanners
+named on its command line (when they are on PATH) and git, and treats every byte of the
+candidate and of scanner output as data, never instructions.
 
-  trust_vet.py vet   <dir> [--kind auto|skill|plugin|mcp|action] [--sha SHA]
-                           [--max-bytes N] [--run-scanners] [--scanners a,b] [--out-dir DIR]
-  trust_vet.py revet <dir> --from SHA --to SHA [--max-bytes N]
+  trust_vet.py vet     <dir> [--kind auto|skill|plugin|mcp|action|weights] [--sha SHA]
+                             [--max-bytes N] [--run-scanners] [--scanners a,b] [--out-dir DIR]
+                             [--reader NAME=clean|hits:N] [--allow-global module.name]
+  trust_vet.py revet   <dir> --from SHA --to SHA [--max-bytes N]
+  trust_vet.py licence [--civitai-json F | --civitai-id N] [--hf-json F | --hf-repo ORG/NAME]
+                       [--text FILE]...
 
 Output (stdout, JSON):
   {mode, verdict: PASS|CONDITIONAL|HOLD|FAIL, kind, sha, tree, coverage[{file, bytes, class,
-   executable, read_by[], status}], findings[{rule, severity, file, line, note}],
+   executable, read_by[], status, tracked}], findings[{rule, severity, file, line, note}],
    scanners[{name, status, exit, hits}], terms[], reasons[]}
+  licence: {mode, question, verdict, commercial: yes|no|disputed|unknown, sources[], findings[],
+   terms[], reasons[]}
 
-Exit codes: 0 PASS · 1 CONDITIONAL, HOLD or FAIL · 3 NOT-RUN (no readable candidate) · 4 crash.
+Exit codes: 0 PASS · 1 CONDITIONAL, HOLD or FAIL · 2 bad id · 3 NOT-RUN (nothing to read) · 4 crash.
+The licence mode's --civitai-id and --hf-repo read the public Civitai and Hugging Face model APIs
+(read-only GET, no token, nothing from the candidate is sent); every other mode stays offline.
 Findings name a rule, a file and a line number. They never quote the matched line, so a
 credential in a hook never reaches the report (secrets are shieldwarden's job).
 """
@@ -24,15 +32,19 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import pickletools
 import re
 import shutil
+import struct
 import subprocess
 import sys
 import sysconfig
 import tempfile
+import urllib.request
+import zipfile
 from pathlib import Path
 
-VERSION = "0.1.0"
+VERSION = "0.2.0"
 DEFAULT_MAX_BYTES = 1_000_000  # skillspector's per-file analysis cap (MAX_FILE_BYTES, 1 MB)
 SEVERITY_RANK = {"note": 0, "conditional": 1, "hold": 2, "fail": 3}
 VERDICT_FOR = {0: "PASS", 1: "CONDITIONAL", 2: "HOLD", 3: "FAIL"}
@@ -63,9 +75,13 @@ SCANNERS = {
 # A PASS needs one of these to agree (owner Q36). skillspector is one option; cisco skill-scanner is
 # run by hand and recorded with --reader. The skill installs none of them. Sentry's skill-scanner
 # (K4 C4) counts for skills only when its pattern script ran clean; the user vets it first.
+# Model weights (observation 0428): fickling, modelscan and picklescan are run by hand and recorded
+# with --reader; the skill installs none of them.
+WEIGHTS_READERS = {"fickling", "modelscan", "picklescan"}
 EXPECTED_SECOND_READER = {"skill": {"skillspector", "cisco-skill-scanner", "sentry-skill-scanner"},
                           "plugin": {"skillspector", "cisco-skill-scanner"},
-                          "mcp": {"skillspector"}, "action": {"zizmor", "pinact"}}
+                          "mcp": {"skillspector"}, "action": {"zizmor", "pinact"},
+                          "weights": WEIGHTS_READERS}
 READER_ARG = re.compile(r"^([a-z0-9][a-z0-9._-]*)=(clean|hits(?::(\d+))?)$")
 
 NETWORK = re.compile(r"\b(curl|wget|Invoke-WebRequest|Invoke-RestMethod|iwr|irm|nc|ncat|"
@@ -101,6 +117,139 @@ COMMENT_LINE = re.compile(r"^\s*(?:#|//|/?\*|--|rem\b|::)", re.I)
 INTERNAL_NOTE = ("internal — vet further for onward leakage: name what listens on that port and "
                  "whether it forwards data out")
 
+# ---- model weights (observation 0428) --------------------------------------------------------
+# A pickle runs code when it is loaded: every global it imports is called or built by the loader.
+# The scan reads opcodes with pickletools and never loads the file. safetensors and GGUF hold
+# tensors and metadata only, so they are non-executable once their header checks out.
+PICKLE_EXT = {".pkl", ".pickle"}
+TORCH_EXT = {".pt", ".pth", ".ckpt", ".bin"}  # .bin counts only when it is a torch zip
+SAFE_WEIGHT_EXT = {".safetensors", ".gguf"}
+SAFETENSORS_HEADER_MAX = 100_000_000
+MAX_PICKLE_STREAMS = 16
+_TORCH_DTYPES = {"float16", "float32", "float64", "bfloat16", "half", "float", "double", "int8",
+                 "int16", "int32", "int64", "uint8", "bool", "long", "int", "short", "complex64",
+                 "complex128", "float8_e4m3fn", "float8_e5m2"}
+_TORCH_STORAGES = {f"{t}Storage" for t in ("Float", "Half", "BFloat16", "Double", "Long", "Int", "Short",
+                                           "Char", "Byte", "Bool", "ComplexFloat", "ComplexDouble",
+                                           "Untyped")}
+_TORCH_REBUILD = {"_rebuild_tensor", "_rebuild_tensor_v2", "_rebuild_tensor_v3", "_rebuild_parameter",
+                  "_rebuild_parameter_with_state", "_rebuild_qtensor", "_rebuild_sparse_tensor",
+                  "_rebuild_device_tensor_from_numpy", "_rebuild_meta_tensor_no_storage",
+                  "_rebuild_wrapper_subclass"}
+_NUMPY_MULTIARRAY = {"_reconstruct", "scalar"}
+# The tensor, numpy and collections allow-list. Anything else holds until a reader names it.
+SAFE_GLOBALS = {
+    "collections": {"OrderedDict"},
+    "torch": _TORCH_STORAGES | _TORCH_DTYPES | {"Size", "device"},
+    "torch._utils": _TORCH_REBUILD,
+    "numpy": {"ndarray", "dtype"},
+    "numpy.core.multiarray": _NUMPY_MULTIARRAY,
+    "numpy._core.multiarray": _NUMPY_MULTIARRAY,
+    "_codecs": {"encode"},
+    "builtins": {"set", "frozenset", "slice", "complex", "bytearray", "object"},
+    "__builtin__": {"set", "frozenset", "slice", "complex", "bytearray", "object"},
+    "copyreg": {"_reconstructor"},
+    "copy_reg": {"_reconstructor"},
+}
+# A global from one of these packages, or a builtin from the second set, runs code on load: FAIL.
+DANGEROUS_MODULES = {"os", "posix", "nt", "subprocess", "sys", "socket", "shutil", "runpy", "importlib",
+                     "pty", "webbrowser", "ctypes", "multiprocessing", "code", "codeop", "pickle", "_pickle",
+                     "marshal", "types", "asyncio", "http", "urllib", "requests", "platform", "signal",
+                     "pdb", "bdb", "io", "_io", "pathlib", "glob", "ftplib", "smtplib", "telnetlib",
+                     "threading", "_thread", "operator", "_operator"}
+DANGEROUS_BUILTINS = {"eval", "exec", "execfile", "compile", "open", "__import__", "getattr", "setattr",
+                      "delattr", "globals", "locals", "vars", "input", "breakpoint", "apply"}
+_STRING_OPS = {"STRING", "BINSTRING", "SHORT_BINSTRING", "UNICODE", "BINUNICODE", "SHORT_BINUNICODE",
+               "BINUNICODE8"}
+_IDENT = re.compile(r"^[A-Za-z_][\w.]{0,99}$")
+_MARK = object()
+
+
+def _shown(module: str, name: str) -> str:
+    """A global's name for the report. Candidate-controlled text, so only identifiers are shown."""
+    return f"{module}.{name}" if _IDENT.match(module or "") and _IDENT.match(name or "") \
+        else "<non-identifier name>"
+
+
+def classify_global(module: str, name: str, allow: set[str]) -> str:
+    """'dangerous', 'safe', 'allowed' (by the user's --allow-global) or 'unknown'."""
+    if module.split(".")[0] in DANGEROUS_MODULES or \
+            (module in ("builtins", "__builtin__") and name in DANGEROUS_BUILTINS):
+        return "dangerous"
+    if name in SAFE_GLOBALS.get(module, ()) or (module == "numpy.dtypes" and name.endswith("DType")):
+        return "safe"
+    if f"{module}.{name}" in allow:
+        return "allowed"
+    return "unknown"
+
+
+def pickle_globals(fobj) -> tuple[list[tuple[str, str]], int]:
+    """Every global a pickle stream sequence would import, and how many could not be resolved.
+
+    Simulates only the stack shape (strings and marks), enough to resolve STACK_GLOBAL arguments
+    that were pushed, memoized and fetched back. Never constructs an object. Raises ValueError
+    when the bytes are not consecutive pickle streams to the end (trailing data, a bad opcode).
+    """
+    found: list[tuple[str, str]] = []
+    unresolved = 0
+    for _ in range(MAX_PICKLE_STREAMS):
+        stack: list = []
+        memo: dict = {}
+        try:
+            for op, arg, _pos in pickletools.genops(fobj):
+                name = op.name
+                if name in ("MEMOIZE", "PUT", "BINPUT", "LONG_BINPUT"):
+                    if not stack:
+                        raise ValueError("memo of an empty stack")
+                    memo[len(memo) if name == "MEMOIZE" else arg] = stack[-1]
+                    continue
+                if name in ("GET", "BINGET", "LONG_BINGET"):
+                    stack.append(memo.get(arg))
+                    continue
+                if name == "DUP":
+                    if not stack:
+                        raise ValueError("DUP of an empty stack")
+                    stack.append(stack[-1])
+                    continue
+                if name == "MARK":
+                    stack.append(_MARK)
+                    continue
+                top_two = stack[-2:]
+                before = op.stack_before
+                if pickletools.markobject in before:
+                    while stack and stack[-1] is not _MARK:
+                        stack.pop()
+                    if not stack:
+                        raise ValueError("no mark on the stack")
+                    stack.pop()
+                    pops = before.index(pickletools.markobject)
+                else:
+                    pops = len(before)
+                if pops > len(stack):
+                    raise ValueError("stack underflow")
+                del stack[len(stack) - pops:]
+                if name in ("GLOBAL", "INST"):
+                    module, _, attr = str(arg).partition(" ")
+                    found.append((module, attr))
+                elif name == "STACK_GLOBAL":
+                    if len(top_two) == 2 and all(isinstance(x, str) for x in top_two):
+                        found.append((top_two[0], top_two[1]))
+                    else:
+                        unresolved += 1
+                elif name in ("EXT1", "EXT2", "EXT4"):
+                    unresolved += 1
+                if name in _STRING_OPS:
+                    stack.append(arg if isinstance(arg, str) else None)
+                else:
+                    stack.extend(None for _ in op.stack_after)
+        except (EOFError, struct.error, UnicodeDecodeError, IndexError) as exc:
+            raise ValueError(type(exc).__name__) from None
+        here = fobj.tell()
+        if not fobj.read(1):
+            return found, unresolved
+        fobj.seek(here)
+    raise ValueError("more pickle streams than the scan reads")
+
 
 def is_loopback(host: str) -> bool:
     h = host.strip("[]").lower()
@@ -127,12 +276,16 @@ def net_classes(text: str) -> dict[str, int]:
 
 
 class Vet:
-    def __init__(self, root: Path, max_bytes: int):
+    def __init__(self, root: Path, max_bytes: int, allow_globals: list[str] | None = None):
         self.root = root
         self.max_bytes = max_bytes
         self.coverage: list[dict] = []
         self.findings: list[dict] = []
         self.texts: dict[str, str] = {}
+        self.allow = set(allow_globals or [])
+        self.allowed_used: set[str] = set()
+        self.weights: list[str] = []   # every weight file, any format
+        self.pickles: list[str] = []   # pickle-format weights read by the opcode scan
 
     # ---- inventory -------------------------------------------------------------------
     def walk(self) -> None:
@@ -160,6 +313,12 @@ class Vet:
         size = p.stat().st_size
         ext = p.suffix.lower()
         in_bin = rel.split("/")[0] == "bin"
+        # Weights come first: they are read by format at any size, never by the text cap.
+        if ext in SAFE_WEIGHT_EXT:
+            self._safe_weight(p, rel, size, ext)
+            return
+        if (ext in PICKLE_EXT or ext in TORCH_EXT) and self._pickle_weight(p, rel, size, ext):
+            return
         if ext in BYTECODE_EXT or ext in ARCHIVE_EXT:
             cls = "bytecode" if ext in BYTECODE_EXT else "archive"
             self._row(rel, size, cls, True, [], "UNREAD")
@@ -184,7 +343,115 @@ class Vet:
 
     def _row(self, rel, size, cls, executable, read_by, status):
         self.coverage.append({"file": rel, "bytes": size, "class": cls, "executable": executable,
-                              "read_by": list(read_by), "status": status})
+                              "read_by": list(read_by), "status": status, "tracked": None})
+
+    # ---- weights ---------------------------------------------------------------------
+    def _safe_weight(self, p: Path, rel: str, size: int, ext: str) -> None:
+        """safetensors (u64 header length + JSON header) or GGUF (magic): non-executable once the
+        header checks out. A file that only wears the name is UNREAD binary and holds."""
+        ok = False
+        with p.open("rb") as f:
+            head = f.read(8)
+            if ext == ".gguf":
+                ok = head[:4] == b"GGUF"
+            elif len(head) == 8:
+                n = struct.unpack("<Q", head)[0]
+                if 2 <= n <= SAFETENSORS_HEADER_MAX and 8 + n <= size:
+                    try:
+                        ok = isinstance(json.loads(f.read(n).decode("utf-8")), dict)
+                    except (ValueError, UnicodeDecodeError):
+                        ok = False
+        self.weights.append(rel)
+        if ok:
+            self._row(rel, size, "weights", False, ["trust_vet"], "READ")
+            return
+        self._row(rel, size, "binary", True, [], "UNREAD")
+        self.add("weights-bad-header", "hold", rel, None,
+                 f"named {ext} but its header does not parse as one: treat it as unknown binary")
+
+    def _pickle_weight(self, p: Path, rel: str, size: int, ext: str) -> bool:
+        """Raw pickles and torch files (zip with inner .pkl members, or a legacy raw pickle).
+        Returns False for a .bin that is no torch zip, so it stays ordinary bytecode."""
+        streams: dict[str, tuple[list, int]] = {}
+        code: list[str] = []
+        try:
+            if zipfile.is_zipfile(p):
+                with zipfile.ZipFile(p) as z:
+                    names = z.namelist()
+                    inner = [n for n in names if n.endswith(".pkl")]
+                    if not inner:
+                        if ext == ".bin":
+                            return False
+                        self._row(rel, size, "archive", True, [], "UNREAD")
+                        self.weights.append(rel)
+                        self.add("pickle-unparsed", "hold", rel, None,
+                                 "a zip with no pickle inside: not a torch file, read nothing")
+                        return True
+                    code = [n for n in names if n.endswith(".py") or "/code/" in f"/{n}"]
+                    for n in inner:
+                        with z.open(n) as f:
+                            streams[n] = pickle_globals(f)
+            elif ext == ".bin":
+                return False
+            else:
+                with p.open("rb") as f:
+                    streams[""] = pickle_globals(f)
+        except (ValueError, OSError, zipfile.BadZipFile, RuntimeError, NotImplementedError) as exc:
+            self.weights.append(rel)
+            self._row(rel, size, "weights-pickle", True, [], "UNREAD")
+            self.add("pickle-unparsed", "hold", rel, None,
+                     f"the opcode scan could not read it to the end ({type(exc).__name__}): trailing data, "
+                     "a legacy torch layout or a damaged file; read it with a weights scanner")
+            return True
+        self.weights.append(rel)
+        self.pickles.append(rel)
+        self._row(rel, size, "weights-pickle", True, ["trust_vet"], "READ")
+        if code:
+            self.add("torchscript-code", "hold", rel, None,
+                     f"{len(code)} TorchScript code member(s) inside: torch.jit.load runs them; read each")
+        bad: dict[str, set[str]] = {"dangerous": set(), "unknown": set()}
+        unresolved = 0
+        for member, (found, unres) in streams.items():
+            where = f" (member {member})" if member else ""
+            unresolved += unres
+            for module, name in found:
+                cls = classify_global(module, name, self.allow)
+                if cls == "allowed":
+                    self.allowed_used.add(f"{module}.{name}")
+                elif cls in bad:
+                    bad[cls].add(_shown(module, name) + where)
+        if bad["dangerous"]:
+            self.add("pickle-dangerous-global", "fail", rel, None,
+                     "loading it imports " + ", ".join(sorted(bad["dangerous"]))
+                     + ": a pickle that reaches these runs code on load")
+        if bad["unknown"]:
+            self.add("pickle-global-unknown", "hold", rel, None,
+                     "imports outside the tensor, numpy and collections allow-list: "
+                     + ", ".join(sorted(bad["unknown"]))
+                     + "; read what each does, then allow it by name with --allow-global or refuse it")
+        if unresolved:
+            self.add("pickle-global-unresolved", "hold", rel, None,
+                     f"{unresolved} import(s) built at load time that the scan cannot name")
+        return True
+
+    # ---- tracked versus generated ----------------------------------------------------
+    def mark_tracked(self) -> None:
+        """0428 point 2: split rows by `git ls-files`. An untracked .pyc whose source .py is tracked
+        was compiled on this host, is not in the SHA, and becomes GENERATED (out of the verdict).
+        Every other untracked row keeps its status; decide() names it as not in the SHA."""
+        if _git(self.root, "rev-parse", "--is-inside-work-tree") != "true":
+            return
+        listed = _git(self.root, "ls-files", "-z")
+        tracked = {t for t in (listed or "").split("\0") if t}
+        for c in self.coverage:
+            c["tracked"] = c["file"] in tracked
+            if c["tracked"] or c["status"] != "UNREAD" or not c["file"].endswith((".pyc", ".pyo")):
+                continue
+            parts = c["file"].split("/")
+            stem = parts[-1].split(".")[0]
+            folder = parts[:-2] if len(parts) > 1 and parts[-2] == "__pycache__" else parts[:-1]
+            if "/".join([*folder, stem + ".py"]) in tracked:
+                c["status"] = "GENERATED"
 
     def add(self, rule, severity, file, line, note):
         self.findings.append({"rule": rule, "severity": severity, "file": file, "line": line,
@@ -200,6 +467,9 @@ class Vet:
         if (self.root / "action.yml").is_file() or (self.root / "action.yaml").is_file() or \
            (self.root / ".github" / "workflows").is_dir() and not (self.root / ".mcp.json").is_file():
             return "action"
+        if self.weights and not (self.root / ".mcp.json").is_file() and \
+                not any(c["class"] == "script" for c in self.coverage):
+            return "weights"
         return "mcp"
 
     def rules(self, kind: str) -> list[str]:
@@ -274,6 +544,11 @@ class Vet:
                     self.add("licence-restricts", "note", rel, None,
                              "licence limits use or derivatives: adopt ideas only, fold in no code")
         self._lockfiles()
+        if self.weights:
+            self.add("weights-licence", "note", None, None,
+                     f"{len(self.weights)} weight file(s): the repo licence does not settle the weights' "
+                     "licence; run trust_vet.py licence per weight (Civitai and Hugging Face fields, "
+                     "upstream licence text)")
         if not any(c["file"].rsplit("/", 1)[-1].upper().startswith(("LICENSE", "LICENCE", "COPYING"))
                    for c in self.coverage):
             self.add("no-licence", "note", None, None,
@@ -553,6 +828,24 @@ def decide(vet: Vet, kind: str, sha: str | None, scanners: list[dict], unpinned:
     if unread_exec:
         worst = max(worst, SEVERITY_RANK["hold"])
         reasons.append(f"{len(unread_exec)} executable, bytecode, archive or oversized file(s) UNREAD")
+        untracked = [c["file"] for c in vet.coverage if c["status"] == "UNREAD" and c["executable"]
+                     and c["tracked"] is False]
+        if untracked:
+            reasons.append(f"{len(untracked)} of the UNREAD file(s) are untracked, so not in the SHA (made "
+                           "or downloaded on this host): vet each as its own candidate or remove it")
+    generated = [c["file"] for c in vet.coverage if c["status"] == "GENERATED"]
+    if generated:
+        reasons.append(f"{len(generated)} generated file(s) left out of the verdict: untracked bytecode "
+                       "compiled from a tracked source, not in the SHA; remove them before install")
+    ran_clean_now = {s["name"] for s in scanners if s["status"] == "RUN" and s["hits"] == 0}
+    if vet.pickles and kind != "weights" and not (ran_clean_now & WEIGHTS_READERS):
+        worst = max(worst, SEVERITY_RANK["conditional"])
+        reasons.append(f"{len(vet.pickles)} pickle file(s) read by trust_vet's opcode scan alone: no weights "
+                       "reader agreed (" + ", ".join(sorted(WEIGHTS_READERS)) + "; record a hand run "
+                       "with --reader)")
+    if vet.allowed_used:
+        reasons.append("pickle imports allowed by --allow-global, the user's call and not a reader's: "
+                       + ", ".join(sorted(vet.allowed_used)))
     if unread_media:
         worst = max(worst, SEVERITY_RANK["conditional"])
         reasons.append(f"{len(unread_media)} media file(s) UNREAD")
@@ -619,6 +912,12 @@ def build_terms(vet: Vet, kind: str, sha: str, unpinned: list[str], scanners: li
         terms.append(f"pin-action: replace {ref} with its commit SHA (pinact supplies it)")
     if "licence-restricts" in rules or "no-licence" in rules:
         terms.append("licence: adopt ideas only; fold in no code")
+    if "weights-licence" in rules:
+        terms.append("licence-per-weight: run trust_vet.py licence for each weight before use; the repo "
+                     "licence covers the code, not the weights")
+    if vet.pickles:
+        terms.append("pickle-load: load pickle weights with torch.load(weights_only=True) or convert them "
+                     "to safetensors; a full unpickle runs whatever the file imports")
     for s in scanners:
         if s["status"] != "RUN":
             terms.append(f"not-run: {s['name']} did not run; the verdict rests on the readers that did")
@@ -626,7 +925,8 @@ def build_terms(vet: Vet, kind: str, sha: str, unpinned: list[str], scanners: li
 
 
 def vet_dir(root: Path, kind: str, sha: str | None, max_bytes: int, scanner_names: list[str],
-            run_scanners: bool, out_dir: Path | None, readers: list[str] | None = None) -> dict:
+            run_scanners: bool, out_dir: Path | None, readers: list[str] | None = None,
+            allow_globals: list[str] | None = None) -> dict:
     hand = []
     for spec in readers or []:
         m = READER_ARG.match(spec.strip())
@@ -635,8 +935,12 @@ def vet_dir(root: Path, kind: str, sha: str | None, max_bytes: int, scanner_name
         hits = 0 if m.group(2) == "clean" else int(m.group(3) or 1)
         hand.append({"name": m.group(1), "status": "RUN", "exit": None, "hits": hits,
                      "note": "run by hand by the user; result recorded with --reader"})
-    vet = Vet(root, max_bytes)
+    for spec in allow_globals or []:
+        if not re.fullmatch(r"[A-Za-z_][\w.]*\.[A-Za-z_]\w*", spec):
+            raise ValueError("--allow-global takes module.name")
+    vet = Vet(root, max_bytes, allow_globals)
     vet.walk()
+    vet.mark_tracked()
     kind = vet.detect_kind() if kind == "auto" else kind
     unpinned = vet.rules(kind)
     sha = sha or _git(root, "rev-parse", "HEAD")
@@ -697,12 +1001,198 @@ def revet(root: Path, old: str, new: str, max_bytes: int) -> dict:
             "terms": terms}
 
 
+# ---- licence per weight (observation 0428 point 3) ------------------------------------------
+# The commercial question lives in the model card, not the code repo's LICENSE. Two sources that
+# disagree hold the verdict; a reader settles it from the licence text.
+CIVITAI_API = "https://civitai.com/api/v1/models/"
+HF_API = "https://huggingface.co/api/models/"
+CIVITAI_ID = re.compile(r"^\d{1,12}$")
+HF_REPO = re.compile(r"^[A-Za-z0-9][\w.-]{0,95}/[A-Za-z0-9][\w.-]{0,95}$")
+HF_PERMISSIVE = {"apache-2.0", "mit", "bsd", "bsd-2-clause", "bsd-3-clause", "bsd-3-clause-clear",
+                 "cc0-1.0", "unlicense", "isc", "zlib", "mpl-2.0", "artistic-2.0", "afl-3.0", "wtfpl",
+                 "bsl-1.0", "ecl-2.0", "gpl-2.0", "gpl-3.0", "lgpl-2.1", "lgpl-3.0", "agpl-3.0",
+                 "cc-by-2.0", "cc-by-2.5", "cc-by-3.0", "cc-by-4.0", "cc-by-sa-3.0", "cc-by-sa-4.0"}
+HF_USE_RESTRICTED = ("openrail", "rail", "llama", "gemma")
+NONCOMMERCIAL = re.compile(r"(?i)non-?commercial|research[- ](?:purposes? )?only|not (?:be used )?for "
+                           r"commercial")
+REVENUE = re.compile(r"(?i)\brevenue\b[^\n]{0,160}?[$€£]\s?\d|[$€£]\s?\d[\d,.]*\s*(?:k|m|mm|million|b|bn|"
+                     r"billion)?\b[^\n]{0,160}?\brevenue\b|monthly active users")
+MAX_API_BYTES = 5_000_000
+
+
+def fetch_json(url: str) -> dict:
+    """One read-only GET of a public model API. Sends no token and nothing from the candidate."""
+    req = urllib.request.Request(url, headers={"Accept": "application/json",
+                                               "User-Agent": f"trust_vet/{VERSION}"})
+    with urllib.request.urlopen(req, timeout=30) as r:  # noqa: S310 - fixed https hosts only
+        data = json.loads(r.read(MAX_API_BYTES).decode("utf-8"))
+    return data if isinstance(data, dict) else {}
+
+
+def _civitai_source(data: dict) -> dict:
+    acu = data.get("allowCommercialUse")
+    src = {"source": "civitai", "commercial": "unknown", "rights": None, "credit_required": False,
+           "restrictions": []}
+    if isinstance(acu, str):
+        rights = [] if acu in ("", "None") else [acu]
+    elif isinstance(acu, list):
+        rights = [str(x) for x in acu if str(x) not in ("", "None")]
+    else:
+        src["note"] = "allowCommercialUse missing"
+        return src
+    src.update(rights=rights, commercial="yes" if rights else "no")
+    src["credit_required"] = data.get("allowNoCredit") is False
+    if data.get("allowDerivatives") is False:
+        src["restrictions"].append("no derivatives (merges or fine-tunes)")
+    if data.get("allowDifferentLicense") is False:
+        src["restrictions"].append("a derivative must keep this licence")
+    return src
+
+
+def _hf_source(data: dict) -> dict:
+    card = data.get("cardData") if isinstance(data.get("cardData"), dict) else {}
+    lic = card.get("license")
+    if isinstance(lic, list):
+        lic = lic[0] if lic else None
+    if not lic:
+        lic = next((t.split(":", 1)[1] for t in data.get("tags", []) if isinstance(t, str)
+                    and t.startswith("license:")), None)
+    lic = str(lic or "").strip().lower()
+    name = str(card.get("license_name") or "")
+    src = {"source": "huggingface", "license": lic or None, "commercial": "unknown",
+           "credit_required": False, "restrictions": []}
+    if not lic:
+        src["note"] = "no licence in cardData or tags"
+    elif re.search(r"(^|-)nc(-|$)", lic) or NONCOMMERCIAL.search(lic) or NONCOMMERCIAL.search(name):
+        src["commercial"] = "no"
+    elif lic in HF_PERMISSIVE:
+        src["commercial"] = "yes"
+        src["credit_required"] = lic.startswith("cc-by")
+    elif any(k in lic for k in HF_USE_RESTRICTED):
+        src["commercial"] = "yes"
+        src["restrictions"].append(f"{lic}: commercial use under a use policy; read its restrictions")
+    else:
+        src["note"] = (f"licence id {lic!r} is not a known one" if lic != "other"
+                       else "licence 'other': read license_name and license_link")
+    return src
+
+
+def _text_source(rel: str, text: str) -> tuple[dict, list[dict]]:
+    """Upstream licence text: a no when it limits use to non-commercial, else no ruling of its own."""
+    findings = []
+    src = {"source": f"text:{rel}", "commercial": None, "credit_required": False, "restrictions": []}
+    for i, line in enumerate(text.splitlines(), 1):
+        if NONCOMMERCIAL.search(line) and src["commercial"] is None:
+            src["commercial"] = "no"
+            findings.append({"rule": "licence-no-commercial", "severity": "fail", "file": rel, "line": i,
+                             "note": "the licence text limits use to non-commercial"})
+        if REVENUE.search(line):
+            src["restrictions"].append("revenue or user threshold")
+            findings.append({"rule": "licence-revenue-threshold", "severity": "conditional", "file": rel,
+                             "line": i, "note": "commercial use depends on a revenue or user threshold: "
+                                               "read the clause"})
+        if LICENCE_LIMITS.search(line):
+            findings.append({"rule": "licence-restricts", "severity": "conditional", "file": rel, "line": i,
+                             "note": "source-available or restricted terms: read the clause"})
+    return src, findings
+
+
+def licence_check(civitai: dict | None, hf: dict | None, texts: list[tuple[str, str]]) -> dict:
+    """The commercial-use verdict for one weight from its model cards and licence text."""
+    sources, findings = [], []
+    if civitai is not None:
+        sources.append(_civitai_source(civitai))
+    if hf is not None:
+        sources.append(_hf_source(hf))
+    for rel, text in texts:
+        src, f = _text_source(rel, text)
+        sources.append(src)
+        findings.extend(f)
+    rulings = {s["commercial"] for s in sources if s["commercial"] is not None}
+    reasons, terms = [], []
+    for s in sources:
+        if s["commercial"] == "unknown":
+            findings.append({"rule": "licence-unknown", "severity": "hold", "file": None, "line": None,
+                             "note": f"{s['source']}: " + s.get("note", "commercial use not stated")})
+    if {"yes", "no"} <= rulings:
+        commercial = "disputed"
+        findings.append({"rule": "licence-sources-disagree", "severity": "hold", "file": None, "line": None,
+                         "note": "the sources disagree on commercial use: "
+                                 + ", ".join(f"{s['source']}={s['commercial']}" for s in sources
+                                             if s["commercial"] in ("yes", "no"))})
+    elif "unknown" in rulings or not rulings:
+        commercial = "unknown"
+    else:
+        commercial = rulings.pop()
+    if commercial == "no":
+        findings.append({"rule": "licence-no-commercial", "severity": "fail", "file": None, "line": None,
+                         "note": "every source that rules says no commercial use"})
+    if commercial == "yes":
+        if any(s["credit_required"] for s in sources):
+            findings.append({"rule": "licence-credit", "severity": "conditional", "file": None, "line": None,
+                             "note": "the licence requires credit to the creator"})
+            terms.append("credit: credit the creator wherever the weight or its output is published")
+        restricted = sorted({r for s in sources for r in s["restrictions"]})
+        if restricted:
+            findings.append({"rule": "licence-use-restrictions", "severity": "conditional", "file": None,
+                             "line": None, "note": "; ".join(restricted)})
+            terms.append("use-restrictions: " + "; ".join(restricted))
+    worst = max((SEVERITY_RANK[f["severity"]] for f in findings), default=0)
+    if commercial == "disputed":  # a reader settles it from the text: never FAIL on one source's no
+        worst = SEVERITY_RANK["hold"]
+    elif commercial == "unknown":
+        worst = max(worst, SEVERITY_RANK["hold"])
+    verdict = VERDICT_FOR[worst]
+    if verdict in ("PASS", "CONDITIONAL"):
+        terms.insert(0, "record: each source, its value and the date read; a licence is a dated claim")
+    else:
+        terms = []
+    reasons.append(f"commercial use: {commercial}")
+    return {"mode": "licence", "version": VERSION, "question": "commercial use", "verdict": verdict,
+            "commercial": commercial, "sources": sources, "findings": findings, "terms": terms,
+            "reasons": reasons}
+
+
+def _licence_main(a) -> int:
+    if (a.civitai_json and a.civitai_id) or (a.hf_json and a.hf_repo):
+        print(json.dumps({"mode": "licence", "verdict": "NOT-RUN",
+                          "reasons": ["give a saved JSON or an id for each source, not both"]}))
+        return 2
+    if a.civitai_id and not CIVITAI_ID.match(a.civitai_id) or \
+            a.hf_repo and (not HF_REPO.match(a.hf_repo) or ".." in a.hf_repo):
+        print(json.dumps({"mode": "licence", "verdict": "NOT-RUN",
+                          "reasons": ["a Civitai id is digits; a Hugging Face repo is owner/name"]}))
+        return 2
+    notes: list[str] = []
+
+    def load(path, url):
+        if path:
+            return json.loads(Path(path).read_text(encoding="utf-8"))
+        if url:
+            try:
+                return fetch_json(url)
+            except Exception as exc:  # a failed read is an unknown source, never a crash
+                notes.append(f"could not read {url}: {type(exc).__name__}")
+                return {}
+        return None
+    civitai = load(a.civitai_json, a.civitai_id and CIVITAI_API + a.civitai_id)
+    hf = load(a.hf_json, a.hf_repo and HF_API + a.hf_repo)
+    texts = [(Path(t).name, Path(t).read_text(encoding="utf-8", errors="replace")) for t in a.text]
+    if civitai is None and hf is None and not texts:
+        print(json.dumps({"mode": "licence", "verdict": "NOT-RUN", "reasons": ["no licence source given"]}))
+        return 3
+    res = licence_check(civitai, hf, texts)
+    res["reasons"].extend(notes)
+    print(json.dumps(res, indent=2))
+    return 0 if res["verdict"] == "PASS" else 1
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="Pre-install vet of a third-party candidate (read-only).")
     sub = ap.add_subparsers(dest="mode", required=True)
     v = sub.add_parser("vet")
     v.add_argument("path")
-    v.add_argument("--kind", default="auto", choices=["auto", "skill", "plugin", "mcp", "action"])
+    v.add_argument("--kind", default="auto", choices=["auto", "skill", "plugin", "mcp", "action", "weights"])
     v.add_argument("--sha")
     v.add_argument("--max-bytes", type=int, default=DEFAULT_MAX_BYTES)
     v.add_argument("--run-scanners", action="store_true")
@@ -710,12 +1200,27 @@ def main(argv: list[str] | None = None) -> int:
     v.add_argument("--out-dir")
     v.add_argument("--reader", action="append", default=[],
                    help="a second scanner the user ran by hand: NAME=clean or NAME=hits[:N] (repeatable)")
+    v.add_argument("--allow-global", action="append", default=[],
+                   help="a pickle import the user has read and accepts: module.name (repeatable); "
+                        "never clears a dangerous one")
     r = sub.add_parser("revet")
     r.add_argument("path")
     r.add_argument("--from", dest="old", required=True)
     r.add_argument("--to", dest="new", required=True)
     r.add_argument("--max-bytes", type=int, default=DEFAULT_MAX_BYTES)
+    lc = sub.add_parser("licence", help="commercial-use verdict for one weight from its model cards")
+    lc.add_argument("--civitai-json", help="a saved Civitai /api/v1/models/<id> response")
+    lc.add_argument("--civitai-id", help="read the public Civitai model API for this id")
+    lc.add_argument("--hf-json", help="a saved Hugging Face /api/models/<repo> response")
+    lc.add_argument("--hf-repo", help="read the public Hugging Face model API for owner/name")
+    lc.add_argument("--text", action="append", default=[], help="an upstream licence text file (repeatable)")
     a = ap.parse_args(argv)
+    if a.mode == "licence":
+        try:
+            return _licence_main(a)
+        except Exception as exc:  # report the crash class only
+            print(json.dumps({"mode": "licence", "verdict": "NOT-RUN", "reasons": [f"crash: {type(exc).__name__}"]}))
+            return 4
     root = Path(a.path).resolve()
     if not root.is_dir():
         print(json.dumps({"mode": a.mode, "verdict": "NOT-RUN",
@@ -727,7 +1232,8 @@ def main(argv: list[str] | None = None) -> int:
             out_dir = Path(a.out_dir).resolve() if a.out_dir else None
             if out_dir:
                 out_dir.mkdir(parents=True, exist_ok=True)
-            res = vet_dir(root, a.kind, a.sha, a.max_bytes, names, a.run_scanners, out_dir, a.reader)
+            res = vet_dir(root, a.kind, a.sha, a.max_bytes, names, a.run_scanners, out_dir, a.reader,
+                          a.allow_global)
         else:
             res = revet(root, a.old, a.new, a.max_bytes)
     except Exception as exc:  # report the crash class only; never a traceback with candidate text
