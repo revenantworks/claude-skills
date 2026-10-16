@@ -13,7 +13,7 @@ Summary · Modes: watch, nudge, guard · What the command hooks read · push_gat
 
 | Hook | Matcher | Blocks | Fail mode | Install mode |
 |---|---|---|---|---|
-| `push_gate.py` | `Bash\|PowerShell` | a `git push` with no live intent, a range larger than the intent, no local-CI stamp for the pushed commit; any force, delete, mirror, `--all` or `--tags` push | closed for anything naming `push` | watch; force, delete, mirror, `--all`, `--tags`, an unreadable push and every shape refusal are hard |
+| `push_gate.py` | `Bash\|PowerShell` (PreToolUse; PostToolUse reports a push that left the remote behind) | a `git push` with no live intent, a HEAD move before the push on one line, a range larger than the intent, no local-CI stamp for the pushed commit; any force, delete, mirror, `--all` or `--tags` push | closed for anything naming `push` | watch; force, delete, mirror, `--all`, `--tags`, an unreadable push and every shape refusal are hard |
 | `hyperv_lock.py` | `Bash\|PowerShell\|Write\|Edit\|MultiEdit\|NotebookEdit` | Hyper-V restore and remove commands outside hypervrunner's one allowed script for each (`teardown.py` for remove, `cleanroom.py` for restore), the owner's `purge --entry`, writing them into any other script, and a run of those scripts that fails the owner's sha256 pin | closed for anything naming a blocked cmdlet or disk file | hard (guard) |
 | `call_cap.py` | `*`, and `SubagentStop` | a subagent's calls past its cap plus grace; logs warn, cap, block and each subagent's end to a local event log | open | watch |
 | `launch_throttle.py` | `Agent\|Task\|Workflow` | a launch in the stop band, or with `parallel_ceiling` 0 | open, with a "not enforced" note | watch |
@@ -126,6 +126,13 @@ flag that hands on a program (`find -exec`, `-execdir`, `-ok`, `rg --pre`, any `
 launcher carries its own flags (`sudo -u root bash x.sh`), or the name is built at run time, the
 position cannot be decided and every runner name on the segment counts, as before.
 
+A named file is read as code only where the line runs it (observation 0414). `expand()` reads a
+quoted word without opening the file it names when the word is only data: an argument to a
+script a shell or interpreter runs, when that script runs none of its arguments or variables
+(a parse-check script given paths after `-Files`), or an item of a PowerShell `foreach … in`
+list on a line that runs no variable. A bash `$VAR` script path set to a literal earlier on the
+same line (`S=./new.sh; bash $S <slug>`) resolves to that file, so it is read, not left unknown.
+
 **Fail closed.** An `-EncodedCommand` that does not decode, or nesting deeper than four levels, is
 blocked by every command hook. So is a script file on disk the hook cannot read (over 8 MB, or
 locked): a shell script refuses in `push_gate`, `hyperv_lock` and `golive_block`; a file an
@@ -209,9 +216,24 @@ three-commit branch on an empty repo (observation 0356). A branch the remote lac
 commit the remote does not hold, the whole branch on an empty remote. When the remote cannot be
 reached the gate falls back to the local tracking ref and says so in the range line. It refuses when no intent is
 live, when the range is larger than `--max`, when `--head` is set and differs, and when
-`ci-pass.json` does not name the exact commit. Force, delete, mirror, `--all` and `--tags` are
+`ci-pass.json` does not name the exact commit. The range is read before the line runs, so a git
+command that can move HEAD or the pushed branch (commit, merge, cherry-pick, am, rebase, pull,
+revert, reset, checkout, switch, update-ref, stash branch) before a push on the same line is
+refused under `push_gate.range`, naming the segment (observation 0407): `git commit -m x; git
+push origin main` once cleared "commits 0" and pushed a commit with no intent or stamp. Commit
+in one call, push in the next. Path forms (`checkout --`, `reset --`) and commands after the
+push do not count, and the hard refusals still fire first. Force, delete, mirror, `--all` and `--tags` are
 refused outright: the owner runs those. `GATEWARDEN_PUSH_NO_INTENT=1` turns the intent check off.
 Files: `<git dir>/gatewarden/push-intent.json` and `ci-pass.json`, per worktree.
+
+**After the push (PostToolUse, observation 0399).** `push_gate.py` also runs after every
+`Bash|PowerShell` call. After a call that pushed, it measures each pushed ref against the
+remote's real tip (the same `ls-remote` span as the pre-push check). A remote still behind is
+reported to Claude as a failed push, `remote did not move`, with the retry and compare commands,
+and to the owner in one line: a push once printed "Everything up-to-date" with two commits
+still ahead. This pass only reads: it asks for no intent or stamp, never refuses, and stays
+silent when the line moved HEAD after the push. `perm_audit.py harden` wires it beside the
+PreToolUse entry.
 
 Pushes are found after unwrapping (see "What the command hooks read"), so `sh -c "git push"` or an
 encoded push is gated like a plain one. Also refused: an inline alias (`git -c alias.x=push x`), a
@@ -589,6 +611,9 @@ gets its own `Edit(<folder>/**)` rule (a Windows path in POSIX form, `//d/rig/ho
   {"matcher": "*", "hooks": [{"type": "command", "command": "python \"<dir>/call_cap.py\"", "timeout": 30}]},
   {"matcher": "Agent|Task|Workflow", "hooks": [{"type": "command", "command": "python \"<dir>/launch_throttle.py\"", "timeout": 30}]},
   {"matcher": "Bash|PowerShell|Read|Write|Edit|MultiEdit|mcp__.*", "hooks": [{"type": "command", "command": "python \"<dir>/golive_block.py\"", "timeout": 30}]}
+ ],
+ "PostToolUse": [
+  {"matcher": "Bash|PowerShell", "hooks": [{"type": "command", "command": "python \"<dir>/push_gate.py\"", "timeout": 30}]}
  ],
  "SubagentStop": [
   {"hooks": [{"type": "command", "command": "python \"<dir>/call_cap.py\"", "timeout": 30}]}

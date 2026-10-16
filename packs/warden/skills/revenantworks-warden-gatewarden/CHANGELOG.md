@@ -2,6 +2,8 @@
 
 ## [1.0.0] — 2026-10-01
 
+2026-10-16 (docs for U18's hook changes): `hooks.md` describes push_gate's PostToolUse pass, which reports `remote did not move` after a push that left the remote behind and is wired by `perm_audit.py harden` (0399); the refusal of a git command that moves HEAD before a push on the same line, under `push_gate.range` (0407); and `hooklib.expand()` reading a quoted data word without opening the file it names unless the line runs it (0414). The summary row and the settings block carry the PostToolUse entry.
+
 2026-10-16 (full observation review, U21): `hook-review.md` gains a warn-mode privacy hook row (0434) and a Changing a rule section: a verdict diff for every loosening (0388), a transcript false-positive sweep and the `*`/`:*` trap for deny rules (0369), and no silent enforcement drop on upgrade (0370); `hooks.md` corrects the call-cap sentence (0371); `loads.md` proves which copy ran (0420); `least-privilege.md` audits routine and task grants (0374, 0386). No hook code changed here; the hook backlog is a separate build brief.
 
 First public release. What Claude and its agents may do with the tools already installed, and what
