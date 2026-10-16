@@ -47,8 +47,16 @@ let a launch through on an older open row, twice): when the launch's brief
 names its unit -- `Unit <id> of run <run-id>` or `You are unit <id>`, read
 from tool_input (prompt first) -- that unit must have its own row with status
 `dispatched`, or the launch is refused (exit 2). A brief that names no unit
-keeps the coarse check. Not covered: a row left `dispatched` by an earlier
-launch of the same unit still passes; the guard keeps no launch history.
+keeps the coarse check. Each cleared launch is recorded (unit, time, a hash
+of its row) in dispatch-launches.json beside the mode flag; a second launch of
+the same unit on a row not re-written since is refused (0425 follow-up).
+
+Hook backlog B4 (2026-10-16; observations 0387, 0416, 0437): a row that writes
+nothing (repo a dash or `none (...)`, files_allowed `none`) is no writer; the
+one-writer check keys on the repo column, never report or expected_artifacts;
+a conflict refuses the units in it by name, not the whole wave; a row whose
+cell count differs from its header's is reported and not read; open means
+`dispatched` or `committed`, exactly.
 
 Extended 2026-08-20 (skillwright pack audit, finding P1-2 / S-3): SKILL.md
 section 6 states two wave-execution caps in prose -- max 6 concurrent units,
@@ -124,6 +132,7 @@ the ledger currency rule, the cell validators, and the real exit codes of all
 four defects against temp fixtures. Stdlib only.
 """
 import csv
+import hashlib
 import io
 import json
 import os
@@ -592,28 +601,57 @@ def concurrent_cap() -> int | None:
 OPEN_STATUSES = {"dispatched", "committed"}
 
 
-def _table_rows(text: str, suffix: str, wanted: tuple) -> list:
+def _column_index(header: list, wanted: tuple) -> dict:
+    """{name: column} for each wanted name: an exact column name first, then the first header cell
+    that holds the name, except that `repo` never matches `report` (observation 0416: the report
+    cell was read as the repo a unit writes)."""
+    idx = {}
+    for name in wanted:
+        exact = [i for i, cell in enumerate(header) if _col_name(cell) == name]
+        if exact:
+            idx[name] = exact[0]
+            continue
+        for i, cell in enumerate(header):
+            if name in cell and not (name == "repo" and "report" in cell):
+                idx[name] = i
+                break
+    return idx
+
+
+def _pipe_cells(line: str) -> list:
+    """A pipe-table line's cells; an escaped pipe (`\\|`) stays inside its cell."""
+    return [c.strip().replace("\\|", "|") for c in re.split(r"(?<!\\)\|", line.strip().strip("|"))]
+
+
+def _table_rows(text: str, suffix: str, wanted: tuple, widths: list | None = None) -> list:
     """Every row of a ledger as a dict keyed by the wanted column names, for
-    whichever of them the header actually has. Parses the same two formats
-    ledger_has_populated_row does (CSV, Markdown pipe table) but returns raw
-    cell values for arbitrary columns -- the wave-cap checks need `repo`,
-    `worktree`, and `status`, none of which that function reads."""
+    whichever of them the header actually has, plus `_raw` (the row as written).
+    Parses the same two formats ledger_has_populated_row does (CSV, Markdown
+    pipe table) but returns raw cell values for arbitrary columns -- the
+    wave-cap checks need `repo`, `worktree`, and `status`, none of which that
+    function reads. A row whose cell count differs from its header's is not
+    read at all (observation 0437: a 16-cell row under a 15-column header put
+    its status in the wrong cell and read as open); when `widths` is given,
+    each such row is added to it as (unit id or row number, cells, header cells)."""
     rows = []
+    wanted = tuple(wanted) + (() if "unit_id" in wanted else ("unit_id",))
     if suffix == ".csv":
         parsed = list(csv.reader(io.StringIO(text)))
         if len(parsed) < 2:
             return rows
         header = [h.strip().lower() for h in parsed[0]]
-        idx = {}
-        for name in wanted:
-            for i, cell in enumerate(header):
-                if name in cell:
-                    idx[name] = i
-                    break
-        for row in parsed[1:]:
-            if not row or (idx and max(idx.values()) >= len(row)):
+        idx = _column_index(header, wanted)
+        for n, row in enumerate(parsed[1:], 2):
+            if not row:
                 continue
-            rows.append({name: row[i].strip() for name, i in idx.items()})
+            if len(row) != len(header):
+                if widths is not None:
+                    uid = row[idx["unit_id"]].strip() if "unit_id" in idx and idx["unit_id"] < len(row) else f"line {n}"
+                    widths.append((uid, len(row), len(header)))
+                continue
+            got = {name: row[i].strip() for name, i in idx.items()}
+            got["_raw"] = ",".join(row)
+            rows.append(got)
         return rows
 
     # The unit-row table (observation 0361); a ledger with no such table falls
@@ -627,21 +665,35 @@ def _table_rows(text: str, suffix: str, wanted: tuple) -> list:
     lines = picked[1]
     if len(lines) < 2:
         return rows
-    header_cells = [c.strip().lower() for c in lines[0].strip().strip("|").split("|")]
-    idx = {}
-    for name in wanted:
-        for i, cell in enumerate(header_cells):
-            if name in cell:
-                idx[name] = i
-                break
+    header_cells = [c.lower() for c in _pipe_cells(lines[0])]
+    idx = _column_index(header_cells, wanted)
     for ln in lines[1:]:
-        cells = [c.strip() for c in ln.strip().strip("|").split("|")]
+        cells = _pipe_cells(ln)
         if all(set(c) <= {"-", ":"} for c in cells):
             continue
-        if not idx or max(idx.values()) >= len(cells):
+        if len(cells) != len(header_cells):
+            if widths is not None:
+                uid = cells[idx["unit_id"]] if "unit_id" in idx and idx["unit_id"] < len(cells) else ln.strip()[:20]
+                widths.append((uid, len(cells), len(header_cells)))
             continue
-        rows.append({name: cells[i] for name, i in idx.items()})
+        if not idx:
+            continue
+        got = {name: cells[i] for name, i in idx.items()}
+        got["_raw"] = ln.strip()
+        rows.append(got)
     return rows
+
+
+def row_width_problems(path: Path) -> list:
+    """One finding per ledger row whose cell count differs from its header's (observation 0437):
+    the row is not read, so its status counts neither as open nor as closed."""
+    try:
+        text = path.read_text(encoding="utf-8", errors="replace")
+    except Exception:
+        return []
+    widths: list = []
+    _table_rows(text, path.suffix.lower(), ("status",), widths)
+    return [f"row width: {uid} has {n} cells, the header has {m}; the row is not read" for uid, n, m in widths]
 
 
 AGENT_COUNT_RE = re.compile(r"(?<![A-Za-z0-9])[xX](\d+)\s*$")  # the token closes the cell (P1e review, 2026-09-11)
@@ -671,9 +723,8 @@ def agent_multiplier(surface: str) -> int:
 
 def open_unit_count(path: Path) -> int:
     """Sum of agent weight across rows still open per OPEN_STATUSES, not a
-    row count. A row with no status column, or a placeholder status, counts
-    as open -- an unlabeled row is exactly the case a cap exists to catch,
-    not a reason to exempt it. Each open row is worth `agent_multiplier()` of
+    row count. Open means `dispatched` or `committed` (B4, observation 0437):
+    a blank, a placeholder or a word such as `running` is not open. Each open row is worth `agent_multiplier()` of
     its `surface` cell (observation #0022) so a single Workflow row that fans
     out to N agents costs N against the cap, matching what SKILL.md section 6
     already says in prose."""
@@ -684,39 +735,59 @@ def open_unit_count(path: Path) -> int:
     rows = _table_rows(text, path.suffix.lower(), ("status", "surface"))
     count = 0
     for row in rows:
-        status = _norm(row.get("status", ""))
-        if not status or status in PLACEHOLDER_CELLS or status in OPEN_STATUSES:
+        if _is_open(row):
             count += agent_multiplier(row.get("surface", ""))
     return count
+
+
+def _reads_only(row: dict) -> bool:
+    """A row that writes no repo (observations 0387, 0416): its repo cell is a dash or starts with
+    `none` (`none (read-only)`), or its files_allowed cell is `none`, `none (…)` or a dash."""
+    repo = _norm(row.get("repo", ""))
+    if not repo or repo in PLACEHOLDER_CELLS or repo.startswith("none"):
+        return True
+    if "files_allowed" in row:
+        files = _norm(row.get("files_allowed", ""))
+        if files.startswith("none") or files in ("", "-", "--", "—", "–", "n/a"):
+            return True
+    return False
+
+
+def _bare_writers(path: Path) -> dict:
+    """{repo: [unit ids]} of open rows that write a repo's main tree (no worktree). The key is
+    `repo`, never the report or expected_artifacts cell (observation 0416)."""
+    try:
+        text = path.read_text(encoding="utf-8", errors="replace")
+    except Exception:
+        return {}
+    rows = _table_rows(text, path.suffix.lower(), ("status", "repo", "worktree", "files_allowed"))
+    out: dict = {}
+    for n, row in enumerate(rows, 1):
+        if not _is_open(row) or _reads_only(row):
+            continue
+        worktree = _norm(row.get("worktree", ""))
+        if worktree and worktree not in PLACEHOLDER_CELLS:
+            continue  # isolated in its own worktree -- not a collision
+        out.setdefault(_norm(row.get("repo", "")), []).append(row.get("unit_id", "").strip() or f"row {n}")
+    return out
 
 
 def repo_collision(path: Path) -> str | None:
     """The first repo with 2+ open rows that both write the main tree (no
     worktree/branch value) -- the one-writer-per-repo violation SKILL.md
     section 6 names. None if every repo with more than one open row has each
-    writer isolated in its own worktree."""
-    try:
-        text = path.read_text(encoding="utf-8", errors="replace")
-    except Exception:
-        return None
-    rows = _table_rows(text, path.suffix.lower(), ("status", "repo", "worktree"))
-    bare_writers: dict = {}
-    for row in rows:
-        status = _norm(row.get("status", ""))
-        is_open = (not status) or (status in PLACEHOLDER_CELLS) or (status in OPEN_STATUSES)
-        if not is_open:
-            continue
-        repo = _norm(row.get("repo", ""))
-        worktree = _norm(row.get("worktree", ""))
-        if not repo or repo in PLACEHOLDER_CELLS:
-            continue
-        if worktree and worktree not in PLACEHOLDER_CELLS:
-            continue  # isolated in its own worktree -- not a collision
-        bare_writers[repo] = bare_writers.get(repo, 0) + 1
-    for repo, n in bare_writers.items():
-        if n >= 2:
+    writer isolated in its own worktree. A row that writes nothing (B4) is no writer."""
+    for repo, units in _bare_writers(path).items():
+        if len(units) >= 2:
             return repo
     return None
+
+
+def collision_units(path: Path, repo: str | None = None) -> list:
+    """The unit ids of the conflicting writers on `repo` (default: the first conflicting repo)."""
+    writers = _bare_writers(path)
+    repo = repo if repo is not None else repo_collision(path)
+    return sorted(writers.get(repo, [])) if repo else []
 
 
 # ---------------------------------------------------------------------------
@@ -871,8 +942,9 @@ def parse_tokens(cell: str) -> int | None:
 
 
 def _is_open(row: dict) -> bool:
-    status = _norm(row.get("status", ""))
-    return (not status) or (status in PLACEHOLDER_CELLS) or (status in OPEN_STATUSES)
+    """Open means `dispatched` or `committed`, exactly (B4, observation 0437). A blank, a placeholder
+    or another word (`running`) is not an open status; a misaligned row is not read at all."""
+    return _norm(row.get("status", "")) in OPEN_STATUSES
 
 
 def open_rows(path: Path) -> list:
@@ -1522,8 +1594,10 @@ def selftest() -> int:
             ("0425: a unit whose own row is closed is refused", _launch("Unit U5 of run r1."), 2, "U5"),
             ("0425: a prompt that names no unit keeps the coarse check", _launch("Survey the repo."), 0, None),
         )
-        for label, payload, expected, needle in bind_cases:
-            code, _out, err = _run_guard_full(payload, fresh_flag, tmp)
+        for n, (label, payload, expected, needle) in enumerate(bind_cases):
+            # Each case is a first launch: its own launch-history file (0425 follow-up).
+            code, _out, err = _run_guard_full(payload, fresh_flag, tmp,
+                                              {"CLAUDE_DISPATCH_LAUNCHES": str(tmp / f"bind-launches-{n}.json")})
             if code != expected:
                 problems.append(f"{label}: expected exit {expected}, got {code} ({err.strip()[:160]})")
             elif needle and needle not in err:
@@ -1769,6 +1843,11 @@ def selftest() -> int:
             problems.append("1.4.0: search_dirs must start at the cwd")
 
     hk_cases = _selftest_records_and_v2(problems)
+    try:
+        b4_cases = _selftest_b4_and_history(problems)
+    except Exception as e:  # a missing helper is a failure by name, not a crash
+        problems.append(f"B4 and launch-history cases could not run: {type(e).__name__}: {e}")
+        b4_cases = 0
 
     if problems:
         for p in problems:
@@ -1785,9 +1864,105 @@ def selftest() -> int:
         "the calibration warning with its numbers, a pre-1.3.0 ledger unchanged, "
         "the pct_at_dispatch cell write, and argv fixture mode; plus the 1.4.0 lookup-order, "
         f"pointer-file and status-lint cases; plus {hk_cases} records-header and ledger-v2 "
-        f"row-validation cases; plus {len(bind_cases)} unit-row binding cases, observation 0425)"
+        f"row-validation cases; plus {len(bind_cases)} unit-row binding cases, observation 0425; plus "
+        f"{b4_cases} B4 row-reading and launch-history cases)"
     )
     return 0
+
+
+def _selftest_b4_and_history(problems: list) -> int:
+    """Hook backlog B4 (observations 0387, 0416, 0437) and the 0425 follow-up (launch history).
+    Appends to `problems`; returns the number of cases run."""
+    cases = 0
+
+    def check(cond: bool, msg: str) -> None:
+        nonlocal cases
+        cases += 1
+        if not cond:
+            problems.append(msg)
+
+    head15 = ("| unit_id | task | model | effort | surface | repo | worktree | files_allowed | report | "
+              "expected_artifacts | estimated_tokens | dispatch_ts | commit_sha | notes | status |\n"
+              "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|\n")
+
+    def r15(uid, repo="—", wt="—", files="none (read-only)", report="handback", status="dispatched",
+            extra=False, ts="2026-10-16 20:00Z"):
+        cells = [uid, "t", "Claude Opus 5", "medium", "subagent (background)", repo, wt, files, report,
+                 "waves/x.md", "40k", ts, "", "n"] + ([""] if extra else []) + [status]
+        return "| " + " | ".join(cells) + " |"
+
+    with tempfile.TemporaryDirectory() as td:
+        tmp = Path(td)
+
+        def ledger(name, rows):
+            p = tmp / name
+            p.write_text(head15 + "\n".join(rows) + "\n", encoding="utf-8")
+            return p
+
+        # 0387: three read-only research rows (repo `none (read-only)`) and one worktree unit.
+        p = ledger("l0387.md", [r15("R1", repo="none (read-only)"), r15("R2", repo="none (read-only)"),
+                                r15("R3", repo="none (read-only)"),
+                                r15("GW1", repo="estate", wt="wt-gw1", files="estate/**", report="waves/GW1.md")])
+        check(repo_collision(p) is None, "B4/0387: read-only rows (repo `none (read-only)`) read as writers")
+        # 0416: two read-only rows with the same report cell; no `repo` column at all.
+        q = tmp / "l0416.md"
+        q.write_text("| unit_id | task | model | effort | surface | files_allowed | report | status |\n"
+                     "|---|---|---|---|---|---|---|---|\n"
+                     "| A1 | t | Claude Opus 5 | medium | subagent | none (read-only) | handback | dispatched |\n"
+                     "| A2 | t | Claude Opus 5 | medium | subagent | none (read-only) | handback | dispatched |\n",
+                     encoding="utf-8")
+        check(repo_collision(q) is None, "B4/0416: the report column was read as the repo a unit writes")
+        p = ledger("l0416b.md", [r15("A1", repo="claude-skills"), r15("A2", repo="claude-skills")])
+        check(repo_collision(p) is None, "B4/0416: rows with files_allowed none counted as two writers")
+        # 0437: 16-cell rows under a 15-column header are not open, and each is reported.
+        p = ledger("l0437.md", [r15(f"U{i}", repo="estate", files="estate/**", extra=True) for i in range(1, 14)])
+        check(open_unit_count(p) == 0, f"B4/0437: misaligned rows read as open ({open_unit_count(p)})")
+        widths = row_width_problems(p)
+        check(len(widths) == 13 and "U1" in widths[0] and "16" in widths[0] and "15" in widths[0],
+              f"B4/0437: row width findings missing or without id and counts: {widths[:2]}")
+        check(any("row width" in n for n in ledger_warnings(p)), "B4/0437: no `row width` warning")
+        # Open means dispatched or committed only.
+        p = ledger("lopen.md", [r15("O1", status=""), r15("O2", status="running"), r15("O3", status="TBD"),
+                                r15("O4"), r15("O5", status="committed")])
+        check(open_unit_count(p) == 2, f"B4: open should mean dispatched or committed only ({open_unit_count(p)})")
+        # A real two-writer conflict still refuses.
+        p = ledger("ltwo.md", [r15("W1", repo="workshop", files="src/**"), r15("W2", repo="workshop", files="docs/**")])
+        check(repo_collision(p) == "workshop", "B4: a real two-writer conflict on one repo was missed")
+        check(collision_units(p) == ["W1", "W2"], f"B4: the conflicting units are not named ({collision_units(p)})")
+
+        # Guard level: a conflict refuses the conflicting unit by name, not the whole wave; and the launch
+        # history (0425 follow-up).
+        run = tmp / "proj" / ".dispatch" / "runs" / "r9"
+        run.mkdir(parents=True)
+        led = run / "ledger.md"
+        led.write_text(head15 + "\n".join([
+            r15("W1", repo="workshop", files="src/**"), r15("W2", repo="workshop", files="docs/**"),
+            r15("G3", repo="workshop", wt="wt-g3", files="src/**"), r15("R4")]) + "\n", encoding="utf-8")
+        flag = {"session_id": "abc", "ts": time.time()}
+
+        def launch(prompt, hist):
+            payload = {"tool_name": "Agent", "session_id": "abc", "cwd": str(tmp / "proj"),
+                       "tool_input": {"description": "u", "prompt": prompt}}
+            return _run_guard_full(payload, flag, tmp, {"CLAUDE_DISPATCH_LAUNCHES": str(tmp / hist)})
+
+        code, _o, err = launch("Unit G3 of run r9.", "h1.json")
+        check(code == 0, f"B4: a unit in its own worktree was refused for another pair's conflict: {err[:200]}")
+        code, _o, err = launch("Unit W1 of run r9.", "h2.json")
+        check(code == 2 and "W1" in err and "W2" in err, f"B4: the conflicting unit was not refused by name: {code} {err[:200]}")
+        code, _o, err = launch("Survey the repo.", "h3.json")
+        check(code == 2 and "W1" in err and "W2" in err, f"B4: a launch naming no unit did not name the pair: {code} {err[:200]}")
+
+        led.write_text(head15 + r15("H1", repo="estate", wt="wt-h1", files="estate/**") + "\n", encoding="utf-8")
+        code, _o, err = launch("Unit H1 of run r9.", "hist.json")
+        check(code == 0, f"0425b: the first launch of H1 was refused: {err[:200]}")
+        code, _o, err = launch("Unit H1 of run r9.", "hist.json")
+        check(code == 2 and "H1" in err and "launched" in err,
+              f"0425b: a second launch on the same unchanged row passed: {code} {err[:200]}")
+        led.write_text(head15 + r15("H1", repo="estate", wt="wt-h1", files="estate/**", ts="2026-10-16 21:00Z")
+                       + "\n", encoding="utf-8")
+        code, _o, err = launch("Unit H1 of run r9.", "hist.json")
+        check(code == 0, f"0425b: a relaunch after the row was re-written was refused: {err[:200]}")
+    return cases
 
 
 def _selftest_records_and_v2(problems: list) -> int:
@@ -2212,6 +2387,11 @@ def ledger_warnings(path: Path) -> list:
         notes.append(f"dispatch_ledger_guard WARNING: {path} keeps its records off git (public repo), but git "
                      "would commit it; add an ignore rule for the run directory before the next row "
                      "(references/ledger-schema.md, Where it lives).")
+    widths = row_width_problems(path)
+    if widths:
+        shown = "; ".join(widths[:5]) + (f"; and {len(widths) - 5} more" if len(widths) > 5 else "")
+        notes.append(f"dispatch_ledger_guard WARNING: {shown} (observation 0437). Fix the row to the "
+                     "header's width; until then it counts neither as open nor as closed.")
     bad = status_lint(path)
     if bad:
         notes.append("dispatch_ledger_guard WARNING: status cells start with `done` but are not exactly "
@@ -2261,6 +2441,54 @@ def unit_row_problem(path: Path, unit: str) -> str | None:
         return None
     states = ", ".join(sorted({r.get("status", "").strip() or "(blank)" for r in mine}))
     return f"has a row for unit {unit}, but its status is {states}, not dispatched"
+
+
+def launches_path() -> Path:
+    """The launch history (0425 follow-up): beside the mode flag, in the guard's own state folder.
+    CLAUDE_DISPATCH_LAUNCHES points it elsewhere (the selftest)."""
+    override = os.environ.get("CLAUDE_DISPATCH_LAUNCHES")
+    return Path(override) if override else flag_path().parent / "dispatch-launches.json"
+
+
+def read_launches() -> dict:
+    try:
+        data = json.loads(launches_path().read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def _launch_key(ledger: Path, unit: str) -> tuple:
+    """(key, row signature): the ledger and unit, and a hash of the unit's rows as written now."""
+    try:
+        text = ledger.read_text(encoding="utf-8", errors="replace")
+    except Exception:
+        text = ""
+    rows = [r.get("_raw", "") for r in _table_rows(text, ledger.suffix.lower(), ("unit_id", "status"))
+            if _unit_cell(r.get("unit_id", "")) == _unit_cell(unit)]
+    try:
+        where = str(ledger.resolve())
+    except Exception:
+        where = str(ledger)
+    sig = hashlib.sha256("\n".join(rows).encode("utf-8")).hexdigest()[:16]
+    return f"{os.path.normcase(where)}::{_unit_cell(unit)}", sig
+
+
+def record_launch(key: str, signature: str) -> bool:
+    """Record a cleared launch (unit, time, row signature); entries older than 14 days are dropped."""
+    data = read_launches()
+    now = time.time()
+    data = {k: v for k, v in data.items() if isinstance(v, dict) and now - float(v.get("ts", 0) or 0) < 14 * 86400}
+    data[key] = {"row": signature, "ts": now, "at": time.strftime("%Y-%m-%d %H:%MZ", time.gmtime(now))}
+    path = launches_path()
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = path.with_name(path.name + ".tmp")
+        tmp.write_text(json.dumps(data, indent=1), encoding="utf-8")
+        os.replace(tmp, path)
+        return True
+    except Exception:
+        return False
 
 
 def _guard(data: dict) -> int:
@@ -2343,16 +2571,39 @@ def _guard(data: dict) -> int:
         )
         return 2
 
-    collision = repo_collision(ledger)
-    if collision:
+    # B4 (observations 0387, 0416): a conflict refuses the units in it by name, not the whole wave. A
+    # launch whose brief names a unit outside every conflict passes; one that names no unit is refused
+    # while any conflict stands.
+    for repo, units in _bare_writers(ledger).items():
+        if len(units) < 2:
+            continue
+        if unit and _unit_cell(unit) not in {_unit_cell(u) for u in units}:
+            continue
         print(
-            f"dispatch_ledger_guard: {ledger} shows two or more open units writing '{collision}' "
-            "with no worktree assigned to either -- the one-writer-per-repo rule in SKILL.md "
-            "section 6. Give each writer its own worktree, or sequence them instead of running "
-            "both at once.",
+            f"dispatch_ledger_guard: {ledger} shows units {', '.join(sorted(units))} open and writing "
+            f"'{repo}' with no worktree assigned -- the one-writer-per-repo rule in SKILL.md section 6. "
+            + (f"This launch is unit {unit}, one of them. " if unit else "")
+            + "Give each writer its own worktree, or sequence them instead of running both at once. "
+            "A unit that writes nothing takes `—` in repo or `none` in files_allowed.",
             file=sys.stderr,
         )
         return 2
+
+    # Observation 0425 follow-up: a second launch of a unit whose row was not re-written since the
+    # first is refused (the row left `dispatched` by the earlier launch does not cover a new one).
+    launch_key = signature = None
+    if unit:
+        launch_key, signature = _launch_key(ledger, unit)
+        before = read_launches().get(launch_key)
+        if before and before.get("row") == signature:
+            print(
+                f"dispatch_ledger_guard: unit {unit} was already launched at {before.get('at', '?')} on this "
+                f"same row of {ledger}, and the row has not been re-written since. A relaunch needs its own "
+                "row write first (status and dispatch_ts for the new launch), in its own call "
+                "(references/ledger-schema.md, Writing the ledger).",
+                file=sys.stderr,
+            )
+            return 2
 
     # Usage windows (1.3.0): silent without a fresh reading; the stop-band block;
     # the calibration warning; the pct_at_dispatch cell.
@@ -2365,6 +2616,10 @@ def _guard(data: dict) -> int:
     notes = ledger_warnings(ledger)
     if notes:
         context = (context + " " if context else "") + " ".join(notes)
+    if launch_key and not record_launch(launch_key, signature):
+        context = (context + " " if context else "") + (
+            f"dispatch_ledger_guard WARNING: the launch of unit {unit} could not be recorded in "
+            f"{launches_path()}; a second launch on the same row will not be caught.")
     if context:
         print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse",
                                                  "additionalContext": context}}))
