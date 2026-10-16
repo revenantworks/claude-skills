@@ -2,6 +2,8 @@
 
 ## [1.0.0] — 2026-10-01
 
+2026-10-16: turbo has no lane cap by default (owner ruling). On entry the controller asks once, "No cap (pick) or a number?", and records the answer in the budget file (`parallel_ceiling` null = no cap, turbo only). Every launch still passes the four launch gates (real work only, disjoint file sets, can land, tier from the table), the stop bands and a machine-load probe before heavy local runs; turbo still starts only on the user's word. Case 10 extended.
+
 2026-10-13: `context` entry — the in-session context budget: compact, clear or neither (never while units or dispatched rows run, never mid-step), what to write first, and a per-use-case auto-compact table whose figures are the user's own overlay keys (`context.autocompact.<use_case>`); trigger rows #32–#35, Case 21 and two native cases added.
 
 2026-10-09: work-day mode — overnight conduct between check-ins, questions queued to a check-in file with recommended answers, asked one at a time at user-set check-ins (default 12:00 and 17:00, overlay `workday.checkins`); trigger rows #30–#31, Case 20 and a behaviour case added.

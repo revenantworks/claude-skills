@@ -2,6 +2,8 @@
 
 ## [1.0.0] — 2026-10-01
 
+2026-10-16: the wave cap's turbo exception (owner ruling: turbo runs with no lane cap unless the user names one). A live budget file with `"mode": "turbo"` and `"parallel_ceiling": null` lifts the 6-unit cap; every other launch gate still applies (SKILL.md section 6). The ledger guard reads it the same way: no cap for turbo plus null while unexpired; 6 when the file is missing, expired, malformed, or null outside turbo; a numeric ceiling unchanged and still clamped at 12. Guard self-tests: 13 cap cases and 4 exit-code cases, with the old cap as positive control.
+
 2026-10-15 (lessons from a long Godot build): land cadence is per arc for pin-moving lanes, with one pin-arc join row, and view lanes land freely (SKILL.md section 3; `unit-brief-template.md`); build briefs say narrow runs while building, the full suite once, counts files the controller's, and a perf window; a refused report file falls back to the final message; per-unit reviews drop a tier when the meter is tight (`tier-routing.md`); briefs written ahead get a join check before launch (observations 0432, 0417, 0422, 0379). Eval cases 30-31 and `behaviour-pin-arc-cadence`.
 
 2026-10-08 (K8 fix round): the ledger guard enforces the documented stop band (95% default, or the budget file's tighter band) on both the 5-hour and weekly windows, and writes the ledger atomically; the gate's built-in lane rate is labelled a default, not a measurement (audit K7-2-22, -23, -24). The meter-floor rule reads in room left; trigger rows #31 and #38 name their pacewright and scoutwright boundaries (K7-2-11, -12, -25, -26).

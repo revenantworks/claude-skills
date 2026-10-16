@@ -205,10 +205,10 @@ it is durable, not when it is written.**
 
 ## 6 · Wave execution
 
-- **Cap 6 concurrent units per wave, counting agents, not rows** (#0022). A fan-out call costs N
-  units and N × per-agent budget.
+- **Cap 6 concurrent units per wave, counting agents, not rows** (#0022). A fan-out costs N
+  units and N × per-agent budget. Turbo, null ceiling: no cap.
 - **Max 2 nesting levels.** A wave over 12 units is split and shown to the user first.
-- **Stagger dispatch**; units launched in one minute race for files.
+- **Stagger dispatch**: units launched together race for files.
 - **No controller commit to a unit's repo between its brief and its launch** (#0083); the brief's
   guard is base-is-ancestor plus target-files-unchanged, never HEAD equality. A measurement unit
   waits for every held change it would measure (#0182).

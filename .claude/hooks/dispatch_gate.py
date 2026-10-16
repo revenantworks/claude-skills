@@ -346,7 +346,10 @@ def reset_eve_line(windows: dict | None, now: float | None = None, budget: dict 
             src = "meter file"
         age = f", read {int((now - read_at) // 60)} min ago from the {src}" if read_at else ""
         ceiling = b.get("parallel_ceiling")
-        cap = (f"cap = the budget file parallel_ceiling {ceiling}" if isinstance(ceiling, int)
+        no_cap = b.get("mode") == "turbo" and "parallel_ceiling" in b and (
+            ceiling is None or str(ceiling).strip().lower() == "none")
+        cap = ("cap = none (turbo, no lane cap; the launch gates still apply)" if no_cap else
+               f"cap = the budget file parallel_ceiling {ceiling}" if isinstance(ceiling, int)
                and not isinstance(ceiling, bool) else f"cap = {DEFAULT_CEILING} (no unexpired budget file)")
         rate_pl = _num(b.get("lane_pt_per_hour"))
         lane_src = "budget file lane_pt_per_hour" if rate_pl and rate_pl > 0 else LANE_RATE_SOURCE
