@@ -23,12 +23,8 @@ It also ships one check-only hook, `scripts/gdformat_check.py`.
 
 The plugin is not in the pack itself, so installing `gamedev` never starts a language server.
 
-```
-/plugin marketplace add revenantworks/claude-skills
-/plugin install gdscript-lsp@revenantworks
-```
-
-From a local clone, try it for one session without installing:
+It is not in the marketplace yet: the build registry has no table for a plugin that sits
+inside a pack, so it ships as a trial. From a local clone, load it for one session:
 `claude --plugin-dir packs/gamedev/plugins/gdscript-lsp`.
 
 ## The bridge
