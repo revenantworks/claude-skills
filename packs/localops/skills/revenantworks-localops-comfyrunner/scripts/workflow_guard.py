@@ -455,10 +455,11 @@ def combo_options(spec) -> list | None:
 
 
 def recipe_check(wf: dict, info: dict) -> dict:
-    """Refuse, with the reason, before submit: a node class the server lacks, a loader file
-    or any other choice input whose literal value the server does not offer, and a CLIP
-    loader type that does not match the family the latent source names. `info` is the
-    /object_info of the workflow's classes (comfy_client.py nodes WF --save-info FILE)."""
+    """Refuse, with the reason, before submit: a node class the server lacks, a required
+    input the node does not set (observation 0418: a newer server added one and the graph
+    passed), a loader file or any other choice input whose literal value the server does not
+    offer, and a CLIP loader type that does not match the family the latent source names.
+    `info` is the /object_info of the workflow's classes (comfy_client.py nodes WF --save-info FILE)."""
     nodes = {k: v for k, v in wf.items() if isinstance(v, dict) and "class_type" in v}
     reasons = []
     for nid, node in sorted(nodes.items()):
@@ -467,8 +468,13 @@ def recipe_check(wf: dict, info: dict) -> dict:
         if not isinstance(spec, dict):
             reasons.append(f"node {nid}: class {ct} is not installed on this server")
             continue
-        inputs = {**(spec.get("input", {}).get("required") or {}), **(spec.get("input", {}).get("optional") or {})}
-        for name, val in (node.get("inputs") or {}).items():
+        required = spec.get("input", {}).get("required") or {}
+        inputs = {**required, **(spec.get("input", {}).get("optional") or {})}
+        given = node.get("inputs") or {}
+        for name in sorted(k for k in required if k not in given):
+            reasons.append(f"node {nid} ({ct}): required input {name} is not set; the server "
+                           f"refuses the graph at submit (required_input_missing)")
+        for name, val in given.items():
             opts = combo_options(inputs.get(name))
             if opts is not None and isinstance(val, str) and val not in opts:
                 reasons.append(f"node {nid} ({ct}): {name} {val!r} is not offered by the server "
@@ -697,6 +703,11 @@ def selftest() -> int:
     rc = recipe_check(bad, info)
     assert rc["verdict"] == "refuse" and len(rc["reasons"]) == 2, rc
     assert any("CLIP type 'stable_diffusion'" in r for r in rc["reasons"])
+    short = copy.deepcopy(info)   # a required input the server added (0418)
+    short["CreateVideo"] = {"input": {"required": {"fps": ["FLOAT", {}], "images": ["IMAGE", {}],
+                                                  "resolution_steps": ["INT", {}]}}}
+    rs = recipe_check(w, short)
+    assert rs["verdict"] == "refuse" and any("required input resolution_steps" in r for r in rs["reasons"]), rs
     gone = {k: v for k, v in info.items() if k != "CreateVideo"}
     assert any("CreateVideo is not installed" in r for r in recipe_check(w, gone)["reasons"])
     # Prompt read-back (0324) and the CLIP budget note (0325).

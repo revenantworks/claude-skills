@@ -7,6 +7,11 @@ each job before it reaches the GPU.
 
 Description cut to about 600 characters, main use case first (2026-10-08).
 
+2026-10-16 (observation 0418): the recipe check refuses a node that leaves a required input
+unset, naming the node and the input (selftest case added); a batch runs as a submit-wait loop
+(`recipes.md`, Batching by model); scripts are called by absolute path from a short working
+folder (SKILL.md step 5).
+
 Repair and recipes from a live post-update repair (2026-10-13): a `doctor` entry and
 `references/repair.md`. It covers a torch/torchvision pair out of step after an update (read from
 package metadata, fixed from the vendor index, pinned with a scoped `uv.toml`), extension update

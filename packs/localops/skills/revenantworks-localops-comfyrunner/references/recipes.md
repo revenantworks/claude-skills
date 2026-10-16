@@ -81,8 +81,10 @@ never one render at a time.
 
 ### Batching by model
 
-The first load dominates a short job. Queue a batch grouped by model (every Klein job, then every
-Z-Image job), never interleaved; a switch evicts and reloads. Families that share a text encoder
+The first load dominates a short job. Run a batch grouped by model (every Klein job, then every
+Z-Image job), never interleaved; a switch evicts and reloads. `submit` refuses while the queue is
+not empty, so a batch is a sequential loop: submit, `wait`, submit the next (observation 0418: 11
+of 12 looped submits came back `prompt_id: None`, and only the JSON body said ComfyUI was busy). Families that share a text encoder
 (Klein and Z-Image both use `qwen_3_4b`) switch faster than unrelated ones, which the measured
 times show.
 

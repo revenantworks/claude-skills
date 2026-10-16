@@ -48,7 +48,7 @@ The workflow must be **API format**. A UI-format file (`nodes` and `links` array
 
 ## 2. Classify — from the graph, not a model list
 
-`workflow_guard.py WF --mode <mode>` finds each decode node, walks back to the latent that sets its shape, and classifies the job: width and height with a frame count is **video**, `seconds` is **audio**, width and height alone is **image**; a video output node turns an image batch into frames. It reports the size, the frames or seconds, the work units and, for video, the ratio to the crash size (`gpu-config.json` `comfy.crash_size`; unset, the reported case is the labelled proposal). With `--object-info INFO.json` it also refuses a missing node class, a loader file or option the server does not offer, and a CLIP type that does not match the family (recipes.md).
+`workflow_guard.py WF --mode <mode>` finds each decode node, walks back to the latent that sets its shape, and classifies the job: width and height with a frame count is **video**, `seconds` is **audio**, width and height alone is **image**; a video output node turns an image batch into frames. It reports the size, the frames or seconds, the work units and, for video, the ratio to the crash size (`gpu-config.json` `comfy.crash_size`; unset, the reported case is the labelled proposal). With `--object-info INFO.json` it also refuses a missing node class, a required input the node does not set, a loader file or option the server does not offer, and a CLIP type that does not match the family (recipes.md).
 
 ## 3. Pre-flight — the four guards
 
@@ -67,7 +67,7 @@ Act on the worse of the guard's and the pre-flight's verdicts (media-budgets.md,
 
 ## 5. Run
 
-Re-check the queue, then `comfy_client.py submit WF --verdict GUARD.json` (the guard's JSON for this workflow, written after it; add `--confirmed` once the user has answered each `ask`). Submit refuses without a fresh `go`. `node_errors` → report them and stop; never edit the graph to make it pass. `wait PROMPT_ID --timeout T`, with T above the projection's high bound. A timeout is reported, never interrupted. Renew the lease on long runs.
+Call every script by its absolute path from a short working folder; never `cd` into the plugin folder (its path is past the Win32 working-folder limit, and Git Bash refuses it). Re-check the queue, then `comfy_client.py submit WF --verdict GUARD.json` (the guard's JSON for this workflow, written after it; add `--confirmed` once the user has answered each `ask`). Submit refuses without a fresh `go`. `node_errors` → report them and stop; never edit the graph to make it pass. `wait PROMPT_ID --timeout T`, with T above the projection's high bound. A timeout is reported, never interrupted. Renew the lease on long runs.
 
 ## 6. Verify
 
