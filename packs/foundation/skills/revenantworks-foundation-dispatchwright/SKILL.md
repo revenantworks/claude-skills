@@ -71,7 +71,7 @@ raw logs or research;** a judgment it needs is a unit.
 
 **`dispatchwright resume`**: first action, always — `git log --oneline origin/main -5` and a read
 of the run's ledger rows. Then **rewrite every row that claims done with no matching sha on
-origin to `unverified`** (observation 0183) before deciding what to re-dispatch. Re-read the
+origin to `unverified`** (#0183) before deciding what to re-dispatch. Re-read the
 budget file or the meters (§6) — never launch on a reading taken before a stop. Re-dispatch only
 unfinished or unproven rows; never restart a row whose commit is on origin. A workflow wave is
 relaunched by pasting the archived script inline, not by its path (#0081). A compaction is not a
@@ -147,7 +147,7 @@ A plan that fails this check names the cheaper shape and stops.
   test goes to the later half and the earlier count says so. A design about a dataset is two
   units: measure the source's extent, the user approves the list, then design.
 - **One writer per repo.** Two writers may share a repo only with disjoint `files_allowed`,
-  separate worktrees, and short-lived branches that land in the same window (observation 0176).
+  separate worktrees, and short-lived branches that land in the same window (#0176).
 - **Enumerate shared content before splitting a document set** — grep the whole set for anything
   in more than one writer's file; settle it centrally, assign one owner, or give both files to one
   writer; record it in `shared_artifacts` (#0082).
@@ -161,14 +161,14 @@ A plan that fails this check names the cheaper shape and stops.
 - **Split a cross-repo finding before dispatch**, one sub-finding per repo, or name the boundary
   in the brief (#0020). **Join the packet's halves**: every finding id resolves to the unit's own
   repo, and the brief's subject is covered by at least one id (#0028).
-- **Every writer row names `files_allowed`** (observation 0183); the brief states the same list.
+- **Every writer row names `files_allowed`** (#0183); the brief states the same list.
 
 ## 4 · Tier
 
 Tier every unit from `references/tier-routing.md` — no sibling call (#0073). Read the work's
 demands (reasoning depth, horizon, volume/latency, stakes), pick the tier, apply the role
 overrides, and write `tier · model · effort · surface` into the ledger. **Effort binds only
-through an agent definition launched by `subagent_type`** (observation 0179): the surface cell
+through an agent definition launched by `subagent_type`** (#0179): the surface cell
 names the definition, or the row writes `effort: inherited (<session effort>)`. Under a usage
 cap, prefer the measured cheapest actual-per-landed-row, not list price (tier-routing.md). Never
 round up "to be safe"; never invent a tier. A unit added mid-run is tiered before it dispatches.
@@ -178,7 +178,7 @@ round up "to be safe"; never invent a tier. A unit added mid-run is tiered befor
 Every unit carries `references/unit-brief-template.md`, built on one rule: **a unit is done when
 it is durable, not when it is written.**
 
-- **Durable = a local commit per finished piece** (observation 0169). The controller batches
+- **Durable = a local commit per finished piece** (#0169). The controller batches
   pushes — end of wave, a land, a handoff, or when only CI can verify — and the row reads
   `landed locally` until then. Per-piece push stays for a surface with no durable local clone
   (a cloud session, a sandbox torn down at exit). A platform-pinned branch lands through its own
@@ -206,13 +206,14 @@ it is durable, not when it is written.**
 ## 6 · Wave execution
 
 - **Cap 6 concurrent units per wave, counting agents, not rows** (#0022). A fan-out costs N
-  units and N × per-agent budget. Turbo, null ceiling: no cap.
+  units and N × per-agent budget. Turbo, null ceiling: no cap; CPU-heavy local lanes keep
+  pacewright's machine cap, land run first.
 - **Max 2 nesting levels.** A wave over 12 units is split and shown to the user first.
 - **Stagger dispatch**: units launched together race for files.
 - **No controller commit to a unit's repo between its brief and its launch** (#0083); the brief's
   guard is base-is-ancestor plus target-files-unchanged, never HEAD equality. A measurement unit
   waits for every held change it would measure (#0182).
-- **One process tree per unit** (observations 0123, 0126, 0127): kill by pid, never by image
+- **One process tree per unit** (#0123, #0126, #0127): kill by pid, never by image
   name — if unsure, leave it. Never combine `git -C` with `--work-tree`; never discard stderr on a
   writing git command. A brief that assumes an idle machine carries a load probe in the same
   call; if the user reports other work, ask before any heavy local launch (#0193).
@@ -245,7 +246,7 @@ per meter on its row. Before the table, obey pacewright's **budget decision file
 (`~/.dispatch/budget-decision.json`) as data while it is unexpired — ceiling, allowance, top-tier
 and hosted-CI switches, stop band (meters.md). Without one, run the **fallback fit**: never guess
 a window, convert percent to tokens only with the user's figure (else `unfitted`), and an
-owner's advance go launches an unfitted plan smallest-first (observation 0093). The live gate
+owner's advance go launches an unfitted plan smallest-first (#0093). The live gate
 stops launches at 95% and slows to one unit at 80% by default.
 
 ## 7 · Escalation
@@ -270,12 +271,12 @@ origin/<branch>` and report:
 
 - **Unclaimed commits**, **unpushed worktrees**, and **duplicated work**.
 - **Scope**: `git diff --name-status <base>..<sha>` per writer row; a path outside
-  `files_allowed` makes the row `unverified` (observation 0183).
+  `files_allowed` makes the row `unverified` (#0183).
 - **Actual vs. estimate**: each closed row gets `actual` from the harness notice, its spend per
   meter, and a `rework` count; the header's actuals block gains a line. Self-reported figures are
   marked unverified.
 - **Effort as resolved** — the definition's frontmatter or the harness record, not the ledger's
-  intent (observation 0179).
+  intent (#0179).
 - **Gate figures are re-derived** from raw counts, never a summary line. A pass within noise of
   its bar is re-read as mean, median and steady-window mean, by a rule fixed before extra rounds
   (#0182).

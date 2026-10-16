@@ -16,7 +16,9 @@ What separates it from a usage warning hook:
   never reasons a number into being.
 - **Spend has a mode, not only a stop.** Normal, pace, turbo, overnight, work day, owner-away and
   reset-eve share one base and differ only in their throttle (`references/modes.md`). Turbo starts only on
-  the user's word.
+  the user's word; its no-cap counts lanes, not machine load, so CPU-heavy local lanes (test
+  suites, builds, renders) keep a cap derived from the machine's threads, and the land run goes
+  first.
 - **An unexplained meter jump is investigated.** The UBA (usage reconciliation) compares each
   reading with the known spend and brakes new launches when points go missing.
 - **Plan numbers are data.** Every token, unit and CI-minute figure lives in one plan profile, so
