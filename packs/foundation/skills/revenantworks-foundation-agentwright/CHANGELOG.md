@@ -2,6 +2,8 @@
 
 ## [1.0.0] — 2026-10-01
 
+2026-10-16 (full observation review, U21): `design-checklist.md` area 9, audit the grants of an untrusted-input job from its raw config (0374) and read back connector grants after a form save (0386); area 6, dated keys name their time zone (0386) and every external write names the runtime's own tool (0431); area 8, coverage on long walks, null for an uncounted count, one retry rule, fallbacks checked against the schema (0440), and input verified before an unattended prompt edit (0391).
+
 2026-10-16 (weekly observation review): `design-checklist.md` gains run-to-run state stores and state-versus-policy in prompts (area 5), a specified follow-up surface for replies in a fired session (area 6), proof of a config write by field read-back and the outcome-branch check (area 8), a narrow push checked against the ref distance (area 4), and schedule retirement that removes every re-create instruction (area 3) (observations 0404, 0405, 0406, 0412, 0413).
 
 2026-10-08 (K8 fix round): the description says it never schedules or runs what it designs (trigger row #18's exclusion); Emit states why it stays model-invocable (audit K7-1-19, -21).
