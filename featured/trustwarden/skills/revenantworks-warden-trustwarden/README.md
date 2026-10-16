@@ -1,6 +1,6 @@
 # revenantworks-warden-trustwarden
 
-Vets third-party code before it is installed: skills, plugins, MCP servers and GitHub Actions. It
+Vets third-party code before it is installed: skills, plugins, MCP servers, GitHub Actions and model weights. It
 ends with a verdict and the terms to install under, never a bare score.
 
 ## Why it exists
@@ -43,9 +43,10 @@ revenantworks-warden-trustwarden/
 │   ├── scanner-matrix.md       # which tool reads which kind, flags, known skips (stamped)
 │   ├── install-terms.md        # terms and the Claude Code control behind each (stamped)
 │   ├── install-walkthrough.md  # owner-run scanner installs, a check and a way back each
+│   ├── model-weights.md        # pickle opcode scan, weights readers, licence per weight (stamped)
 │   └── pack.md                 # warden roster, generated
 ├── scripts/
-│   ├── trust_vet.py            # stdlib; vet and revet; JSON verdict
+│   ├── trust_vet.py            # stdlib; vet, revet and licence; JSON verdict
 │   └── test_trust_vet.py
 └── evals/                      # hand-run suites + native claude plugin eval cases
 ```

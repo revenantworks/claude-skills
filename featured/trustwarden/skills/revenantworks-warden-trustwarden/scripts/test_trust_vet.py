@@ -499,8 +499,9 @@ class Cli(Base):
         self.assertTrue(all(s["status"] == "NOT-RUN" for s in out["scanners"]))
 
 
-@unittest.skipUnless(shutil.which("git"), "git not on PATH")
-class Revet(Base):
+class GitRepo(Base):
+    """Helpers for cases that need a real git checkout (no tests of its own)."""
+
     def git(self, root, *args):
         subprocess.run(["git", "-C", str(root), *args], check=True, capture_output=True)
 
@@ -519,6 +520,9 @@ class Revet(Base):
         return subprocess.run(["git", "-C", str(root), "rev-parse", "HEAD"], capture_output=True,
                               text=True).stdout.strip()
 
+
+@unittest.skipUnless(shutil.which("git"), "git not on PATH")
+class Revet(GitRepo):
     def test_new_hook_needs_a_fresh_vet(self):
         root, old = self.repo()
         build(root, {"hooks/hooks.json": "{}", "README.md": "r2\n"})
@@ -541,6 +545,261 @@ class Revet(Base):
         root, old = self.repo()
         res = tv.vet_dir(root, "auto", None, tv.DEFAULT_MAX_BYTES, [], False, None)
         self.assertEqual(res["sha"], old)
+
+
+# ---- model weights (observation 0428) ------------------------------------------------------
+# Every pickle below is hand-assembled bytes. No test loads one: the scanner reads opcodes only.
+OS_SYSTEM_P2 = b"\x80\x02cos\nsystem\nq\x00X\x04\x00\x00\x00echoq\x01\x85q\x02Rq\x03."
+# Protocol 4: the module and name are pushed, memoized, then fetched back before STACK_GLOBAL.
+MEMO_HIDDEN_P4 = b"\x80\x04\x8c\x02os\x94\x8c\x06system\x94h\x00h\x01\x93\x94)R."
+UNKNOWN_P2 = b"\x80\x02cfractions\nFraction\nq\x00X\x03\x00\x00\x001/2q\x01\x85q\x02Rq\x03."
+TORCH_DATA_PKL = (b"\x80\x02ccollections\nOrderedDict\nq\x00)Rq\x01X\x06\x00\x00\x00weightq\x02"
+                  b"ctorch._utils\n_rebuild_tensor_v2\nq\x03(ctorch\nFloatStorage\nq\x04tq\x05Rq\x06s.")
+CLEAN_P2 = b"\x80\x02ccollections\nOrderedDict\nq\x00)Rq\x01."
+
+
+def torch_zip(data_pkl: bytes, extra: dict | None = None) -> bytes:
+    import zipfile
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        z.writestr("archive/data.pkl", data_pkl)
+        z.writestr("archive/data/0", b"\x00" * 16)
+        z.writestr("archive/version", "3\n")
+        for name, body in (extra or {}).items():
+            z.writestr(name, body)
+    return buf.getvalue()
+
+
+def safetensors(header: dict | None = None) -> bytes:
+    import struct
+    head = json.dumps(header or {"w": {"dtype": "F32", "shape": [1], "data_offsets": [0, 4]}}).encode()
+    return struct.pack("<Q", len(head)) + head + b"\x00" * 4
+
+
+GGUF = b"GGUF\x03\x00\x00\x00" + b"\x00" * 24
+
+
+class Weights(Base):
+    def wvet(self, files, readers=None, allow=None, kind="auto", max_bytes=tv.DEFAULT_MAX_BYTES):
+        root = build(self.tmp / "cand", files)
+        return tv.vet_dir(root, kind, SHA, max_bytes, [], False, None, readers=readers,
+                          allow_globals=allow)
+
+    def row(self, res, name):
+        return next(c for c in res["coverage"] if c["file"] == name)
+
+    def test_clean_raw_pickle_is_read_and_a_weights_reader_can_pass_it(self):
+        res = self.wvet({"model.pkl": CLEAN_P2, "LICENSE": LICENSE_MIT}, readers=["picklescan=clean"])
+        self.assertEqual(res["kind"], "weights")
+        row = self.row(res, "model.pkl")
+        self.assertEqual((row["status"], row["class"], row["executable"]), ("READ", "weights-pickle", True))
+        self.assertIn("trust_vet", row["read_by"])
+        self.assertEqual(res["verdict"], "PASS")
+        self.assertTrue(any(t.startswith("licence-per-weight") for t in res["terms"]))
+
+    def test_pickle_read_by_trust_vet_alone_caps_at_conditional(self):
+        res = self.wvet({"model.pkl": CLEAN_P2, "LICENSE": LICENSE_MIT})
+        self.assertEqual(res["verdict"], "CONDITIONAL")
+        self.assertTrue(any("picklescan" in r for r in res["reasons"]))
+
+    def test_pickle_in_a_skill_needs_a_weights_reader_too(self):
+        res = self.vet({"SKILL.md": SKILL, "LICENSE": LICENSE_MIT, "assets/m.pkl": CLEAN_P2},
+                       scanners=[CLEAN])
+        self.assertEqual(res["verdict"], "CONDITIONAL")
+        self.assertTrue(any("pickle" in r for r in res["reasons"]))
+
+    def test_pickle_importing_os_system_fails(self):
+        res = self.wvet({"model.pkl": OS_SYSTEM_P2, "LICENSE": LICENSE_MIT}, readers=["picklescan=clean"])
+        f = next(f for f in res["findings"] if f["rule"] == "pickle-dangerous-global")
+        self.assertEqual((f["severity"], f["file"]), ("fail", "model.pkl"))
+        self.assertIn("os.system", f["note"])
+        self.assertEqual(res["verdict"], "FAIL")
+        self.assertEqual(res["terms"], [])
+
+    def test_memo_hidden_stack_global_is_resolved_and_fails(self):
+        res = self.wvet({"model.pkl": MEMO_HIDDEN_P4, "LICENSE": LICENSE_MIT})
+        self.assertIn("pickle-dangerous-global", self.rules(res))
+        self.assertEqual(res["verdict"], "FAIL")
+
+    def test_global_outside_the_allow_list_holds(self):
+        res = self.wvet({"model.pkl": UNKNOWN_P2, "LICENSE": LICENSE_MIT}, readers=["picklescan=clean"])
+        f = next(f for f in res["findings"] if f["rule"] == "pickle-global-unknown")
+        self.assertIn("fractions.Fraction", f["note"])
+        self.assertEqual(res["verdict"], "HOLD")
+
+    def test_allow_global_clears_an_unknown_but_never_a_dangerous_one(self):
+        res = self.wvet({"model.pkl": UNKNOWN_P2, "LICENSE": LICENSE_MIT}, readers=["picklescan=clean"],
+                        allow=["fractions.Fraction"])
+        self.assertNotIn("pickle-global-unknown", self.rules(res))
+        self.assertTrue(any("fractions.Fraction" in r and "--allow-global" in r for r in res["reasons"]))
+        res = self.wvet({"model.pkl": OS_SYSTEM_P2, "LICENSE": LICENSE_MIT}, readers=["picklescan=clean"],
+                        allow=["os.system"])
+        self.assertEqual(res["verdict"], "FAIL")
+
+    def test_torch_zip_reads_each_inner_pickle(self):
+        res = self.wvet({"model.pt": torch_zip(TORCH_DATA_PKL), "LICENSE": LICENSE_MIT},
+                        readers=["picklescan=clean"])
+        self.assertEqual(self.row(res, "model.pt")["status"], "READ")
+        self.assertEqual(res["verdict"], "PASS")
+        res = self.wvet({"model.pt": torch_zip(OS_SYSTEM_P2), "LICENSE": LICENSE_MIT})
+        f = next(f for f in res["findings"] if f["rule"] == "pickle-dangerous-global")
+        self.assertEqual(f["file"], "model.pt")
+        self.assertIn("archive/data.pkl", f["note"])
+        self.assertEqual(res["verdict"], "FAIL")
+
+    def test_hf_bin_that_is_a_torch_zip_is_read(self):
+        res = self.wvet({"pytorch_model.bin": torch_zip(TORCH_DATA_PKL), "LICENSE": LICENSE_MIT})
+        self.assertEqual(self.row(res, "pytorch_model.bin")["class"], "weights-pickle")
+
+    def test_bin_that_is_not_a_zip_stays_bytecode_unread(self):
+        res = self.vet({"SKILL.md": SKILL, "LICENSE": LICENSE_MIT, "bin/tool.bin": b"\x7fELF\x00"},
+                       scanners=[CLEAN])
+        self.assertEqual(self.row(res, "bin/tool.bin")["class"], "bytecode")
+        self.assertEqual(res["verdict"], "HOLD")
+
+    def test_torchscript_code_inside_the_zip_holds(self):
+        res = self.wvet({"model.pt": torch_zip(TORCH_DATA_PKL, {"archive/code/__torch__/m.py": "def f(): pass\n"}),
+                         "LICENSE": LICENSE_MIT}, readers=["picklescan=clean"])
+        self.assertIn("torchscript-code", self.rules(res))
+        self.assertEqual(res["verdict"], "HOLD")
+
+    def test_pickle_with_trailing_bytes_is_unread_and_holds(self):
+        res = self.wvet({"old.pth": CLEAN_P2 + b"\x00\xffraw storage bytes", "LICENSE": LICENSE_MIT},
+                        readers=["picklescan=clean"])
+        self.assertEqual(self.row(res, "old.pth")["status"], "UNREAD")
+        self.assertIn("pickle-unparsed", self.rules(res))
+        self.assertEqual(res["verdict"], "HOLD")
+
+    def test_safetensors_and_gguf_are_read_as_non_executable_at_any_size(self):
+        # The safetensors file is over the text cap; the LICENSE stays under it.
+        res = self.wvet({"a.safetensors": safetensors() + b"\x00" * 2000, "b.gguf": GGUF,
+                         "LICENSE": LICENSE_MIT}, readers=["modelscan=clean"], max_bytes=500)
+        for name in ("a.safetensors", "b.gguf"):
+            row = self.row(res, name)
+            self.assertEqual((row["status"], row["class"], row["executable"]), ("READ", "weights", False))
+        self.assertEqual(res["verdict"], "PASS")
+        self.assertIn("weights-licence", self.rules(res))
+
+    def test_a_safetensors_file_with_a_bad_header_holds(self):
+        res = self.wvet({"a.safetensors": b"\xff" * 16, "LICENSE": LICENSE_MIT}, readers=["modelscan=clean"])
+        self.assertEqual(self.row(res, "a.safetensors")["status"], "UNREAD")
+        self.assertIn("weights-bad-header", self.rules(res))
+        self.assertEqual(res["verdict"], "HOLD")
+
+    def test_cli_kind_weights_and_allow_global(self):
+        root = build(self.tmp / "cand", {"model.pkl": UNKNOWN_P2, "LICENSE": LICENSE_MIT})
+        r = subprocess.run([sys.executable, str(Path(tv.__file__)), "vet", str(root), "--sha", SHA,
+                            "--kind", "weights", "--allow-global", "fractions.Fraction",
+                            "--reader", "fickling=clean"], capture_output=True, text=True)
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertEqual(json.loads(r.stdout)["verdict"], "PASS")
+
+
+@unittest.skipUnless(shutil.which("git"), "git not on PATH")
+class TrackedSplit(GitRepo):
+    """0428 point 2: UNREAD rows split into tracked (in the SHA) and untracked (made on the host)."""
+
+    def test_untracked_pyc_from_a_tracked_source_is_generated_not_unread(self):
+        root, _ = self.repo()
+        build(root, {"scripts/helper.py": "print('hi')\n"})
+        self.commit(root)
+        build(root, {"scripts/__pycache__/helper.cpython-312.pyc": b"\x00\x01compiled"})
+        res = tv.vet_dir(root, "auto", None, tv.DEFAULT_MAX_BYTES, [], False, None,
+                         readers=["cisco-skill-scanner=clean"])
+        row = next(c for c in res["coverage"] if c["file"].endswith(".pyc"))
+        self.assertEqual((row["status"], row["tracked"]), ("GENERATED", False))
+        self.assertEqual(res["verdict"], "PASS")
+        self.assertTrue(any("generated" in r for r in res["reasons"]))
+
+    def test_untracked_unread_file_without_a_source_still_holds_and_is_named(self):
+        root, _ = self.repo()
+        build(root, {"tools/fetched.exe": b"MZ\x00"})
+        res = tv.vet_dir(root, "auto", None, tv.DEFAULT_MAX_BYTES, [], False, None,
+                         readers=["cisco-skill-scanner=clean"])
+        self.assertEqual(res["verdict"], "HOLD")
+        self.assertTrue(any("untracked" in r for r in res["reasons"]))
+
+    def test_tracked_pyc_is_shipped_and_holds(self):
+        root, _ = self.repo()
+        build(root, {"scripts/helper.py": "print('hi')\n",
+                     "scripts/__pycache__/helper.cpython-312.pyc": b"\x00\x01compiled"})
+        self.commit(root)
+        res = tv.vet_dir(root, "auto", None, tv.DEFAULT_MAX_BYTES, [], False, None,
+                         readers=["cisco-skill-scanner=clean"])
+        row = next(c for c in res["coverage"] if c["file"].endswith(".pyc"))
+        self.assertEqual((row["status"], row["tracked"]), ("UNREAD", True))
+        self.assertEqual(res["verdict"], "HOLD")
+
+
+class Licence(Base):
+    """0428 point 3: the commercial question is answered per weight, from the model cards."""
+
+    CIVITAI_OK = {"allowCommercialUse": ["Image", "Rent", "Sell"], "allowNoCredit": True,
+                  "allowDerivatives": True}
+
+    def test_agreeing_sources_pass(self):
+        res = tv.licence_check(self.CIVITAI_OK, {"cardData": {"license": "apache-2.0"}}, [])
+        self.assertEqual((res["verdict"], res["commercial"]), ("PASS", "yes"))
+
+    def test_sources_that_disagree_hold(self):
+        res = tv.licence_check(self.CIVITAI_OK, {"cardData": {"license": "cc-by-nc-4.0"}}, [])
+        self.assertEqual((res["verdict"], res["commercial"]), ("HOLD", "disputed"))
+        self.assertIn("licence-sources-disagree", self.rules(res))
+
+    def test_no_commercial_use_fails_for_the_commercial_question(self):
+        for value in ([], "None"):
+            res = tv.licence_check({"allowCommercialUse": value, "allowNoCredit": True}, None, [])
+            self.assertEqual((res["verdict"], res["commercial"]), ("FAIL", "no"))
+
+    def test_credit_required_is_conditional_with_a_term(self):
+        res = tv.licence_check({"allowCommercialUse": "Sell", "allowNoCredit": False}, None, [])
+        self.assertEqual(res["verdict"], "CONDITIONAL")
+        self.assertTrue(any(t.startswith("credit") for t in res["terms"]))
+
+    def test_an_other_licence_id_is_unknown_and_holds(self):
+        res = tv.licence_check(None, {"cardData": {"license": "other", "license_name": "custom"}}, [])
+        self.assertEqual((res["verdict"], res["commercial"]), ("HOLD", "unknown"))
+
+    def test_openrail_is_commercial_with_use_restrictions(self):
+        res = tv.licence_check(None, {"cardData": {"license": "creativeml-openrail-m"}}, [])
+        self.assertEqual(res["verdict"], "CONDITIONAL")
+        self.assertTrue(any(t.startswith("use-restrictions") for t in res["terms"]))
+
+    def test_upstream_revenue_threshold_is_named_by_file_and_line(self):
+        text = ("Permission is granted for commercial use.\n"
+                "Entities with annual revenue above $10,000,000 need a separate commercial licence.\n")
+        res = tv.licence_check(None, {"cardData": {"license": "apache-2.0"}}, [("LICENSE", text)])
+        f = next(f for f in res["findings"] if f["rule"] == "licence-revenue-threshold")
+        self.assertEqual((f["file"], f["line"]), ("LICENSE", 2))
+        self.assertEqual(res["verdict"], "CONDITIONAL")
+
+    def test_noncommercial_upstream_text_counts_as_a_no(self):
+        res = tv.licence_check(self.CIVITAI_OK, None, [("LICENSE", "For non-commercial use only.\n")])
+        self.assertEqual((res["verdict"], res["commercial"]), ("HOLD", "disputed"))
+
+    def test_fetch_builds_the_public_api_urls_and_refuses_odd_ids(self):
+        seen = []
+
+        def fake_get(url):
+            seen.append(url)
+            return {"allowCommercialUse": ["Sell"], "allowNoCredit": True} if "civitai" in url \
+                else {"cardData": {"license": "mit"}}
+        with mock.patch.object(tv, "fetch_json", side_effect=fake_get):
+            with contextlib.redirect_stdout(io.StringIO()) as out:
+                code = tv.main(["licence", "--civitai-id", "12345", "--hf-repo", "org/model-x"])
+        self.assertEqual(code, 0, out.getvalue())
+        self.assertEqual(seen, ["https://civitai.com/api/v1/models/12345",
+                                "https://huggingface.co/api/models/org/model-x"])
+        for bad in (["--civitai-id", "12/../x"], ["--hf-repo", "org/x?y=1"]):
+            with contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(tv.main(["licence", *bad]), 2)
+
+    def test_cli_with_saved_json_and_no_source_exits_3(self):
+        path = self.tmp / "hf.json"
+        path.write_text(json.dumps({"cardData": {"license": "apache-2.0"}}), encoding="utf-8")
+        with contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(tv.main(["licence", "--hf-json", str(path)]), 0)
+            self.assertEqual(tv.main(["licence"]), 3)
 
 
 if __name__ == "__main__":

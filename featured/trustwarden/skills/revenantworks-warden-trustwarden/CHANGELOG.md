@@ -7,6 +7,16 @@ are installed, and ends with a verdict and the terms to install under, never a b
 
 Description cut to about 600 characters, main use case first (2026-10-08).
 
+2026-10-16 (observation 0428): a model-weights kind. Pickle and torch files are parsed opcode by
+opcode, never loaded, and every import is named against a tensor, numpy and collections
+allow-list (FAIL for `os`, `subprocess`, `eval` and the like; HOLD for the unknown, the
+unresolved, TorchScript code and trailing bytes); safetensors and GGUF read as non-executable
+after a header check. fickling, modelscan or picklescan, run by hand, is the second reader for
+weights. In a git checkout each row says whether it is tracked, and an untracked `.pyc` compiled
+from a tracked source is GENERATED, out of the verdict. A new `licence` mode reads the Civitai and
+Hugging Face fields and the upstream text for one weight and holds when they disagree.
+New `references/model-weights.md`. 28 tests.
+
 2026-10-16 (observation 0445): scanner discovery looks on PATH, then in the Python user Scripts
 folder (`pip install --user`), and names that folder when the scanner was found there; the
 install walkthrough gives the pip form, the PATH line, and says `python -m zizmor` is not a check.

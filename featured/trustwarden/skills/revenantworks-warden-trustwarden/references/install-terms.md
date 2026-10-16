@@ -44,6 +44,8 @@ any permission or settings rule.
 | `install-scripts`, `installer-present` | No installer runs on the host. A first run goes to the sandbox (hypervrunner: Windows Sandbox, networking off), and the report lists what it wrote |
 | `no-lockfile`, `lockfile-no-integrity`, `unpinned-requirement` | Install only from a committed lockfile with exact pins and integrity hashes (`npm ci`, a frozen lockfile, `pip install --require-hashes`); any dependency change is a `revet` |
 | `licence-restricts`, `no-licence` | Adopt ideas only; fold in no code or text. Cite the source |
+| any READ pickle weight (`pickle-load`) | Load it with `torch.load(weights_only=True)`, which refuses imports outside torch's own allow-list, or convert it to safetensors in a sandbox first; a full unpickle runs whatever the file imports |
+| `weights-licence` (`licence-per-weight`) | Run `trust_vet.py licence` for each weight before use; the repo licence covers the code, not the weights (`model-weights.md`) |
 | a scanner `NOT-RUN` | The verdict rests only on the readers that ran; the term names the missing one |
 | `mod-present` (read by hand) | A mod runs JavaScript inside Claude Code with your permissions: treat it as a hook and read every file before any term is given |
 

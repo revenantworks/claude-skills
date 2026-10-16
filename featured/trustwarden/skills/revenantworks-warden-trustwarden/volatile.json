@@ -10,6 +10,11 @@
     "cadence_days": 90
   },
   {
+    "file": "references/model-weights.md",
+    "class": "calendar",
+    "cadence_days": 90
+  },
+  {
     "file": "SOURCES.md",
     "class": "calendar",
     "cadence_days": 90
