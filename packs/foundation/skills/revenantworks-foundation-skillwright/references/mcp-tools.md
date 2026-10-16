@@ -112,8 +112,11 @@ failed the host's output check, and no test called them).
    in CI) on every push that touches the plugin. A plugin the step skips (for example a condition
    that only tests plugins with a hooks file) runs no contract test: fix the condition, or say so.
 6. **Repo green is not install green.** While versions are frozen, a plugin update can report
-   "latest" with a stale cache (observation 0376); before claiming the installed tool works,
-   reinstall or diff the plugin cache against the repo.
+   "latest" with a stale cache (observation 0376), and a local-path marketplace does not settle
+   it: `claude plugin list` read "Read from" the checkout while a desktop-app session ran the
+   cache (observation 0420). Before claiming the installed tool works, prove which copy ran by a
+   string only one copy contains, or diff the plugin cache against the repo; a reinstall is the
+   owner's step.
 
 Contract tests are code tests: they live in the plugin's own test folder, not in a skill's
 `evals/`. A skill that *calls* the tool gets trigger evals as usual (Entry — Evals).
