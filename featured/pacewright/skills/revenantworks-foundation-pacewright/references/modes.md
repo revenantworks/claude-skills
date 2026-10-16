@@ -91,7 +91,8 @@ hard stop, with the one exception named under reset-eve's final 3 hours.
 turns it on.
 
 - **No lane cap by default** (owner ruling 2026-10-16). Turbo runs with no restriction on the
-  unit count; what keeps it smart is the gates below, not a number.
+  unit count; what keeps it smart is the gates below, not a number. The no-cap counts lanes, not
+  machine load: CPU-heavy local lanes keep a machine cap (below).
 - **One entry question, once.** On entry the controller asks the user one line: "No cap (pick) or
   a number?" The pick is no cap. The answer goes into the budget file (SKILL.md §5) as
   `"mode": "turbo"` with `"parallel_ceiling": null` for no cap, or the number the user names (a
@@ -105,10 +106,30 @@ turns it on.
   2. Its file set does not overlap a running writer's (one writer per repo or worktree).
   3. It can land in this session.
   4. Its tier comes from the shared table.
-- **Machine load.** Before a heavy local launch (a test suite, a game engine run, a build, any
-  CPU-heavy job), probe the machine's load in the same call. Many heavy local suites at once slow
-  every lane, so when the CPU is saturated, launch docs, brief and review lanes instead, and hold
-  the heavy one to the next unit finish. Remote and read-only lanes are not held by local load.
+- **Two kinds of lane** (owner ruling 2026-10-16, after turbo ran 8 local game-engine test suites
+  at once on a 16-thread machine: the CPU sat at 97%, a 45-minute land test run stretched past
+  1 h 40 min, and because lands are serial it blocked the queue behind it).
+  - **Light lanes, no cap**: design, briefs, docs, reviews that re-run a few scripts, remote and
+    read-only work.
+  - **CPU-heavy lanes, the machine cap**: local work that loads the CPU for minutes — a full test
+    suite, a build, a render, a measure or perf run, a game engine run.
+- **The machine cap is derived, not guessed.** Heavy cap = floor(logical threads ÷ threads per
+  heavy lane), at least 1. Threads per heavy lane comes from one measured heavy run (the logical
+  threads it keeps busy alone, rounded up), recorded as the overlay's measured key
+  `turbo.heavy_lane_threads` (`accounting.md`). Until a measure exists, use about one heavy lane
+  per 5 logical threads: a 16-thread machine gave 3, the measured case above (the owner's pick).
+  The rule is stated with the cap whenever it is applied, never a bare number.
+- **The cap is per machine, not per controller.** The load probe re-reads it before each heavy
+  launch, in the same call: logical threads, current CPU load, and every heavy process running
+  on the machine (test suites, builds, container CI), whoever started it — another controller,
+  another session, the user. Two controllers each counting only their own lanes put 6 suites on
+  16 threads. A heavy lane launches only while that machine-wide count is under the cap and the
+  load leaves room; otherwise launch a light lane and hold the heavy one to the next heavy finish.
+- **The land run goes first.** The land (merge) test run is a heavy lane with priority: it takes
+  the next free heavy slot ahead of any row's suite, and while it runs no new heavy lane starts
+  that would push the heavy count past the cap. A land run is never queued behind row suites.
+- **Lands are batched.** Finished, reviewed rows wait and merge in batches, so one land test run
+  (and one CI run) covers several rows; lands stay serial.
 - **No launch** while the 5-hour window is at 85% or more; the slow and stop bands (default 80% and
   95%, both windows) and the 95% weekly stop hold as in every mode.
 - **Ends** at PACE + 15, at the end of the stated period, or on the user's word.

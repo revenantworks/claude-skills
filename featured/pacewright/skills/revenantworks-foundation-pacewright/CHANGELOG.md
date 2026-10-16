@@ -2,6 +2,8 @@
 
 ## [1.0.0] — 2026-10-01
 
+2026-10-16: turbo's no lane cap counts lanes, not machine load (owner ruling, after 8 concurrent local test suites on a 16-thread machine held the CPU at 97% and stretched a 45-minute land test run past 1 h 40 min). Lanes split into light (design, briefs, docs, reviews that re-run a few scripts: no cap) and CPU-heavy local work (full test suites, builds, renders, measure runs: a machine cap). The cap is derived: floor(logical threads ÷ threads per heavy lane), the latter from one measured heavy run as the new measured overlay key `turbo.heavy_lane_threads`, default 5 (16 threads gave 3); the load probe re-reads it before each heavy launch and counts every heavy process on the machine, whoever started it (two controllers each at 3 had put 6 suites on 16 threads). The land test run goes first, and finished, reviewed rows land in batches under one land run. Gates and stop bands unchanged. Case 10 gains T3 and T4.
+
 2026-10-16: turbo has no lane cap by default (owner ruling). On entry the controller asks once, "No cap (pick) or a number?", and records the answer in the budget file (`parallel_ceiling` null = no cap, turbo only). Every launch still passes the four launch gates (real work only, disjoint file sets, can land, tier from the table), the stop bands and a machine-load probe before heavy local runs; turbo still starts only on the user's word. Case 10 extended.
 
 2026-10-13: `context` entry — the in-session context budget: compact, clear or neither (never while units or dispatched rows run, never mid-step), what to write first, and a per-use-case auto-compact table whose figures are the user's own overlay keys (`context.autocompact.<use_case>`); trigger rows #32–#35, Case 21 and two native cases added.

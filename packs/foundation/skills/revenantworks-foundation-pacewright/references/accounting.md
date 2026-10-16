@@ -248,6 +248,10 @@ entries:
   `HH:MM`, default `["12:00", "17:00"]`) and the optional `workday.end` (`HH:MM`) carry
   `source: owner` and no evidence; the user edits them at any time, and pacewright never writes
   them. A value not in `HH:MM` is ignored and reported. Rules: `modes.md`, Work day.
+- **The machine key is measured.** `turbo.heavy_lane_threads` (logical threads one CPU-heavy
+  local run keeps busy alone, rounded up; `bounds: [1, 64]`, `source: measured`, `evidence`
+  naming the run) sets turbo's heavy-lane cap, floor(logical threads ÷ it). Absent, the default
+  is 5. Rules: `modes.md`, Turbo.
 - **Context keys are owner keys too.** `context.autocompact.<use_case>` (use case one of
   `controller`, `build`, `research`, `chat`) holds the user's own auto-compact window for that
   kind of session, in tokens, with `bounds: [100000, 1000000]` (the setting's documented range),

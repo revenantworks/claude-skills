@@ -137,8 +137,8 @@ Weekly 80–94%: one unit. Weekly 95%: stop.
 - **Pace** (above PACE + 3): a burn budget, %/h = 0.565 − gap ÷ hours to the weekly reset; one
   builder plus an optional small read-only unit; a running budget, and a log line per check.
 - **Turbo**: **only on the user's word**, for a stated period. No lane cap unless the user names
-  one (asked once at entry); every launch passes four launch gates. Ends at PACE + 15, and drops
-  to normal after two checks below the baseline rate.
+  one; heavy local lanes keep a derived machine cap, land run first; four launch gates.
+  Ends at PACE + 15; drops to normal after two checks below baseline.
 - **Overnight** (22:00–09:00 user time, by clock): entry is a gate — every queued command
   allowed, liveness watched from outside the session; throttle from the gap, never turbo; no
   blocking question — launch first, questions to a morning file; a morning report.
