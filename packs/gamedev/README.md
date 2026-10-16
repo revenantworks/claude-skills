@@ -41,6 +41,11 @@ Paste this table into a project's CLAUDE.md to route requests without loading ev
 
 **Featured:** pixelsmith also ships on its own as a one-skill plugin (`/plugin install pixelsmith@revenantworks`).
 
+**Opt-in plugin:** `plugins/gdscript-lsp/` gives Claude Code Godot's own GDScript language
+server through a loopback stdio-to-TCP bridge (port 6005), plus a check-only format hook that
+reports NOT-RUN without a formatter. It is a separate plugin, so installing this pack never starts
+a language server; its README has the install line and every setting.
+
 **Capstone:** the Forge Run in `capstone/` takes one playable scene through the pack; uismith has no leg on the card yet.
 
 ## Pack rule
