@@ -363,6 +363,28 @@ describe('the band redraws on every press (bug: Later and Ask me later looked de
   })
 })
 
+describe('the pane redraws on every press, with no redraw of the test\'s own', () => {
+  test('view bar, a group Open, Snooze and the back row each show at once', async ($, on) => {
+    world(on, noteFiles())
+    on('ui.toast', async () => ({ value: undefined }))
+    await $.command.run(cmd({ command: 'dash', args: '', origin: { kind: 'composer' } }))
+    const pane = await $.ui.mount({ plugin: 'dash', surface: 'terminal', component: 'Pane', requestId: 'dash', props: PANE_PROPS })
+    expect(await pane.find({ type: 'Text', text: /Skills, last 30 days/ })).toBeDefined()
+    await pane.press({ key: 'view:suggest' })
+    expect(await pane.find({ type: 'Text', text: /1\. shell: npm/ })).toBeDefined()
+    await pane.press({ key: 'drill:shell: npm' })
+    expect(await pane.find({ type: 'Text', text: /npm run build/ })).toBeDefined()
+    expect(await pane.find({ type: 'Text', text: /snoozed/ })).toBeUndefined()
+    await pane.press({ key: 'snooze:shell: npm' })
+    expect(await pane.find({ type: 'Text', text: /snoozed/ })).toBeDefined()
+    await pane.press({ key: 'drill:*' })
+    expect(await pane.find({ type: 'Text', text: /1\. shell: npm/ })).toBeDefined()
+    await pane.press({ key: 'view:overview' })
+    expect(await pane.find({ type: 'Text', text: /Skills, last 30 days/ })).toBeDefined()
+    await pane.unmount()
+  })
+})
+
 describe('the band redraws when something else changes what it shows', () => {
   test('a dismiss pressed in the pane takes the same suggestion off the band at once', async ($, on) => {
     world(on, noteFiles())
