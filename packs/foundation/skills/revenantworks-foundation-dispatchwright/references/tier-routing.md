@@ -70,6 +70,13 @@ arms (high and medium effort on pin-moving builds, one model against another) ca
 records its `trial_arm` (`references/ledger-schema.md`). The next row's arm is read off the tally,
 never inferred from memory.
 
+**Model trials run headless, never as Agent-tool units** (observation 0390). An Agent-tool
+sub-agent carries the whole harness (about 50k tokens of system prompt, tool schemas and skill
+list), so a cheap model's trial cost more than the work it measured. Run trials and baselines
+through a headless runner (`claude -p` with a fixed system prompt, only the job's tools, no session
+persistence, JSON output) and record the per-run overhead beside each score. `--bare`
+authenticates only with an API key, so it bills the API, not the plan.
+
 ## How effort actually binds
 
 **The effort column binds only through an agent definition** (observation 0179). The Agent or
@@ -125,6 +132,13 @@ runs at `medium`, set once at the start of the run.
   Adversarial verifier). The author's tests cover the cases the author imagined; once 176 passing
   tests missed three high-severity defects that one such reviewer found. It hunts rather than
   re-checks, so it takes the balanced tier at `medium` or above, not the re-derive default below.
+- **A row whose deliverable is adversarial or evasion-shaped input** (a bypass battery, obfuscated
+  payload fixtures) is planned attended, split from the round's ordinary fixes, one finding per
+  unit, with the design decided in the brief: the file site, the list to extend, the call names and
+  the tests (observation 0366). A safety classifier stopped such units overnight, and again
+  attended with benign fixtures while the unit reasoned about the shape; with the design
+  pre-decided, one finding per unit finished green. When even that stops, the change is
+  person-run, or the class is documented as a known limit.
 - **A verifier that only re-derives evidence already on disk defaults to balanced or fast tier at
   low or medium effort.** Re-reading a file to confirm a finding already made is not the same job
   as weighing the votes across a wave, and the top tier belongs to the judge, not to every voter

@@ -25,6 +25,11 @@ the repo: `<repo>/.dispatch/runs/<run-id>/ledger.md` (or `.csv` — either is fi
 and states it in the plan). `<run-id>` is a short date-plus-slug the plan names once, e.g.
 `2026-08-18-estate-sweep`.
 
+**Hook-written run records stay out of a repo whose local CI needs a still tree** (observation
+0380). A file a hook appends to every turn (`actuals.jsonl`) changed mid-run and voided a green
+local CI twice. Gitignore it and commit a rollup at wave ends, or have the repo's local CI exclude
+that path by name; never run the stamped CI in the background while such a hook is live.
+
 **Committed in a private repo, off git in a public one** (observations #0032, #0203; owner ruling
 2026-10-01). The plan states which case the run is in, as one ledger header line:
 `records: private (committed)` or `records: public (off git)`.
@@ -78,12 +83,12 @@ carries anything but the bare word `done`.
 | `model` | Read from this skill's own `references/tier-routing.md` — never invented, never rounded up "to be safe" (self-contained since 1.2.9, observation #0073). |
 | `effort` | From the same file, **written as it will bind** (observation 0179): the value in the agent definition the unit launches by, or `inherited (<session effort>)` where the surface has no definitions. Never the intended value alone. |
 | `surface` | `inline` \| `subagent (background)` \| `subagent (foreground)` \| `teammate` \| `remote worktree`, plus `· def: <agent definition>` when the unit launches by `subagent_type` (tier-routing.md, How effort actually binds). **`teammate`** (an agent-teams teammate) is for read-only research and review waves only: an in-process teammate cannot be resumed, inherits the lead's effort, cannot nest, and the feature is experimental. **A row for a Workflow or Task call that itself fans out to more than one agent states the count as an `x<N>` token in this cell** — `subagent (workflow) x245`, not three rows for 245 agents (observation #0022). `dispatch_ledger_guard.py`'s `open_unit_count()` parses the token and counts the row as N units against the 6-unit wave cap; a missing or malformed token (no digits, `x0`, `xN`) defaults to 1. Two tokens in one cell: the last one wins. **Where a step in this unit's route needs a credential the unit may not switch to, the split is recorded here too** — `subagent (background) · PR and release: controller` (observation #0088). |
-| `repo` | The repo this unit writes, or `—` for a read-only unit. |
+| `repo` | The repo this unit writes, or `—` for a read-only unit. `—` is the one read-only marker: free text such as `none (read-only)` reads to a guard as a repo name, and three read-only rows once refused a whole wave as three writers (observation 0387). |
 | `worktree` / `branch` | The path and branch a writer unit runs in, per §6's one-writer-per-repo rule. `—` for a unit that shares the main tree. |
 | `files_allowed` | The paths or globs this writer may change (observation 0183). The brief states the same list; Reconcile runs `git diff --name-status <base>..<sha>`, and a path outside the list makes the row `unverified`. Two writers in one repo need disjoint lists (SKILL.md §6). `—` for a read-only unit. |
 | `blocked_by` | The unit ids this row waits on, or `—`. A row launches only when every row it names is closed; the wave table orders by these edges. |
-| `call_cap` | The tool-call ceiling the brief gives the unit (observation 0165), **counted by the harness**, never by the unit (observation 0280): the unit stops near 0.85 of it to leave room to commit and report, and §7's 2x-budget stop reads the harness's count as the only evidence. Part of the cap is reserved for verification (unit-brief-template.md, Budget). There is no per-unit token stop; a size gate names the tool that measures it. Where gatewarden's call-cap hook is installed, the controller may write the launched agent's cap into that hook's caps file so the hook refuses calls past it; the hook is gatewarden's, the cap is this row's. |
-| `expected_artifacts` | What the unit should produce — a file, a commit, a report — stated before dispatch, not inferred after. |
+| `call_cap` | The tool-call ceiling the brief gives the unit (observation 0165), **counted by the harness**, never by the unit (observation 0280): the unit stops near 0.85 of it to leave room to commit and report, and §7's 2x-budget stop reads the harness's count as the only evidence. Part of the cap is reserved for verification (unit-brief-template.md, Budget). There is no per-unit token stop; a size gate names the tool that measures it. A controller session cannot write gatewarden's caps file (the auto-mode classifier refuses the edit as self-modification, observation 0371), so until the call-cap hook reads the cap from the launch itself, the barrier is a cap per agent definition in that file, placed by the owner; the hook is gatewarden's, the cap is this row's. |
+| `expected_artifacts` | What the unit should produce — a file, a commit, a report — stated before dispatch, not inferred after. A report names a distinct path per unit (`waves/<unit_id>.md`): two rows with the same report cell read to the guard as a shared write target, even when both are read-only (observation 0416). |
 | `estimated_tokens` | The plan's own estimate, with its basis beside it — `60000 (median of 4 rows)` or `400000 (owner)`. **A row for a Workflow or Task call that fans out to N agents holds N × the per-agent figure** — the N being the `x<N>` token on its `surface` cell — so the guard can take the column as written. The guard sums this column over the open rows exactly as written; a cell it cannot read as a number counts as 0 and is named in its warning. |
 | `actual` | `<tokens> / <calls> / <min>`, copied from the harness's completion notice (observation 0144). A figure the unit reports about itself is written with `(self-reported, unverified)` and never feeds a calibration. |
 | `rework` | `0` or the number of fix rounds the row needed, with the finding ids — the input to the actuals block and to measured-cost tiering (tier-routing.md). |
@@ -191,6 +196,10 @@ six-unit cap, sixteen of them units that had finished hours earlier.
 
 **The `status` cell of a closed row holds the bare word** (`done`, `verified`, …); the reason
 goes in a note column or after the table. The guard warns on a cell such as `done (no change)`.
+**Open means `dispatched` or `committed`, nothing else**: `running` is not a status, and a row
+written with it is not counted (observation 0437). **Every row has exactly the header's cell
+count**: one extra empty cell shifts `status` into the next column, and a day of such rows once
+read as 13 open units and refused every launch (observation 0437).
 
 **The dispatcher closes the row when the unit returns, not at Reconcile.** Reconcile still
 verifies every writer row independently.

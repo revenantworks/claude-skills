@@ -136,6 +136,15 @@ or is told to cite "as read on <date>"; citations use `<sha>:<file>:<line>` (obs
 written" and report. Never improvise with a token in an env var or a second remote (observation
 #0088).]
 
+**Writes the classifier may refuse:** [a local commit from a brief that reached the unit through a
+relay, a plugin uninstall or install, and late writes in a long write-heavy session have each been
+refused by the auto-mode classifier, with the files left staged (observations 0378, 0429). The Done
+line allows `staged, not committed`, and the hand-back carries the owner's one-line command that
+finishes it. A plugin refresh (marketplace update, uninstall, install) is an owner step from the
+start, handed over as one block. When the owner reports such a block done, ask for its pasted
+output, or check every expected end state (each plugin present, read from the checkout) before
+reporting: one status read can land mid-sequence.]
+
 **Expected artifacts:** [what "done" looks like — a file, a commit, a specific report shape]
 
 **Expected test total (if this unit ends in a test run):** [the count before the run starts, from
@@ -148,7 +157,13 @@ nine named tests. The brief author counts them before launch; a mismatch is a br
 before the unit runs, never a short total at Reconcile.]
 
 **Verification list (if this repo has CI):** [every step the CI file runs, in its own commands, and
-the file's path — derived by reading that file now, never from memory (observation #0087). After a
+the file's path — derived by reading that file now, never from memory (observation #0087).
+**Generate the local stand-in, never hand-list it** (observation 0367): a script reads the CI file
+and runs each `run:` step, printing every step it skips; a hand-picked list certifies the subset,
+and a stamp tool records whatever command it was given. **A host version the CI file pins** is part
+of the definition (observation 0368): when it is older than the rig's, run the plugin tests on the
+kept binaries that bracket it (`~/.local/share/claude/versions/<version>`, by path) and name the
+versions used; a test that passed on the rig's newer host once failed on the pin's. After a
 push, read the remote run's result and report a red run on your row. Resolve the run by full sha:
 `git rev-parse HEAD`, then the newest runs matched on `headSha` (`gh run list --json
 databaseId,headSha,status,conclusion`); an empty run id fails loudly, never reads as green
@@ -285,6 +300,14 @@ path.]
   land. A brief that says "copy it to the run dir" contradicts the guard.
 - **Scratch space is per unit:** `<scratchpad>/<unit_id>/` or unit-prefixed file names. Parallel
   units that shared one scratchpad overwrote each other's helper script.
+- **A worktree isolates the tree, not state outside it** (observation 0438). Before parallel units
+  run checks in one project, list every out-of-tree store they share — an engine's user-data folder
+  keyed by the project's name (Godot's `user://`), caches, fixed temp names, ports — and give each
+  unit its own root, or serialise the full runs. Two worktrees of one Godot project once failed a
+  test by writing the same `user://` file at the same time.
+- **Stop every background process you started before you hand back** (observation 0439): list them
+  by pid and stop them. A watcher (`tail -f`, a follow loop) written into a script file passes the
+  command-text guard, and orphans ran for hours. The controller runs a reaper at each land.
 - **A worktree keeps its repo's folder name** (observations 0424, 0394) when the repo's tests
   resolve paths from the checkout's location: `<scratch>/<unit_id>/<repo-name>`, never
   `<scratch>/wt-<unit_id>`. A test that reads its parent folder's name, or counts sibling
@@ -327,6 +350,24 @@ path.]
 - **A control that depends on live state carries its own expiry.** Name what live state besides
   the file it touches its result depends on, and pin the fixture against it — use the hook's own
   test override where one exists (observation #0062).
+- **Suite lanes are capped apart from units** (owner ruling 2026-10-16, observation 0446): at
+  most 3 units run a full test suite at once on one machine (set per rig), the merge run first.
+  A brief says: run only the test modules you touch; the controller runs the full suite once on
+  the landed batch. Design and review units are not counted.
+- **Moving or importing run records is a privacy scan before the commit** (observation 0434).
+  Ledgers, briefs and raw logs carry user-folder paths and names. Run the repo's privacy scan over
+  the moved set first, scrub captures or leave them untracked, and treat any privacy warning, warn
+  mode included, as a stop, never a note in a PR body.
+- **Probe the thing that ships next** (observation 0393): a check of a generated artifact (a
+  dashboard, a page) probes a fresh build from the generator at HEAD. The committed copy lags its
+  generator between runs and is reported only as `stale, rebuilt next run`; a unit once nearly
+  patched CSS the generator had already fixed.
+- **Order a land: the cheap edits first, the expensive check once, on the exact head** (observation
+  0433). Write the land commit (counts, docs, CI literals) first; then run the local CI once
+  through the stamp tool (`ci_stamp.py run -- <ci command>`) on that head; then any platform pin
+  measure; then record the push intent in its own call (the push hook reads the whole command
+  before the intent runs); then push. A suite run bare, or before the land commit, is not the
+  verdict, and a 55-minute suite once ran twice for it.
 - **An "apply" command that ends in an install crosses an owner boundary.** Write a `repo_apply`
   half this unit runs and an `owner_install` half it only reports, never one command string
   (observation #0026).
