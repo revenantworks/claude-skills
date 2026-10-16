@@ -352,7 +352,9 @@ path.]
   test override where one exists (observation #0062).
 - **Suites share one machine-wide cap, apart from the unit cap** (owner ruling 2026-10-16 "both",
   observation 0446): at most 4 suite processes run at once on the machine, across every session
-  and thread, beside pacewright's derived machine cap (the stricter holds). Each process counts, so a runner that fans out N headless Godots uses N slots. Every
+  and thread (the owner may raise it for a while in `~/.dispatch/suite-cap.json`, and with 2 or more
+  running a new suite also waits for CPU under its `cpu_target`, default 75%; `suite_slot.py
+  report` reads the per-run perf log to pick both), beside pacewright's derived machine cap (the stricter holds). Each separate suite counts, so a plain runner that fans out N headless Godots uses N slots; a wrapper and the suite it starts (ci_stamp over ci_local, ci_local over unittest) share one. Every
   background suite starts at below-normal priority with no window. A brief says: start every test
   or build run through the slot runner, `python <dispatchwright>/scripts/suite_slot.py --cwd
   <worktree> -- <command...>` (it waits for a slot, then runs the command at low priority with no
