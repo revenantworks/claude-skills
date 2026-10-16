@@ -8,6 +8,10 @@ they actually reach, read from evidence. (The reach entries came from the retire
 
 Description cut to about 600 characters, main use case first (2026-10-08).
 
+2026-10-16: `launch_throttle.py` reads only a number as a zero ceiling. A turbo budget file with no
+lane cap (`parallel_ceiling` null or `"none"`) once raised in `int()` and fell open past the stop
+band; the stop band now holds in turbo, with two tests.
+
 ### What it does
 
 - Hooks install in watch mode: they log what they would stop and let the work run. Hard rules

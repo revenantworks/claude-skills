@@ -941,6 +941,23 @@ class ThrottleTests(unittest.TestCase):
         self.assertEqual(code, 2)
         self.assertIn("parallel_ceiling", err)
 
+    def test_turbo_no_cap_still_honours_the_stop_band(self):
+        # A "none" ceiling once raised in int() and fell open past the stop band.
+        self.reading(97)
+        for ceiling in (None, "none"):
+            Path(self.budget).write_text(json.dumps({
+                "schema": 1, "expires_at": "2999-01-01T00:00:00Z", "mode": "turbo",
+                "parallel_ceiling": ceiling}))
+            self.assertEqual(self.launch()[0], 2, f"ceiling {ceiling!r}")
+
+    def test_turbo_no_cap_allows_under_the_bands(self):
+        self.reading(50)
+        Path(self.budget).write_text(json.dumps({
+            "schema": 1, "expires_at": "2999-01-01T00:00:00Z", "mode": "turbo", "parallel_ceiling": None}))
+        code, out, _ = self.launch()
+        self.assertEqual(code, 0)
+        self.assertEqual(out.strip(), "")
+
     def test_other_tools_pass_silently(self):
         self.reading(99)
         code, out, _ = self.launch(tool="Read")
