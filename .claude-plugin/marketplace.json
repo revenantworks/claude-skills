@@ -43,20 +43,6 @@
       "repository": "https://github.com/revenantworks/claude-skills"
     },
     {
-      "name": "gdscript-lsp",
-      "source": "./packs/gamedev/plugins/gdscript-lsp",
-      "version": "1.0.0",
-      "license": "Apache-2.0",
-      "category": "development",
-      "description": "Opt-in GDScript language server for Claude Code: a stdlib bridge to the Godot editor's LSP on loopback (diagnostics, hover, definition), plus a check-only format hook that never edits a file and installs nothing.",
-      "keywords": [
-        "godot",
-        "gdscript",
-        "lsp",
-        "gamedev"
-      ]
-    },
-    {
       "name": "localops",
       "source": "./packs/localops",
       "description": "Skills for running work on this machine, on the -runner motif, one program per runner. Seven members: lmstudiorunner (local LM Studio models, verified), comfyrunner (ComfyUI renders behind GPU guards), dockerrunner (Docker Desktop and WSL), duckrunner (DuckDB over a repo's data files), whisperrunner (local transcripts with whisper.cpp), hypervrunner (Hyper-V VMs and Windows Sandbox), obsrunner (OBS Studio, read-only by default, and FFmpeg post-processing). Each routes on its own description and works alone.",
