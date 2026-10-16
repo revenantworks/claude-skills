@@ -375,5 +375,40 @@ class TestSurface(unittest.TestCase):
         self.assertEqual(code, 0)
 
 
+class QuotedRegexTests(unittest.TestCase):
+    """CodeQL py/redos (alert 3): _QUOTED once let a backslash match either branch, so an
+    unclosed quote full of backslash pairs backtracked exponentially. The probe runs in a
+    child with a timeout, so the unfixed regex fails the test instead of hanging it."""
+
+    BS = "\\"
+
+    def _probe_seconds(self, text: str) -> float:
+        code = ("import sys,time;sys.path.insert(0,sys.argv[1]);import shield_scan as s;"
+                "t=time.perf_counter();s._QUOTED.search(sys.argv[2]);print(time.perf_counter()-t)")
+        try:
+            p = subprocess.run([sys.executable, "-c", code, str(HERE), text], capture_output=True,
+                               text=True, timeout=10, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+        except subprocess.TimeoutExpired:
+            self.fail("_QUOTED backtracked past 10 s on an adversarial input")
+        self.assertEqual(p.returncode, 0, p.stderr)
+        return float(p.stdout.strip())
+
+    def test_unclosed_quote_of_backslash_pairs_is_fast(self):
+        for n in (40, 5000):
+            self.assertLess(self._probe_seconds('"' + (self.BS + "a") * n), 1.0, n)
+
+    def test_quoted_text_still_drops_out_of_code_refs(self):
+        sys.path.insert(0, str(HERE))
+        import shield_scan as s
+        refs = s._code_refs('"api secret" + key')
+        self.assertNotIn("secret", refs)
+        self.assertIn("key", refs)
+        refs = s._code_refs("'it" + self.BS + "'s secret' + tok")  # an escaped quote stays inside
+        self.assertNotIn("secret", refs)
+        self.assertIn("tok", refs)
+        self.assertIn("token", s._code_refs('f"{token} here"'))  # interpolation still counts
+        self.assertIn("pw", s._code_refs("`a" + self.BS + self.BS + "` + pw"))  # escaped backslash closes
+
+
 if __name__ == "__main__":
     unittest.main()

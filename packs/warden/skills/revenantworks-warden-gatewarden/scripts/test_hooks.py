@@ -1016,6 +1016,33 @@ class HeredocGuardTests(unittest.TestCase):
     def test_plain_python_dash_c_passes(self):
         self.assertEqual(run_hook("heredoc_guard.py", bash("python -c \"print(1)\""))[0], 0)
 
+    # CodeQL py/redos (alert 1): ANSI_C once let a backslash match either branch, so an unclosed
+    # $"... full of backslash pairs backtracked exponentially. The probe runs in a child with a
+    # timeout, so the unfixed regex fails the test instead of hanging it.
+    def _ansi_c_probe_seconds(self, text: str) -> float:
+        code = ("import sys,time;sys.path.insert(0,sys.argv[1]);import heredoc_guard as h;"
+                "t=time.perf_counter();h.ANSI_C.search(sys.argv[2]);print(time.perf_counter()-t)")
+        try:
+            p = subprocess.run([PY, "-c", code, str(HOOKS), text], capture_output=True, text=True,
+                               timeout=10, creationflags=NO_WINDOW)
+        except subprocess.TimeoutExpired:
+            self.fail("ANSI_C backtracked past 10 s on an adversarial input")
+        self.assertEqual(p.returncode, 0, p.stderr)
+        return float(p.stdout.strip())
+
+    def test_ansi_c_unclosed_backslash_pairs_is_fast(self):
+        for n in (40, 5000):
+            self.assertLess(self._ansi_c_probe_seconds('$"' + (self.BS + "a") * n), 1.0, n)
+
+    def test_ansi_c_quotes_still_unwrap(self):
+        sys.path.insert(0, str(HOOKS))
+        import heredoc_guard
+        sub = lambda t: heredoc_guard.ANSI_C.sub(lambda m: "'" + m.group(2) + "'", t)
+        self.assertEqual(sub("python $'-'"), "python '-'")
+        self.assertEqual(sub('python $"-"'), "python '-'")
+        self.assertEqual(sub("echo $'a" + self.BS + "'b'"), "echo 'a" + self.BS + "'b'")  # escaped quote kept
+        self.assertEqual(sub("echo $'a" + self.BS + self.BS + "' x"), "echo 'a" + self.BS + self.BS + "' x")
+
 
 # ---------------------------------------------------------------- bypass battery (FX3)
 # Every shape the warden audit (A3, 2026-10-01) executed against the hooks, plus nested

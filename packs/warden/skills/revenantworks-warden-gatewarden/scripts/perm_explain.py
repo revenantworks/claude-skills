@@ -21,7 +21,9 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import perm_common as pc  # noqa: E402
 
-GIT_OPT = re.compile(r"^(git(?:\.exe)?)\s+((?:-C\s+\S+|-c\s+\S+|--[\w-]+(?:=\S+)?|-[a-zA-Z])\s+)+(.*)$")
+# -C and -c always take a value in git, so neither is also a bare flag: one reading per option, and a
+# line that does not match fails without exponential backtracking (CodeQL py/redos).
+GIT_OPT = re.compile(r"^(git(?:\.exe)?)\s+((?:-[Cc]\s+\S+|--[\w-]+(?:=\S+)?|-[abd-zABD-Z])\s+)+(.*)$")
 SHELL_C = re.compile(r"""(?i)^(?:\S*[\\/])?(?:sh|bash|zsh|dash|pwsh|powershell|cmd)(?:\.exe)?\s+(?:-c|-command|/c)\s+(['"]?)(.*)\1\s*$""")
 
 

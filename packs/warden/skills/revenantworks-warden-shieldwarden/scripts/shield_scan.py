@@ -471,7 +471,9 @@ class Engine:
 
 
 _INTERP = re.compile(r"\{([^{}]*)\}")
-_QUOTED = re.compile(r"""(['"`])(?:\\.|(?!\1).)*\1""")
+# A backslash only ever opens an escape: the plain branch takes no backslash, so each character has
+# one reading and an unclosed quote fails in linear time (CodeQL py/redos).
+_QUOTED = re.compile(r"""(['"`])(?:\\.|(?!\1)[^\\])*\1""")
 
 
 def _code_refs(arg: str) -> str:

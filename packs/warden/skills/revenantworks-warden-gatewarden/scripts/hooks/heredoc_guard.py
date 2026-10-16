@@ -90,7 +90,9 @@ LAUNCH = {"time", "nohup", "exec", "env", "sudo", "doas", "nice", "&", "call", "
 RUNNERS = {"uv", "poetry", "pipenv", "pdm", "hatch", "rye", "conda"}  # `<runner> run python`
 WRAPPERS = hl.SHELLS | {"eval", "iex", "invoke-expression", "su", "sudo", "doas", "ssh", "watch", "script",
                         "flock", "runuser", "xargs", "nohup", "timeout", "start-process", "saps", "env"}
-ANSI_C = re.compile(r"\$(['\"])((?:\\.|(?!\1).)*)\1")
+# The plain branch takes no backslash, so an escape has one reading and an unclosed $'... fails in
+# linear time (CodeQL py/redos).
+ANSI_C = re.compile(r"\$(['\"])((?:\\.|(?!\1)[^\\])*)\1")
 # The stdin shape as raw text, for an event the parser does not read (bad JSON, over 256 KB, a crash).
 RAW_STDIN = re.compile(r"(?i)(?:^|[\s;&|(`\"'=])(?:[^\s;&|()]*[\\/])?(?:python[\d.]*t?w?|pypy[\d.]*|py)(?:\.exe)?"
                        r"['\"]?(?:\s+-[^\s;&|]*)*?\s+['\"$]*(?:-|/dev/stdin|/dev/fd/0|/proc/self/fd/0)['\"]*"

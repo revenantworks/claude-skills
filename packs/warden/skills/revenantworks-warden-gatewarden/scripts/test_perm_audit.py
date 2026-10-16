@@ -295,6 +295,30 @@ class ExplainTests(Base):
         self.assertNotEqual(r["decision"], "deny")
         self.assertIn("git-global-option", [b["shape"] for b in r["bypass"]])
 
+    def test_git_value_options_keep_their_values(self):
+        p = self.settings({"permissions": {"deny": ["Bash(git push *)"]}})
+        for line in ("git -C repo push", "git -c core.x=1 -C . push", "git --no-pager -C x push",
+                     "git -p push"):
+            r = self.explain("Bash", line, p)
+            self.assertIn("git-global-option", [b["shape"] for b in r["bypass"]], line)
+
+    def test_git_opt_backtracking_is_bounded(self):
+        # CodeQL py/redos (alert 2): `-C x` matched either as one option with a value or as
+        # two bare flags, so a run of `-C -A` before a quoted newline (the splitter keeps it
+        # in one part) backtracked exponentially. The child's timeout keeps a regression
+        # from hanging the suite.
+        code = ("import sys,time;sys.path.insert(0,sys.argv[1]);import perm_explain as e;"
+                "t=time.perf_counter();e.GIT_OPT.match(sys.argv[2]);print(time.perf_counter()-t)")
+        for n in (40, 2000):
+            text = "git " + "-C -A " * n + "\"x\ny\""
+            try:
+                out = subprocess.run([PY, "-c", code, str(HERE), text], capture_output=True, text=True,
+                                     timeout=10, creationflags=NO_WINDOW)
+            except subprocess.TimeoutExpired:
+                self.fail("GIT_OPT backtracked past 10 s on an adversarial input")
+            self.assertEqual(out.returncode, 0, out.stderr)
+            self.assertLess(float(out.stdout.strip()), 1.0, n)
+
     def test_absolute_path_is_not_matched_and_bypass_is_named(self):
         p = self.settings({"permissions": {"deny": ["Bash(curl *)"]}})
         r = self.explain("Bash", "/usr/bin/curl https://example.invalid", p)
