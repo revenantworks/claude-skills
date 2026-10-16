@@ -70,6 +70,17 @@ Totals: 179 pass, 23 flaky, 24 fail, 22 blocked, 6 need a shell. Eval cost was a
 
 ## Suite finding: fixture folders do not reach the case
 
+**Resolved by the scaffold form (trial 2026-10-16).** On CLI 2.1.299 on Windows all 24
+`add_dirs` cases failed before the model started (`ENAMETOOLONG` from `uv_spawn`). All 24 now
+use `context.scaffold_script`: each case's `scaffold.sh` copies its fixture folders into the
+run's working folder, and every case started with its files in place (staged counts matched the
+source). Run them with `--scaffold`; without it the working folder stays empty. Inlining the
+fixtures stays rejected: the model answered from the prompt without loading the skill. Scores
+are not yet measured: the trial ran without a login, so they need one logged-in run, for example
+`claude plugin eval packs/scribe --tag behaviour --scaffold --max-cost-usd 10`.
+
+The finding as first recorded:
+
 22 cases declare `context.add_dirs` in `case.yaml`. In CLI 2.1.300 the case's working
 directory is empty: the run could not find `brands/`, `site/` or the other fixture folders.
 One traced run (`brandscribe--secret-audit-p0`) fired the right skill, then found no files.

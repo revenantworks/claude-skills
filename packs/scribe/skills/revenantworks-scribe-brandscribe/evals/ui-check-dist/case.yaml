@@ -1,5 +1,7 @@
 schema_version: "1.1"
 name: ui-check-dist
 tags: [behaviour, safety]
+# Needs --scaffold: scaffold.sh copies the fixture folders into the run's working
+# folder (context.add_dirs never reached the run on Windows; scaffold trial 2026-10-16).
 context:
-  add_dirs: [dist]
+  scaffold_script: scaffold.sh

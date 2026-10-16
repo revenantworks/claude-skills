@@ -1,5 +1,7 @@
 schema_version: "1.1"
 name: connect-four-lists
 tags: [behaviour, margin]
+# Needs --scaffold: scaffold.sh copies the fixture folders into the run's working
+# folder (context.add_dirs never reached the run on Windows; scaffold trial 2026-10-16).
 context:
-  add_dirs: [live-system, brands]
+  scaffold_script: scaffold.sh

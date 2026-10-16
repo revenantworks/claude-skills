@@ -1,5 +1,7 @@
 schema_version: "1.1"
 name: ui-taste-p3
 tags: [behaviour]
+# Needs --scaffold: scaffold.sh copies the fixture folders into the run's working
+# folder (context.add_dirs never reached the run on Windows; scaffold trial 2026-10-16).
 context:
-  add_dirs: [page]
+  scaffold_script: scaffold.sh
