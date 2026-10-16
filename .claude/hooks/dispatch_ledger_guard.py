@@ -41,12 +41,14 @@ like a fan-out. This hook reads it on every Task/Agent/Workflow call:
     must exist, must be current, and must carry a properly tiered row. Anything
     else exits 2 with a short reason on stderr.
 
-This is deliberately a coarse check, stated plainly rather than overclaimed: it
-confirms *a* tiered row exists in the run's current ledger, not that the
-SPECIFIC unit about to be dispatched has one -- correlating a Task call's own
-tool_input against a specific ledger row would need a unit id the tool_input
-has no standard place to carry. The coarse form still catches the failure mode
-that matters most: a wave launched with a missing, stale, or untiered ledger.
+This started as a coarse check: it confirms *a* tiered row exists in the run's
+current ledger. Extended 2026-10-16 (observation 0425, a failed ledger write
+let a launch through on an older open row, twice): when the launch's brief
+names its unit -- `Unit <id> of run <run-id>` or `You are unit <id>`, read
+from tool_input (prompt first) -- that unit must have its own row with status
+`dispatched`, or the launch is refused (exit 2). A brief that names no unit
+keeps the coarse check. Not covered: a row left `dispatched` by an earlier
+launch of the same unit still passes; the guard keeps no launch history.
 
 Extended 2026-08-20 (skillwright pack audit, finding P1-2 / S-3): SKILL.md
 section 6 states two wave-execution caps in prose -- max 6 concurrent units,
@@ -1497,6 +1499,36 @@ def selftest() -> int:
             if expected == 2 and "wave cap" not in err:
                 problems.append(f"{label}: the refusal does not name the wave cap: {err.strip()[:200]!r}")
 
+        # --- observation 0425: a launch binds to its own unit row -------------
+        # The controller's ledger write failed and the launch went through on an
+        # older open row (U6). The brief names its unit; that unit needs its own
+        # dispatched row.
+        bind_run = tmp / "bindrun" / ".dispatch" / "runs" / "r1"
+        bind_run.mkdir(parents=True)
+        (bind_run / "ledger.md").write_text(
+            header + _row("U6") + "\n" + _row("U5", status="verified") + "\n", encoding="utf-8")
+
+        def _launch(prompt: str, tool: str = "Agent") -> dict:
+            return {"tool_name": tool, "session_id": "abc", "cwd": str(tmp / "bindrun"),
+                    "tool_input": {"description": "a unit", "prompt": prompt}}
+
+        bind_cases = (
+            ("0425: a unit with no row is refused while another row is open",
+             _launch("Unit U7a of run r1. First read the contract."), 2, "U7a"),
+            ("0425: 'You are unit' with no row is refused", _launch("You are unit U7a of the run."), 2, "U7a"),
+            ("0425: a Task launch binds the same way", _launch("Unit U7a of run r1.", "Task"), 2, "U7a"),
+            ("0425: a unit whose own row is dispatched passes", _launch("Unit U6 of run r1."), 0, None),
+            ("0425: the unit id matches without regard to case", _launch("unit u6 of run r1"), 0, None),
+            ("0425: a unit whose own row is closed is refused", _launch("Unit U5 of run r1."), 2, "U5"),
+            ("0425: a prompt that names no unit keeps the coarse check", _launch("Survey the repo."), 0, None),
+        )
+        for label, payload, expected, needle in bind_cases:
+            code, _out, err = _run_guard_full(payload, fresh_flag, tmp)
+            if code != expected:
+                problems.append(f"{label}: expected exit {expected}, got {code} ({err.strip()[:160]})")
+            elif needle and needle not in err:
+                problems.append(f"{label}: the refusal does not name {needle}: {err.strip()[:160]}")
+
         # --- usage windows, dispatchwright 1.3.0 -----------------------------
         # Windows files in the shape usage_windows.py writes from the documented
         # statusline payload; only written_at is minted here, as the flag's ts is.
@@ -1753,7 +1785,7 @@ def selftest() -> int:
         "the calibration warning with its numbers, a pre-1.3.0 ledger unchanged, "
         "the pct_at_dispatch cell write, and argv fixture mode; plus the 1.4.0 lookup-order, "
         f"pointer-file and status-lint cases; plus {hk_cases} records-header and ledger-v2 "
-        "row-validation cases)"
+        f"row-validation cases; plus {len(bind_cases)} unit-row binding cases, observation 0425)"
     )
     return 0
 
@@ -2187,6 +2219,50 @@ def ledger_warnings(path: Path) -> list:
     return notes
 
 
+# Observation 0425: the brief names its unit ("Unit U7a of run <run-id>", "You
+# are unit U7a"), so a launch binds to that unit's own row, not to any open row.
+UNIT_ID_PATTERNS = (
+    re.compile(r"(?i)\bunit\s+`?([A-Za-z]{0,3}\d+[A-Za-z0-9._-]*)`?\s+of\s+(?:the\s+)?run\b"),
+    re.compile(r"(?i)\byou\s+are\s+unit\s+`?([A-Za-z]{0,3}\d+[A-Za-z0-9._-]*)`?"),
+)
+
+
+def launch_unit_id(data: dict) -> str | None:
+    """The unit id the launch's brief names, prompt first; None when it names none."""
+    ti = data.get("tool_input")
+    if not isinstance(ti, dict):
+        return None
+    texts = [ti.get("prompt")] + [v for k, v in ti.items() if k != "prompt"]
+    for text in texts:
+        if not isinstance(text, str):
+            continue
+        for pat in UNIT_ID_PATTERNS:
+            m = pat.search(text)
+            if m:
+                return m.group(1).rstrip("._-")
+    return None
+
+
+def _unit_cell(cell: str) -> str:
+    return re.sub(r"[`*_\s]", "", cell or "").lower()
+
+
+def unit_row_problem(path: Path, unit: str) -> str | None:
+    """Why the ledger does not hold a `dispatched` row for this unit, or None."""
+    try:
+        text = path.read_text(encoding="utf-8", errors="replace")
+    except Exception as e:
+        return f"the ledger could not be read ({e})"
+    rows = _table_rows(text, path.suffix.lower(), ("unit_id", "status"))
+    mine = [r for r in rows if _unit_cell(r.get("unit_id", "")) == _unit_cell(unit)]
+    if not mine:
+        return f"has no row for unit {unit}"
+    if any(_norm(r.get("status", "")) == "dispatched" for r in mine):
+        return None
+    states = ", ".join(sorted({r.get("status", "").strip() or "(blank)" for r in mine}))
+    return f"has a row for unit {unit}, but its status is {states}, not dispatched"
+
+
 def _guard(data: dict) -> int:
     tool_name = data.get("tool_name", "")
     if tool_name not in GATED_TOOLS:
@@ -2240,6 +2316,20 @@ def _guard(data: dict) -> int:
             file=sys.stderr,
         )
         return 2
+
+    # Observation 0425: bind the launch to its own row when the brief names its unit.
+    unit = launch_unit_id(data)
+    if unit:
+        problem = unit_row_problem(ledger, unit)
+        if problem:
+            print(
+                f"dispatch_ledger_guard: this launch's brief names unit {unit}, and {ledger} {problem}. "
+                "Another unit's open row does not cover it. Write this unit's row with status "
+                "`dispatched` first, in its own call, and check that the write landed before the launch "
+                "(references/ledger-schema.md, Writing the ledger).",
+                file=sys.stderr,
+            )
+            return 2
 
     open_count = open_unit_count(ledger)
     cap = concurrent_cap()   # None = turbo with no lane cap (pacewright budget file)
