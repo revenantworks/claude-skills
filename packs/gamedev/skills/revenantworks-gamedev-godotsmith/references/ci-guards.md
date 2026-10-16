@@ -173,6 +173,10 @@ The consequences:
 
 - **A push is verified by the remote run on that commit, not by a local pass.** A sha on
   `origin` says the work arrived, not that it is green.
+- **The local CI is the push verdict only on the head that is pushed, and only through the
+  stamp the push gate reads.** A full local run made bare, or before the land commit (counts,
+  docs, CI literals), proves a head nobody pushes, and the gate sends it round again: write the
+  land commit first, then run the suite once through the stamp (observation 0433).
 - **A stamp that a run happened is not a result.** A verify hook that accepts a turn because
   a marker file is newer than the last edit records that something ran, not what it found.
   Verification is the recorded numbers (script, test and failure counts from a run on that

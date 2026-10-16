@@ -171,6 +171,11 @@ that each commit's suite line was taken alone, not copied from the final run.
 
 ## 4. What GUT does not tell you at all
 
+- **Whether another run shared the project's `user://` folder.** Godot keys `user://` by the
+  project's name, not its folder, so every worktree of one project writes the same place. A
+  suite is proof only if no other run of the same project ran at the same time, or the tests
+  write under a per-process root; one docs-only branch failed a key-bindings test because a
+  second worktree's suite wrote the same `user://` file at once (observation 0438).
 - **Whether an assert was meaningful.** 324,558 asserts and a suite that never exercises
   the branch you changed are perfectly compatible.
 - **Whether a test file exists that nobody wired in.** A file outside the `-gdir` tree, or
