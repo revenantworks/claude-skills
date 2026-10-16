@@ -60,7 +60,10 @@ def main() -> None:
                 ceiling = bd.get("parallel_ceiling")
         except Exception:
             pass
-        if ceiling is not None and int(ceiling) <= 0:
+        # Only a number can set a zero ceiling. A null or "none" ceiling (turbo with
+        # no lane cap) or any other word is no ceiling here; int() on it once raised
+        # into the fail-open branch below and skipped the stop band.
+        if isinstance(ceiling, (int, float)) and not isinstance(ceiling, bool) and ceiling <= 0:
             hl.block("launch throttle: the live budget decision sets parallel_ceiling 0; nothing launches. "
                      "Commit running work and check the meters before the next launch.", rule="launch_throttle.ceiling")
         try:
