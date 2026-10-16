@@ -2466,7 +2466,7 @@ class HookBacklogStampTests(unittest.TestCase):
         git(self.work, "checkout", "-b", "main")
         os.makedirs(os.path.join(self.work, ".github", "workflows"))
         Path(self.work, ".github", "workflows", "ci.yml").write_text(
-            "jobs:\n  t:\n    steps:\n" + "".join(f"      - run: echo {i}\n" for i in range(5)))
+            "jobs:\n  check:\n    steps:\n" + "".join(f"      - run: echo {i}\n" for i in range(5)))
         git(self.work, "add", ".")
         git(self.work, "commit", "-m", "base")
         git(self.work, "push", "-u", "origin", "main")
