@@ -309,6 +309,60 @@ describe('drawing', () => {
   })
 })
 
+// A press must redraw its own site: no test below calls ui.redraw() after a press, so a handler that
+// only changes a module variable leaves the old drawing up and the test fails (the dead Later, AD).
+const BAND_PROPS = { hasSurvey: false, isWorking: false, maxRows: 6, bodyColumns: 100, scroll: SCROLL, view: {} }
+const PANE_PROPS = { title: 'dash', isFocused: true, bodyColumns: 100, placement: 'dock' as const, scroll: SCROLL, view: {} }
+const ASK = /keep counts across sessions/
+const NOTE = /dash suggests/
+/** Six runs of one shell command across three past sessions: enough for one suggestion note. */
+const noteFiles = (): Record<string, string> => ({
+  [SW]: RECORDS,
+  [`${DIR}/events.jsonl`]: serializeEvents(Array.from({ length: 6 }, (_, i) => ({ t: NOW - DAY - i, s: sessionKey(`old-${i % 3}`), k: 'cmd', shape: 'npm run build' }))),
+})
+const TURN: TurnCompleteInput = { answer: '', durationMs: 1, isAborted: false, turnId: 't', reason: 'answer' }
+
+describe('the band redraws on every press (bug: Later and Ask me later looked dead)', () => {
+  for (const [key, d1] of [['ask-on', true], ['ask-off', false], ['ask-later', undefined]] as const) {
+    test(`${key} hides the records ask at once`, async ($, on) => {
+      const files: Record<string, string> = {}
+      world(on, files)
+      on('ui.render', async () => ({ type: 'Box', props: {} }))
+      await $.command.run(cmd({ command: 'dash', args: 'help', origin: { kind: 'composer' } }))
+      const ui = await $.ui.mount({ plugin: 'dash', surface: 'terminal', component: 'AbovePrompt', props: BAND_PROPS })
+      expect(await ui.find({ type: 'Text', text: ASK })).toBeDefined()
+      await ui.press({ key })
+      expect(await ui.find({ type: 'Text', text: ASK })).toBeUndefined()
+      expect(files[SW] === undefined ? undefined : parseSwitches(files[SW]).features.D1).toBe(d1)
+      await ui.unmount()
+    })
+  }
+  test('Later hides the suggestion note at once', async ($, on) => {
+    world(on, noteFiles())
+    on('ui.render', async () => ({ type: 'Box', props: {} }))
+    await $.turn.complete(TURN)
+    const ui = await $.ui.mount({ plugin: 'dash', surface: 'terminal', component: 'AbovePrompt', props: BAND_PROPS })
+    expect(await ui.find({ type: 'Text', text: NOTE })).toBeDefined()
+    await ui.press({ key: 'note-later' })
+    expect(await ui.find({ type: 'Text', text: NOTE })).toBeUndefined()
+    await ui.unmount()
+  })
+  test('Show hides the note and switches an open pane to Suggestions at once', async ($, on) => {
+    world(on, noteFiles())
+    on('ui.render', { component: 'AbovePrompt' }, async () => ({ type: 'Box', props: {} }))
+    await $.turn.complete(TURN)
+    await $.command.run(cmd({ command: 'dash', args: '', origin: { kind: 'composer' } }))
+    const pane = await $.ui.mount({ plugin: 'dash', surface: 'terminal', component: 'Pane', requestId: 'dash', props: PANE_PROPS })
+    expect(await pane.find({ type: 'Text', text: /Skills, last 30 days/ })).toBeDefined()
+    const ui = await $.ui.mount({ plugin: 'dash', surface: 'terminal', component: 'AbovePrompt', props: BAND_PROPS })
+    await ui.press({ key: 'note-show' })
+    expect(await ui.find({ type: 'Text', text: NOTE })).toBeUndefined()
+    expect(await pane.find({ type: 'Text', text: /Suggestions/ })).toBeDefined()
+    await ui.unmount()
+    await pane.unmount()
+  })
+})
+
 describe('health across sessions (bug: privacy NOT LOADED while it was loaded)', () => {
   test('a second session beating into the same file leaves this session loaded', async ($, on) => {
     const files: Record<string, string> = {}
