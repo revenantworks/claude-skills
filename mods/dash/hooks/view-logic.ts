@@ -4,6 +4,7 @@
 // glyph, lines kept under about 72 characters. Colour is a tone the pane paints; text stays plain.
 import type { Feed, Health, SkillRow } from './collector-logic'
 import { statusText, type Live } from './meters-logic'
+import { ruleCheck, ruleSummary, type Rule } from './rules-logic'
 import { groupAction, grouped, resolveRef, type Suggestion } from './suggest-logic'
 import {
   BACKGROUNDS, NEUTRAL, bar, columns, consoleVerdict, headerText, madeFor, resolveVariant, roleChecks, themeVerdict,
@@ -280,7 +281,11 @@ const statesText = (st: Partial<Record<Suggestion['state'], number>>): string =>
  * The suggestion queue rolled up by command type, most-asked first (`drill` null), or one group's
  * shapes (`drill` a group number or name), each with its prompts, its runs and its state.
  */
-export const suggestLines = (rows: readonly Suggestion[], theme: Theme = NEUTRAL, drill: string | null = null): Line[] => {
+/**
+ * The suggestion queue. With `rules` (read from the settings files, read-only) each shape in a
+ * drill-in also says whether an allow, deny or ask rule already covers it.
+ */
+export const suggestLines = (rows: readonly Suggestion[], theme: Theme = NEUTRAL, drill: string | null = null, rules?: readonly Rule[]): Line[] => {
   const t = theme
   const sep = t.glyphs.sep
   const gs = grouped(rows)
@@ -306,6 +311,13 @@ export const suggestLines = (rows: readonly Suggestion[], theme: Theme = NEUTRAL
       out.push({ text: fit(`  ${`${gi + 1}.${i + 1}`.padStart(5)} [${states.join('/')}] ${sub.label}`, MAX_COLS), tone })
       const ids = sub.rows.map(r => r.id).join(' ')
       out.push({ text: fit(`        ${ev}${sep}id${sub.rows.length === 1 ? '' : 's'} ${ids}`, MAX_COLS), tone: 'dim', buttons: acts(sub.label, sub.rows) })
+      // A prompt row's key names the tool, so it is the better one to check; a run row checks both shells.
+      const probe = sub.rows.find(r => r.kind === 'prompt') ?? sub.rows[0]!
+      const check = rules ? ruleCheck(probe.key, rules) : null
+      if (check) {
+        out.push({ text: fit(`        ${ruleSummary(check)}`, MAX_COLS), tone: check.verdict === 'denied' ? 'warning' : 'dim' })
+        if (check.verdict === 'allowed') out.push({ text: '        already allowed: no rule to add. Dismiss it, or gatewarden explain.', tone: 'dim' })
+      }
     })
     const short = g.name.replace(/^\w+: /, '')
     out.push(blank, { text: `  /dash suggest accept|dismiss|snooze ${gi + 1} or ${short} (the group), ${short}.<n> (one shape) or an id`, tone: 'dim' },

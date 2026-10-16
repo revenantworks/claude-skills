@@ -23,6 +23,7 @@ import {
   judge, junitCounts, leaseLines, leasePath, lmsFrom, ollamaFrom, paletteTokens, parseLease, parseRoster, pinChanges,
   resolveBrand, versionAtLeast, type CiFacts, type Pins, type Proof, type Readings,
 } from './panels-logic'
+import { parseRuleFile, settingsPaths, type Rule } from './rules-logic'
 import { actOn, actOnRows, candidates, mergeSuggestions, parseSuggestions, pickNote, serializeSuggestions, type Suggestion } from './suggest-logic'
 import {
   addTask, changesPrs, endAgent, estimateFor, isRunActive, runOwnedBy, lastLineOf, matchLedgerRow, newestLedger, parseEstWall, parseLedger, parsePrList,
@@ -75,6 +76,8 @@ let dsListed = false
 let dsFeed: Feed | null = null
 let dsHealth: Health = emptyHealth()
 let dsSuggest: Suggestion[] = []
+/** Permission rules from the settings files, read-only (permissions.allow, deny, ask; nothing else kept). */
+let dsRules: Rule[] = []
 let dsNoted = false
 let dsNote: Suggestion | null = null
 let dsNotes: string[] = []
@@ -160,6 +163,13 @@ async function dsWrite($: EngineInterface, path: string, text: string): Promise<
   } catch {
     // Observe-only writes never block the person's work.
   }
+}
+
+/** Re-read the rules: user, user-local, project and local settings. dash never writes them. */
+async function dsLoadRules($: EngineInterface): Promise<void> {
+  const out: Rule[] = []
+  for (const [scope, path] of settingsPaths(dsHome, dsCwd || dsRoot)) out.push(...parseRuleFile(await dsRead($, path), scope))
+  dsRules = out
 }
 
 async function dsCanDraw($: EngineInterface): Promise<boolean> {
@@ -468,7 +478,7 @@ async function dsLines($: EngineInterface, view: View): Promise<Line[]> {
     case 'meters': return metersLines(live, feed, now, th)
     case 'health': return healthLines(feed.health, th, findDupes(feed.skills, dsSkillSources))
     case 'tasks': return dsTaskLines($)
-    case 'suggest': return suggestLines(dsSuggest, th, dsSuggestDrill)
+    case 'suggest': return suggestLines(dsSuggest, th, dsSuggestDrill, dsRules)
     case 'theme': return themeLines(dsThemes, dsTheme.name, dsTheme, dsThemeErrors, dsConsole)
     case 'gpu': return text('GPU', leaseLines(parseLease(await dsRead($, dsLeaseFile)), dsReadings, now))
     case 'palette': return text('Brand palette', await dsPaletteLines($))
@@ -874,7 +884,8 @@ export const register: Register = on => {
       // An MCP tool result is a string or content blocks; a { text } object fails the host's output check.
       if (view === 'suggest') {
         const group = (e as { group?: unknown }).group
-        return { result: linesText(suggestLines(dsSuggest, dsTheme, typeof group === 'string' && group.trim() ? group.trim() : null)) }
+        await dsLoadRules($)
+        return { result: linesText(suggestLines(dsSuggest, dsTheme, typeof group === 'string' && group.trim() ? group.trim() : null, dsRules)) }
       }
       return { result: linesText(await dsLines($, ['overview', 'skills', 'meters', 'health', 'tasks'].includes(view) ? view : 'overview')) }
     }
@@ -1136,6 +1147,7 @@ export const register: Register = on => {
         }
         // `/dash suggest 3` or `/dash suggest git` drills into one group; bare lists every group.
         dsSuggestDrill = rest || null
+        await dsLoadRules($)
         return show('suggest')
       }
       case 'publish': {
