@@ -20,7 +20,11 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
+# The rig's real secret homes (the DPAPI file, the registry) never reach these tests: only the
+# process environment is read unless a test names another source (observation 0443).
+os.environ.setdefault("OBSRUNNER_SECRET_SOURCES", "env")
 import obs_audit  # noqa: E402
+import obs_secret  # noqa: E402
 import obs_post  # noqa: E402
 import obs_ws  # noqa: E402
 
@@ -603,6 +607,46 @@ class RenderTests(StateDirCase):
         rel = self.run_post("release")
         self.assertEqual(rel["status"], "NOT-OURS")
         self.assertTrue(self.lease_path().exists())
+
+
+class SecretSources(StateDirCase):  # observation 0443
+    def setUp(self):
+        super().setUp()
+        self._src = os.environ.get("OBSRUNNER_SECRET_SOURCES")
+
+    def tearDown(self):
+        os.environ["OBSRUNNER_SECRET_SOURCES"] = self._src or "env"
+        super().tearDown()
+
+    def test_empty_env_value_counts_as_none(self):
+        os.environ["OBSRUNNER_SECRET_SOURCES"] = "env"
+        os.environ["OBS_WEBSOCKET_PASSWORD"] = ""
+        self.assertEqual(obs_secret.resolve(), (None, "none"))
+
+    def test_env_is_a_fallback_reported_as_such(self):
+        os.environ["OBSRUNNER_SECRET_SOURCES"] = "dpapi,env"
+        os.environ["OBS_WEBSOCKET_PASSWORD"] = "fallback-value"
+        self.assertEqual(obs_secret.resolve(), ("fallback-value", "env"))
+        self.assertIn("-Migrate", obs_secret.NOTES["env"])
+
+    def test_dpapi_path_is_the_estate_layout(self):
+        p = obs_secret.secret_path()
+        self.assertEqual(p.parent.name, "estate-secrets")
+        self.assertEqual(p.name, "OBS_WEBSOCKET_PASSWORD.dpapi")
+
+    def test_bad_dpapi_file_reads_as_absent(self):
+        os.environ["OBSRUNNER_SECRET_SOURCES"] = "dpapi"
+        p = obs_secret.secret_path()
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text("not hex", encoding="ascii")
+        self.assertEqual(obs_secret.resolve(), (None, "none"))
+
+    def test_status_names_the_source_never_the_value(self):
+        os.environ["OBSRUNNER_SECRET_SOURCES"] = "env"
+        os.environ["OBS_WEBSOCKET_PASSWORD"] = "never-printed-value"
+        out = json.dumps(obs_ws.cmd_status())
+        self.assertIn('"password_source": "env"', out)
+        self.assertNotIn("never-printed-value", out)
 
 
 if __name__ == "__main__":

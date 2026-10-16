@@ -30,7 +30,7 @@ Optional mods: `references/mods.md`, only when their data is present.
 
 1. **Never start, stop or toggle a stream, a virtual camera or an output.** "Go live" gets one sentence: the user presses Start Streaming in OBS. The deny list in `scripts/obs_ws.py` refuses these requests before anything is sent.
 2. **Never read or write the stream key.** `GetStreamServiceSettings` returns it whole, so it is never called; `SetStreamServiceSettings` neither. The audit keeps only the service type and name from `service.json`. A key pasted into chat is not repeated; tell the user to reset it.
-3. **Never print the WebSocket password.** It comes from the `OBS_WEBSOCKET_PASSWORD` environment variable; every response is masked (keys, tokens, URL query strings — alert-widget URLs carry tokens).
+3. **Never print the WebSocket password.** It comes from the DPAPI file the owner's `obs_configure.ps1` writes, else the `OBS_WEBSOCKET_PASSWORD` variable as a fallback (`status` names the source); a session never handles the value; every response is masked (keys, tokens, URL query strings — alert-widget URLs carry tokens).
 4. **Never upload, post, schedule or act in chat.** The user uploads; obsrunner writes the upload sheet. Never download platform video.
 5. **Never overwrite a recording or an output.** Every render goes to a new folder.
 6. **Never install anything** — OBS, plugins, obsws-python and FFmpeg are owner steps (install walkthrough).

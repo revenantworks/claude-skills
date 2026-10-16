@@ -14,7 +14,8 @@ Rules this file enforces (references/websocket-allowlist.md is the human copy):
     every go-live path and both stream-service requests: GetStreamServiceSettings returns the
     stream key, so it is never called.
   - A request on no list is refused. Write requests need --confirm (the user's yes).
-  - Loopback hosts only. The password comes from OBS_WEBSOCKET_PASSWORD and is never printed.
+  - Loopback hosts only. The password comes from the DPAPI file, else OBS_WEBSOCKET_PASSWORD
+    (obs_secret.py: the order and the owner rule), and is never printed; `status` names the source.
   - Every response is masked before it is printed (keys, tokens, passwords, URL query strings).
   - The client is the obsws-python package (owner-installed, references/install-walkthrough.md).
     Without it every command reports NOT-RUN; nothing is installed from here.
@@ -29,6 +30,9 @@ import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import obs_secret  # noqa: E402  (where the password lives; never printed)
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
@@ -102,7 +106,7 @@ def mask(obj):
 
 
 def _scrub(text: str) -> str:
-    pw = os.environ.get("OBS_WEBSOCKET_PASSWORD")
+    pw = obs_secret.resolve()[0]
     return text.replace(pw, "<masked>") if pw else text
 
 
@@ -135,7 +139,7 @@ def call(request: str, data: dict | None = None, confirm: bool = False, host: st
         return {**out, "status": "REFUSED", "reason": f"host {host!r} is not loopback; obsrunner drives the "
                 "OBS on this machine only"}
     port = port or int(os.environ.get("OBS_WEBSOCKET_PORT") or DEFAULT_PORT)
-    password = os.environ.get("OBS_WEBSOCKET_PASSWORD") or None
+    password = obs_secret.resolve()[0]
     factory = factory or _default_factory
     try:
         client = factory(host, port, password, timeout)
@@ -207,7 +211,8 @@ def obs_state(factory=None) -> str:
 # ---- CLI --------------------------------------------------------------------------------
 
 def cmd_status() -> dict:
-    out = {"command": "status"}
+    src = obs_secret.resolve()[1]
+    out = {"command": "status", "password_source": src, "password_note": obs_secret.NOTES[src]}
     for req in ("GetVersion", "GetStreamStatus", "GetRecordStatus", "GetReplayBufferStatus", "GetRecordDirectory"):
         out[req] = call(req)
         if out[req]["status"] in ("NOT-RUN", "ERROR"):

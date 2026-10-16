@@ -51,6 +51,8 @@ revenantworks-localops-obsrunner/
 │   └── pack.md                  # the localops roster
 ├── scripts/
 │   ├── obs_ws.py                # the allow-list gate: classify, call, status, check, mark
+│   ├── obs_secret.py            # where the WebSocket password lives (DPAPI file first); never prints it
+│   ├── obs_configure.ps1        # owner-run setup: WebSocket on, password to DPAPI, -Migrate, -Check
 │   ├── obs_audit.py             # offline profile audit against this GPU
 │   ├── obs_post.py              # cut, vertical, captions, loudness, frames, chapters, moments, sheet, hold, release
 │   ├── gpu_preflight.py         # pack-shared, byte-identical

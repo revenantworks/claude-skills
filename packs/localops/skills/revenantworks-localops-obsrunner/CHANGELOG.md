@@ -7,6 +7,14 @@ turns its recordings into clips, vertical versions, chapters and upload sheets o
 
 Description cut to about 600 characters, main use case first (2026-10-08).
 
+2026-10-16 (observation 0443 and the owner rule that no password sits in a plain environment
+variable): `scripts/obs_configure.ps1`, run by the owner with OBS closed, enables the WebSocket
+server with authentication and a generated password and stores it DPAPI-encrypted under
+`%LOCALAPPDATA%\estate-secrets\` (the estate format), printing nothing; `-Migrate` moves an
+existing user variable there and deletes it; `-Check` reports presence only. `obs_ws.py` reads
+the DPAPI file first, then the process and user environment as fallbacks, treats an empty value
+as none, and `status` names the source (`scripts/obs_secret.py`). Five tests.
+
 ### What it does
 
 - Live-safe OBS: reads freely, writes one confirmed change at a time (scene, source, mute, volume,
