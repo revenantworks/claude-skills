@@ -1,0 +1,12 @@
+{
+  "gdscript": {
+    "command": "python",
+    "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/gdscript_lsp_bridge.py"],
+    "extensionToLanguage": {
+      ".gd": "gdscript"
+    },
+    "startupTimeout": 120000,
+    "restartOnCrash": true,
+    "maxRestarts": 3
+  }
+}

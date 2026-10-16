@@ -1,0 +1,7 @@
+gdscript-lsp (a plugin of the Revenantworks claude-skills gamedev pack)
+Copyright 2026 Revenantworks
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+This product includes no third-party code or text. Godot, GDQuest's gdscript-formatter and
+gdtoolkit are separate tools the user installs and runs; none of their code is redistributed.

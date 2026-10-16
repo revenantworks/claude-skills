@@ -1,0 +1,11 @@
+{
+  "name": "gdscript-lsp",
+  "version": "1.0.0",
+  "description": "GDScript language server for Claude Code through Godot's own LSP: a stdio-to-TCP bridge (loopback only, Python stdlib) to the editor's port 6005, with an opt-in headless editor, plus a check-only GDScript format hook that reports NOT-RUN when no formatter is installed. Installs nothing.",
+  "author": {
+    "name": "Revenantworks"
+  },
+  "repository": "https://github.com/revenantworks/claude-skills",
+  "license": "Apache-2.0",
+  "keywords": ["godot", "gdscript", "lsp", "language-server", "formatter"]
+}
