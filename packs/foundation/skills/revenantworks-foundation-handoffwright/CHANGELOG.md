@@ -2,6 +2,8 @@
 
 ## [1.0.0] — 2026-10-01
 
+2026-10-16 (full observation review, U21): the Excuses table gains the branch-from-local-main row: a hand-over command that creates a branch for a push fetches, checks shared history and branches from `origin/main` (observation 0442, carrier for 0441).
+
 2026-10-08 (K8 fix round): compatibility declares the optional background-agent tool `now` uses; the bare reply names `now`; "no launch before the commit lands"; the trigger-eval prose count reads 10 / 9; SOURCES cite private runs neutrally (audit K7-2-13, -18, -19, -20, -21).
 
 2026-10-08: description cut to about 600 characters, main use case first; trigger phrases and seams kept (routing proof: K9 evals).

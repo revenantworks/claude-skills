@@ -220,6 +220,7 @@ above; none of them holds.
 | "The setting change is trivial; it needs no reversal" | Non-git changes are the ones nobody can find later (observation #0045) | Write the undo command beside it |
 | "The commit sha is the deliverable" | A sha with no starter prompt leaves the next session to rebuild context | End with the paste-ready starter prompt |
 | "`git add -A` is quicker" | It sweeps in unrelated work or an untracked `.env` | Stage the handoff and the named paths only |
+| "The branch command can start from local main" | After a history rewrite the local main is the history the rewrite removed; a handed-over `git switch -c ...; git push -u origin HEAD` republished it on a public repo (observations 0441, 0442) | Any command that creates a branch for a push starts with `git fetch origin`, refuses when `git merge-base HEAD origin/main` prints nothing, and branches from `origin/main` |
 
 **Red flags** — stop and re-read the Never list when one appears:
 
