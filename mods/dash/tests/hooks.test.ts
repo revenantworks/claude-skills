@@ -363,6 +363,53 @@ describe('the band redraws on every press (bug: Later and Ask me later looked de
   })
 })
 
+describe('the band redraws when something else changes what it shows', () => {
+  test('a dismiss pressed in the pane takes the same suggestion off the band at once', async ($, on) => {
+    world(on, noteFiles())
+    on('ui.render', { component: 'AbovePrompt' }, async () => ({ type: 'Box', props: {} }))
+    await $.turn.complete(TURN)
+    await $.command.run(cmd({ command: 'dash', args: 'suggest', origin: { kind: 'composer' } }))
+    const pane = await $.ui.mount({ plugin: 'dash', surface: 'terminal', component: 'Pane', requestId: 'dash', props: PANE_PROPS })
+    const ui = await $.ui.mount({ plugin: 'dash', surface: 'terminal', component: 'AbovePrompt', props: BAND_PROPS })
+    expect(await ui.find({ type: 'Text', text: NOTE })).toBeDefined()
+    await pane.press({ key: 'drill:shell: npm' })
+    await pane.press({ key: 'dismiss:shell: npm' })
+    expect(await ui.find({ type: 'Text', text: NOTE })).toBeUndefined()
+    await ui.unmount()
+    await pane.unmount()
+  })
+  test('a typed /dash suggest dismiss takes the note off an open band', async ($, on) => {
+    world(on, noteFiles())
+    on('ui.render', { component: 'AbovePrompt' }, async () => ({ type: 'Box', props: {} }))
+    await $.turn.complete(TURN)
+    const ui = await $.ui.mount({ plugin: 'dash', surface: 'terminal', component: 'AbovePrompt', props: BAND_PROPS })
+    expect(await ui.find({ type: 'Text', text: NOTE })).toBeDefined()
+    await $.command.run(cmd({ command: 'dash', args: 'suggest dismiss 1', origin: { kind: 'composer' } }))
+    expect(await ui.find({ type: 'Text', text: NOTE })).toBeUndefined()
+    await ui.unmount()
+  })
+  test('a typed /dash records off takes the ask off an open band', async ($, on) => {
+    world(on, {})
+    on('ui.render', { component: 'AbovePrompt' }, async () => ({ type: 'Box', props: {} }))
+    await $.command.run(cmd({ command: 'dash', args: 'help', origin: { kind: 'composer' } }))
+    const ui = await $.ui.mount({ plugin: 'dash', surface: 'terminal', component: 'AbovePrompt', props: BAND_PROPS })
+    expect(await ui.find({ type: 'Text', text: ASK })).toBeDefined()
+    await $.command.run(cmd({ command: 'dash', args: 'records off', origin: { kind: 'composer' } }))
+    expect(await ui.find({ type: 'Text', text: ASK })).toBeUndefined()
+    await ui.unmount()
+  })
+  test('a note picked at turn end shows on a band that is already up', async ($, on) => {
+    world(on, noteFiles())
+    on('ui.render', { component: 'AbovePrompt' }, async () => ({ type: 'Box', props: {} }))
+    await $.command.run(cmd({ command: 'dash', args: 'help', origin: { kind: 'composer' } }))
+    const ui = await $.ui.mount({ plugin: 'dash', surface: 'terminal', component: 'AbovePrompt', props: BAND_PROPS })
+    expect(await ui.find({ type: 'Text', text: NOTE })).toBeUndefined()
+    await $.turn.complete(TURN)
+    expect(await ui.find({ type: 'Text', text: NOTE })).toBeDefined()
+    await ui.unmount()
+  })
+})
+
 describe('health across sessions (bug: privacy NOT LOADED while it was loaded)', () => {
   test('a second session beating into the same file leaves this session loaded', async ($, on) => {
     const files: Record<string, string> = {}

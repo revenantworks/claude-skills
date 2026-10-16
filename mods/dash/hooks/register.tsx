@@ -126,6 +126,12 @@ function dsOn(id: string): boolean {
   return isFeatureOn(dsSw, id)
 }
 
+/** Redraws the band: every change to what it shows (dsAskRecords, dsNote, a switch) calls this,
+ *  wherever it happens, since a module variable alone redraws nothing (the dead Later, AD). */
+async function dsBandBump($: EngineInterface): Promise<void> {
+  await update($, dsBandRev, n => (n ?? 0) + 1)
+}
+
 function dsRecording(): boolean {
   return isRecordingOn(dsSw, 'D1')
 }
@@ -1042,6 +1048,7 @@ export const register: Register = on => {
         dsSuggest = p.rows
         dsNoted = true
         dsNote = p.note
+        await dsBandBump($)
         if (dsRecording()) await dsWrite($, dsPath('dash/suggestions.json'), serializeSuggestions(dsSuggest, now))
         if (!(await dsCanDraw($))) dsNotes.push(`dash suggests: ${p.note.title}\n  why: ${p.note.evidence}\n  /dash suggest to accept, dismiss or snooze`)
       }
@@ -1124,6 +1131,7 @@ export const register: Register = on => {
           dsSuggest = r.rows
           if (dsRecording()) await dsWrite($, dsPath('dash/suggestions.json'), serializeSuggestions(dsSuggest, now))
           if (dsNote && !dsSuggest.some(x => x.id === dsNote?.id && x.state === 'shown')) dsNote = null
+          await dsBandBump($)
           return { text: r.text }
         }
         // `/dash suggest 3` or `/dash suggest git` drills into one group; bare lists every group.
@@ -1163,6 +1171,8 @@ export const register: Register = on => {
             if (dsRecording()) dsBuffer = [...dsMem]
           }
           await dsHeartbeat($)
+          // A switch can show or hide a band row (the records ask, D3 tasks, D5 notes).
+          await dsBandBump($)
         }
         return { text: r.text }
       }
@@ -1182,6 +1192,8 @@ export const register: Register = on => {
       const onPress = (p: Press) => async () => {
         await dsPress($, p)
         await update($, dsPaneRev, n => (n ?? 0) + 1)
+        // A pane press can change the band too: a dismiss or snooze of the noted suggestion.
+        await dsBandBump($)
       }
       // The theme paints each tone; a colour is a theme key or a hex the person chose.
       return (
@@ -1219,7 +1231,7 @@ export const register: Register = on => {
     // Reading the band's revision subscribes it; every band press bumps it, so the press shows at
     // once rather than on the next unrelated redraw (the dead Later button, 2026-10-15).
     await read($, dsBandRev)
-    const bump = () => update($, dsBandRev, n => (n ?? 0) + 1)
+    const bump = () => dsBandBump($)
     const now = await $.clock.now()
     const rows: JSX.Element[] = []
     if (dsAskRecords) {
