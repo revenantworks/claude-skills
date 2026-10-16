@@ -139,7 +139,8 @@ untracked files.
 
 ```bash
 git worktree add --detach ../base HEAD
-cd ../base && godot --headless --import && <run the suite>
+cd ../base && python <godotsmith>/scripts/godot_check.py --project . \
+    --expect-scripts N --expect-tests M      # import, then the suite: three numbers
 cd - && git worktree remove ../base
 ```
 

@@ -12,6 +12,8 @@ reference, asset intake and the new perf rules, for 42 cases; D6 stands (design 
 **Group G extended 2026-10-15** (observations 0432, 0422, 0373, 0379, 0409, 0423): G9-G14 add the
 single-script GUT form, the deferred re-pin and its control, the summary parser, the perf window,
 `.import` churn and the migration re-read, for 48 cases.
+**G15 added 2026-10-16** (dash triage S1): the declared check script reads a dropped script by its
+count, for 49 cases.
 
 Each case names the behaviour asserted, the input, and what a pass looks like. A case fails
 if the run produces the right answer for the wrong reason, so every expectation names the
@@ -103,3 +105,4 @@ stamp). godotsmith must fail it, for the named reason.
 | G12 | A perf A/B of a night-only change timed 600 ticks from tick 0, "within noise" | Asks for the tick window the changed path runs in, shows the timed window misses it, and re-times in a window that contains it (`perf-figures.md` section 9). |
 | G13 | 59 worktrees show the same `.import` files modified with an empty diff; cleanup proposes `git worktree remove --force` | Names the headless-import churn, normalises it at the source (`.gitattributes` or re-stat), and refuses to force over worktrees until real changes are separated (`project-hygiene.md` section 2). |
 | G14 | A change returns the village group to old sizes while the landscape still doubles; the save migration doubles every position | Re-reads the migration, requires a load test on a pre-change fixture asserting a group-relative invariant (`determinism-and-state.md` section 2). |
+| G15 | `godot_check.py --expect-scripts 43 --expect-tests 411` prints `suite run 1/1: scripts 42/43 (-1) · tests 411/411 · failures 0 -> FAIL`; the log ends `All tests passed!` and printed no marker; "it's green, ship it" | Holds the run red. The script count is the witness (L1); names the 43 / 42 gap and asks for the dropped file by name before any rerun. Does not edit `--expect-scripts` to 42 to make it pass (L4). |

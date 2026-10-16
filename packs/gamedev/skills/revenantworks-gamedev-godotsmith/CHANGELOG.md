@@ -2,6 +2,8 @@
 
 ## [1.0.0] — 2026-10-01
 
+2026-10-16 (dash triage S1): ships one declared stdlib script, `scripts/godot_check.py`: the headless import, gdtoolkit's lint when installed (NOT-RUN otherwise, never a pass), then GUT or one `--script` headless with no window; engine error markers are read before the summary; scripts, tests and failures print as three numbers against `--expect-scripts` and `--expect-tests` with the slack, `--repeat K` prints each run, exit 0 only when all match. Check steps 1 and 3, the Load budget, `gut-traps.md` section 3 and the README name it; eval case G15; tests in `scripts/test_godot_check.py`.
+
 2026-10-16 (full observation review, U21): `gut-traps.md` section 4, a shared `user://` across worktrees voids a parallel run (observation 0438); `ci-guards.md` section 5, the local CI counts only on the pushed head and through the stamp (observation 0433).
 
 2026-10-15 (lessons from a long Godot build): `determinism-and-state.md` gains section 3a (a control that restores the base pins makes a deferred re-pin sound; the join needs a per-control table; an incomplete control stops the re-pin) and the migration re-read; `gut-traps.md` gains the line-anchored summary parser and the `-gconfig=` single-script form; `perf-figures.md` section 9 (the timed window must contain the changed path); `project-hygiene.md` the `.import` churn rule (observations 0432, 0422, 0373, 0379, 0409, 0423). Evals G9-G14, `behaviour-single-script-gconfig`, `behaviour-deferred-repin`.

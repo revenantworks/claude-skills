@@ -3,7 +3,11 @@
 Godot 4.x project conventions, and the proof that a build is actually green.
 
 Second member of the **gamedev** pack, on the `-smith` motif, beside `pixelsmith`.
-Apache-2.0. Ships no code.
+Apache-2.0. Ships one declared stdlib script, `scripts/godot_check.py` (run, not read), with its
+test `scripts/test_godot_check.py`: the headless import, gdtoolkit's lint when installed (NOT-RUN
+when not), then GUT, with engine error markers read before the summary and the script, test and
+failure counts printed against the expected totals. With no shell, a check reads committed logs and
+says NOT-RUN.
 
 ## What it is for
 

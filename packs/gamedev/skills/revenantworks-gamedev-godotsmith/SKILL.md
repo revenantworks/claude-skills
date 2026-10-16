@@ -2,7 +2,7 @@
 name: revenantworks-gamedev-godotsmith
 description: Proves a Godot 4.x build is actually green and holds its project conventions. Trigger when a GUT or GDScript result needs believing (a suite green while a script failed to parse, drifted CI guard counts, a coverage claim, a gate figure, a failing check someone wants softened); to review scenes, signals, awaits, threads, determinism, saves, imports or .uid files, or the upgrade rule (not the migration); to prove a simulation or balance rule; for import settings and the pixel-art render precondition; or say godotsmith (check, guard, gate, review, intake). API reference is the Godot docs'; art reads pixelsmith's; audio direction soundsmith's.
 license: Apache-2.0
-compatibility: Ships no code. Reads a repo with the surface's file tools and, where a shell exists, runs the project's own import, test and lint commands, or an adopted runner (godot-skill run_tests.py, godot-mcp) whose JSON is still a summary line. With no shell every check degrades to a read of committed logs and config, and says so. Godot 4.x with GUT is the worked case. No packages, no network at runtime.
+compatibility: Ships one declared stdlib script, scripts/godot_check.py (import, lint, GUT in order; three numbers; run, not read). Where a shell exists it runs that script, the project's own commands, or an adopted runner (godot-skill run_tests.py, godot-mcp) whose JSON is still a summary line. With no shell every check reads committed logs and config and says NOT-RUN. Godot 4.x with GUT is the worked case. No packages, no network.
 metadata:
   version: "1.0.0"
   profile: standard
@@ -46,6 +46,8 @@ enforcing. Reach past them only as listed, and never load the whole folder.
   and asset intake (section 8): import settings and the render precondition
 - `references/design-and-balance.md` — a simulation or balance rule's claims, arms and fallbacks
 - `references/pack.md` — boundary doubt about a sibling's territory
+- `scripts/godot_check.py` — run, not read: Check steps 1 and 3 in one command (import, lint,
+  GUT headless, markers before the summary, three numbers against the expected totals)
 
 Optional mods: `references/mods.md`, only when their data is present.
 
@@ -124,10 +126,14 @@ function" — a claim like that is true the day it is written and unchecked fore
    **every source change**. Headless tooling cannot see an unimported file and reports a
    false "not found", and the import is the only tool that reports a parse or type-inference
    error: lint passes it and the suite drops the script silently. `project-hygiene.md` §1.
+   Where a shell exists, `python scripts/godot_check.py --project <dir> --expect-scripts N
+   --expect-tests M` runs steps 1 and 3 in this order (`--before` for codegen, `--lint` for
+   gdtoolkit, NOT-RUN when absent).
 2. **Population.** List every path that executes the code: the test tree, every CI job's own
    script, any tooling harness. A coverage claim with no stated population is not a claim.
 3. **Instrument.** Run the suite; record script count, test count and failure count **as
-   three numbers**, never as the word "green". Drive an adopted runner where present
+   three numbers**, never as the word "green" (`godot_check.py` prints them against the
+   expected totals with the slack, and `--repeat K` prints each run's). Drive an adopted runner where present
    (godot-skill `run_tests.py`, godot-mcp); its JSON is a summary line, so L1 still applies.
    With no shell, read the committed log and say the numbers are quoted, not measured.
 4. **Drift.** Compare each number against the repo's own guards and its docs. Report every
