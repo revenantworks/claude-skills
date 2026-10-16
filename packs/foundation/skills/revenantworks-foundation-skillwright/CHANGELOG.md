@@ -2,6 +2,8 @@
 
 ## [1.0.0] — 2026-10-01
 
+2026-10-16 (dash triage S4): `build-templates.md` Packaging gives the plugin validation one-liner, `claude plugin validate --strict <plugin folder>`, the line that means pass (`✔ Validation passed`, exit 0), and points at the claude-skills `tools/ci_local.py` run.
+
 2026-10-16 (full observation review, U21): `mcp-tools.md` item 6, a local-path marketplace does not prove which copy runs; prove it by a string only one copy holds (observations 0420, 0429). `tools/build.py --check` fails a plain `description:` or `when_to_use:` holding ` #`, which YAML reads as a comment that silently cuts the text (observation 0389); one test.
 
 2026-10-08 (K8 fix round): pack-registry drops the pointer to a history file that never shipped (git history holds it); SOURCES points at the live prompt-caching page instead of copying per-model rates and floors (audit K7-1-07, -08).
