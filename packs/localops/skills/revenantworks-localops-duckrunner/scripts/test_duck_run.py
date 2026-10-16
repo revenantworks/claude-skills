@@ -304,6 +304,16 @@ class EngineTests(RepoCase):
                             "--sources", "a.csv"])
         self.assertNotEqual(code, 0)
 
+    def test_sandbox_refusal_is_a_refused_record_not_a_traceback(self):
+        self.write("a.csv", "x\n1\n")
+        self.write("secret.csv", "k\nv\n")
+        sql = self.write("q.sql", f"SELECT * FROM read_csv('{(self.repo / 'secret.csv').as_posix()}')")
+        code, out = run_main(["ask", "--repo", str(self.repo), "--sql", str(sql),
+                              "--sources", "a.csv"])
+        self.assertEqual(code, 1, out)
+        self.assertEqual(out["status"], "refused")
+        self.assertIn("sandbox", out["reason"])
+
     def test_attached_duckdb_first_query_succeeds(self):
         import duckdb
         db = self.repo / "cache" / "state.duckdb"

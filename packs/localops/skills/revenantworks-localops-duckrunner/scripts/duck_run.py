@@ -375,9 +375,18 @@ def cmd_ask(args) -> int:
             yaml_ext = load_yaml_extension(con)
             plan = build_plan(repo, sources, yaml_ext, Path(tmp))
             prepare(con, plan, args.memory_limit)
-            cur = con.execute(sql)
-            cols = [d[0] for d in cur.description] if cur.description else []
-            rows = cur.fetchmany(args.max_rows + 1)
+            try:
+                cur = con.execute(sql)
+                cols = [d[0] for d in cur.description] if cur.description else []
+                rows = cur.fetchmany(args.max_rows + 1)
+            except duckdb.Error as e:
+                # The sandbox refusing a path outside the sources is a PermissionException: the
+                # block held, so report it as a refusal with a nonzero code, never a traceback.
+                first = str(e).splitlines()[0] if str(e) else type(e).__name__
+                if isinstance(e, getattr(duckdb, "PermissionException", ())):
+                    raise RunError(f"refused by the sandbox (only the named sources are "
+                                   f"readable): {first}", code=1) from None
+                raise RunError(f"query failed: {first}", code=2) from None
         finally:
             con.close()
     truncated = len(rows) > args.max_rows

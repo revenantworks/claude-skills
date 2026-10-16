@@ -2,6 +2,8 @@
 
 ## [1.0.0] — 2026-10-01
 
+2026-10-16: `ask` catches DuckDB's own errors. The sandbox refusing a file outside the named sources (a `PermissionException` on duckdb 1.5.6) now prints a `refused` record and exits 1 instead of a traceback; any other query error prints an `error` record and exits 2. One new test; the existing sandbox test errored on the unfixed code.
+
 First public release. Answers questions over a repo's CSV, JSON, Parquet and YAML files with DuckDB,
 shows the SQL every time, and keeps DuckDB caches out of git.
 
