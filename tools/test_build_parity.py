@@ -44,11 +44,13 @@ class ParityLoadedFromFolder(unittest.TestCase):
             rc = build.parity({PACK: "standard"})
         return rc, out.getvalue()
 
-    def test_plugin_read_from_this_checkout_is_not_drift(self):
+    def test_cache_is_compared_even_when_the_cli_reports_a_checkout_load(self):
+        # B7 (observation 0420), replacing the 0416-era "nothing to compare" skip: a desktop-app
+        # session ran the cache copy while the CLI said "Read from" the checkout.
         rc, out = self.run_parity({PLUGIN_ID: str(build.PACKS / PACK)})
-        self.assertEqual(rc, 0, out)
-        self.assertIn("loaded from checkout - nothing to compare", out)
-        self.assertNotIn("DRIFT", out)
+        self.assertEqual(rc, 1, out)
+        self.assertIn("the CLI says loaded from checkout", out)
+        self.assertIn("DRIFT", out)
 
     def test_genuinely_cached_install_still_compares_and_drifts(self):
         rc, out = self.run_parity({})
@@ -61,6 +63,46 @@ class ParityLoadedFromFolder(unittest.TestCase):
         rc, out = self.run_parity({PLUGIN_ID: str(elsewhere)})
         self.assertEqual(rc, 1, out)
         self.assertNotIn("loaded from checkout", out)
+
+
+class ParityCoversMods(unittest.TestCase):
+    """B7 (observation 0420): a stale mod cache is drift, even while the CLI reports a checkout load."""
+
+    def setUp(self):
+        import shutil
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.home = Path(tmp.name)
+        plugins = self.home / ".claude" / "plugins"
+        self.cache = plugins / "cache" / "revenantworks" / "dash" / "1.0.0"
+        shutil.copytree(build.MODS / "dash", self.cache,
+                        ignore=shutil.ignore_patterns(*build.PARITY_SKIP, "*.pyc", "node_modules"))
+        (plugins / "installed_plugins.json").write_text(json.dumps({"plugins": {"dash@revenantworks": [
+            {"scope": "user", "version": "1.0.0", "installPath": str(self.cache)}]}}), encoding="utf-8")
+
+    def run_parity(self):
+        out = io.StringIO()
+        folders = {"dash@revenantworks": str(build.MODS / "dash")}
+        with mock.patch("pathlib.Path.home", return_value=self.home), \
+                mock.patch.object(build, "_plugin_folders", return_value=folders), redirect_stdout(out):
+            rc = build.parity({}, mods=["dash"])
+        return rc, out.getvalue()
+
+    def test_mod_cache_matching_the_checkout_is_clean(self):
+        rc, out = self.run_parity()
+        self.assertEqual(rc, 0, out)
+        self.assertIn("the CLI says loaded from checkout", out)
+
+    def test_mod_cache_one_commit_stale_is_drift(self):
+        stale = sorted(p for p in self.cache.rglob("*.ts") if p.is_file())[0]
+        stale.write_text(stale.read_text(encoding="utf-8") + "\n// one commit older\n", encoding="utf-8")
+        rc, out = self.run_parity()
+        self.assertEqual(rc, 1, out)
+        self.assertIn("DRIFT", out)
+        self.assertIn(f"differs: {stale.relative_to(self.cache).as_posix()}", out)
+
+    def test_the_mod_list_holds_dash_and_privacy(self):
+        self.assertEqual(build.mod_plugins(), ["dash", "privacy"])
 
 
 class PluginFolders(unittest.TestCase):

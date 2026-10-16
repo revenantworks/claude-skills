@@ -2403,7 +2403,14 @@ def _is_within(path: Path, root: Path) -> bool:
         return False
 
 
-def parity(packs: dict[str, str]) -> int:
+def mod_plugins() -> list[str]:
+    """The mods that ship as plugins: a folder under mods/ with .claude-plugin/plugin.json."""
+    if not MODS.is_dir():
+        return []
+    return sorted(d.name for d in MODS.iterdir() if (d / ".claude-plugin" / "plugin.json").is_file())
+
+
+def parity(packs: dict[str, str], mods: list[str] | None = None) -> int:
     """Diff every shipped file in both installed copies vs repo HEAD (owner-machine detector).
 
     TWO surfaces drift independently, and checking only the first is how a session kept
@@ -2426,46 +2433,53 @@ def parity(packs: dict[str, str]) -> int:
     CRLF working tree against an LF clone is not drift.
 
     A plugin that `claude plugin list --json` reports as `readFromFolder` inside THIS checkout
-    is loaded from the working tree, so its `installPath` cache copy is stale by design and
-    never loaded: it is reported "loaded from checkout - nothing to compare", not compared.
-    A folder outside this checkout, or a plugin with no folder, gets the cache compare.
+    is said by the CLI to load from the working tree. Its `installPath` cache copy is still
+    compared and its drift counted (B7, observation 0420): a desktop-app session ran a stale
+    cache copy of the dash mod while the CLI said "Read from" the checkout. The mods (dash,
+    privacy) are compared like the packs, on both surfaces.
     """
     home = Path.home() / ".claude" / "plugins"
     mkt = home / "marketplaces" / "revenantworks"
     drifted = 0
     checked = 0
+    # B7 (observation 0420): the mods ship as plugins too, so they get the same two surfaces.
+    sources = [(pack, PACKS / pack, Path("packs") / pack) for pack in packs]
+    sources += [(name, MODS / name, Path("mods") / name) for name in (mod_plugins() if mods is None else mods)]
 
     if not mkt.is_dir():
         print("clone: no local marketplace clone — skipped (nothing installed here)")
     else:
         checked += 1
         print("clone — ~/.claude/plugins/marketplaces/revenantworks")
-        for pack in packs:
-            drifted += _compare_tree(PACKS / pack, mkt / "packs" / pack, f"clone:{pack}")
+        for name, src, rel in sources:
+            if (mkt / rel).is_dir() or rel.parts[0] == "packs":
+                drifted += _compare_tree(src, mkt / rel, f"clone:{name}")
 
     installed = home / "installed_plugins.json"
     if not installed.is_file():
         print("cache: no installed_plugins.json — skipped (no plugin installed here)")
     else:
         entries = json.loads(installed.read_text(encoding="utf-8")).get("plugins", {})
-        folders = _plugin_folders() if any(entries.get(f"{p}@revenantworks") for p in packs) else {}
-        for pack in packs:
-            recs = entries.get(f"{pack}@revenantworks") or []
+        folders = _plugin_folders() if any(entries.get(f"{n}@revenantworks") for n, _, _ in sources) else {}
+        for name, src, _rel in sources:
+            recs = entries.get(f"{name}@revenantworks") or []
             if not recs:
-                print(f"cache: {pack} not installed — skipped")
+                print(f"cache: {name} not installed — skipped")
                 continue
             checked += 1
-            folder = folders.get(f"{pack}@revenantworks")
+            folder = folders.get(f"{name}@revenantworks")
             if folder and _is_within(Path(folder), ROOT):
-                print(f"cache: {pack} loaded from checkout - nothing to compare ({Path(folder).name})")
-                continue
+                # Observation 0420: the CLI said "Read from" the checkout while a desktop-app session
+                # ran the cache copy. The CLI's word is a claim, so the cache is compared anyway.
+                print(f"cache: {name} — the CLI says loaded from checkout ({Path(folder).name}); the "
+                      "installPath copy is compared anyway, since a desktop-app session may load it")
             for rec in recs:
                 root = Path(rec.get("installPath", ""))
                 print(f"cache — {root} ({rec.get('scope', '?')} scope, v{rec.get('version', '?')})")
                 if not root.is_dir():
-                    print(f"  ✗ {pack}: installPath does not exist"); drifted += 1
+                    print(f"  ✗ {name}: installPath does not exist"); drifted += 1
                     continue
-                drifted += _compare_tree(PACKS / pack, root, "loaded copy")
+                drifted += _compare_tree(src, root, "loaded copy")
 
     # junction — ~/.claude/skills/<member>, the rig's load path since 2026-08-17:
     # members junction straight into this working tree and the plugin clone and
