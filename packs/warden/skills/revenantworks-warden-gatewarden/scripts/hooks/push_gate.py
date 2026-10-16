@@ -49,6 +49,10 @@ read, a config redirect (GIT_CONFIG_GLOBAL, GIT_CONFIG_SYSTEM, GIT_CONFIG_NOSYST
 XDG_CONFIG_HOME) on a line whose git subcommand is not a builtin (M14e), and a push the gate
 sees but cannot parse. So is a
 shell script on disk too large or locked to read, a shell script over 256 KB that names push, and a mirror or `+`/`:` push refspec set in git config (K7-4-03, K7-4-07).
+A git command that moves HEAD (commit, merge, cherry-pick, am, rebase, pull, revert, reset, checkout,
+switch, update-ref, stash branch) before a push on the same line is refused under `push_gate.range`:
+the range is read before the line runs, so a clear on "commits 0" would send a commit no one checked
+(observation 0407). Split the commit and the push into separate calls. Hard refusals still apply.
 Limits: it binds the commands Claude runs, not the owner's own terminal; it does not read an
 interpreter's source file (release tooling pushes by design); a stamp file written by hand defeats
 step 4.
@@ -260,6 +264,30 @@ class RefBlock(PushBlock):
     rule = "push_gate.irreversible"
 
 
+class HeadMoveBlock(PushBlock):
+    """A command that moves HEAD runs before a push on the same line (observation 0407). The range is
+    read before the line runs, so it misses what the line adds. A soft rule: it follows the range mode."""
+    rule = "push_gate.range"
+    hard = False
+
+
+# Git commands that can move HEAD or the branch a push sends (observation 0407). `checkout` and `reset`
+# with a `--` path list only touch files, so they do not count; of `stash`, only `stash branch` does.
+HEAD_MOVERS = {"commit", "merge", "cherry-pick", "am", "rebase", "pull", "revert", "reset", "checkout", "switch",
+               "update-ref", "stash"}
+PATH_FORM = {"checkout", "reset"}
+
+
+def moves_head(sub: str, rest: list[str]) -> bool:
+    if sub not in HEAD_MOVERS:
+        return False
+    if sub in PATH_FORM and "--" in rest:
+        return False
+    if sub == "stash":
+        return rest[:1] == ["branch"]
+    return True
+
+
 GH_API_VALUE_OPTS = {"-X", "--method", "-H", "--header", "-f", "--raw-field", "-F", "--field", "--input", "-q",
                      "--jq", "-t", "--template", "--cache", "-p", "--preview", "--hostname"}
 
@@ -453,7 +481,7 @@ def config_write(rest: list[str]) -> bool:
     return any(PUSH_CONFIG_KEY.match(a) for a in rest if not a.startswith("-"))
 
 
-def find_pushes(command: str, cwd: str, resolve: bool = True) -> list[dict]:
+def find_pushes(command: str, cwd: str, resolve: bool = True, head_moves: bool = True) -> list[dict]:
     pushes = []
     flat_cmd = hl.despliced(command)
     named = bool(PUSH_HINT.search(flat_cmd))
@@ -472,6 +500,7 @@ def find_pushes(command: str, cwd: str, resolve: bool = True) -> list[dict]:
     # The exemption holds only when every segment naming push is a plain `git …` command: a push word in
     # an assignment (`Y=push; $X $Y`) or any other place keeps the line-wide rule.
     plain = all(_plain_git(ops[idx][0]) for idx in naming)
+    moved: list[str] = []  # segments before this point that move HEAD (observation 0407)
     for idx, (seg, _) in enumerate(ops):
         hl.check_budget()
         target = hl.cd_target(seg)
@@ -488,6 +517,9 @@ def find_pushes(command: str, cwd: str, resolve: bool = True) -> list[dict]:
             p = hl.prog(tok)
             if p == "git-push":
                 run_time_args(toks[i + 1:])
+                if moved and head_moves:
+                    raise HeadMoveBlock(f"push gate: `{moved[0]}` runs before the push on the same line. "
+                                        "Blocked; split the commit and the push into separate calls.")
                 pushes.append({"repo": cwd, "args": [arg(t) for t in toks[i + 1:]], "segment": seg.strip()[:160]})
                 continue
             if p != "git":
@@ -551,6 +583,8 @@ def find_pushes(command: str, cwd: str, resolve: bool = True) -> list[dict]:
             if resolve and sub not in BUILTINS and re.fullmatch(r"[\w.-]+", sub or "-"):
                 from_env = sub.lower() in env_table
                 expansion = lookup(sub)
+            if moves_head(sub, [arg(t) for t in toks[j + 1:j + 2]] + (["--"] if "--" in toks[j + 1:] else [])):
+                moved.append(seg.strip()[:80])
             if sub not in ("push", "config", "remote", "send-pack", "http-push") and expansion is None:
                 continue  # its arguments are never read: no O(n) copy per word on a long line (V-K8w F5)
             rest = [arg(x) for x in parts[1:]] + [arg(t) for t in toks[j + 1:]]
@@ -592,6 +626,12 @@ def find_pushes(command: str, cwd: str, resolve: bool = True) -> list[dict]:
                                     "--work-tree, GIT_CONFIG_*, HOME, --exec-path) cannot be range-checked. "
                                     "Blocked; cd into the repo.")
                 run_time_args(toks[j + 1:])
+                if moved and head_moves:
+                    raise HeadMoveBlock(
+                        f"push gate: `{moved[0]}` runs before the push on the same line. The gate reads the "
+                        "range before the line runs, so it cannot see what that command adds or moves "
+                        "(observation 0407). Blocked; split the commit and the push into separate calls, "
+                        "then record the intent and the CI stamp for the new head.")
                 pushes.append({"repo": repo, "args": rest, "segment": seg.strip()[:160]})
     return pushes
 
@@ -678,7 +718,7 @@ def names_push(text: str) -> bool:
     return bool(PUSH_HINT.search(hl.despliced(text or ""))) or any(PUSH_HINT.search(t) for t in hl.FILES_READ)
 
 
-def all_pushes(cmd: str, cwd: str) -> list[dict]:
+def all_pushes(cmd: str, cwd: str, head_moves: bool = True) -> list[dict]:
     """Every push the command runs, after unwrapping; blocks what cannot be read."""
     cmd = without_message_heredocs(hl.join_lines(cmd))
     try:
@@ -705,9 +745,9 @@ def all_pushes(cmd: str, cwd: str) -> list[dict]:
         for run in [head] + [body for reader, body in bodies if reader not in WRITERS]:
             for seg in hl.segments(run):
                 gh_ref_check(hl.tokens(seg))
-        found += find_pushes(head, where or cwd)
+        found += find_pushes(head, where or cwd, head_moves=head_moves)
         for reader, body in bodies:
-            found += find_pushes(body, where or cwd, resolve=reader not in WRITERS)
+            found += find_pushes(body, where or cwd, resolve=reader not in WRITERS, head_moves=head_moves)
     for body, path in ex.code:
         # Inline code only (python -c, node -e). A source file an interpreter runs is not read
         # for pushes: release tooling pushes by design (stated limit, references/hooks.md).
@@ -1032,11 +1072,25 @@ def hook_main() -> None:
                          "by word. Blocked; run the push as a plain `git push` line.",
                          rule="push_gate.shape", hard=True)
             hl.allow()
+        head_move = None
         try:
             pushes = all_pushes(cmd, ev.get("cwd") or os.getcwd())
+        except HeadMoveBlock as exc:
+            # A HEAD move before the push (0407) is a range question, so it follows the range mode. The
+            # line is read again without that rule first, so every hard refusal and shape still applies.
+            head_move = exc
+            try:
+                pushes = all_pushes(cmd, ev.get("cwd") or os.getcwd(), head_moves=False)
+            except PushBlock as inner:
+                hl.block(str(inner), rule=inner.rule, hard=True)
         except PushBlock as exc:
             # Hard (K7-4-01): a push the gate cannot read may be a force or delete push in disguise.
             hl.block(str(exc), rule=exc.rule, hard=True)
+        if head_move is not None:
+            refuse_hard(pushes)
+            if hl.mode_for(head_move.rule) != "watch":
+                hl.block(str(head_move), rule=head_move.rule)
+            hl.log_event(head_move.rule, "watch", "logged", str(head_move), False)
         if not pushes:
             hl.allow()
         refuse_hard(pushes)

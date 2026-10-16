@@ -237,6 +237,54 @@ class PushGateTests(unittest.TestCase):
         code, _, _ = run_hook("push_gate.py", bash("git add -A && git commit -m x && git push", self.work))
         self.assertEqual(code, 2)
 
+    def test_commit_then_push_on_one_line_is_refused(self):
+        # Observation 0407: the range is read before the line runs, so a commit the same line makes is
+        # not in it. With nothing ahead the gate cleared "commits 0" and the new commit went out unchecked.
+        git(self.work, "push", "origin", "main")
+        Path(self.work, "a.txt").write_text("4\n")
+        wd = self.work.replace("\\", "/")
+        for line in ("git commit -am x; git push origin main",
+                     "git add a.txt && git commit -m x && git push",
+                     f"cd {wd} && git commit -qam x; git push origin main; git rev-parse HEAD",
+                     f'git -C "{wd}" commit -am x && git -C "{wd}" push origin main',
+                     "git merge --no-edit topic && git push origin main",
+                     "git cherry-pick abc123; git push origin main",
+                     "git pull --rebase && git push",
+                     "git am < fix.patch; git push origin main",
+                     "git rebase main && git push origin main",
+                     "git reset --hard HEAD~1 && git push origin main"):
+            code, out, err = run_hook("push_gate.py", bash(line, self.work))
+            self.assertEqual(code, 2, f"{line}: {out}")
+            self.assertIn("split", err.lower(), line)
+
+    def test_commit_then_push_is_refused_even_inside_intent_and_stamp(self):
+        # 0407: three commits ahead, intent and stamp for HEAD; the commit on the line adds a fourth.
+        self.intend(3)
+        self.stamp()
+        code, out, err = run_hook("push_gate.py", bash("git commit -am x && git push origin main", self.work))
+        self.assertEqual(code, 2, out)
+        self.assertIn("split", err.lower())
+        self.assertIn("git commit -am x", err)  # the refusal names what it read
+
+    def test_force_push_after_a_commit_stays_hard_in_watch_mode(self):
+        # 0407 negative control: the soft HEAD-move rule never hides a hard refusal later on the line.
+        for line in ("git commit -am x && git push --force origin main",
+                     "git commit -am x; git push origin :main",
+                     "git commit -am x; git -c alias.p=push p origin main"):
+            code, _, err = run_hook("push_gate.py", bash(line, self.work), env={"GATEWARDEN_MODE": "watch"})
+            self.assertEqual(code, 2, line)
+
+    def test_push_before_a_commit_or_beside_a_read_still_clears(self):
+        # Negative control for 0407: only a HEAD-moving command BEFORE the push changes its range.
+        self.intend(3)
+        self.stamp()
+        for line in ("git push origin main && git commit -am x", "git status -sb && git push origin main",
+                     "git log -1 && git push origin main", "git fetch && git push origin main",
+                     "git diff --stat; git push origin main", "git checkout -- a.txt; git push origin main"):
+            code, out, err = run_hook("push_gate.py", bash(line, self.work))
+            self.assertEqual(code, 0, f"{line}: {err}")
+            self.assertIn("commits  3", out, line)
+
     def test_powershell_tool_is_gated(self):
         code, _, _ = run_hook("push_gate.py", bash("git push", self.work, tool="PowerShell"))
         self.assertEqual(code, 2)
