@@ -62,8 +62,10 @@ revenantworks-foundation-dispatchwright/
 Follows the [Agent Skills](https://agentskills.io/) open standard. Drop the folder into your
 skills directory, or upload the archive in Claude settings. Trigger it by saying `dispatchwright`,
 by describing a request that spans many agents, repos, skills, or files at once, or by naming a
-stalled fan-out that needs to resume without redoing landed work. Self-contained: no executable
-code ships. `git` and the surface's subagent/Task tools are optional — without `git` a run still
+stalled fan-out that needs to resume without redoing landed work. Self-contained: its core job runs
+without code. One optional stdlib helper ships, `scripts/suite_slot.py` (the machine-wide suite
+cap: waits for one of 4 suite slots, then runs the suite at low priority with no window); a run
+without it follows the same rule by hand. `git` and the surface's subagent/Task tools are optional — without `git` a run still
 plans, tiers and dispatches but reports an unverifiable row as unverified rather than done;
 without subagent tools a run ends at the tiered plan and the ledger.
 

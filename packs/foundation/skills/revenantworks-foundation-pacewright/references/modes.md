@@ -125,6 +125,12 @@ turns it on.
   another session, the user. Two controllers each counting only their own lanes put 6 suites on
   16 threads. A heavy lane launches only while that machine-wide count is under the cap and the
   load leaves room; otherwise launch a light lane and hold the heavy one to the next heavy finish.
+- **Suite processes share one fixed ceiling** (owner ruling "both", 2026-10-16, observation
+  0446). Beside the derived lane cap, at most 4 suite processes run on the machine at once,
+  across every session and thread; the stricter of the two holds. Each process counts: a runner
+  that fans out N headless engine runs uses N. Every background suite starts at below-normal
+  priority with no window, through dispatchwright's `scripts/suite_slot.py` where it is
+  installed (it waits for a slot, then runs the command that way).
 - **The land run goes first.** The land (merge) test run is a heavy lane with priority: it takes
   the next free heavy slot ahead of any row's suite, and while it runs no new heavy lane starts
   that would push the heavy count past the cap. A land run is never queued behind row suites.

@@ -350,10 +350,16 @@ path.]
 - **A control that depends on live state carries its own expiry.** Name what live state besides
   the file it touches its result depends on, and pin the fixture against it — use the hook's own
   test override where one exists (observation #0062).
-- **Suite lanes are capped apart from units** (owner ruling 2026-10-16, observation 0446): at
-  most 3 units run a full test suite at once on one machine (set per rig), the merge run first.
-  A brief says: run only the test modules you touch; the controller runs the full suite once on
-  the landed batch. Design and review units are not counted.
+- **Suites share one machine-wide cap, apart from the unit cap** (owner ruling 2026-10-16 "both",
+  observation 0446): at most 4 suite processes run at once on the machine, across every session
+  and thread, beside pacewright's derived machine cap (the stricter holds). Each process counts, so a runner that fans out N headless Godots uses N slots. Every
+  background suite starts at below-normal priority with no window. A brief says: start every test
+  or build run through the slot runner, `python <dispatchwright>/scripts/suite_slot.py --cwd
+  <worktree> -- <command...>` (it waits for a slot, then runs the command at low priority with no
+  window; where the helper is absent, run the suite at low priority and count the machine's suite
+  processes first). What a unit runs is "Narrow while building, wide once" below; the
+  controller's full run on the landed batch goes first. Design and review units start no suite
+  and are not counted.
 - **Moving or importing run records is a privacy scan before the commit** (observation 0434).
   Ledgers, briefs and raw logs carry user-folder paths and names. Run the repo's privacy scan over
   the moved set first, scrub captures or leave them untracked, and treat any privacy warning, warn

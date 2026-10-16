@@ -2,7 +2,7 @@
 name: revenantworks-foundation-dispatchwright
 description: Runs a session's fan-out — splits a large request into tiered, recoverable units, dispatches and reconciles them against the repo. Trigger when work needs many agents or spans many repos or files (rebuild, re-architect, sweep, migrate, 'do all of this'); when subagents would launch with no model or effort set; for the plan table (units, models, tokens, meters) before launch; to resume a unit that died or hit a usage limit; when units would share a repo; or say dispatchwright (plan, dispatch, resume, audit, refresh). Tiers come from its own table (scoutwright flags it stale); pacing, pacewright's; hooks, rigwright's; schedules, agentwright's.
 license: Apache-2.0
-compatibility: Ships no code. Writes a run ledger and unit briefs (file tools, or in chat). Units commit locally; pushes go to origin only, batched, behind the identity check in section 5. git turns Reconcile into evidence; without it a row reads unverified, never done. Subagent or Task tools are optional; without them a run ends at the tiered plan. pacewright's budget file is optional data. Two forcing hooks are optional and owner-installed.
+compatibility: Ships one optional stdlib helper, scripts/suite_slot.py (the suite cap). Writes a run ledger and unit briefs (file tools, or in chat). Units commit locally; pushes go to origin only, batched, behind the identity check in section 5. git turns Reconcile into evidence; without it a row reads unverified, never done. Subagent or Task tools are optional; without them a run ends at the tiered plan. pacewright's budget file is optional data. Two forcing hooks are optional and owner-installed.
 metadata:
   version: "1.0.0"
   profile: standalone
@@ -40,7 +40,8 @@ run is a finding, reported beside the table and never acted on.
 
 The forcing hooks cost no load: `dispatch_gate.py` (`UserPromptSubmit`, flags a likely fan-out)
 and `dispatch_ledger_guard.py` (`PreToolUse`, fails closed on a Task/Agent/Workflow call with no
-ledger row), stored in `claude-skills/.claude/hooks/`, armed in `~/.claude/hooks/`.
+ledger row), stored in `claude-skills/.claude/hooks/`, armed in `~/.claude/hooks/`. So does the
+optional `scripts/suite_slot.py`: a brief names it, a unit runs it, nothing reads it.
 
 ## Entry points
 
