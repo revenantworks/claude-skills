@@ -70,7 +70,7 @@ Say what ran, the mode and why, the binary (known or unknown build), the model, 
 - **`whisperrunner check <clip>`** — one 30-60 s clip on the GPU: backend proof plus transcript check; writes nothing beside the clip.
 - **`whisperrunner plan <file|folder>`** — durations and a time estimate; runs nothing.
 - **`whisperrunner run <file|folder>`** — the whole sequence, interactive or unattended.
-- **`whisperrunner status`** — the lease holder, the last audit and the last run.
+- **`whisperrunner status`** — the lease holder, the last audit and the last run. After an install, `whisper_run.py configure --root <whisper.cpp>` writes the config on the user's word.
 - **`whisperrunner refresh`** — re-read the sources in `engine.md` (latest tag, flags, log strings, models) and restamp it.
 
 Bare invocation ("whisperrunner"): at most four sentences — what it does, the entry map, the three guarantees, the question. It runs nothing.

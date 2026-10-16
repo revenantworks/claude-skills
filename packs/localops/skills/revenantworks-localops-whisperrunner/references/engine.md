@@ -39,7 +39,9 @@ measurement, recorded with its conditions (checks.md, "The speed record").
 
 ## 2. The binary — where it comes from
 
-- whisper.cpp latest tag at verification: **v1.9.4** (published 2026-09-11). The release carries
+- whisper.cpp latest tag at verification: **v1.9.4** (published 2026-09-11). **v1.9.5** was the
+  latest tag on 2026-10-16 and built clean with the same log strings (`GPU-OK` on Vulkan0, one
+  owner install on one card); promote it to the pinned tag at the next refresh. The release carries
   **no Windows Vulkan asset** (assets list empty that day; earlier tags shipped CPU, BLAS and CUDA
   zips only).
 - **The user's path: build from source once**, at a pinned tag, so provenance is known

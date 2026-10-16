@@ -7,6 +7,12 @@ the GPU actually did the work.
 
 Description cut to about 600 characters, main use case first (2026-10-08).
 
+2026-10-16 (observations 0443, 0444, a real install): `whisper_run.py configure` writes
+`whisperrunner.json` from a built whisper.cpp folder (paths checked, hash recorded, no overwrite
+without `--force`; three tests); the walkthrough's step 8 runs inside `models\`, step 10 is the
+configure command, a note covers the unsigned-binary prompt, and step 11 asks for a
+non-repeating clip; `engine.md` records v1.9.5 as built clean, for the next refresh.
+
 ### What it does
 
 - Transcripts in txt, srt, vtt and json with timestamps, from recordings, meetings, voice notes,
