@@ -2,6 +2,8 @@
 
 ## [1.0.0] — 2026-10-01
 
+2026-10-16 (weekly observation review): `design-checklist.md` gains run-to-run state stores and state-versus-policy in prompts (area 5), a specified follow-up surface for replies in a fired session (area 6), proof of a config write by field read-back and the outcome-branch check (area 8), a narrow push checked against the ref distance (area 4), and schedule retirement that removes every re-create instruction (area 3) (observations 0404, 0405, 0406, 0412, 0413).
+
 2026-10-08 (K8 fix round): the description says it never schedules or runs what it designs (trigger row #18's exclusion); Emit states why it stays model-invocable (audit K7-1-19, -21).
 
 2026-10-08: description cut to about 600 characters, main use case first; trigger phrases and seams kept (routing proof: K9 evals).
