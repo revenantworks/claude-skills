@@ -13,7 +13,10 @@ Caps come from `<state>/call-caps.json` (state = GATEWARDEN_STATE or
    "grace": 10,                      # calls allowed past the cap to commit and report
    "warn_at": 0.85,                  # fraction of the cap where the warning starts
    "always_allow": ["SubagentHandback"]}
-No cap for an agent means it is counted and never stopped.
+An agent with no entry reads its cap from its launch (B5, observation 0371): the first user message
+of its own transcript (`agent_transcript_path`) naming `Call cap N`, `call cap N` or `call_cap: N`,
+enforced with the same grace. With no entry and no number in the launch, it is counted and never
+stopped.
 
 Calls 1..cap pass (a warning rides along from warn_at x cap). Calls past the cap
 pass for `grace` more with "past cap: commit and report now". After that every
@@ -258,6 +261,36 @@ def transcript_stats(path: str, salt_: str, limit: int | None = None) -> dict | 
             "unit": unit_of(prompt or ""), "prompt_hash": digest(salt_, prompt, n=12) if prompt else None}
 
 
+LAUNCH_CAP = re.compile(r"(?i)\bcall[ _]cap\s*[:=]?\s*(\d{1,5})\b")
+LAUNCH_READS = 5  # transcript reads per agent while no cap is found (the file may lag the first call)
+
+
+def launch_cap(ev: dict, agent: str) -> int | None:
+    """The cap the agent's launch message names (`Call cap 30`, `call cap 30`, `call_cap: 30`), read
+    from the first user message of its own transcript; None when it names none or cannot be read."""
+    path = agent_transcript(ev, agent)
+    if not path:
+        return None
+    try:
+        with open(path, encoding="utf-8", errors="replace") as fh:
+            for n, line in enumerate(fh):
+                if n >= 40:
+                    break
+                try:
+                    obj = json.loads(line)
+                except ValueError:
+                    continue
+                msg = obj.get("message") if isinstance(obj, dict) else None
+                if not (isinstance(obj, dict) and obj.get("type") == "user" and isinstance(msg, dict)):
+                    continue
+                m = LAUNCH_CAP.search(_text(msg.get("content")))
+                cap = int(m.group(1)) if m else 0
+                return cap if cap > 0 else None
+    except OSError:
+        return None
+    return None
+
+
 def agent_transcript(ev: dict, agent: str) -> str | None:
     p = ev.get("agent_transcript_path")
     if isinstance(p, str) and os.path.isfile(p):
@@ -345,6 +378,11 @@ def main() -> None:
                     "count": count, "tool": safe(tool), "sig": sig}
         except Exception:
             pass
+        if cap is None:  # B5 (observation 0371): the cap the brief gave at launch
+            if rec.get("launch_cap") is None and int(rec.get("launch_reads", 0)) < LAUNCH_READS:
+                rec["launch_reads"] = int(rec.get("launch_reads", 0)) + 1
+                rec["launch_cap"] = launch_cap(ev, agent)
+            cap = rec.get("launch_cap")
         if cap is None:
             hl.write_json_atomic(path, rec)
             hl.allow()

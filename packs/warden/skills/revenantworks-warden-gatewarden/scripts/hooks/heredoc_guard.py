@@ -313,7 +313,15 @@ def _views(text: str) -> list[str]:
     t = ANSI_C.sub(lambda m: "'" + m.group(2) + "'", t)
     t = _without_heredoc_bodies(hl.strip_comments(t))
     t = QUOTED_ASSIGN.sub(lambda m: m.group(1) + "_q_", _resolve_runtime_vars(t))
+    # B1 (observation 0392): a quoted element of a literal array or list (`@('dash', 'privacy')`) is a
+    # value. After `@(` or a comma, or before a comma, no shell runs it as a program.
+    t = ARRAY_HEAD.sub(lambda m: m.group(1) + "_q_", t)
+    t = ARRAY_TAIL.sub(lambda m: "_q_" + m.group(2), t)
     return [t, t.replace("\\", "/")] if "\\" in t else [t]
+
+
+ARRAY_HEAD = re.compile(r"""(@\(\s*|,\s*)('[^'\n]*'|"[^"$`\n]*")""")
+ARRAY_TAIL = re.compile(r"""('[^'\n]*'|"[^"$`\n]*")(\s*,)""")
 
 
 # Observation 0384 (the 0377 program-position rule, applied to shell names): a wrapper runs a string only
@@ -390,7 +398,8 @@ def _inner_texts(text: str, depth: int = 0) -> list[str]:
     for s in subs:
         out += _inner_texts(s, depth + 1)
     for seg in hl.segments(_without_heredoc_bodies(hl.strip_comments(hl.join_lines(text)))):
-        toks = hl.tokens(seg)
+        # An array element is a value, never a wrapper or the string a wrapper runs (B1, 0392).
+        toks = hl.tokens(ARRAY_TAIL.sub(lambda m: "_q_" + m.group(2), ARRAY_HEAD.sub(lambda m: m.group(1) + "_q_", seg)))
         progs = [hl.prog(t) for t in toks]
         if not _runs_wrapper(toks):
             continue
@@ -430,10 +439,39 @@ FOLLOW_REASON = ("heredoc guard: `{slip}` follows a file with no end: the proces
                  "do sleep 30; done` loop, or `tail --pid=<producer pid> -f`.")
 
 
-def unbounded_follow(cmd: str) -> str:
+SCRIPT_WORD = re.compile(r"(?i)\.(?:sh|bash|zsh|ps1)$")
+
+
+def _scripts_run(text: str) -> list[str]:
+    """Script files the text runs (B8, observation 0439): `bash x.sh`, `sh x.sh`, `pwsh -File x.ps1`,
+    or a script path as the command word (`./x.sh`)."""
+    found = []
+    for seg in hl.segments(_without_heredoc_bodies(hl.strip_comments(hl.join_lines(text)))):
+        toks = [t for t in hl.tokens(seg) if not SH_ASSIGN.match(t)]
+        while toks and toks[0].lower() in LAUNCH:
+            toks = toks[1:]
+        if not toks:
+            continue
+        name = re.split(r"[\\/]", hl.unquote(toks[0]))[-1]
+        if SH_NAME.match(name):
+            args = [t for t in toks[1:] if not t.startswith("-")]
+            if args and not any("c" in t[1:] for t in toks[1:] if t.startswith("-") and not t.startswith("--")):
+                found.append(hl.unquote(args[0]))
+        elif PWSH_NAME.match(name):
+            for k, t in enumerate(toks[1:-1], 1):
+                if t.lower() in ("-file", "-f"):
+                    found.append(hl.unquote(toks[k + 1]))
+        elif SCRIPT_WORD.search(hl.unquote(toks[0])):
+            found.append(hl.unquote(toks[0]))
+    return found
+
+
+def unbounded_follow(cmd: str, cwd: str = "", depth: int = 0) -> str:
     """The offending follow (`tail -f`, `tail -F`, `tail --follow`, `Get-Content -Wait`) with no --pid
-    bound, or "". Quoted text is not read (a commit message may name it); a wrapper's string is."""
-    for text in dict.fromkeys(_inner_texts(cmd)):
+    bound, or "". Quoted text is not read (a commit message may name it); a wrapper's string is, and
+    so is a script file the line runs (B8, observation 0439)."""
+    texts = list(dict.fromkeys(_inner_texts(cmd)))
+    for text in texts:
         view = QUOTED.sub(" ", _without_heredoc_bodies(text))
         for m in FOLLOW_TAIL.finditer(view):
             args = m.group(1)
@@ -442,6 +480,15 @@ def unbounded_follow(cmd: str) -> str:
         m = FOLLOW_PS.search(view)
         if m:
             return m.group(0).strip()[:60]
+    if depth >= 2:
+        return ""
+    for text in texts:
+        for path in _scripts_run(text):
+            body = hl.read_small(hl.resolve(path, cwd)) if cwd or os.path.isabs(path) else hl.read_small(path)
+            if body and len(body) <= hl.BIG:
+                slip = unbounded_follow(body, cwd, depth + 1)
+                if slip:
+                    return f"{os.path.basename(path)}: {slip}"[:80]
     return ""
 
 
@@ -478,7 +525,7 @@ def main() -> None:
         if slip:
             reason = OTHER_REASON if slip.endswith(OTHER_TAIL) else STDIN_REASON
             hl.block(reason.format(slip=slip), rule="heredoc_guard.stdin", hard=True)
-        follow = unbounded_follow(cmd)
+        follow = unbounded_follow(cmd, str(ev.get("cwd") or ""))
         if follow:  # owner 2026-10-11: leftovers must not happen again, so it refuses in every mode
             hl.block(FOLLOW_REASON.format(slip=follow), rule="heredoc_guard.follow", hard=True)
         if ev.get("tool_name") == "Bash" and offending(cmd):

@@ -105,6 +105,15 @@ VALUELESS = {"-p", "--paginate", "-P", "--no-pager", "--bare", "--no-replace-obj
 CODE_PUSH = re.compile(r"""(?i)(?<![\w-])git(?:\.exe)?['"]?(?:[\s,]+['"]?[^\s,'"()\[\]]+['"]?){0,4}?"""
                        r"""[\s,]+['"]?push(?![\w-])""")
 PUSH_HINT = re.compile(r"(?i)(?<![a-z])push(?![a-z])")
+# Inline code that can start a process, load code by name or evaluate a string (B1): with a push named in
+# it, the push may run. Code with none of these only computes and writes text, so a push in it is data.
+# Broad on purpose: a false hit keeps the old refusal.
+CODE_RUNS = re.compile(r"(?i)(?<![\w])(?:os\s*\.\s*(?:system|popen|exec\w*|spawn\w*|posix_spawn\w*|startfile|fork\w*)"
+                       r"|subprocess|pty|popen\w*|__import__|importlib|runpy|ctypes|getattr|setattr|__builtins__"
+                       r"|builtins|__dict__|globals|vars|locals|eval|exec\w*|compile|system|spawn\w*|fork"
+                       r"|child_process|shell_exec|passthru|proc_open|qx|open3|require|import\s*\(|process\s*\."
+                       r"\s*binding|deno|bun|%x|invoke|start-process|iex)(?![\w])|`[^`]*push[^`]*`"
+                       r"|open\s*\([^)]*\|")
 HEREDOC = re.compile(r"(?<!<)<<-?\s*(['\"]?)([A-Za-z_]\w*)\1")
 REMOTE_SETTING = re.compile(r"(?i)\s*remote\..+\.(?:mirror|push)(?:=|$)")
 PUSH_CONFIG_KEY = re.compile(r"(?i)^(?:alias\.|remotes?\.|url\.|include)")
@@ -730,6 +739,10 @@ def all_pushes(cmd: str, cwd: str, head_moves: bool = True) -> list[dict]:
     try:
         ex = hl.expand(cmd, cwd)
     except hl.Unparseable as exc:
+        if exc.script:  # B2 (observation 0419): name the script and the depth; the verdict stays
+            raise PushBlock(f"push gate: the script `{os.path.basename(exc.script)}` runs commands nested more "
+                            f"than {hl.MAX_DEPTH} levels deep (level {exc.depth} reached), so it cannot be "
+                            "checked for a push. Blocked; run the script's steps one by one.")
         if exc.hard or PUSH_HINT.search(hl.despliced(cmd)):
             raise PushBlock(f"push gate: {exc} cannot be checked for a push. Blocked; run the "
                             "command in plain text.")
@@ -755,12 +768,15 @@ def all_pushes(cmd: str, cwd: str, head_moves: bool = True) -> list[dict]:
         for reader, body in bodies:
             found += find_pushes(body, where or cwd, resolve=reader not in WRITERS, head_moves=head_moves)
     for body, path in ex.code:
-        # Inline code only (python -c, node -e). A source file an interpreter runs is not read
-        # for pushes: release tooling pushes by design (stated limit, references/hooks.md).
-        if not path and CODE_PUSH.search(body):
+        # Inline code only (python -c, node -e, a quoted heredoc an interpreter reads). A source file an
+        # interpreter runs is not read for pushes: release tooling pushes by design (stated limit,
+        # references/hooks.md). Push words in code that can start no process are data (B1, 0382): a
+        # string the code writes to a file never runs. Any process call, dynamic import or eval keeps
+        # the refusal.
+        if not path and CODE_PUSH.search(body) and CODE_RUNS.search(body):
             raise PushBlock("push gate: a push run from inline code cannot be range-checked. Blocked; "
                             "run it as a plain `git push` line.")
-    detected = detect_count(inert_writer_bodies(cmd))
+    detected = detect_count(inert_writer_bodies(hl.data_view(cmd)))
     if detected > len(found):
         raise PushBlock("push gate: this line holds a push the gate cannot parse. Blocked; run the push "
                         "as a plain `git push` line. If the words `git push` are only text, put them in a "
@@ -1027,8 +1043,16 @@ def check_push(push: dict) -> dict:
                    "WSL instead of Git Bash. Then push.",
                    f'python "{os.path.join(HERE, "ci_stamp.py")}" run --repo "{repo}" --step "<step 1>" '
                    '--step "<step 2>"', "push_gate.no_ci")
-    # A stamp that left a CI check out is partial: say so loudly (observation 0354).
-    return {"rows": view, "items": items, "partial": list(stamp.get("excluded") or []),
+    # A stamp that left a CI check out is partial: say so loudly (observation 0354). So is one that
+    # covered fewer of its workflow's run: steps than the workflow has (B6, observation 0367).
+    short = []
+    try:
+        total, covered = int(stamp.get("workflow_steps") or 0), int(stamp.get("steps_covered") or 0)
+    except (TypeError, ValueError):
+        total = covered = 0
+    if total and covered < total:
+        short.append(f"local CI covered {covered} of {total} run: steps in {stamp.get('workflow', 'the workflow')}")
+    return {"rows": view, "items": items, "partial": list(stamp.get("excluded") or []) + short,
             "ranges": rows, "checked": True}
 
 
@@ -1155,6 +1179,14 @@ def hook_main() -> None:
         except PushBlock as exc:
             # Hard (K7-4-01): a push the gate cannot read may be a force or delete push in disguise.
             hl.block(str(exc), rule=exc.rule, hard=True)
+        for p in pushes:  # B3 (observation 0435): the folder is made by this same command
+            if not os.path.isdir(p["repo"]):
+                hl.block(hl.note("push gate", "refused",
+                                 why="the push target is created in this same command, so it cannot be "
+                                     "checked before the command runs.",
+                                 rows=[("read", p.get("segment", "?")), ("folder", p["repo"])],
+                                 fix="create and commit first, then push in its own call"),
+                         rule="push_gate.unreadable", hard=True)
         if head_move is not None:
             refuse_hard(pushes)
             if hl.mode_for(head_move.rule) != "watch":
@@ -1191,6 +1223,7 @@ def intend_main(argv: list[str]) -> int:
     ap.add_argument("--max", type=int, required=True, dest="max_commits")
     ap.add_argument("--head")
     ap.add_argument("--ttl", type=int, default=900)
+    ap.add_argument("--quiet", action="store_true", help="the one-line verdict only (it is one line already)")
     a = ap.parse_args(argv)
     d = gw_dir(a.repo)
     os.makedirs(d, exist_ok=True)
@@ -1209,7 +1242,75 @@ def intend_main(argv: list[str]) -> int:
     return 0
 
 
+def preflight_main(argv: list[str]) -> int:
+    """S3: the local CI stamp, the push intent and a one-line verdict in one call. It never pushes; the
+    push stays its own visible call.
+
+      python push_gate.py preflight --repo <r> --max <n> [--head <sha>] [--ttl 900] [--excluded "N: R"]
+          [--workflow <file> [--covers N|all]] [--step "<cmd>" ...] [--quiet] [-- <ci command>]
+
+    The CI run has ci_stamp.py's rules (clean tree, HEAD unmoved, a skipped check is no stamp unless
+    --excluded) and its full log stays in <git dir>/gatewarden/ci-last.log. The intent names the stamped
+    head unless --head names another."""
+    ap = argparse.ArgumentParser(prog="push_gate.py preflight")
+    ap.add_argument("--repo", default=".")
+    ap.add_argument("--max", type=int, required=True, dest="max_commits")
+    ap.add_argument("--head")
+    ap.add_argument("--ttl", type=int, default=900)
+    ap.add_argument("--excluded", action="append", default=[])
+    ap.add_argument("--step", action="append", default=[])
+    ap.add_argument("--workflow")
+    ap.add_argument("--covers")
+    ap.add_argument("--runs", type=int, default=1)
+    ap.add_argument("--quiet", action="store_true", help="accepted for symmetry; the output is one line")
+    ap.add_argument("command", nargs=argparse.REMAINDER)
+    a = ap.parse_args(argv)
+    stamp_args = [sys.executable, os.path.join(HERE, "ci_stamp.py"), "run", "--repo", a.repo, "--quiet",
+                  "--runs", str(a.runs)]
+    for item in a.excluded:
+        stamp_args += ["--excluded", item]
+    for step in a.step:
+        stamp_args += ["--step", step]
+    if a.workflow:
+        stamp_args += ["--workflow", a.workflow] + (["--covers", a.covers] if a.covers else [])
+    cmd = a.command[1:] if a.command[:1] == ["--"] else a.command
+    if cmd:
+        stamp_args += ["--", *cmd]
+    p = subprocess.run(stamp_args, stdin=subprocess.DEVNULL, capture_output=True, text=True,
+                       encoding="utf-8", errors="replace", creationflags=hl.NO_WINDOW)
+    said = " ".join(((p.stdout or "") + " " + (p.stderr or "")).split())
+    if p.returncode != 0:
+        print(f"preflight: no stamp, no intent ({hl.clip(said, 200)})", file=sys.stderr)
+        return p.returncode
+    try:
+        stamp = hl.load_json(os.path.join(gw_dir(a.repo), "ci-pass.json"))
+    except (OSError, ValueError):
+        print("preflight: the stamp could not be read back; no intent recorded", file=sys.stderr)
+        return 2
+    head = a.head or stamp.get("head")
+    import contextlib
+    import io
+    with contextlib.redirect_stdout(io.StringIO()):
+        rc = intend_main(["--repo", a.repo, "--max", str(a.max_commits), "--head", head, "--ttl", str(a.ttl)])
+    if rc != 0:
+        print(f"preflight: CI stamped, but the intent was not recorded (head {head})", file=sys.stderr)
+        return rc
+    rows = ranges(a.repo, [])
+    total = sum(r["count"] for r in rows)
+    span = ", ".join(f"{r['remote']}/{r['dst']}..{r['sha'][:12]}" for r in rows)
+    partial = list(stamp.get("excluded") or [])
+    if int(stamp.get("workflow_steps") or 0) > int(stamp.get("steps_covered") or 0):
+        partial.append(f"{stamp.get('steps_covered')} of {stamp.get('workflow_steps')} workflow steps")
+    print(f"preflight: {os.path.basename(os.path.abspath(a.repo))} · {span} · {total} "
+          f"commit{'s' if total != 1 else ''} · stamp {str(stamp.get('head'))[:12]} · "
+          + (f"PARTIAL ({'; '.join(partial)})" if partial else "full")
+          + (f" · over the intent of {a.max_commits}" if total > a.max_commits else ""))
+    return 0
+
+
 if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == "intend":
         sys.exit(intend_main(sys.argv[2:]))
+    if len(sys.argv) > 1 and sys.argv[1] == "preflight":
+        sys.exit(preflight_main(sys.argv[2:]))
     hook_main()

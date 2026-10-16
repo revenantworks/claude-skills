@@ -166,7 +166,7 @@ class Layout(unittest.TestCase):
     def test_runs_as_a_script(self):
         p = subprocess.run([sys.executable, str(HERE / "settings_layout.py"), "--home", str(self.home),
                             "--project", str(self.proj), "--json", "-"], capture_output=True, text=True,
-                           timeout=60, creationflags=NO_WINDOW)
+                           timeout=60, creationflags=NO_WINDOW, stdin=subprocess.DEVNULL)
         self.assertEqual(p.returncode, 0, p.stderr)
         self.assertEqual(json.loads(p.stdout)["tool"], "gatewarden.settings_layout")
         self.assertNotIn(CANARY, p.stdout + p.stderr)

@@ -65,7 +65,7 @@ def bash(cmd: str, cwd: str = ".", tool: str = "Bash", **extra) -> dict:
 def git(cwd, *args):
     return subprocess.run(["git", "-c", "user.name=gatewarden-test", "-c", "user.email=gatewarden-test",
                            "-c", "commit.gpgsign=false", *args], cwd=cwd, capture_output=True,
-                          text=True, check=True, creationflags=NO_WINDOW).stdout.strip()
+                          text=True, check=True, creationflags=NO_WINDOW, stdin=subprocess.DEVNULL).stdout.strip()
 
 
 # ---------------------------------------------------------------- push gate
@@ -93,12 +93,12 @@ class PushGateTests(unittest.TestCase):
         args = [PY, str(HOOKS / "push_gate.py"), "intend", "--repo", self.work, "--max", str(n)]
         if head:
             args += ["--head", head]
-        return subprocess.run(args, capture_output=True, text=True, creationflags=NO_WINDOW)
+        return subprocess.run(args, capture_output=True, text=True, creationflags=NO_WINDOW, stdin=subprocess.DEVNULL)
 
     def stamp(self):
         return subprocess.run([PY, str(HOOKS / "ci_stamp.py"), "run", "--repo", self.work, "--",
                                PY, "-c", "raise SystemExit(0)"], capture_output=True, text=True,
-                              creationflags=NO_WINDOW)
+                              creationflags=NO_WINDOW, stdin=subprocess.DEVNULL)
 
     def test_non_push_command_passes_silently(self):
         code, out, err = run_hook("push_gate.py", bash("git status", self.work))
@@ -389,7 +389,7 @@ class PushGateTests(unittest.TestCase):
         self.intend(3)
         p = subprocess.run([PY, str(HOOKS / "ci_stamp.py"), "run", "--repo", self.work,
                             "--excluded", "lint: gdlint not installed", "--", PY, "-c", "raise SystemExit(0)"],
-                           capture_output=True, text=True, creationflags=NO_WINDOW)
+                           capture_output=True, text=True, creationflags=NO_WINDOW, stdin=subprocess.DEVNULL)
         self.assertEqual(p.returncode, 0, p.stderr)
         code, out, err = run_hook("push_gate.py", bash("git push origin main", self.work))
         self.assertEqual(code, 0, err)
@@ -421,7 +421,7 @@ class CiStampTests(unittest.TestCase):
         body = script if script is not None else f"raise SystemExit({code})"
         return subprocess.run([PY, str(HOOKS / "ci_stamp.py"), "run", "--repo", self.tmp, *extra, "--",
                                PY, "-c", body], capture_output=True, text=True,
-                              encoding="utf-8", errors="replace", creationflags=NO_WINDOW)
+                              encoding="utf-8", errors="replace", creationflags=NO_WINDOW, stdin=subprocess.DEVNULL)
 
     def test_ci_command_gets_null_stdin_and_utf8_mode(self):
         script = ("import os, sys\n"
@@ -476,7 +476,7 @@ class CiStampTests(unittest.TestCase):
     def run_steps(self, *args):
         return subprocess.run([PY, str(HOOKS / "ci_stamp.py"), "run", "--repo", self.tmp, *args],
                               capture_output=True, text=True, encoding="utf-8", errors="replace",
-                              creationflags=NO_WINDOW)
+                              creationflags=NO_WINDOW, stdin=subprocess.DEVNULL)
 
     def test_steps_run_in_order_and_stop_at_the_first_failure(self):
         # Observation 0346: several CI steps without a `bash -c` wrapper.
@@ -562,7 +562,7 @@ class HyperVLockTests(unittest.TestCase):
         "Remove-Item D:\\vms\\lab.vhdx",
         "rm /d/vms/lab_1234.avhdx",
         "del lab.vhd",
-        "python -c \"import subprocess; subprocess.run(['powershell','Restore-VMCheckpoint -VMName lab'])\"",
+        "python -c \"import subprocess; subprocess.run(['powershell','Restore-VMCheckpoint -VMName lab'], stdin=subprocess.DEVNULL)\"",
         "Get-CimInstance -Namespace root/virtualization/v2 Msvm_VirtualSystemSnapshotService",
         "python vmctl.py list; Remove-VM -Name lab -Force",
     ]
@@ -1124,7 +1124,7 @@ class HeredocGuardTests(unittest.TestCase):
                 "t=time.perf_counter();h.ANSI_C.search(sys.argv[2]);print(time.perf_counter()-t)")
         try:
             p = subprocess.run([PY, "-c", code, str(HOOKS), text], capture_output=True, text=True,
-                               timeout=10, creationflags=NO_WINDOW)
+                               timeout=10, creationflags=NO_WINDOW, stdin=subprocess.DEVNULL)
         except subprocess.TimeoutExpired:
             self.fail("ANSI_C backtracked past 10 s on an adversarial input")
         self.assertEqual(p.returncode, 0, p.stderr)
@@ -1235,9 +1235,9 @@ class PushGateBypassTests(unittest.TestCase):
 
     def clear(self):
         subprocess.run([PY, str(HOOKS / "push_gate.py"), "intend", "--repo", self.work, "--max", "1"],
-                       capture_output=True, check=True, creationflags=NO_WINDOW)
+                       capture_output=True, check=True, creationflags=NO_WINDOW, stdin=subprocess.DEVNULL)
         subprocess.run([PY, str(HOOKS / "ci_stamp.py"), "run", "--repo", self.work, "--", PY, "-c",
-                        "raise SystemExit(0)"], capture_output=True, check=True, creationflags=NO_WINDOW)
+                        "raise SystemExit(0)"], capture_output=True, check=True, creationflags=NO_WINDOW, stdin=subprocess.DEVNULL)
 
     def test_quote_spliced_push_is_gated(self):
         self.gated(self.SPLICED)
@@ -1478,10 +1478,10 @@ class ModeTests(unittest.TestCase):
         env = {k: v for k, v in os.environ.items() if not k.startswith("GATEWARDEN_")}
         env["GATEWARDEN_STATE"] = self.tmp
         p = subprocess.run([PY, str(HOOKS / "warden_review.py")], capture_output=True, text=True, env=env,
-                           creationflags=NO_WINDOW)
+                           creationflags=NO_WINDOW, stdin=subprocess.DEVNULL)
         self.assertIn("suggest: set heredoc_guard nudge", p.stdout)
         p = subprocess.run([PY, str(HOOKS / "warden_review.py"), "set", "heredoc_guard", "nudge"],
-                           capture_output=True, text=True, env=env, creationflags=NO_WINDOW)
+                           capture_output=True, text=True, env=env, creationflags=NO_WINDOW, stdin=subprocess.DEVNULL)
         self.assertEqual(p.returncode, 0)
         with open(os.path.join(self.tmp, "modes.json"), encoding="utf-8") as fh:
             self.assertEqual(json.load(fh)["rules"]["heredoc_guard"]["mode"], "nudge")
@@ -1531,7 +1531,7 @@ class InstallDefaultBase(unittest.TestCase):
         env = {k: v for k, v in os.environ.items() if not k.startswith("GATEWARDEN_")}
         env["GATEWARDEN_STATE"] = self.state
         return subprocess.run([PY, str(HOOKS / "warden_review.py"), *args], capture_output=True, text=True,
-                              env=env, creationflags=NO_WINDOW)
+                              env=env, creationflags=NO_WINDOW, stdin=subprocess.DEVNULL)
 
     def modes(self):
         try:
@@ -1899,7 +1899,7 @@ class CiStampMaskTests(unittest.TestCase):
         script = "print('token ' + 'ghp_' + 'B' * 36, flush=True)\nraise SystemExit(1)\n"
         p = subprocess.run([PY, str(HOOKS / "ci_stamp.py"), "run", "--repo", self.tmp, "--", PY, "-c", script],
                            capture_output=True, text=True, encoding="utf-8", errors="replace",
-                           creationflags=NO_WINDOW)
+                           creationflags=NO_WINDOW, stdin=subprocess.DEVNULL)
         self.assertEqual(p.returncode, 1)
         self.assertNotIn("ghp_" + "B" * 36, p.stdout + p.stderr)
         self.assertIn("[redacted]", p.stdout)
@@ -2205,7 +2205,7 @@ base='cd {dash} && '
 for c in [base+'grep -n \"isRunActive\\\\|import \" tests/tasks.test.ts | head -10',
           base+'grep -n \"dash\\\\|bun test\\\\|node --test\\\\|mods\" ../../.github/workflows/*.yml | grep -i -E \"test|mods\" | head -8',
           base+'echo hi | grep -i -E \"test|mods\"']:
-    print(subprocess.run([sys.executable, '-c', 'print(1)'], capture_output=True).returncode, c[len(base):])
+    print(subprocess.run([sys.executable, '-c', 'print(1)'], capture_output=True, stdin=subprocess.DEVNULL).returncode, c[len(base):])
 "'''
 
 
@@ -2306,6 +2306,268 @@ class Obs0414Tests(InstallDefaultBase):
         self.expect(2, [f"foreach ($f in '{t}/evil.ps1') {{ & $f }}",
                         f"foreach ($f in '{t}/evil.ps1') {{ pwsh -File $f }}",
                         f"& '{t}/evil.ps1'"], tool="PowerShell")
+
+
+# ---------------------------------------------------------------- hook backlog B1-B8, S3 (review 2026-10-16b)
+
+NL = "\n"
+PY_FWD = PY.replace("\\", "/")
+B1_PASS = [  # (hook, tool, the refused line's shape from the observation body)
+    # 0382 first instance: `+ nl` outside the quotes of a python -c string is not a `+` refspec.
+    ("push_gate.py", "Bash", 'python -c "import pathlib; nl = chr(10); p = pathlib.Path(\'t.py\'); '
+                             'p.write_text(p.read_text().replace(\'X\', \\"git push origin main\\" + nl))"'),
+    # 0382 second: markdown backticks in a quoted python heredoc next to the word push.
+    ("push_gate.py", "Bash", "python - <<'EOF'" + NL + "import pathlib" + NL + "rows = [" + NL
+     + '    "| `contributions/CANDIDATES.md` | the list |",' + NL + '    "Never open, comment on, review or push.",'
+     + NL + "]" + NL + "pathlib.Path('x.md').write_text(chr(10).join(rows))" + NL + "EOF"),
+    # 0382 third: markdown `*` at a line start in a quoted python heredoc.
+    ("push_gate.py", "Bash", "python3 <<'EOF'" + NL + 's = """' + NL + 'A 5" screen' + NL
+     + "* the card is final; push it" + NL + '"""' + NL + "open('a.md', 'a').write(s)" + NL + "EOF"),
+    # 0382 fourth: a path passed as "$f" to a quoted python heredoc whose code imports time.
+    ("push_gate.py", "Bash", 'f=obs/x.md; python - "$f" <<\'EOF\'' + NL + "import sys, time" + NL
+     + "open(sys.argv[1], 'a').write('push the branch later' + chr(10))" + NL + "EOF"),
+    # 0382 fifth: a gh PR body heredoc holding a path glob.
+    ("push_gate.py", "Bash", 'gh pr create --title "docs: sync" --body "$(cat <<\'EOF\'' + NL + "Moves the files." + NL
+     + "docs/claude-project/** stays as is." + NL + "No push from the routine." + NL + "EOF" + NL + ')"'),
+    # 0392: a commit message heredoc and a -m value naming websocket beside `& $x`.
+    ("golive_block.py", "Bash", "git commit -q -F - <<'EOF'" + NL + "gatewarden: close HK-1 and HK-2" + NL + NL
+     + "HK-1: `$x='bash'; & $x -c` unwraps like bash -c." + NL + "HK-2: an obs websocket client run fails closed."
+     + NL + "EOF"),
+    ("golive_block.py", "Bash", "git commit -q -m 'HK-1: $x=bash; & $x -c unwraps; HK-2: obs websocket client fails closed'"),
+    # 0392: `dash` as an element of a PowerShell string array, in a read-only hash compare.
+    ("heredoc_guard.py", "PowerShell", "$names = @('dash', 'privacy'); foreach ($n in $names) { $a = (Get-FileHash "
+     "\"A/$n/x.ts\").Hash; $b = (Get-FileHash \"B/$n/x.ts\").Hash; \"$n $($a -eq $b)\" }"),
+    # 0392: a grep pattern holding dash (already passing since 0410; kept as a control).
+    ("push_gate.py", "Bash", 'git status -sb | head; git log --oneline -3; grep -l "mods/dash\\|dash suggest" *.md | head'),
+    # 0435 second shape: an observation write whose quoted heredoc body holds `$(` and the word push.
+    ("push_gate.py", "Bash", "cd obs && n=$(ls | grep -E '^[0-9]{4}-' | sort | tail -1 | cut -c1-4) && "
+     "cat > \"$((10#${n:-0}+1))-x.md\" <<'EOF'" + NL + "---" + NL + "title: gate refused" + NL + "---" + NL
+     + "The id snippet (`n=$(ls | tail -1`) ran, then the push was refused." + NL + "EOF"),
+]
+B1_DENY = [
+    ("push_gate.py", "python -c \"import os; os.system('git push --force')\""),
+    ("push_gate.py", "bash <<'EOF'" + NL + "git push --force origin main" + NL + "EOF"),
+    ("push_gate.py", "cat <<'EOF' | bash" + NL + "git push --force origin main" + NL + "EOF"),
+    ("push_gate.py", "python - <<'EOF'" + NL + "import subprocess" + NL + "subprocess.run(['git', 'push', '--force'])" + NL + "EOF"),
+    ("push_gate.py", "cat <<EOF" + NL + "$(git push --force origin main)" + NL + "EOF"),
+    ("push_gate.py", "x=$(cat <<'EOF'" + NL + "git push --force origin main" + NL + "EOF" + NL + "); $x"),
+    ("push_gate.py", 'eval "$(cat <<\'EOF\'' + NL + "git push --force origin main" + NL + "EOF" + NL + ')"'),
+    ("push_gate.py", "perl -e 'print `git push --force origin main`'"),
+    ("push_gate.py", "node -e \"require('child_process').execSync('git push -f origin main')\""),
+    ("push_gate.py", "python -c \"print('$(git push --force origin main)')\""),
+    ("push_gate.py", 'git commit -m "$(git push --force origin main)"'),
+    ("golive_block.py", "python - <<'EOF'" + NL + "import obsws_python as o" + NL + "o.ReqClient().start_stream()" + NL + "EOF"),
+    ("golive_block.py", "cat > x.py <<'EOF'" + NL + "c.StartStream()" + NL + "EOF"),
+    ("heredoc_guard.py", "( 'dash' )"),
+]
+
+
+class HookBacklogB1Tests(InstallDefaultBase):
+    """B1 (observations 0382, 0392, 0435): words a command stores, prints or hands to an interpreter as
+    code are data. Each refused line passes in every mode; anything run stays refused."""
+
+    def setUp(self):
+        super().setUp()
+        os.makedirs(os.path.join(self.tmp, "obs"))
+
+    def expect(self, code, hook, cmd, tool="Bash"):
+        for env in (self.env, dict(self.env, GATEWARDEN_MODE="guard")):
+            got, _, err = run_hook(hook, bash(cmd, self.tmp, tool=tool), env=env)
+            self.assertEqual(got, code, f"{hook} {tool} mode={env.get('GATEWARDEN_MODE')}: {cmd!r}: {err.strip()}")
+
+    def test_the_refused_lines_pass(self):
+        for hook, tool, cmd in B1_PASS:
+            self.expect(0, hook, cmd, tool)
+
+    def test_what_runs_stays_refused(self):
+        for hook, cmd in B1_DENY:
+            self.expect(2, hook, cmd)
+
+    def test_a_commit_message_naming_a_request_is_data(self):
+        self.expect(0, "golive_block.py", "git commit -q -m 'docs: StartStream stays on the deny list'")
+        self.expect(2, "golive_block.py", "python -c \"import obsws_python as o; o.ReqClient().start_stream()\"")
+
+
+class HookBacklogPushTests(InstallDefaultBase):
+    """B2 (observation 0419), B3 (observation 0435 first shape)."""
+
+    def test_b2_depth_overflow_names_the_script_and_the_depth(self):
+        for n in range(1, 7):
+            Path(self.tmp, f"a{n}.sh").write_text(f"bash {self.tmp.replace(chr(92), '/')}/a{n + 1}.sh\n"
+                                                  if n < 6 else "echo done\n")
+        code, _, err = self.hook("push_gate.py", f"bash {self.tmp.replace(chr(92), '/')}/a1.sh")
+        self.assertEqual(code, 2, err)
+        self.assertIn("a1.sh", err)
+        self.assertIn("level 5", err)
+        self.assertIn("one by one", err)
+
+    def test_b3_a_push_folder_made_by_the_same_command_is_a_rule_refusal(self):
+        cmd = ("mkdir newrepo && cd newrepo && git init -q && git commit --allow-empty -qm x && "
+               "git push origin main")
+        code, _, err = self.hook("push_gate.py", cmd)
+        self.assertEqual(code, 2, err)
+        self.assertIn("created in this same command", err)
+        self.assertIn("create and commit first, then push in its own call", err.lower())
+        self.assertNotIn("NotADirectoryError", err)
+        self.assertNotIn("FileNotFoundError", err)
+
+
+class HookBacklogCapTests(unittest.TestCase):
+    """B5 (observation 0371): an agent with no cap entry reads its cap from its launch message."""
+
+    def setUp(self):
+        self.state = tempfile.mkdtemp(prefix="gw-cap5-")
+        self.addCleanup(shutil.rmtree, self.state, ignore_errors=True)
+        Path(self.state, "call-caps.json").write_text(json.dumps({"grace": 10, "warn_at": 0.85}))
+        self.env = {"GATEWARDEN_STATE": self.state}
+
+    def transcript(self, text):
+        p = Path(self.state, "agent-t.jsonl")
+        p.write_text(json.dumps({"type": "user", "message": {"role": "user", "content": text}}) + "\n"
+                     + json.dumps({"type": "assistant", "message": {"content": "call cap 999"}}) + "\n")
+        return str(p)
+
+    def call(self, path, tool="Read", agent="b5"):
+        ev = {"session_id": "s1", "tool_name": tool, "tool_input": {}, "agent_id": agent,
+              "agent_type": "general-purpose", "agent_transcript_path": path}
+        return run_hook("call_cap.py", ev, self.env)
+
+    def test_launch_cap_blocks_after_cap_plus_grace(self):
+        path = self.transcript("You are unit U9 of run r. Call cap 30. Read the brief first.")
+        codes = [self.call(path)[0] for _ in range(40)]
+        self.assertEqual(codes, [0] * 40)
+        code, _, err = self.call(path)
+        self.assertEqual(code, 2, err)
+        self.assertIn("cap of 30", err)
+        self.assertEqual(self.call(path, tool="SubagentHandback")[0], 0)
+
+    def test_the_other_spellings_are_read(self):
+        sys.path.insert(0, str(HOOKS))
+        import call_cap as cc
+        for text, want in (("call cap 12", 12), ("call_cap: 7", 7), ("Call cap 0", None), ("no number", None)):
+            ev = {"agent_transcript_path": self.transcript(text)}
+            self.assertEqual(cc.launch_cap(ev, "x"), want, text)
+
+    def test_no_number_stays_counted_and_unstopped(self):
+        path = self.transcript("You are unit U9. No limit is named here.")
+        self.assertEqual([self.call(path, agent="b5n")[0] for _ in range(15)], [0] * 15)
+
+
+class HookBacklogStampTests(unittest.TestCase):
+    """B6 (observation 0367) and S3 (dash triage): the stamp records its workflow cover; preflight."""
+
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp(prefix="gw-b6-")
+        self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
+        self.remote = os.path.join(self.tmp, "remote.git")
+        self.work = os.path.join(self.tmp, "work")
+        git(self.tmp, "init", "--bare", "-b", "main", self.remote)
+        git(self.tmp, "clone", self.remote, self.work)
+        git(self.work, "checkout", "-b", "main")
+        os.makedirs(os.path.join(self.work, ".github", "workflows"))
+        Path(self.work, ".github", "workflows", "ci.yml").write_text(
+            "jobs:\n  t:\n    steps:\n" + "".join(f"      - run: echo {i}\n" for i in range(5)))
+        git(self.work, "add", ".")
+        git(self.work, "commit", "-m", "base")
+        git(self.work, "push", "-u", "origin", "main")
+        for i in range(1, 3):
+            Path(self.work, "a.txt").write_text(f"{i}\n")
+            git(self.work, "add", "a.txt")
+            git(self.work, "commit", "-m", f"change {i}")
+
+    def tool(self, name, *args):
+        return subprocess.run([PY, str(HOOKS / name), *args], capture_output=True, text=True, encoding="utf-8",
+                              creationflags=NO_WINDOW, stdin=subprocess.DEVNULL)
+
+    def push(self):
+        return run_hook("push_gate.py", bash("git push origin main", self.work))
+
+    def test_b6_a_hand_picked_subset_warns(self):
+        self.tool("push_gate.py", "intend", "--repo", self.work, "--max", "2")
+        p = self.tool("ci_stamp.py", "run", "--repo", self.work, "--workflow", ".github/workflows/ci.yml",
+                      "--step", f'{PY_FWD} -c "print(1)"', "--step", f'{PY_FWD} -c "print(2)"')
+        self.assertEqual(p.returncode, 0, p.stderr)
+        self.assertIn("covers 2 of 5", p.stdout)
+        code, out, err = self.push()
+        self.assertEqual(code, 0, err)
+        self.assertIn("covered 2 of 5 run: steps", out)
+
+    def test_b6_a_generated_full_run_does_not_warn(self):
+        self.tool("push_gate.py", "intend", "--repo", self.work, "--max", "2")
+        p = self.tool("ci_stamp.py", "run", "--repo", self.work, "--workflow", ".github/workflows/ci.yml",
+                      "--covers", "all", "--", PY, "-c", "print(1)")
+        self.assertEqual(p.returncode, 0, p.stderr)
+        code, out, err = self.push()
+        self.assertEqual(code, 0, err)
+        self.assertNotIn("covered", out)
+        self.assertNotIn("PARTIAL", out)
+
+    def test_s3_quiet_stamp_prints_one_line(self):
+        p = self.tool("ci_stamp.py", "run", "--repo", self.work, "--quiet", "--", PY, "-c", "print('noise ' * 50)")
+        self.assertEqual(p.returncode, 0, p.stderr)
+        self.assertEqual(len(p.stdout.strip().splitlines()), 1, p.stdout)
+        self.assertNotIn("noise", p.stdout)
+
+    def test_s3_preflight_stamps_records_and_says_one_line(self):
+        p = self.tool("push_gate.py", "preflight", "--repo", self.work, "--max", "2", "--quiet", "--",
+                      PY, "-c", "print('noise')")
+        self.assertEqual(p.returncode, 0, p.stderr)
+        lines = p.stdout.strip().splitlines()
+        self.assertEqual(len(lines), 1, p.stdout)
+        self.assertIn("preflight:", lines[0])
+        self.assertIn("2 commits", lines[0])
+        self.assertIn("full", lines[0])
+        code, _, err = self.push()
+        self.assertEqual(code, 0, err)
+
+    def test_s3_preflight_with_failing_ci_records_no_intent(self):
+        p = self.tool("push_gate.py", "preflight", "--repo", self.work, "--max", "2", "--", PY, "-c",
+                      "raise SystemExit(3)")
+        self.assertNotEqual(p.returncode, 0)
+        gd = git(self.work, "rev-parse", "--absolute-git-dir")
+        self.assertFalse(Path(gd, "gatewarden", "push-intent.json").exists())
+        self.assertEqual(self.push()[0], 2)
+
+
+class HookBacklogFollowTests(InstallDefaultBase):
+    """B8 (observation 0439): a follow inside a script file the line runs, and orphaned watchers."""
+
+    def setUp(self):
+        super().setUp()
+        Path(self.tmp, "watch.sh").write_text("tail -f run.log | grep --line-buffered DONE\n")
+        Path(self.tmp, "watch.ps1").write_text("Get-Content run.log -Wait | Select-String DONE\n")
+        Path(self.tmp, "ok.sh").write_text("tail -n 5 run.log\n")
+
+    def test_a_script_holding_a_follow_is_refused(self):
+        for cmd, tool in (("bash watch.sh", "Bash"), ("sh ./watch.sh", "Bash"), ("./watch.sh", "Bash"),
+                          ("pwsh -NoProfile -File watch.ps1", "Bash"), ("pwsh -File watch.ps1", "PowerShell")):
+            code, _, err = self.hook("heredoc_guard.py", cmd, tool=tool)
+            self.assertEqual(code, 2, f"{cmd}: {err}")
+            self.assertIn("watch", err)
+
+    def test_a_script_without_a_follow_passes(self):
+        code, _, err = self.hook("heredoc_guard.py", "bash ok.sh")
+        self.assertEqual(code, 0, err)
+
+    def test_orphans_older_than_thirty_minutes_are_listed(self):
+        sys.path.insert(0, str(HOOKS))
+        import follow_sweep as fs
+        now = 1_000_000.0
+        git_tail = "C:\\Program Files\\Git\\usr\\bin\\tail.exe"
+        procs = [
+            {"pid": 1, "ppid": 999, "name": "tail.exe", "path": git_tail, "cmd": "tail -f a.log", "started": now - 40 * 60},
+            {"pid": 2, "ppid": 7, "name": "tail.exe", "path": git_tail, "cmd": "tail -f a.log", "started": now - 40 * 60},
+            {"pid": 3, "ppid": 7, "name": "grep.exe", "path": git_tail.replace("tail", "grep"),
+             "cmd": "grep --line-buffered x", "started": now - 13 * 3600},
+            {"pid": 4, "ppid": 999, "name": "tail.exe", "path": git_tail, "cmd": "tail -f a.log", "started": now - 10 * 60},
+            {"pid": 5, "ppid": 999, "name": "tail.exe", "path": git_tail, "cmd": "tail -n 5 a.log", "started": now - 50 * 60},
+            {"pid": 7, "ppid": 0, "name": "bash.exe", "path": "C:\\Git\\usr\\bin\\bash.exe", "cmd": "bash", "started": 0},
+        ]
+        self.assertEqual(fs.pick(procs, now), [1, 3])
+        s = fs.script("C:\\state\\f.log")
+        self.assertIn("AddMinutes(-30)", s)
+        self.assertIn("ParentProcessId", s)
+        self.assertIn("AddHours(-12)", s)
 
 
 if __name__ == "__main__":

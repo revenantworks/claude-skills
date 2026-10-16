@@ -74,10 +74,12 @@ unknown name. `snooze` refuses the same. The file is `~/.claude/gatewarden/modes
 overrides the path); `warden_digest.py` writes it explicitly on its first run.
 
 **The leftover sweep.** At every session start `warden_digest.py` launches `follow_sweep.py`
-detached and windowless (Windows only): it stops Git for Windows `tail`/`grep` processes older than
-12 hours that follow a file or wait on a stream, and logs each to `follow_sweep.log` in the state
-folder. It backstops `heredoc_guard.follow` for paths that hook does not see (a Monitor command, a
-script).
+detached and windowless (Windows only): it stops Git for Windows `tail`/`grep` processes that follow
+a file or wait on a stream when they are older than 12 hours, or older than 30 minutes with their
+parent process gone (an orphan nothing will read or stop; observation 0439), and logs each to
+`follow_sweep.log` in the state folder. It backstops `heredoc_guard.follow` for paths that hook does
+not see (a Monitor command, a crash). `heredoc_guard.follow` itself also reads a script file the
+line runs (`bash x.sh`, `sh x.sh`, `./x.sh`, `pwsh -File x.ps1`), two levels deep (B8).
 
 **The weekly review.** `warden_digest.py` (SessionStart) stays silent for the first week, then once
 every seven days shows one line when the log holds events: how many, across how many rules, and how
@@ -209,6 +211,42 @@ python ci_stamp.py run --repo <repo> -- <the repo's CI command>
 git push
 ```
 
+Or the first two in one call (`preflight`, from the dash triage S3): it runs the CI through
+`ci_stamp.py` with the same rules (clean tree, HEAD unmoved, a skipped check is no stamp unless
+`--excluded`), records the intent for the stamped head, and prints one line: repo, remote range,
+commit count, stamp sha, full or PARTIAL. It never pushes; the push stays its own visible call.
+`--quiet` on `intend` and on `ci_stamp.py run` prints the one-line verdict only, with the full log
+in `<git dir>/gatewarden/ci-last.log`, so no `; tail` chaser is needed.
+
+```
+python push_gate.py preflight --repo <repo> --max <commits> [--head <sha>] [--workflow <file> [--covers N|all]] -- <the repo's CI command>
+git push
+```
+
+**Data, not commands (B1; observations 0382, 0392, 0435).** The command hooks read the words a line
+stores, prints or hands to an interpreter as code as data. A quoted heredoc (`<<'EOF'`, `<<"EOF"`)
+read by an interpreter (`python -`, `node`, `perl`) is that interpreter's code, never shell lines;
+one read by `git commit`, `git tag` or `git notes` with `-F -` (observation 0381) or by gh, or by cat
+inside a `$(…)` that is a git or gh argument (`--body "$(cat <<'EOF' …)"`), is a message no rule
+reads (any other git reader, `git log <<'EOF'`, keeps the old reading); one read by cat or tee at the top of a command is not
+parsed as shell but stays visible to the content-word scans (a go-live or Hyper-V word written into a
+script is still refused). An interpreter's `-c`/`-e` argument is read with bash's quoting, so `\"git
+push origin main\" + nl` is a string, not a `+` refspec; a literal `-m`/`--body` value is a message.
+A push named in inline code is refused only when the code can start a process, load code by name or
+evaluate a string (`os.system`, `subprocess`, `child_process`, `eval`, `__import__`, a backtick span
+naming push, and the like): code with none of these only writes text. Unchanged: an unquoted heredoc
+(the shell runs its `$(…)`), a body piped on (`cat <<'EOF' | bash`), a shell reader, `eval
+"$(cat <<'EOF' …)"`, a heredoc captured into a variable, and a double-quoted `-c` or `-m` value that
+holds a `$(…)` or a backtick (the shell runs that part first). A quoted element of a literal array
+or list (`@('dash', 'privacy')`) is a value, never a program, for heredoc_guard.
+
+**Refusal texts.** A script whose commands nest past four levels is refused with its name and the
+level reached: "run the script's steps one by one" (B2, observation 0419). The owner's decision
+(2026-10-16): a deep script does not pass even when no level read names `git push`. A push into a
+folder the same command creates is refused with "the push target is created in this same command;
+create and commit first, then push in its own call", never a raw `NotADirectoryError` (B3,
+observation 0435).
+
 The gate works out each pushed ref's range against the remote's real branch tip (`git ls-remote`,
 ten seconds, no credential prompt; it never fetches). A local tracking ref goes stale when a remote
 is deleted, renamed or recreated: it once showed "0 commits, nothing new" while the push created a
@@ -336,7 +374,15 @@ A dirty tree is refused, so the stamp always names a commit.
 ```
 python ci_stamp.py run --repo <repo> -- <one command>
 python ci_stamp.py run --repo <repo> --step "python -m unittest discover -s tools" --step "python tools/build.py --check"
+python ci_stamp.py run --repo <repo> --workflow .github/workflows/ci.yml [--covers N|all] [--quiet] -- <command>
 ```
+
+**Workflow cover (B6, observation 0367).** `--workflow <file>` counts the workflow's `run:` steps
+into the stamp (`workflow`, `workflow_steps`, `steps_covered`). The steps covered are the number of
+`--step` lines (a single command counts one), or `--covers N`, or `--covers all` for a runner
+generated from the workflow. When a stamp covers fewer steps than the workflow has, push_gate clears
+the push but says so in its note and the owner's line, like an `--excluded` check: "local CI covered
+2 of 5 run: steps in .github/workflows/ci.yml". A hand-picked subset once certified only itself.
 
 **Several steps:** repeat `--step`, one command line each, in order; the first failure stops the run.
 Never wrap them in `bash -c '... && ...'`: on Windows a bare `bash` from Python resolves to
@@ -446,10 +492,12 @@ Caps live in `~/.claude/gatewarden/call-caps.json` (`GATEWARDEN_STATE` moves the
 
 From `warn_at × cap` a note asks the unit to finish the current piece. Past the cap, `grace` more
 calls pass with "commit and report now". After that every call is blocked except `always_allow`,
-so the unit can still hand back. An agent with no cap is counted and never stopped. A controller
-session cannot add the launched agent's id under `by_agent_id` itself: the auto-mode classifier
-refuses that edit as self-modification (observation 0371). Until the hook reads a brief's
-`call_cap` from the launch, the barrier is `by_agent_type`, placed by the owner.
+so the unit can still hand back. A controller session cannot add the launched agent's id under
+`by_agent_id` itself: the auto-mode classifier refuses that edit as self-modification (observation
+0371). So an agent with no entry reads its cap from its launch (B5): the first user message of its
+own transcript (`agent_transcript_path`) naming `Call cap N`, `call cap N` or `call_cap: N`, enforced
+with the same grace. The transcript is read at most five times per agent while no number is found.
+An agent with no entry and no number in its launch is counted and never stopped.
 
 ### The event log
 

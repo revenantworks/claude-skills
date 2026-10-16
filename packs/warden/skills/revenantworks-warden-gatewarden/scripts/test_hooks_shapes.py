@@ -47,7 +47,7 @@ def bash(cmd: str, cwd: str, tool: str = "Bash") -> dict:
 def git(cwd, *args):
     return subprocess.run([G, "-c", "user.name=gatewarden-test", "-c", "user.email=gatewarden-test",
                            "-c", "commit.gpgsign=false", *args], cwd=cwd, capture_output=True,
-                          text=True, check=True, creationflags=NO_WINDOW).stdout.strip()
+                          text=True, check=True, creationflags=NO_WINDOW, stdin=subprocess.DEVNULL).stdout.strip()
 
 
 class PushShapeBase(unittest.TestCase):

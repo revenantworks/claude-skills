@@ -111,7 +111,8 @@ counts the suggestions; only the owner's `warden_review.py set` moves a soft rul
 pushes with the gate installed: `python push_gate.py intend --repo . --max <N>`, then
 `python ci_stamp.py run --repo . -- <the repo's CI command>`, or one `--step "<command>"` per CI
 step (never `bash -c`); a log that says a check was skipped writes no stamp unless `--excluded`
-names it, and that stamp is partial (`hooks.md`, "ci_stamp").
+names it, and that stamp is partial (`hooks.md`, "ci_stamp"). Or both in one call, one line out:
+`python push_gate.py preflight --repo . --max <N> -- <the repo's CI command>`.
 
 **`gatewarden capreview [--since DATE]`** — after the call cap stopped a unit: a runaway, or a cap
 set too low? `python scripts/cap_review.py [--since DATE] [--transcripts DIR] [--json] [--out FILE]`

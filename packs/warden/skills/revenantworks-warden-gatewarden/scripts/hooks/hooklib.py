@@ -528,9 +528,11 @@ def unquote(token: str) -> str:
 # shell runs that is not on disk yet lands in `pending`: it is written on this same line.
 
 class Unparseable(Exception):
-    def __init__(self, why: str, hard: bool = True):
+    def __init__(self, why: str, hard: bool = True, script: str = "", depth: int = 0):
         super().__init__(why)
         self.hard = hard
+        self.script = script  # the script file the line runs when the overflow is inside one (B2)
+        self.depth = depth
 
 
 MAX_DEPTH = 4
@@ -726,6 +728,7 @@ class Expanded:
         self.hidden_runs: list[tuple[str, str]] = []  # (file key, unread reason) for each script this
                                                   # line writes from hidden content and then runs
         self.files = True                         # False: never read a file (heredoc_guard)
+        self.running: list[str] = []              # script files being expanded, outermost first (B2)
         self.read: set[str] = set()               # files already expanded: a script that names itself
                                                   # (a usage comment) is read once, not to MAX_DEPTH
 
@@ -915,6 +918,295 @@ def _data_word(toks: list[str], k: int, ps: bool, cwd: str, segs: list[str], si:
         any(prog(t) in ("foreach", "for") for t in toks[:k]) and not runs_variable(command, ps)
 
 
+# ------------------------------------------------------------ data, not commands (B1: 0382, 0392, 0435)
+# Words a command stores, prints or hands to an interpreter as code are not words the shell runs. A quoted
+# heredoc (`<<'EOF'`, `<<"EOF"`) is not expanded by the shell, so its body is one of three things:
+#   code    - the reader is an interpreter (python -, node, perl ...): the body is its program, read as
+#             inline code (Expanded.code), never as shell lines;
+#   message - the reader is git or gh (a commit, tag or PR text), or cat/tee inside a `$(…)` that is a
+#             git or gh argument (`gh pr create --body "$(cat <<'EOF' …)"`): stored text, read by no rule;
+#   data    - the reader is cat or tee at the top of a command: not parsed as shell, but still seen by
+#             the content-word scans (a go-live or Hyper-V word written into a script stays refused).
+# Anything else keeps the old reading: an unquoted heredoc (the shell expands `$(…)` in it), a body piped
+# on (`cat <<'EOF' | bash`), a shell or unknown reader, and a cat inside a substitution that is run or
+# kept (`eval "$(cat <<'EOF' …)"`, `x=$(cat <<'EOF' …)`). An interpreter's `-c`/`-e` argument is read
+# with bash's quoting (a `\"` inside double quotes stays inside), so its words never split into shell
+# words (`… \"git push origin main\" + nl` is not a `+` refspec).
+HEREDOC_MARK = re.compile(r"(?<!<)<<(-?)\s*(['\"]?)([A-Za-z_]\w*)\2")
+MESSAGE_READERS = {"git", "gh"}
+TEXT_READERS = {"cat", "tee"}
+MESSAGE_FLAGS = {"-m", "--message", "-b", "--body", "-t", "--title", "--notes"}
+MESSAGE_SUBS = {"commit", "tag", "notes", "merge", "stash"}
+
+
+def bash_unquote(word: str) -> str:
+    """A shell word with bash's quote removal: '…' literal, "…" with \\" \\\\ \\$ \\` unescaped."""
+    out, i, quote = [], 0, None
+    while i < len(word):
+        ch = word[i]
+        if quote == "'":
+            if ch == "'":
+                quote = None
+            else:
+                out.append(ch)
+        elif ch == "\\" and i + 1 < len(word) and (quote is None or word[i + 1] in "\"\\$`"):
+            out.append(word[i + 1])
+            i += 1
+        elif quote == '"':
+            if ch == '"':
+                quote = None
+            else:
+                out.append(ch)
+        elif ch in "'\"":
+            quote = ch
+        else:
+            out.append(ch)
+        i += 1
+    return "".join(out)
+
+
+def shell_words(text: str) -> list[list[tuple[int, int]]]:
+    """Bash words as (start, end) spans, grouped by simple command (split on ; | & and newlines outside
+    quotes). Comments are skipped; a backslash escapes as bash does (observation 0410)."""
+    segs, cur, i, n = [], [], 0, len(text)
+    while i < n:
+        ch = text[i]
+        if ch in " \t\r":
+            i += 1
+            continue
+        if ch in ";|&\n":
+            if cur:
+                segs.append(cur)
+            cur = []
+            i += 1
+            continue
+        if ch == "#":
+            end = text.find("\n", i)
+            i = n if end < 0 else end
+            continue
+        start, quote = i, None
+        while i < n:
+            ch = text[i]
+            if quote == "'":
+                if ch == "'":
+                    quote = None
+            elif ch == "\\" and i + 1 < n and (quote is None or text[i + 1] in "\"\\$`"):
+                i += 2
+                continue
+            elif quote == '"':
+                if ch == '"':
+                    quote = None
+            elif ch in "'\"":
+                quote = ch
+            elif ch in " \t\r;|&\n":
+                break
+            i += 1
+        cur.append((start, i))
+    if cur:
+        segs.append(cur)
+    return segs
+
+
+def substitutes(word: str) -> bool:
+    """True when bash runs part of the word before the program sees it: a `$(` or backtick outside
+    single quotes (a double-quoted `-c` program or message is expanded first)."""
+    i, quote = 0, None
+    while i < len(word):
+        ch = word[i]
+        if quote == "'":
+            if ch == "'":
+                quote = None
+        elif ch == "\\":
+            i += 2
+            continue
+        elif ch == "`" or word.startswith("$(", i):
+            return True
+        elif ch == '"':
+            quote = None if quote == '"' else '"'
+        elif ch == "'" and quote is None:
+            quote = "'"
+        i += 1
+    return False
+
+
+def _program_index(words: list[str]) -> int | None:
+    k = 0
+    while k < len(words):
+        w = words[k]
+        if re.match(r"^[A-Za-z_]\w*=", w) or prog(w) in LAUNCHERS or (k and (w.startswith("-") or COUNT_ARG.match(w))):
+            k += 1
+            continue
+        return k
+    return None
+
+
+def _value_spans(text: str, ps: bool) -> list[tuple[int, int, str]]:
+    """(start, end, kind) of word spans that are data: an interpreter's code argument ("code") and a
+    literal message value of git commit/tag/notes or gh ("message"; `$` or a backtick inside double
+    quotes keeps it, since that part runs)."""
+    if ps:
+        return []
+    spans = []
+    for seg in shell_words(text):
+        words = [text[a:b] for a, b in seg]
+        k = _program_index(words)
+        if k is None:
+            continue
+        p = prog(words[k])
+        if p in INTERPRETERS:
+            flag = next((j for j in range(k + 1, len(words)) if words[j] in CODE_FLAGS), None)
+            if flag is not None and flag + 1 < len(words) and not substitutes(words[flag + 1]):
+                a, b = seg[flag + 1]
+                spans.append((a, b, "code"))
+            continue
+        if p not in MESSAGE_READERS:
+            continue
+        j = k + 1
+        while j < len(words) and words[j].startswith("-"):
+            j += 2 if words[j] in ("-C", "-c") else 1
+        if p == "git" and (j >= len(words) or words[j] not in MESSAGE_SUBS):
+            continue
+        if p == "gh" and j < len(words) and words[j] == "alias":
+            continue
+        for m in range(j, len(words) - 1):
+            w = words[m]
+            nxt = words[m + 1]
+            if w in MESSAGE_FLAGS and not substitutes(nxt):
+                a, b = seg[m + 1]
+                spans.append((a, b, "message"))
+    return spans
+
+
+def code_args(text: str, ps: bool = False) -> list[str]:
+    """The code each interpreter `-c`/`-e` on the text runs, unquoted the way bash does it."""
+    return [bash_unquote(text[a:b]) for a, b, kind in _value_spans(text, ps) if kind == "code"]
+
+
+def _enclosing(prefix: str) -> tuple[str, str | None]:
+    """(the simple command a heredoc marker belongs to, the text before the `$(` or backtick it sits in,
+    or None at the top level). Quotes, `$(`, `(` and backticks are tracked; a separator restarts."""
+    # [start of the current simple command, opener, text before the opener, quote state outside it]
+    stack = [[0, None, "", None]]
+    quote, i = None, 0
+    while i < len(prefix):
+        ch = prefix[i]
+        if quote == "'":
+            if ch == "'":
+                quote = None
+        elif ch == "\\":
+            i += 2
+            continue
+        elif prefix.startswith("$(", i):  # a substitution opens a new quoting context, inside "…" too
+            stack.append([i + 2, "$(", prefix[stack[-1][0]:i], quote])
+            quote = None
+            i += 2
+            continue
+        elif ch == "`":
+            if stack[-1][1] == "`":
+                quote = stack.pop()[3]
+            else:
+                stack.append([i + 1, "`", prefix[stack[-1][0]:i], quote])
+                quote = None
+        elif quote == '"':
+            if ch == '"':
+                quote = None
+        elif ch in "'\"":
+            quote = ch
+        elif ch == "(":
+            stack.append([i + 1, "(", prefix[stack[-1][0]:i], quote])
+        elif ch == ")" and len(stack) > 1:
+            quote = stack.pop()[3]
+        elif ch in ";|&\n":
+            stack[-1][0] = i + 1
+        i += 1
+    top = stack[-1]
+    owner = None
+    for level in reversed(stack[1:]):
+        if level[1] in ("$(", "`"):
+            owner = level[2]
+            break
+    return prefix[top[0]:], owner
+
+
+GIT_STDIN_FILE = {"-F-", "--file=-", "--file=/dev/stdin", "-F/dev/stdin"}
+
+
+def _git_reads_message(words: list[str]) -> bool:
+    """git commit, tag or notes reading its message from stdin (`-F -`, `--file=-`, `-F /dev/stdin`): the
+    only git heredoc that is a message (observation 0381). `git log <<'EOF'` keeps the shell reading."""
+    plain = [unquote(w) for w in words]
+    j = 1
+    while j < len(plain) and plain[j].startswith("-"):
+        j += 2 if plain[j] in ("-C", "-c") else 1
+    if j >= len(plain) or plain[j] not in ("commit", "tag", "notes"):
+        return False
+    rest = plain[j + 1:]
+    return any(t in GIT_STDIN_FILE or (t in ("-F", "--file") and k + 1 < len(rest) and rest[k + 1] in ("-", "/dev/stdin"))
+               for k, t in enumerate(rest))
+
+
+def heredoc_kinds(text: str) -> list[tuple[int, int, str, str]]:
+    """(first body line, end line, kind, reader) for each quoted heredoc on the text whose body is code,
+    a message or data (see above). Line numbers index text.split("\\n")."""
+    lines, out, i = text.split("\n"), [], 0
+    while i < len(lines):
+        line = lines[i]
+        marks = list(HEREDOC_MARK.finditer(line))
+        i += 1
+        if not marks:
+            continue
+        j = i
+        for m in marks:  # the bodies follow one after another, in marker order
+            start = j
+            while j < len(lines) and lines[j].strip() != m.group(3):
+                j += 1
+            if j == len(lines):
+                return out  # no end line: the rest stays shell text
+            before = "\n".join(lines[:i - 1] + [line[:m.start()]])
+            cmd, owner = _enclosing(before)
+            after = line[m.end():]
+            words = [w for w in tokens(cmd)]
+            k = _program_index(words) if words else None
+            reader = prog(words[k]) if k is not None else ""
+            piped = bool(re.match(r"^[^;&|]*\|(?!\|)", re.sub(r"'[^']*'|\"[^\"]*\"", "", after)))
+            kind = ""
+            if m.group(2) and not piped:
+                if reader in INTERPRETERS:
+                    kind = "code"
+                elif reader == "gh" and "alias" not in words or reader == "git" and _git_reads_message(words):
+                    kind = "message"
+                elif reader in TEXT_READERS:
+                    if owner is None:
+                        kind = "data"
+                    else:
+                        ow = tokens(re.sub(r"""['"]""", " ", owner))
+                        ok = _program_index(ow) if ow else None
+                        if ok is not None and prog(ow[ok]) in MESSAGE_READERS:
+                            kind = "message"
+            if kind:
+                out.append((start, j, kind, reader))
+            j += 1
+        i = j
+    return out
+
+
+def data_view(text: str, ps: bool = False, kinds: tuple[str, ...] = ("code", "message", "data")) -> str:
+    """The text with the bodies of these heredoc kinds blanked (line count kept) and, for "code" and
+    "message", the interpreter code arguments and literal message values replaced by ''."""
+    if ps or ("<<" not in text and not re.search(r"(?i)python|py\b|node|perl|ruby|php|git|gh", text)):
+        return text
+    lines = text.split("\n")
+    for a, b, kind, _ in heredoc_kinds(text):
+        if kind in kinds:
+            for n in range(a, b):
+                lines[n] = ""
+    text = "\n".join(lines)
+    for a, b, kind in sorted(_value_spans(text, ps), reverse=True):
+        if kind in kinds:
+            text = text[:a] + "''" + text[b:]
+    return text
+
+
 def expand(command: str, cwd: str = "", depth: int = 0, out: Expanded | None = None,
            ps: bool | None = None, files: bool = True) -> Expanded:
     """Every shell text and code body the command runs, as far as text can show it. `ps` says the
@@ -923,11 +1215,24 @@ def expand(command: str, cwd: str = "", depth: int = 0, out: Expanded | None = N
         out = Expanded()
         out.files = files
     if depth > MAX_DEPTH:
-        raise Unparseable(f"commands nested more than {MAX_DEPTH} levels deep")
+        raise Unparseable(f"commands nested more than {MAX_DEPTH} levels deep", script=(out.running or [""])[0],
+                          depth=depth)
     check_budget()
     ps = is_powershell() if ps is None else ps
     command = join_lines(command, ps)
-    out.shells.append((command, cwd))
+    if not ps and "<<" in command:
+        lines = command.split("\n")
+        for a, b, kind, _ in heredoc_kinds(command):
+            if kind == "code":
+                body = "\n".join(lines[a:b])
+                out.code.append((body, ""))
+                _inline_code(body, out)
+    for code in code_args(command, ps):
+        out.code.append((code, ""))
+        _inline_code(code, out)
+    # The content-word scans see data bodies (cat/tee) but not messages or code; the parse sees none.
+    out.shells.append((data_view(command, ps, ("code", "message")), cwd))
+    command = data_view(command, ps)
     if OPAQUE.search(command):
         out.opaque.append("a command built or invoked at run time")
     for inner in substitutions(command):
@@ -1146,7 +1451,11 @@ def _run_file(path_tok: str, cwd: str, depth: int, out: Expanded, shell: bool) -
     elif len(text) > BIG:
         out.big.append(text)
     else:
-        expand(text, cwd, depth + 1, out, bool(re.search(r"(?i)\.ps[md]?1$", path)))
+        out.running.append(path)
+        try:
+            expand(text, cwd, depth + 1, out, bool(re.search(r"(?i)\.ps[md]?1$", path)))
+        finally:
+            out.running.pop()
 
 
 # ------------------------------------------------------------ scratch rewrite (observation 0384)

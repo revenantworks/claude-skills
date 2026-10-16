@@ -70,6 +70,13 @@ def main(argv: list[str]) -> int:
                    help="one CI step, split like a shell line (no shell); repeat, in order")
     r.add_argument("--runs", type=int, default=1,
                    help="run every step N times; stamp only when every run passes (a flaky check)")
+    r.add_argument("--workflow", metavar="FILE",
+                   help="the CI workflow this run stands in for; its `run:` steps are counted into the stamp")
+    r.add_argument("--covers", metavar="N|all",
+                   help="how many of the workflow's run: steps this run covers (default: the step count; "
+                        "`all` for a runner generated from the workflow)")
+    r.add_argument("--quiet", action="store_true",
+                   help="print the one-line verdict only; the full log stays in ci-last.log")
     r.add_argument("command", nargs=argparse.REMAINDER)
     s = sub.add_parser("show")
     s.add_argument("--repo", default=".")
@@ -96,6 +103,11 @@ def main(argv: list[str]) -> int:
                   "step with --step \"<command>\" (no shell wrapper), or name Git Bash by its full path.",
                   file=sys.stderr)
             return 2
+    try:
+        workflow = workflow_cover(a.repo, a.workflow, a.covers, len(steps))
+    except (OSError, ValueError) as exc:
+        print(f"ci_stamp: --workflow/--covers could not be read ({exc})", file=sys.stderr)
+        return 2
     if hl.run_git(a.repo, "status", "--porcelain", "--untracked-files=no"):
         print("ci_stamp: the tree has uncommitted changes; commit first so the stamp names a commit",
               file=sys.stderr)
@@ -124,8 +136,12 @@ def main(argv: list[str]) -> int:
             if returncode != 0:
                 break
     text = open(log, "rb").read().decode("utf-8", errors="replace")
-    _echo(sys.stdout, text)
+    if not a.quiet:
+        _echo(sys.stdout, text)
     if returncode != 0:
+        if a.quiet:
+            print(f"ci_stamp: CI failed (exit {returncode}); no stamp written; log: {log}", file=sys.stderr)
+            return returncode
         tail = "\n".join(text.rstrip("\n").splitlines()[-TAIL_LINES:])
         _echo(sys.stderr, f"ci_stamp: last {TAIL_LINES} lines of the run (full log: {log}):\n{tail}\n")
         print(f"ci_stamp: CI failed (exit {returncode}); no stamp written", file=sys.stderr)
@@ -139,14 +155,40 @@ def main(argv: list[str]) -> int:
               + "\n  ".join(missing[:5]) + "\nA skipped check is not a pass; no stamp written. Install the "
               "tool, or name the check with --excluded \"NAME: REASON\" so the stamp says partial.\n")
         return 3
-    hl.write_json_atomic(path, {
+    stamp = {
         "head": head, "passed_at": time.time(), "seconds": round(time.time() - started, 1),
         "command_sha256": hashlib.sha256(" && ".join(" ".join(s) for s in steps).encode()).hexdigest()[:16],
-        "runs": runs, "excluded": a.excluded, "partial": bool(a.excluded)})
-    print(f"ci_stamp: CI passed for {head[:12]}" + (f" ({runs} runs)" if runs > 1 else "") + "; stamp written")
-    for item in a.excluded:
-        print(f"ci_stamp: PARTIAL stamp, not run locally: {item}")
+        "runs": runs, "excluded": a.excluded, "partial": bool(a.excluded)}
+    if workflow:
+        stamp.update(workflow=workflow[0], workflow_steps=workflow[1], steps_covered=workflow[2])
+    hl.write_json_atomic(path, stamp)
+    cover = f"; covers {workflow[2]} of {workflow[1]} run: steps in {workflow[0]}" if workflow else ""
+    print(f"ci_stamp: CI passed for {head[:12]}" + (f" ({runs} runs)" if runs > 1 else "") + "; stamp written"
+          + cover + (" (PARTIAL: " + "; ".join(a.excluded) + ")" if a.quiet and a.excluded else ""))
+    if not a.quiet:
+        for item in a.excluded:
+            print(f"ci_stamp: PARTIAL stamp, not run locally: {item}")
     return 0
+
+
+RUN_STEP = re.compile(r"^\s*(?:-\s+)?run\s*:", re.M)
+
+
+def workflow_cover(repo: str, wf: str | None, covers: str | None, n_steps: int) -> tuple | None:
+    """(workflow path as given, its run: step count, steps this run covers), or None without
+    --workflow (B6, observation 0367). Raises ValueError for a workflow file that cannot be read."""
+    if not wf:
+        return None
+    full = wf if os.path.isabs(wf) else os.path.join(repo, wf)
+    with open(full, encoding="utf-8", errors="replace") as fh:
+        total = len(RUN_STEP.findall(fh.read()))
+    if covers is None:
+        covered = n_steps
+    elif covers.strip().lower() == "all":
+        covered = total
+    else:
+        covered = int(covers)
+    return wf.replace("\\", "/"), total, covered
 
 
 def _echo(stream, text: str) -> None:

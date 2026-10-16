@@ -25,12 +25,12 @@ CANARY = "CANARY-" + "7f3a9" + "e1d22"
 
 def run(script, *args):
     p = subprocess.run([PY, str(HERE / script), *args], capture_output=True, text=True,
-                       timeout=60, creationflags=NO_WINDOW)
+                       timeout=60, creationflags=NO_WINDOW, stdin=subprocess.DEVNULL)
     return p.returncode, p.stdout, p.stderr
 
 
 def git(cwd, *args):
-    subprocess.run(["git", *args], cwd=cwd, capture_output=True, check=True, creationflags=NO_WINDOW)
+    subprocess.run(["git", *args], cwd=cwd, capture_output=True, check=True, creationflags=NO_WINDOW, stdin=subprocess.DEVNULL)
 
 
 class Base(unittest.TestCase):
@@ -317,7 +317,7 @@ class ExplainTests(Base):
             text = "git " + "-C -A " * n + "\"x\ny\""
             try:
                 out = subprocess.run([PY, "-c", code, str(HERE), text], capture_output=True, text=True,
-                                     timeout=10, creationflags=NO_WINDOW)
+                                     timeout=10, creationflags=NO_WINDOW, stdin=subprocess.DEVNULL)
             except subprocess.TimeoutExpired:
                 self.fail("GIT_OPT backtracked past 10 s on an adversarial input")
             self.assertEqual(out.returncode, 0, out.stderr)
