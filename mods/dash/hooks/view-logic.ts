@@ -304,9 +304,12 @@ export const suggestLines = (rows: readonly Suggestion[], theme: Theme = NEUTRAL
       const tone = stateTone(states.includes('new') ? 'new' : states.includes('shown') ? 'shown' : states[0]!)
       const ev = evidenceText(sub, sep) || sub.rows[0]!.evidence
       out.push({ text: fit(`  ${`${gi + 1}.${i + 1}`.padStart(5)} [${states.join('/')}] ${sub.label}`, MAX_COLS), tone })
-      out.push({ text: fit(`        ${ev}`, MAX_COLS), tone: 'dim', buttons: acts(sub.label, sub.rows) })
+      const ids = sub.rows.map(r => r.id).join(' ')
+      out.push({ text: fit(`        ${ev}${sep}id${sub.rows.length === 1 ? '' : 's'} ${ids}`, MAX_COLS), tone: 'dim', buttons: acts(sub.label, sub.rows) })
     })
-    out.push(blank, { text: `  /dash suggest accept|dismiss|snooze ${gi + 1} (the group) or ${gi + 1}.<n> (one shape)${sep}/dash suggest for every group`, tone: 'dim' })
+    const short = g.name.replace(/^\w+: /, '')
+    out.push(blank, { text: `  /dash suggest accept|dismiss|snooze ${gi + 1} or ${short} (the group), ${short}.<n> (one shape) or an id`, tone: 'dim' },
+      { text: `  An id or a name stays put when a group closes; a number can shift.${sep}/dash suggest for every group`, tone: 'dim' })
     return out
   }
   const open = gs.reduce((n, g) => n + g.open, 0)

@@ -284,21 +284,34 @@ export const grouped = (rows: readonly Suggestion[]): Group[] => {
     .sort((a, b) => byEvidence(a, b) || a.name.localeCompare(b.name))
 }
 
-/** `3` is a group, `3.2` one shape in it, a six-character id one row; `ref` may also name a group. */
+/** A group by its full name (`shell: git`) or its name without the type (`git`), any case. */
+const groupByName = (gs: readonly Group[], name: string): Group | undefined => {
+  const want = name.trim().toLowerCase()
+  return gs.find(g => g.name.toLowerCase() === want || g.name.toLowerCase().replace(/^\w+: /, '') === want)
+}
+
+/**
+ * `3` is a group, `3.2` one shape in it, a six-character id one row; a group name (`git`) and
+ * `<name>.<n>` (`git.2`) work everywhere a number does. A number shifts when a group or shape
+ * closes; an id and a name do not, so the drill-in prints each shape's ids.
+ */
 export const resolveRef = (rows: readonly Suggestion[], ref: string): { label: string; rows: Suggestion[] } | null => {
   const gs = grouped(rows)
-  const m = /^(\d+)(?:\.(\d+))?$/.exec(ref.trim())
-  if (m) {
-    const g = gs[Number(m[1]) - 1]
+  const r = ref.trim()
+  const pick = (g: Group | undefined, n: string | undefined) => {
     if (!g) return null
-    if (m[2] === undefined) return { label: g.name, rows: g.rows }
-    const sub = g.subs[Number(m[2]) - 1]
+    if (n === undefined) return { label: g.name, rows: g.rows }
+    const sub = g.subs[Number(n) - 1]
     return sub ? { label: sub.label, rows: sub.rows } : null
   }
-  const byId = rows.find(r => r.id === ref.trim())
+  const m = /^(\d+)(?:\.(\d+))?$/.exec(r)
+  if (m) return pick(gs[Number(m[1]) - 1], m[2])
+  const byId = rows.find(x => x.id === r)
   if (byId) return { label: byId.title, rows: [byId] }
-  const byName = gs.find(g => g.name.toLowerCase() === ref.trim().toLowerCase() || g.name.toLowerCase().replace(/^\w+: /, '') === ref.trim().toLowerCase())
-  return byName ? { label: byName.name, rows: byName.rows } : null
+  const named = groupByName(gs, r)
+  if (named) return pick(named, undefined)
+  const dotted = /^(.+)\.(\d+)$/.exec(r)
+  return dotted ? pick(groupByName(gs, dotted[1]!), dotted[2]) : null
 }
 
 /** The line the person copies to NEXT.md when they accept. dash never writes it there. */

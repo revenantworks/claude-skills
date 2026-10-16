@@ -197,4 +197,18 @@ describe('grouping by command type', () => {
     expect(linesText(suggestLines(rows, undefined, 'git'))).toMatch(/2\.1 \[new\] cd ; git push/)
     expect(linesText(suggestLines(rows, undefined, '9'))).toMatch(/No group "9"/)
   })
+  test('a group name and <name>.<n> work like numbers; the drill-in prints each shape\'s ids', () => {
+    const rows = mergeSuggestions([], cands([...perm('bash cd ; git push', 9), ...perm('bash cd ; git add', 5), ...perm('mcp__srv__read', 3)]), NOW)
+    const snoozed = (ref: string) => actOn(rows, 'snooze', ref, NOW).rows.filter(r => r.state === 'snoozed').map(r => r.key)
+    expect(snoozed('git.2')).toEqual(['prompt:bash cd ; git add'])
+    expect(snoozed('shell: git.1')).toEqual(['prompt:bash cd ; git push'])
+    expect(snoozed('srv.1')).toEqual(['prompt:mcp__srv__read'])
+    expect(actOn(rows, 'dismiss', 'git.9', NOW).text).toMatch(/No suggestion "git\.9"/)
+    const id = rows.find(r => r.key === 'prompt:bash cd ; git add')!.id
+    expect(id).toMatch(/^[0-9a-f]{6}$/)
+    const drill = linesText(suggestLines(rows, undefined, 'git'))
+    expect(drill).toContain(`id ${id}`)
+    expect(drill).toMatch(/git\.<n> \(one shape\) or an id/)
+    expect(linesText(suggestLines(rows, undefined, 'git.2'))).toContain(`id ${id}`)
+  })
 })
