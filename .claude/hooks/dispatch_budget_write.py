@@ -17,6 +17,9 @@ the owner's weekly reading with read_at = now, so the reset-eve line in
 dispatch_gate.py prefers it over a lagging meter file (observation 0350).
 `--target-pct` / `--target-at` carry the owner's goal (observation 0350);
 `--lane-rate` carries the measured points per lane-hour (observation 0349).
+`--parallel none` (with `--mode turbo` only) records turbo with no lane cap as
+`"parallel_ceiling": null` (owner 2026-10-16); a number stays 0 to 12. A
+write that leaves turbo drops the null ceiling.
 
 The file is `DISPATCH_BUDGET_FILE` or ~/.dispatch/budget-decision.json, or
 `--file PATH`. The write is atomic (temp file, then rename). `--dry-run` prints
@@ -35,7 +38,8 @@ import time
 from pathlib import Path
 
 MODES = ("normal", "pace", "turbo", "overnight", "owner-away", "reset-eve")
-CEILING_LIMIT = 12          # the same ceiling dispatch_ledger_guard.py clamps to
+CEILING_LIMIT = 12          # the same ceiling dispatch_ledger_guard.py clamps numbers to
+NO_CAP_WORDS = ("none",)   # --parallel none: turbo with no lane cap, written as null
 MAX_TTL_SECONDS = 5 * 3600  # the file never outlives a 5-hour window
 ISO_FMT = "%Y-%m-%dT%H:%M:%SZ"
 FORBIDDEN = ("--written-at", "--expires-at", "--written_at", "--expires_at")
@@ -70,9 +74,24 @@ def build(existing: dict, args: argparse.Namespace, now: float) -> dict:
             raise ValueError(f"--mode {args.mode!r}: one of {', '.join(MODES)}")
         d["mode"] = args.mode
     if args.parallel is not None:
-        if not 0 <= args.parallel <= CEILING_LIMIT:
-            raise ValueError(f"--parallel {args.parallel}: 0 to {CEILING_LIMIT}")
-        d["parallel_ceiling"] = args.parallel
+        word = str(args.parallel).strip().lower()
+        if word in NO_CAP_WORDS:
+            # Turbo with no lane cap (owner 2026-10-16): the owner's answer to
+            # "No cap or a number?" at turbo entry. Only turbo may carry it.
+            if d.get("mode") != "turbo":
+                raise ValueError("--parallel none: only with --mode turbo (no cap is turbo's alone)")
+            d["parallel_ceiling"] = None
+        else:
+            try:
+                n = int(word)
+            except ValueError:
+                raise ValueError(f"--parallel {args.parallel!r}: a whole number 0 to {CEILING_LIMIT}, "
+                                 "or none (turbo only)") from None
+            if not 0 <= n <= CEILING_LIMIT:
+                raise ValueError(f"--parallel {n}: 0 to {CEILING_LIMIT}, or none (turbo only)")
+            d["parallel_ceiling"] = n
+    if d.get("mode") != "turbo" and "parallel_ceiling" in d and d["parallel_ceiling"] is None:
+        del d["parallel_ceiling"]   # leaving turbo drops its no-cap; readers fall back to their default
     if args.basis is not None:
         d["basis"] = args.basis
     if args.target_pct is not None or args.target_at is not None:
@@ -124,7 +143,7 @@ def write_atomic(path: Path, data: dict) -> None:
 def parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description="Write the budget decision file, stamped from the clock.")
     p.add_argument("--mode")
-    p.add_argument("--parallel", type=int)
+    p.add_argument("--parallel")   # a number 0..CEILING_LIMIT, or none (turbo only)
     p.add_argument("--ttl", default="2h")
     p.add_argument("--basis")
     p.add_argument("--target-pct", type=float)
@@ -206,16 +225,31 @@ def selftest() -> int:
                              ("a ceiling over the limit", ["--parallel", "40"]),
                              ("an unknown mode", ["--mode", "burn"]),
                              ("a ttl over 5h", ["--ttl", "6h"]),
-                             ("a ttl of a clock time", ["--ttl", "15:40"])):
+                             ("a ttl of a clock time", ["--ttl", "15:40"]),
+                             ("no cap outside turbo", ["--mode", "pace", "--parallel", "none"]),
+                             ("a ceiling that is a word", ["--mode", "turbo", "--parallel", "lots"])):
             code, _ = run(["--file", str(f), "--dry-run"] + extra, now=now)
             if code != 2:
                 problems.append(f"{label} was accepted (exit {code})")
+        # Turbo with no lane cap (owner 2026-10-16): written as null; leaving turbo drops it.
+        code, out = run(["--file", str(f), "--mode", "turbo", "--parallel", "none", "--ttl", "2h"])
+        d = json.loads(f.read_text(encoding="utf-8"))
+        if code != 0 or d.get("mode") != "turbo" or "parallel_ceiling" not in d or d["parallel_ceiling"] is not None:
+            problems.append(f"turbo --parallel none did not write a null ceiling (exit {code}: {out[:160]})")
+        code, out = run(["--file", str(f), "--mode", "normal"])
+        d = json.loads(f.read_text(encoding="utf-8"))
+        if code != 0 or "parallel_ceiling" in d:
+            problems.append(f"leaving turbo kept its null ceiling (exit {code}: {d.get('parallel_ceiling', 'absent')!r})")
+        code, out = run(["--file", str(f), "--mode", "turbo", "--parallel", "8"])
+        if code != 0 or json.loads(f.read_text(encoding="utf-8")).get("parallel_ceiling") != 8:
+            problems.append(f"turbo with a numeric ceiling was not written as that number (exit {code})")
     if problems:
         for p in problems:
             print(f"DISPATCH_BUDGET_WRITE SELFTEST FAIL: {p}")
         return 2
     print("dispatch_budget_write selftest: OK (clock stamps, ttl expiry, kept fields, two typed-stamp "
-          "refusals, target/owner-reading/lane-rate fields, dry run, 7 refused inputs)")
+          "refusals, target/owner-reading/lane-rate fields, dry run, 9 refused inputs, "
+          "turbo no-cap written as null and dropped on leaving turbo)")
     return 0
 
 
