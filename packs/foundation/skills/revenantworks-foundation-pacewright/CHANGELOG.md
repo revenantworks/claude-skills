@@ -2,6 +2,8 @@
 
 ## [1.0.0] — 2026-10-01
 
+2026-10-16 (thread sweep, U28 and U35): the suite ceiling in modes.md is now CPU-gated (start below 2, else under the cap while CPU is under its target, default 75%) with the cap read from ~/.dispatch/suite-cap.json; a wrapper and its suite share one slot; runs log to ~/.dispatch/suite-perf.jsonl for `suite_slot.py report`.
+
 2026-10-16 (owner ruling "both" on observation 0446): beside the derived machine cap, a fixed ceiling of 4 suite processes machine-wide across every session and thread (the stricter holds), each process counted, every background suite at below-normal priority with no window, through dispatchwright's `scripts/suite_slot.py` where installed (`modes.md`, Turbo).
 
 2026-10-16: turbo's no lane cap counts lanes, not machine load (owner ruling, after 8 concurrent local test suites on a 16-thread machine held the CPU at 97% and stretched a 45-minute land test run past 1 h 40 min). Lanes split into light (design, briefs, docs, reviews that re-run a few scripts: no cap) and CPU-heavy local work (full test suites, builds, renders, measure runs: a machine cap). The cap is derived: floor(logical threads ÷ threads per heavy lane), the latter from one measured heavy run as the new measured overlay key `turbo.heavy_lane_threads`, default 5 (16 threads gave 3); the load probe re-reads it before each heavy launch and counts every heavy process on the machine, whoever started it (two controllers each at 3 had put 6 suites on 16 threads). The land test run goes first, and finished, reviewed rows land in batches under one land run. Gates and stop bands unchanged. Case 10 gains T3 and T4.

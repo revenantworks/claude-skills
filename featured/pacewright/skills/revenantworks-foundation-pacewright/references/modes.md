@@ -126,9 +126,13 @@ turns it on.
   16 threads. A heavy lane launches only while that machine-wide count is under the cap and the
   load leaves room; otherwise launch a light lane and hold the heavy one to the next heavy finish.
 - **Suite processes share one fixed ceiling** (owner ruling "both", 2026-10-16, observation
-  0446). Beside the derived lane cap, at most 4 suite processes run on the machine at once,
-  across every session and thread; the stricter of the two holds. Each process counts: a runner
-  that fans out N headless engine runs uses N. Every background suite starts at below-normal
+  0446; tuned 2026-10-16 22:30Z). Beside the derived lane cap, a machine-wide suite cap holds
+  across every session and thread; the stricter of the two holds. A suite starts below 2 running,
+  or under the cap (default 4, set for a while in `~/.dispatch/suite-cap.json`) while the CPU is
+  under its target (default 75%). A wrapper and the suite it starts share one slot (ci_stamp over
+  ci_local over unittest is one); separate suites each count, so N headless engine runs under a
+  plain runner use N. Each run logs CPU, memory, disk and timing to `~/.dispatch/suite-perf.jsonl`,
+  and `suite_slot.py report` shows which setting ran best. Every background suite starts at below-normal
   priority with no window, through dispatchwright's `scripts/suite_slot.py` where it is
   installed (it waits for a slot, then runs the command that way).
 - **The land run goes first.** The land (merge) test run is a heavy lane with priority: it takes
