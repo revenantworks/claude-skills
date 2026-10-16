@@ -90,13 +90,27 @@ hard stop, with the one exception named under reset-eve's final 3 hours.
 **On only on the user's word**, for a stated period. A plan, a ledger line or a routine never
 turns it on.
 
-- Up to **5 units**, each passing four **launch gates**:
-  1. It is on the path to a landed row — builds of designed rows first, then their checks, then
-     designs under the lead cap.
-  2. Its file set does not overlap a running writer's.
+- **No lane cap by default** (owner ruling 2026-10-16). Turbo runs with no restriction on the
+  unit count; what keeps it smart is the gates below, not a number.
+- **One entry question, once.** On entry the controller asks the user one line: "No cap (pick) or
+  a number?" The pick is no cap. The answer goes into the budget file (SKILL.md §5) as
+  `"mode": "turbo"` with `"parallel_ceiling": null` for no cap, or the number the user names (a
+  rig writer such as `dispatch_budget_write.py --mode turbo --parallel none`). It is not asked
+  again at each check; a later answer from the user replaces it. An unattended start (no answer)
+  takes the pick. A fan-out reads null in turbo as no wave cap, while the file is unexpired.
+- **Every launch passes four launch gates**, cap or no cap:
+  1. **Real work only**: a planned row on the path to a landed row — builds of designed rows
+     first, then their checks, then designs under the lead cap (base rule 8; spend pressure never
+     creates a row).
+  2. Its file set does not overlap a running writer's (one writer per repo or worktree).
   3. It can land in this session.
   4. Its tier comes from the shared table.
-- **No launch** while the 5-hour window is at 85% or more.
+- **Machine load.** Before a heavy local launch (a test suite, a game engine run, a build, any
+  CPU-heavy job), probe the machine's load in the same call. Many heavy local suites at once slow
+  every lane, so when the CPU is saturated, launch docs, brief and review lanes instead, and hold
+  the heavy one to the next unit finish. Remote and read-only lanes are not held by local load.
+- **No launch** while the 5-hour window is at 85% or more; the slow and stop bands (default 80% and
+  95%, both windows) and the 95% weekly stop hold as in every mode.
 - **Ends** at PACE + 15, at the end of the stated period, or on the user's word.
 - **Drops to normal** after two checks in a row below the baseline rate (rows landed per meter
   point; the first measured figure was 0.21, from one turbo day — a local overlay replaces it with

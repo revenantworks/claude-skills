@@ -136,9 +136,12 @@ Weekly 80–94%: one unit. Weekly 95%: stop.
 
 - **Pace** (above PACE + 3): a burn budget, %/h = 0.565 − gap ÷ hours to the weekly reset; one
   builder plus an optional small read-only unit; a running budget, and a log line per check.
-- **Turbo**: **only on the user's word**, for a stated period. Up to 5 units, each passing four
-  launch gates. No launch at 5-hour 85% or more. Ends at PACE + 15, and drops to normal after two
-  checks in a row below the baseline rows-per-point rate.
+- **Turbo**: **only on the user's word**, for a stated period. No lane cap by default: on entry
+  ask once, "No cap (pick) or a number?", and record the answer in the budget file (null = no
+  cap). Every launch still passes four launch gates (real work only, disjoint file sets, can land,
+  tier from the table), the stop bands and a machine-load probe before heavy local runs. No
+  launch at 5-hour 85% or more. Ends at PACE + 15, and drops to normal after two checks in a row
+  below the baseline rows-per-point rate.
 - **Overnight** (22:00–09:00 user time, by clock): entry is a gate — every queued command
   allowed, liveness watched from outside the session; throttle from the gap, never turbo; no
   blocking question — launch first, questions to a morning file; a morning report.
@@ -208,6 +211,8 @@ writer: this skill. Any fan-out may read it; none writes it.
 }
 ```
 
+- **`parallel_ceiling` is a number, or `null` in turbo only:** null means no lane cap, the user's
+  answer at turbo entry. Outside turbo a reader treats null as its own default.
 - **Optional fields:** `target_pct` and `target_at` (the user's goal), `owner_reading`
   (`weekly_pct`, `read_at`), `lane_pt_per_hour` (the mix's measured rate). A reminder reads them.
 - **Stamps come from the clock, never typed** (observation 0343): a writer such as the rig's
