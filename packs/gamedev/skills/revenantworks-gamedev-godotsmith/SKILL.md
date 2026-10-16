@@ -46,8 +46,7 @@ enforcing. Reach past them only as listed, and never load the whole folder.
   and asset intake (section 8): import settings and the render precondition
 - `references/design-and-balance.md` — a simulation or balance rule's claims, arms and fallbacks
 - `references/pack.md` — boundary doubt about a sibling's territory
-- `scripts/godot_check.py` — run, not read: Check steps 1 and 3 in one command (import, lint,
-  GUT headless, markers before the summary, three numbers against the expected totals)
+- `scripts/godot_check.py` — run, not read: Check steps 1 and 3 in one command
 
 Optional mods: `references/mods.md`, only when their data is present.
 
@@ -126,14 +125,12 @@ function" — a claim like that is true the day it is written and unchecked fore
    **every source change**. Headless tooling cannot see an unimported file and reports a
    false "not found", and the import is the only tool that reports a parse or type-inference
    error: lint passes it and the suite drops the script silently. `project-hygiene.md` §1.
-   Where a shell exists, `python scripts/godot_check.py --project <dir> --expect-scripts N
-   --expect-tests M` runs steps 1 and 3 in this order (`--before` for codegen, `--lint` for
-   gdtoolkit, NOT-RUN when absent).
+   `scripts/godot_check.py` runs steps 1 and 3 in this order.
 2. **Population.** List every path that executes the code: the test tree, every CI job's own
    script, any tooling harness. A coverage claim with no stated population is not a claim.
 3. **Instrument.** Run the suite; record script count, test count and failure count **as
    three numbers**, never as the word "green" (`godot_check.py` prints them against the
-   expected totals with the slack, and `--repeat K` prints each run's). Drive an adopted runner where present
+   expected totals). Drive an adopted runner where present
    (godot-skill `run_tests.py`, godot-mcp); its JSON is a summary line, so L1 still applies.
    With no shell, read the committed log and say the numbers are quoted, not measured.
 4. **Drift.** Compare each number against the repo's own guards and its docs. Report every
