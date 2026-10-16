@@ -62,6 +62,21 @@ class FullFrontmatterParse(unittest.TestCase):
             else:
                 __import__("sys").modules["yaml"] = saved
 
+    def test_hash_in_a_plain_description_fails_both_paths(self):  # observation 0389
+        fm = "\nname: x\ndescription: Covers rows 25-28 #3 and the rest of the text.\n"
+        quoted = "\nname: x\ndescription: 'Covers rows 25-28 #3 and the rest of the text.'\n"
+        self.assertIn("' #'", build.frontmatter_yaml_error(fm) or "")
+        self.assertIsNone(build.frontmatter_yaml_error(quoted))
+        saved = __import__("sys").modules.get("yaml")
+        __import__("sys").modules["yaml"] = None  # force the stdlib path
+        try:
+            self.assertIn("' #'", build.frontmatter_yaml_error(fm) or "")
+        finally:
+            if saved is None:
+                del __import__("sys").modules["yaml"]
+            else:
+                __import__("sys").modules["yaml"] = saved
+
     def test_every_live_member_parses(self):
         for folder in sorted(build.PACKS.glob("*/skills/*")) + sorted(build.FEATURED.glob("*/skills/*")):
             sk = folder / "SKILL.md"

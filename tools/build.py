@@ -1197,7 +1197,14 @@ def frontmatter_yaml_error(fm: str) -> str | None:
     """None when the whole frontmatter parses as YAML, else a one-line reason (unit K8e). Every
     field is parsed, not only the description: a plain value holding ": " (handoffwright and
     pixelsmith `compatibility:` until K8e) breaks a strict YAML loader. PyYAML when installed;
-    else a stdlib scan that fails a plain (unquoted, non-block) scalar holding ": " or ending ":"."""
+    else a stdlib scan that fails a plain (unquoted, non-block) scalar holding ": " or ending ":".
+    Either way a plain description or when_to_use holding " #" fails first: YAML reads the rest as
+    a comment, so the file parses and the skill triggers on a shorter text (observation 0389)."""
+    for n, line in enumerate(fm.splitlines(), 1):
+        m = re.match(r"^(description|when_to_use):[ \t]+(.*)$", line)
+        if m and m.group(2)[:1] not in "'\"|>" and " #" in m.group(2):
+            return (f"plain {m.group(1)} holds ' #' at line {n}: YAML cuts the rest as a comment "
+                    f"(quote the value)")
     try:
         import yaml
     except ModuleNotFoundError:
