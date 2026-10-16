@@ -129,6 +129,27 @@ class Verdicts(Base):
             res = tv.run_scanner("skillspector", root, None)
         self.assertEqual(res["status"], "NOT-RUN")
 
+    def test_scanner_in_the_user_scripts_folder_runs_and_is_named(self):  # observation 0445
+        root = build(self.tmp / "cand", {"SKILL.md": SKILL})
+        folder = str(self.tmp / "user-scripts")
+        exe = str(self.tmp / "user-scripts" / "zizmor.exe")
+        seen = {}
+
+        def fake_which(name, path=None):
+            return exe if path == folder else None
+
+        def fake_run(argv, **kw):
+            seen["argv0"] = argv[0]
+            return subprocess.CompletedProcess(argv, 0, "", "")
+        with mock.patch.object(tv.shutil, "which", side_effect=fake_which), \
+                mock.patch.object(tv.sysconfig, "get_path", return_value=folder), \
+                mock.patch.object(tv.subprocess, "run", side_effect=fake_run):
+            res = tv.run_scanner("zizmor", root, None)
+        self.assertEqual(res["status"], "RUN")
+        self.assertEqual(seen["argv0"], exe)
+        self.assertIn(folder, res["note"])
+        self.assertIn("not on PATH", res["note"])
+
     def test_scanner_runs_the_resolved_path_not_the_bare_name(self):
         # A Windows .cmd shim is found by which() but not by CreateProcess given the bare name.
         root = build(self.tmp / "cand", {"SKILL.md": SKILL})

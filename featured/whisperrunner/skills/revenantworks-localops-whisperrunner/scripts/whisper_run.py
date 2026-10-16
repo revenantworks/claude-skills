@@ -420,6 +420,42 @@ def cmd_audit(a) -> dict:
     return rec
 
 
+def cmd_configure(a) -> dict:
+    """Write whisperrunner.json from a built whisper.cpp folder (observation 0443): full paths, the
+    binary's hash and a source line, every path checked before anything is written. Refuses, and
+    writes nothing, when the binary or the GPU model is missing, or a config exists without --force.
+    It runs on the user's word; nothing else in this skill writes the config."""
+    root = Path(a.root).resolve()
+    exe = "whisper-cli.exe" if os.name == "nt" else "whisper-cli"
+    bins = [root / "build" / "bin" / "Release" / exe, root / "build" / "bin" / exe]
+    binary = next((b for b in bins if b.is_file()), None)
+    models = {"model_gpu": root / "models" / a.model_gpu, "model_cpu": root / "models" / a.model_cpu,
+              "vad_model": root / "models" / a.vad_model}
+    stops = []
+    if binary is None:
+        stops.append(f"whisper-cli not found under {root / 'build' / 'bin'}: build first (walkthrough step 7)")
+    if not models["model_gpu"].is_file():
+        stops.append(f"GPU model not found: {models['model_gpu']} (walkthrough step 8, run inside models)")
+    target = paths()["config"]
+    if target.exists() and not a.force:
+        stops.append(f"{target} exists; pass --force to replace it")
+    if stops:
+        return {"command": "configure", "written": False, "stops": stops}
+    cfg = {"bin": str(binary)}
+    skipped = []
+    for key, p in models.items():
+        if p.is_file():
+            cfg[key] = str(p)
+        else:
+            skipped.append(f"{key}: {p.name} not found, left out")
+    cfg["sha256"] = sha256(str(binary))
+    cfg["source"] = f"built from source, tag {a.tag or 'not stated'}, {datetime.now().strftime('%Y-%m-%d')}"
+    if not a.dry_run:
+        write_json(target, cfg)
+    return {"command": "configure", "written": not a.dry_run, "path": str(target), "config": cfg,
+            "skipped": skipped, "next": "whisper_run.py status, then audit on a 30-60 s clip of real speech"}
+
+
 def cmd_status() -> dict:
     p = paths()
     lease = read_json(p["lease"])
@@ -437,6 +473,14 @@ def main(argv=None) -> int:
     pl = sub.add_parser("plan")
     pl.add_argument("input")
     sub.add_parser("status")
+    c = sub.add_parser("configure", help="write whisperrunner.json from a built whisper.cpp folder")
+    c.add_argument("--root", required=True, help="the whisper.cpp folder (holds build\\ and models\\)")
+    c.add_argument("--tag", help="the tag the binary was built at, for the source line")
+    c.add_argument("--model-gpu", default="ggml-large-v3-turbo.bin")
+    c.add_argument("--model-cpu", default="ggml-large-v3-turbo-q5_0.bin")
+    c.add_argument("--vad-model", default="ggml-silero-v6.2.0.bin")
+    c.add_argument("--force", action="store_true", help="replace an existing config")
+    c.add_argument("--dry-run", action="store_true", help="print the config, write nothing")
     for name in ("run", "check", "audit"):
         s = sub.add_parser(name)
         s.add_argument("input")
@@ -466,6 +510,8 @@ def main(argv=None) -> int:
         out = cmd_plan(a)
     elif a.cmd == "status":
         out = cmd_status()
+    elif a.cmd == "configure":
+        out = cmd_configure(a)
     elif a.cmd == "audit":
         out = cmd_audit(a)
     else:

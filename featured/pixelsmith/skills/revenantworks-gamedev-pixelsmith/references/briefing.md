@@ -109,16 +109,17 @@ A diffusion model (a Stable Diffusion checkpoint with a pixel-art LoRA, for exam
 ```
 <the LoRA's own style words>, pixel art, <top-down | three-quarter> view, <asset class> <doing activity>,
 silhouette <shape word>, <pose word>, simple, flat colors, limited palette, light high-contrast subject,
-plain <key colour name> background
+plain light grey background
 Negative: <the LoRA's own negatives>, 3d render, realistic, gradient, soft shading, blurry,
-anti-aliased, text, background scene
+anti-aliased, text, background scene, drop shadow, cast shadow
 ```
 
-Never in a diffusion prompt: "transparent background", "exactly <n> colors", a hex value, or a pixel size. Each is asked of a model that cannot deliver it, and each belongs to the contract below.
+Never in a diffusion prompt: "transparent background", "exactly <n> colors", a hex value, a pixel size, or a colour word for the background. Each is asked of a model that cannot deliver it, and each belongs to the contract below. A named background colour leaks into the subject (in one live pilot "magenta" made a pink sword and "bright green" made green blades, while the ground still rendered grey), so the ground is a neutral light grey and the key colour is made by the contract, never by the prompt. Shadows survive the key, so they are negatives.
 
 **Post-process contract** — the runner does these, in this order, on every candidate:
 
 1. **Native grid.** Generation size = native size × one integer factor (the model's own), inside the model's single-pass limit. A subject that does not fill the frame is cropped, never resampled.
+1b. **Flatten.** A flood fill from the four corners turns the near-flat ground (it drifts a level or two per channel, never the exact key) into the exact key colour, within a stated tolerance. A step that compares against an exact value needs an input step that produces that value; without this one, step 4 keys out nothing.
 2. **Downscale.** Nearest-neighbour, integer factor only, then re-detect the grid (a LoRA's cell grid is approximate). Any bilinear or bicubic step fails the asset.
 3. **Palette snap.** Quantize to the spec block's exact palette, count included. The value-gap check runs after the snap, on the snapped colours.
 4. **Key out.** Remove the flat key colour after the snap. Transparency is made here, never asked for. A cutout of a dark subject from a dark render (no flat key) uses a segmentation model or a re-render on a flat chroma ground, never a brightness key: the subject and the ground share a value range, so any threshold leaks into the body or keeps the floor.
@@ -126,7 +127,7 @@ Never in a diffusion prompt: "transparent background", "exactly <n> colors", a h
 6. **Pre-screen.** A mechanical check per candidate from the spec block: colour count, off-palette pixel count, dominant value, gap per terrain. Only survivors go on.
 7. **Acceptance.** Survivors go through Entry — Test. The brief is not the acceptance; the scorecard is.
 
-The contract is pixelsmith's, and so is its script: `scripts/pixel_post.py` (stdlib; run, not read) runs steps 2–4 and 6 on any generator's candidate. A local runner such as `revenantworks-localops-comfyrunner` (ComfyUI) only renders: it generates at the native grid and writes the step-5 record; the script then runs on its candidates and the survivors go to step 7. The runner is named, never required; with no shell, hand back the script command and mark the post-process NOT-RUN. pixelsmith never draws or generates.
+The contract is pixelsmith's, and so is its script: `scripts/pixel_post.py` (stdlib; run, not read) runs steps 1b–4 and 6 on any generator's candidate; its `opaque_pixels` counts what is left after the key. A local runner such as `revenantworks-localops-comfyrunner` (ComfyUI) only renders: it generates at the native grid and writes the step-5 record; the script then runs on its candidates and the survivors go to step 7. The runner is named, never required; with no shell, hand back the script command and mark the post-process NOT-RUN. pixelsmith never draws or generates.
 
 ## Style lock for a set
 

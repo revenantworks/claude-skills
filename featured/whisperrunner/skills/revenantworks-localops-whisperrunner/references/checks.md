@@ -78,7 +78,10 @@ An existing output file is never overwritten unless the user passes `--overwrite
 
 `whisperrunner.json` in the pack's state folder (beside `gpu-lease.json`:
 `%LOCALAPPDATA%\localops\` on Windows, `$XDG_STATE_HOME/localops/` or `~/.local/state/localops/`
-elsewhere). The user writes it; the skill reads it and never edits it.
+elsewhere). The user writes it, by hand or with `whisper_run.py configure --root <whisper.cpp>`
+run on the user's word (it checks every path, refuses to replace a config without `--force`, and
+writes nothing when the binary or GPU model is missing); otherwise the skill reads it and never
+edits it.
 
 | Key | Meaning |
 |---|---|

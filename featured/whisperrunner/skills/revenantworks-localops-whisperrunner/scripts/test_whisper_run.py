@@ -268,5 +268,50 @@ class RunnerEndToEnd(unittest.TestCase):
         self.assertIsNotNone(plan["estimate"]["gpu"]["minutes"])
 
 
+class Configure(unittest.TestCase):  # observation 0443
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+        self.root = self.tmp / "whisper.cpp"
+        exe = "whisper-cli.exe" if os.name == "nt" else "whisper-cli"
+        (self.root / "build" / "bin" / "Release").mkdir(parents=True)
+        (self.root / "models").mkdir()
+        self.bin = self.root / "build" / "bin" / "Release" / exe
+        self.bin.write_bytes(b"fake binary")
+        (self.root / "models" / "ggml-large-v3-turbo.bin").write_bytes(b"m")
+        self.env = {"LOCALAPPDATA": str(self.tmp / "state"), "XDG_STATE_HOME": str(self.tmp / "state")}
+
+    def configure(self, *extra):
+        import io
+        from contextlib import redirect_stdout
+        from unittest import mock
+        buf = io.StringIO()
+        with mock.patch.dict(os.environ, self.env), redirect_stdout(buf):
+            whisper_run.main(["configure", "--root", str(self.root), "--tag", "v1.9.5", *extra])
+        return json.loads(buf.getvalue())
+
+    def test_writes_paths_hash_and_source_and_skips_missing_optional_models(self):
+        out = self.configure()
+        self.assertTrue(out["written"], out)
+        cfg = json.loads(Path(out["path"]).read_text(encoding="utf-8"))
+        self.assertEqual(cfg["bin"], str(self.bin.resolve()))
+        self.assertEqual(cfg["sha256"], hashlib.sha256(b"fake binary").hexdigest())
+        self.assertIn("tag v1.9.5", cfg["source"])
+        self.assertNotIn("model_cpu", cfg)
+        self.assertEqual(len(out["skipped"]), 2)
+
+    def test_refuses_an_existing_config_without_force(self):
+        self.configure()
+        again = self.configure()
+        self.assertFalse(again["written"])
+        self.assertTrue(any("--force" in s for s in again["stops"]))
+        self.assertTrue(self.configure("--force")["written"])
+
+    def test_missing_gpu_model_writes_nothing(self):
+        (self.root / "models" / "ggml-large-v3-turbo.bin").unlink()
+        out = self.configure()
+        self.assertFalse(out["written"])
+        self.assertFalse((self.tmp / "state" / "localops" / "whisperrunner.json").exists())
+
+
 if __name__ == "__main__":
     unittest.main()

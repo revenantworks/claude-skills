@@ -17,13 +17,21 @@ run `winget show <id>` and confirm the publisher. Steps 3 and 5 may need an admi
 | 5 | Vulkan SDK | `winget install --id KhronosGroup.VulkanSDK -e` | new shell: `vulkaninfo --summary` lists the card; `echo $env:VULKAN_SDK` is set | `winget uninstall --id KhronosGroup.VulkanSDK -e` |
 | 6 | FFmpeg | `winget install --id Gyan.FFmpeg -e` | `ffmpeg -version` | `winget uninstall --id Gyan.FFmpeg -e` |
 | 7 | Clone and build at the pinned tag | in a tools folder of the user's choice: `git clone https://github.com/ggml-org/whisper.cpp; git -C whisper.cpp checkout <tag from engine.md>; cmake -S whisper.cpp -B whisper.cpp/build -DGGML_VULKAN=1; cmake --build whisper.cpp/build -j --config Release` | `whisper.cpp\build\bin\Release\whisper-cli.exe --help` prints the usage | delete the `whisper.cpp` folder |
-| 8 | Models (owner's download) | `whisper.cpp\models\download-ggml-model.cmd large-v3-turbo`, then `… large-v3-turbo-q5_0` for the CPU path; optional VAD: `whisper.cpp\models\download-vad-model.cmd silero-v6.2.0` | the `.bin` files exist under `whisper.cpp\models\` | delete the `.bin` files |
+| 8 | Models (owner's download) | `cd whisper.cpp\models` first: the scripts save into the CURRENT folder, not `models\` (run from the home folder, 2.2 GB once landed in the user profile). Then `.\download-ggml-model.cmd large-v3-turbo`, then `… large-v3-turbo-q5_0` for the CPU path; optional VAD: `.\download-vad-model.cmd silero-v6.2.0` | the `.bin` files exist under `whisper.cpp\models\` | delete the `.bin` files |
 | 9 | Record the binary | `Get-FileHash whisper.cpp\build\bin\Release\whisper-cli.exe -Algorithm SHA256` | a 64-character hash | — |
-| 10 | Write the config | see below | `python scripts/whisper_run.py status` shows `config_present: true` | delete `whisperrunner.json` |
-| 11 | First measurement | `python scripts/whisper_run.py audit <a 30-60 s clip>` | `gpu.backend.verdict` is `GPU-OK`; both `realtime_x` values present | — |
+| 10 | Write the config | `python scripts/whisper_run.py configure --root <full path to whisper.cpp> --tag <tag>` (checks every path, records the hash; `--dry-run` prints it first) | `python scripts/whisper_run.py status` shows `config_present: true` | delete `whisperrunner.json` |
+| 11 | First measurement | `python scripts/whisper_run.py audit <a 30-60 s clip of real, non-repeating speech>` | `gpu.backend.verdict` is `GPU-OK`; both `realtime_x` values present | — |
 
-**Step 10, the config** — one PowerShell command, run from the folder that holds `whisper.cpp`
-(it fills in full paths and the hash itself, and writes nothing else):
+**The first run of the self-built `whisper-cli.exe`** can raise a Windows protection prompt: the
+binary is unsigned because the owner built it. The `sha256` that step 10 records is how to
+confirm it is that build before allowing it.
+
+**Step 11's clip must not repeat.** Looping the bundled `jfk.wav` to reach 30 s makes the
+transcript check fail on repetition by design, which reads as a broken install; use any real
+recording of 30-60 s.
+
+**Step 10 by hand** (when the script cannot run) — one PowerShell command, run from the folder
+that holds `whisper.cpp` (it fills in full paths and the hash itself, and writes nothing else):
 
 ```powershell
 $w = (Resolve-Path whisper.cpp).Path; $d = Join-Path $env:LOCALAPPDATA 'localops'; New-Item -ItemType Directory -Force $d | Out-Null; $bin = Join-Path $w 'build\bin\Release\whisper-cli.exe'; [ordered]@{ bin = $bin; model_gpu = (Join-Path $w 'models\ggml-large-v3-turbo.bin'); model_cpu = (Join-Path $w 'models\ggml-large-v3-turbo-q5_0.bin'); vad_model = (Join-Path $w 'models\ggml-silero-v6.2.0.bin'); sha256 = (Get-FileHash $bin -Algorithm SHA256).Hash.ToLower(); source = "built from source, tag <tag>, $(Get-Date -Format yyyy-MM-dd)" } | ConvertTo-Json | Set-Content -Encoding utf8 (Join-Path $d 'whisperrunner.json')
