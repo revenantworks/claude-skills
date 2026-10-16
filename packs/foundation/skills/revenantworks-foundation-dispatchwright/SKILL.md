@@ -206,8 +206,13 @@ it is durable, not when it is written.**
 ## 6 · Wave execution
 
 - **Cap 6 concurrent units per wave, counting agents, not rows** (#0022). A fan-out call costs N
-  units and N × per-agent budget.
-- **Max 2 nesting levels.** A wave over 12 units is split and shown to the user first.
+  units and N × per-agent budget. A live budget file's numeric `parallel_ceiling` sets the cap
+  (up to 12). **Turbo exception:** a live budget file in turbo with `parallel_ceiling` null (the
+  user answered "no cap" at turbo entry, pacewright) lifts the cap. Every other gate still applies
+  to each launch: a planned row only, one writer per repo, disjoint file sets, the tier row, the
+  stop bands and the load probe below.
+- **Max 2 nesting levels.** A wave over 12 units is split and shown to the user first (in turbo
+  with no cap: shown, not split).
 - **Stagger dispatch**; units launched in one minute race for files.
 - **No controller commit to a unit's repo between its brief and its launch** (#0083); the brief's
   guard is base-is-ancestor plus target-files-unchanged, never HEAD equality. A measurement unit
