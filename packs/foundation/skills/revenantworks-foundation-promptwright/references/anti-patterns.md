@@ -20,6 +20,7 @@ These are craft defects — visible to a friendly reader. The Hostile read in Ph
 10. Unparseable structured output
 11. Contradictory requirements
 12. Excuses (moved from Phase 6)
+13. Assumed memory and frozen state (unattended prompts)
 
 ---
 
@@ -143,3 +144,13 @@ These are craft defects — visible to a friendly reader. The Hostile read in Ph
 | "Scores look fine, skip the checklist" | Mark all 15 or print the pass line |
 | "The user will catch it" | Fix it now; the prompt ships as is |
 | "Emphasis will make the model obey" | Make the line observable instead |
+
+---
+
+## 13. Assumed memory and frozen state (unattended prompts)
+
+**Pattern:** a scheduled or unattended prompt says "read last week's output in your history and move the rotation on", or states a goal's status as a flat fact ("cert done 2026-09-06") copied from a planning document.
+
+**Why it hurts:** each fire starts a fresh session with no history, so the rotation restarts at item 0 every week. A copied fact goes stale the moment it is copied, and a target date in a plan table ("X passed | date") is a plan, never a record: one such line would have had a coach skip the cert the user was studying.
+
+**Fix:** list everything the prompt assumes it can remember or know, and give each item a source the run reads — a repo file, an artifact database, a ledger — or derive it from the date (entry = ISO week mod list length). Point state at its source of truth; a snapshot carries its date and "check <source>; the source wins". The run's state store itself is a spec question for agentwright (observations 0405, 0406).
