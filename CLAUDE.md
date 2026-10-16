@@ -39,6 +39,7 @@ lives in its README ("Which skill does what"), since an installed plugin never l
 
 ```bash
 git config core.hooksPath .githooks  # once per clone: arms the PII pre-commit hook
+python tools/ci_local.py           # read-only: the whole local CI in one process (exit 3 = a step NOT-RUN)
 python tools/build.py --check      # read-only gate: versions, counts, seams
 python tools/build.py --parity     # read-only: installed-copy parity
 python -m unittest discover -s tools -p "test_*.py"

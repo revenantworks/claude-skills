@@ -12,6 +12,10 @@ upload list. Add `--swaps <dir>` to also build install zips carrying your own
 plus a README.txt there, `--dry-run` to see the plan. Steps 1 to 5 below
 describe what it does by hand.
 
+**One command runs the whole local CI:** `python tools/ci_local.py` (read-only;
+`--list` names the steps, `--only`/`--skip` pick them). Exit 0 all passed, 1 a
+step failed, 3 a step was NOT-RUN (its tool is absent; never a pass).
+
 **Pack-shared files** live in `packs/<pack>/shared/` with `holders.json`;
 `tools/build.py` writes each holder's copy and `--check` fails on drift (owner
 Q2, 2026-10-01). Edit the shared source, never a copy.
