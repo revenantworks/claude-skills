@@ -345,13 +345,23 @@ def segments(command: str) -> list[str]:
     return [s for s, _ in split_ops(command)]
 
 
-def split_ops(command: str) -> list[tuple[str, str]]:
-    """segments() with the separator after each one (`;`, `|`, `||`, `&&`, a newline, or "")."""
+def split_ops(command: str, escapes: bool = False) -> list[tuple[str, str]]:
+    """segments() with the separator after each one (`;`, `|`, `||`, `&&`, a newline, or "").
+
+    `escapes=True` applies bash's backslash rules (observation 0410): outside quotes a backslash keeps
+    the next character literal (`a\\|b` is no pipe), and inside double quotes it does so for `"`, `\\`,
+    `$` and a backtick (`"x \\" | y"` is one word). Only expand() passes it, for text it knows is not
+    PowerShell; the hooks' own segment checks keep the plain split, which never merges segments."""
     command = strip_comments(command)
     out, cur, quote = [], [], None
     i = 0
     while i < len(command):
         ch = command[i]
+        if escapes and ch == "\\" and i + 1 < len(command) and quote != "'" and \
+                (quote is None or command[i + 1] in "\"\\$`"):
+            cur.append(command[i:i + 2])
+            i += 2
+            continue
         if quote:
             cur.append(ch)
             if ch == quote:
@@ -796,6 +806,17 @@ def _run_substitution(command: str, inner: str, ps: bool, out: "Expanded") -> No
                 return
 
 
+def _executor_words(seg: str, toks: list[str]) -> list[str]:
+    """The words on a segment that may run a shell text. A `cd` folder is a place, not a program (a
+    folder named `dash`, observation 0410), and a word a plain reader or printer only reads is no
+    program either (observation 0377's plain_args); everything else counts, as before."""
+    if cd_target(seg):
+        return []
+    plain = plain_args(toks)
+    return [t for k, t in enumerate(toks) if not (plain and plain[0] <= k < plain[1])
+            and (prog(t) in EXECUTORS or t.lower() in EXECUTORS)]
+
+
 def expand(command: str, cwd: str = "", depth: int = 0, out: Expanded | None = None,
            ps: bool | None = None, files: bool = True) -> Expanded:
     """Every shell text and code body the command runs, as far as text can show it. `ps` says the
@@ -814,10 +835,10 @@ def expand(command: str, cwd: str = "", depth: int = 0, out: Expanded | None = N
     for inner in substitutions(command):
         _run_substitution(command, inner, ps, out)
         expand(inner, cwd, depth + 1, out, ps)
-    ops = split_ops(command)
+    ops = split_ops(command, escapes=not ps)
     segs = [s for s, _ in ops]
     toks_all = [tokens(s) for s in segs]
-    if any(prog(t) in EXECUTORS or t.lower() in EXECUTORS for toks in toks_all for t in toks):
+    if any(_executor_words(s, toks) for s, toks in zip(segs, toks_all)):
         inner_ps = ps or any(prog(t) in PS or prog(t) in STDIN_EVAL for toks in toks_all for t in toks)
         for toks in toks_all:
             for t in toks:

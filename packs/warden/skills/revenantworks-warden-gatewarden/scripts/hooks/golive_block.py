@@ -84,13 +84,22 @@ REASON = ("go-live block: go-live and stream-key requests are the owner's button
           "sends them. Tell the owner what to press in OBS instead.")
 
 
-def segment_blocked(seg: str) -> bool:
+def segment_blocked(seg: str) -> str:
+    """The text the segment matched (observation 0410: a refusal names what it read), or ""."""
     for text in (seg, hl.despliced(seg)):
-        if SERVICE_JSON.search(text) and not LISTING.search(seg):
-            return True
-        if (NAMES.search(text) or CLI.search(text)) and not (SEARCH.search(seg) or CLASSIFY.search(seg)):
-            return True
-    return False
+        m = SERVICE_JSON.search(text)
+        if m and not LISTING.search(seg):
+            return m.group(0)
+        m = NAMES.search(text) or CLI.search(text)
+        if m and not (SEARCH.search(seg) or CLASSIFY.search(seg)):
+            return m.group(0)
+    return ""
+
+
+def reason(why: str) -> str:
+    if not why:
+        return REASON
+    return REASON.replace("the owner's button;", f"the owner's button (read: `{hl.clip(why, 60)}`);", 1)
 
 
 # A wildcard under an OBS profiles folder can match service.json (`cat …/profiles/p/s*e.json`).
@@ -115,22 +124,23 @@ def text_hits(text: str) -> bool:
     return any(NAMES.search(t) or CLI.search(t) or SERVICE_JSON.search(t) for t in (text, hl.despliced(text)))
 
 
-def command_blocked(cmd: str, cwd: str = "") -> bool:
-    """Check every shell text and code body the command runs (hooklib.expand)."""
+def command_blocked(cmd: str, cwd: str = "") -> str:
+    """Check every shell text and code body the command runs (hooklib.expand). Returns what it matched
+    or why it could not read the line (observation 0410), or "" when the line passes."""
     if len(cmd) > hl.BIG:  # V-K8w F8: a regex scan, never a word-by-word parse
-        return text_hits(cmd) or bool(PROFILE_GLOB.search(cmd))
+        return "a command over the size limit" if text_hits(cmd) or PROFILE_GLOB.search(cmd) else ""
     try:
         ex = hl.expand(cmd, cwd)
     except hl.Unparseable as exc:
-        return exc.hard or bool(HINT.search(hl.despliced(cmd)) or CLIENT_RUN.search(cmd))
+        return str(exc) if exc.hard or HINT.search(hl.despliced(cmd)) or CLIENT_RUN.search(cmd) else ""
     # A scratch script rewritten in place and run (observation 0384) counts as read when neither its text
     # nor the line holds a request name, a go-live flag, service.json, a go-live word or an OBS client.
     hl.settle_rewrites(ex, cmd, cwd, lambda text: not (text_hits(cmd + "\n" + text) or HINT.search(
         hl.despliced(cmd + "\n" + text)) or CLIENT.search(text)))
     if ex.unread or ex.unread_code:  # a script on disk the block could not read: fail closed (K7-4-03)
-        return True
+        return (ex.unread + ex.unread_code)[0]
     if any(text_hits(t) for t in ex.big):
-        return True
+        return "a script over the size limit"
     for text, where in ex.shells:
         cur = where or cwd
         for s in hl.segments(text):
@@ -138,12 +148,24 @@ def command_blocked(cmd: str, cwd: str = "") -> bool:
             if target:
                 cur = hl.resolve(target, cur)
                 continue
-            if segment_blocked(s) or path_blocked(s, cur) or (PROFILE_GLOB.search(s) and not LISTING.search(s)):
-                return True
+            why = segment_blocked(s)
+            if why:
+                return why
+            if path_blocked(s, cur) or (PROFILE_GLOB.search(s) and not LISTING.search(s)):
+                return s
+        # The bash reading of the same text (observation 0410): `grep a\" f; obs-cmd …` runs obs-cmd in
+        # bash, though the plain split keeps it inside the grep segment. Extra segments only add checks.
+        for s, _ in hl.split_ops(text, escapes=True):
+            why = segment_blocked(s)
+            if why:
+                return why
     for body, path in ex.code:
-        if (NAMES.search(body) or CLI.search(body) or SERVICE_JSON.search(body)) and not (path and own_file(path)):
-            return True
-    return bool(ex.opaque) and bool(HINT.search(hl.despliced(cmd)) or CLIENT_RUN.search(cmd))
+        m = NAMES.search(body) or CLI.search(body) or SERVICE_JSON.search(body)
+        if m and not (path and own_file(path)):
+            return m.group(0)
+    if ex.opaque and (HINT.search(hl.despliced(cmd)) or CLIENT_RUN.search(cmd)):
+        return ex.opaque[0]
+    return ""
 
 
 def mcp_blocked(tool: str, ti) -> bool:
@@ -168,8 +190,9 @@ def main() -> None:
         tool = str(ev.get("tool_name") or "")
         ti = ev.get("tool_input") or {}
         if tool in hl.SHELL_TOOLS:
-            if command_blocked(hl.command_of(ev), str(ev.get("cwd") or "")):
-                hl.block(REASON, rule="golive_block", hard=True)
+            why = command_blocked(hl.command_of(ev), str(ev.get("cwd") or ""))
+            if why:
+                hl.block(reason(why), rule="golive_block", hard=True)
         elif tool.startswith("mcp__"):
             if mcp_blocked(tool, ti):
                 hl.block(REASON, rule="golive_block", hard=True)

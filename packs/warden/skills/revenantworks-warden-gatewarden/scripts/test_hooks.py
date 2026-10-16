@@ -2197,5 +2197,65 @@ class Obs0403FollowTests(InstallDefaultBase):
             self.assertIsNone(fs.spawn(self.tmp))
 
 
+# Observation 0410: the python -c bisect harness one session ran, shaped like the real one. Its code
+# holds `\"` inside the double-quoted program text, and a quoted `|` after it.
+HARNESS_0410 = r'''cd "{tmp}" && python -c "
+import json,subprocess,sys
+base='cd {dash} && '
+for c in [base+'grep -n \"isRunActive\\\\|import \" tests/tasks.test.ts | head -10',
+          base+'grep -n \"dash\\\\|bun test\\\\|node --test\\\\|mods\" ../../.github/workflows/*.yml | grep -i -E \"test|mods\" | head -8',
+          base+'echo hi | grep -i -E \"test|mods\"']:
+    print(subprocess.run([sys.executable, '-c', 'print(1)'], capture_output=True).returncode, c[len(base):])
+"'''
+
+
+class Obs0410Tests(InstallDefaultBase):
+    """Observation 0410: golive_block refused a read-only `cd …/mods/dash && grep … | grep` line, and
+    hyperv_lock refused a python -c harness, both as "a script piped into a shell". Two parse steps
+    caused it: a `cd` folder named `dash` counted as the dash shell, so every quoted grep pattern was
+    read as shell text, and a `\\"` inside double quotes ended the quote, so a `|` inside the Python
+    string split the line. Read-only lines pass in guard mode; the dangerous forms stay refused."""
+
+    def setUp(self):
+        super().setUp()
+        self.dash = os.path.join(self.tmp, "mods", "dash").replace("\\", "/")
+        os.makedirs(os.path.join(self.dash, "tests"))
+        Path(self.dash, "tests", "tasks.test.ts").write_text("import x from 'y';\n")
+
+    def expect(self, code, hooks, cmds, tool="Bash"):
+        for cmd in cmds:
+            for name in hooks:
+                for env in (self.env, dict(self.env, GATEWARDEN_MODE="guard")):
+                    got, _, err = run_hook(name, bash(cmd, self.dash, tool=tool), env=env)
+                    self.assertEqual(got, code, f"{name} {tool} mode={env.get('GATEWARDEN_MODE')}: "
+                                                f"{cmd!r}: {err.strip()}")
+
+    def test_read_only_grep_compound_after_cd_into_dash_passes(self):
+        line = (f'cd {self.dash} && grep -n "isRunActive\\|import " tests/tasks.test.ts | head -10; '
+                'grep -n "dash\\|bun test\\|node --test\\|mods" ../../.github/workflows/*.yml | '
+                'grep -i -E "test|mods" | head -8')
+        self.expect(0, ("golive_block.py", "hyperv_lock.py", "push_gate.py"), [line])
+
+    def test_python_harness_with_escaped_quotes_passes(self):
+        cmd = HARNESS_0410.replace("{tmp}", self.tmp.replace("\\", "/")).replace("{dash}", self.dash)
+        self.expect(0, ("golive_block.py", "hyperv_lock.py", "push_gate.py"), [cmd])
+
+    def test_go_live_and_piped_shells_stay_refused(self):
+        self.expect(2, ("golive_block.py",), [
+            f"cd {self.dash} && obs-cmd streaming start",
+            f'cd {self.dash} && grep -n "a\\\\" tests/tasks.test.ts; obs-cmd streaming start',
+            f'cd {self.dash} && grep -n a\\" tests/tasks.test.ts; obs-cmd streaming start',
+            f'cd {self.dash} && python -c "import obsws_python as o; o.ReqClient().start_stream()"',
+            'bash -c "grep -n \\"x\\" f; obs-cmd streaming start"',
+            "pwsh -Command 'Select-String \"x\\\"; obs-cmd streaming start'",
+        ])
+        self.expect(2, ("golive_block.py",), ['Select-String "x\\"; obs-cmd streaming start'], tool="PowerShell")
+        self.expect(2, ("hyperv_lock.py",), [
+            f"cd {self.dash} && echo eA== | base64 -d | bash",
+            'python -c "import subprocess; subprocess.run(\\"powershell Restore-VMSnapshot -VMName lab\\")"',
+            f'cd {self.dash} && grep -n "a\\\\" tests/tasks.test.ts; Remove-VM -Name lab -Force',
+        ])
+
+
 if __name__ == "__main__":
     unittest.main()
