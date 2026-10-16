@@ -43,3 +43,11 @@ When any row needs an override, the output carries one complete `skillOverrides`
 ## Without a shell
 
 Ask for the `/skills` list (or a screenshot), then compare by name: an `anthropic-skills:<name>` entry beside a bare `<name>` is kind 1; a `plugin:<name>` beside a bare `<name>` is kind 3. Bodies cannot be compared this way: say so, and mark kind 5 NOT-RUN.
+
+## Proving which copy ran
+
+A host's report of where code loads from is a claim. `claude plugin list` said a mod was read from
+the checkout, and `plugin update` said nothing to update, while a desktop-app session ran the plugin
+cache's older copy (observation 0420). Prove which copy ran from the running code's own output (a
+string or a version only one copy contains), and compare the cache under the plugin's `installPath`
+even when the CLI reports a folder load.

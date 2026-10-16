@@ -2,6 +2,8 @@
 
 ## [1.0.0] — 2026-10-01
 
+2026-10-16 (full observation review, U21): `hook-review.md` gains a warn-mode privacy hook row (0434) and a Changing a rule section: a verdict diff for every loosening (0388), a transcript false-positive sweep and the `*`/`:*` trap for deny rules (0369), and no silent enforcement drop on upgrade (0370); `hooks.md` corrects the call-cap sentence (0371); `loads.md` proves which copy ran (0420); `least-privilege.md` audits routine and task grants (0374, 0386). No hook code changed here; the hook backlog is a separate build brief.
+
 First public release. What Claude and its agents may do with the tools already installed, and what
 they actually reach, read from evidence. (The reach entries came from the retired filewarden and the
 `layout` entry was added on 2026-10-08, inside the 1.0.0 private test phase.)

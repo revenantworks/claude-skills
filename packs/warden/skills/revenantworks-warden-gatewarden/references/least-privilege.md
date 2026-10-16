@@ -36,3 +36,11 @@ State these limits in every footprint report. A clean footprint means "no eviden
 ## Iterate
 
 An audit-log hook installed in advance (a PostToolUse logger) adds refusals and exact timings. gatewarden reads such a log as a second evidence source when the owner points at it; it never installs one.
+
+## Routine and task grants
+
+A scheduled routine or task is an agent with grants too, and its editor may not show them
+(observations 0374, 0386). Read the stored config through the platform's get call and list every
+server, connector and tool. Flag as P0 a shell, device bridge or file-write grant on a job that
+reads untrusted input, and as P1 any connector whose `permitted_tools` is empty (unlimited). The
+repair is agentwright's design step; gatewarden reports the grant against the job's needs.

@@ -424,8 +424,10 @@ Caps live in `~/.claude/gatewarden/call-caps.json` (`GATEWARDEN_STATE` moves the
 
 From `warn_at × cap` a note asks the unit to finish the current piece. Past the cap, `grace` more
 calls pass with "commit and report now". After that every call is blocked except `always_allow`,
-so the unit can still hand back. An agent with no cap is counted and never stopped. A controller that
-knows a brief's `call_cap` can add the launched agent's id under `by_agent_id`.
+so the unit can still hand back. An agent with no cap is counted and never stopped. A controller
+session cannot add the launched agent's id under `by_agent_id` itself: the auto-mode classifier
+refuses that edit as self-modification (observation 0371). Until the hook reads a brief's
+`call_cap` from the launch, the barrier is `by_agent_type`, placed by the owner.
 
 ### The event log
 
