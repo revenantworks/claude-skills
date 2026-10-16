@@ -2257,5 +2257,56 @@ class Obs0410Tests(InstallDefaultBase):
         ])
 
 
+class Obs0414Tests(InstallDefaultBase):
+    """Observation 0414: push_gate refused three read-only lines because a file the line only names (a
+    path a parser reads, an argument to a script, an assignment) was read as a script it runs. A file is
+    read as code only where the line runs it; the dangerous forms stay refused."""
+
+    def setUp(self):
+        super().setUp()
+        t = self.tmp.replace("\\", "/")
+        self.t = t
+        os.makedirs(os.path.join(self.tmp, "rig-sync"))
+        os.makedirs(os.path.join(self.tmp, "scripts"))
+        self.sync = f"{t}/rig-sync/sync-repos.ps1"
+        Path(self.sync).write_text("param([string]$Root = '.')\n& $Git -C $Root push origin main\n"
+                                   "git push origin main\n")
+        Path(t, "parsecheck.ps1").write_text(
+            "param([string[]]$Files)\nforeach ($f in $Files) { $e=$null; "
+            "[void][System.Management.Automation.Language.Parser]::ParseFile($f,[ref]$null,[ref]$e); "
+            "\"$f errors: $($e.Count)\" }\n")
+        Path(t, "scripts", "new-observation.sh").write_text('#!/bin/sh\nprintf "%s\\n" "$1" > "$2/x.md"\n')
+        Path(t, "evil.sh").write_text("git push --force origin main\n")
+        Path(t, "wrap.sh").write_text('bash "$1"\n')
+        Path(t, "evil.ps1").write_text("git push --force origin main\n")
+
+    def expect(self, code, cmds, tool="Bash"):
+        for cmd in cmds:
+            for env in (self.env, dict(self.env, GATEWARDEN_MODE="guard")):
+                got, _, err = run_hook("push_gate.py", bash(cmd, self.tmp, tool=tool), env=env)
+                self.assertEqual(got, code, f"{tool} mode={env.get('GATEWARDEN_MODE')}: {cmd!r}: {err.strip()}")
+
+    def test_the_three_refused_lines_pass(self):
+        win = self.sync.replace("/", "\\")
+        self.expect(0, [f"foreach ($f in '{win}') {{ $e=$null; [void][System.Management.Automation.Language."
+                        "Parser]::ParseFile($f,[ref]$null,[ref]$e); \"$f errors: $($e.Count)\" }"],
+                    tool="PowerShell")
+        self.expect(0, [f'pwsh -NoProfile -NonInteractive -File "{self.t}/parsecheck.ps1" -Files "{self.sync}"',
+                        f'W="{self.t}/obs"; S={self.t}/scripts/new-observation.sh; '
+                        'bash $S scheduled-receipt-push-carried-every-local-commit "$W"'])
+
+    def test_a_named_file_that_runs_is_still_read(self):
+        t = self.t
+        self.expect(2, [f'pwsh -NoProfile -File "{t}/evil.ps1"', f'pwsh -NoProfile "{t}/evil.ps1"',
+                        f"bash -c '{t}/evil.sh'", f"sudo '{t}/evil.sh'", f"timeout 5 '{t}/evil.sh'",
+                        f"S={t}/evil.sh; bash $S", f'S="{t}/evil.sh"; bash "$S" x',
+                        f"S={t}/evil.sh; S=$(cat list); bash $S push", f"S={t}/evil.sh; read S; bash $S push",
+                        f"FOO=1 {t}/evil.sh", f"bash {t}/wrap.sh '{t}/evil.sh'",
+                        f"for f in '{t}/evil.sh'; do bash $f; done"])
+        self.expect(2, [f"foreach ($f in '{t}/evil.ps1') {{ & $f }}",
+                        f"foreach ($f in '{t}/evil.ps1') {{ pwsh -File $f }}",
+                        f"& '{t}/evil.ps1'"], tool="PowerShell")
+
+
 if __name__ == "__main__":
     unittest.main()

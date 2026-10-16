@@ -817,6 +817,104 @@ def _executor_words(seg: str, toks: list[str]) -> list[str]:
             and (prog(t) in EXECUTORS or t.lower() in EXECUTORS)]
 
 
+# Observation 0414: a file a line only names is data, not a script it runs. The words before which a
+# variable or a quoted word is run, not read.
+RUN_PREV = {"&", ".", "source", "iex", "invoke-expression", "start-process", "saps", "-file", "-f", "-command",
+            "-c", "/c", "/k", "-e", "--eval", "-exec", "-execdir", "-ok", "-okdir", "eval", "exec", "xargs",
+            "sudo", "doas", "env", "nohup", "time", "command", "-encodedcommand", "-ec", "call", "start",
+            "invoke-command", "icm", "-scriptblock", "parallel"}
+SCRIPT_VAR = re.compile(r'"?\$(?:\{([A-Za-z_]\w*)\}|([A-Za-z_]\w*))"?')
+
+
+def literal_var(tok: str, segs: list[str], upto: int) -> str | None:
+    """The literal value a bash variable word (`$S`, `"${S}"`) holds when segment `upto` runs: the last
+    plain `S=value` (or `export S=value`) before it, with no `$`, substitution, glob or space in the value.
+    None when the line sets it any other way (read, for, declare, a second non-literal assignment)."""
+    m = SCRIPT_VAR.fullmatch(tok)
+    if not m:
+        return None
+    name = m.group(1) or m.group(2)
+    setter = re.compile(r"(?<![\w$])(?:read|for|select|declare|local|typeset|mapfile|readarray|getopts|let|unset)"
+                        r"\b[^;|&\n]*?(?<![\w$])" + name + r"\b")
+    other = re.compile(r"(?<![\w$])" + name + r"\+?=|\$\{" + name + r":?[=?+-]")
+    val = None
+    for k, s in enumerate(segs):
+        if setter.search(s):
+            return None
+        if k >= upto:
+            continue
+        lit = re.fullmatch(r"\s*(?:export\s+)?" + name + r"=(\S+)\s*", s)
+        if lit and not re.search(r"[$`(){}*?\[\]]", lit.group(1)):
+            val = unquote(lit.group(1))
+            val = os.path.expanduser(val) if val.startswith("~") else val
+        elif other.search(s):
+            return None
+    return val
+
+
+def runs_variable(text: str, ps: bool, resolved=lambda tok, k: False) -> bool:
+    """True when the text runs something it holds in a variable or argument (`bash $f`, `& $x`,
+    `pwsh -File $f`, `"$1"` as a bash command word). A PowerShell variable as a command word only prints;
+    the loop variable of `foreach ($f in …)` is a name, not a run. `resolved(tok, segment index)` names
+    variables the line set to a literal, which do not count."""
+    segs = [s for s, _ in split_ops(text, escapes=not ps)]
+    for si, seg in enumerate(segs):
+        if cd_target(seg):
+            continue
+        toks = tokens(seg)
+        for k, t in enumerate(toks):
+            if not re.match(r"""^["'(]?(?:\$|%[A-Za-z_])""", t) or re.match(r"^\(?\$?[A-Za-z_][\w:]*\s*=", t):
+                continue
+            if resolved(t, si):
+                continue
+            prev = toks[k - 1] if k else ""
+            p = prog(prev) if prev else ""
+            if (k == 0 and not ps) or unquote(prev).lower() in RUN_PREV or \
+                    (p and p != "foreach" and (p in RUNS or p in EXECUTORS)):
+                return True
+    return False
+
+
+def _script_arg(toks: list[str], k: int, cwd: str, segs: list[str], si: int) -> bool:
+    """True when toks[k] is an argument handed to a script file that a shell or interpreter on this
+    segment runs, and that script runs none of its arguments or variables (observation 0414): the script
+    reads the word as data. A word before the script, after a code flag, or after another launcher is
+    not one."""
+    for i in range(k):
+        p = prog(toks[i])
+        if p not in RUNS:
+            continue
+        j, s = i + 1, None
+        while j < k:
+            w = unquote(toks[j]).lower()
+            if p in PS and w in ("-file", "-f"):
+                s = j + 1
+                break
+            if w in CODE_FLAGS or w in ("-command", "-encodedcommand", "-ec", "-m", "-"):
+                return False
+            if not toks[j].startswith("-"):
+                s = j
+                break
+            j += 1
+        if s is None or s >= k or any(prog(t) in RUNS or prog(t) in EXECUTORS for t in toks[s + 1:k]):
+            return False
+        path = literal_var(toks[s], segs, si) or unquote(toks[s])
+        if SCRIPT_VAR.fullmatch(path) or not os.path.isfile(resolve(path, cwd)):
+            return False
+        text = read_small(resolve(path, cwd))
+        return text is not None and not runs_variable(text, bool(re.search(r"(?i)\.ps[md]?1$", path)))
+    return False
+
+
+def _data_word(toks: list[str], k: int, ps: bool, cwd: str, segs: list[str], si: int, command: str) -> bool:
+    """A quoted word the line only hands on as data (observation 0414): an argument to a script it runs
+    (_script_arg), or an item of a PowerShell `foreach (… in …)` list on a line that runs no variable."""
+    if _script_arg(toks, k, cwd, segs, si):
+        return True
+    return ps and k > 0 and unquote(toks[k - 1]).lower() == "in" and \
+        any(prog(t) in ("foreach", "for") for t in toks[:k]) and not runs_variable(command, ps)
+
+
 def expand(command: str, cwd: str = "", depth: int = 0, out: Expanded | None = None,
            ps: bool | None = None, files: bool = True) -> Expanded:
     """Every shell text and code body the command runs, as far as text can show it. `ps` says the
@@ -840,18 +938,31 @@ def expand(command: str, cwd: str = "", depth: int = 0, out: Expanded | None = N
     toks_all = [tokens(s) for s in segs]
     if any(_executor_words(s, toks) for s, toks in zip(segs, toks_all)):
         inner_ps = ps or any(prog(t) in PS or prog(t) in STDIN_EVAL for toks in toks_all for t in toks)
-        for toks in toks_all:
-            for t in toks:
+        for si, toks in enumerate(toks_all):
+            for k, t in enumerate(toks):
                 m = QUOTED_VALUE.match(t)  # alias gp='…', a NAME='…' handed on to a runner
                 if m:
                     expand(m.group(2), cwd, depth + 1, out, inner_ps)
                 if len(t) > 2 and t[0] == t[-1] and t[0] in "'\"":
                     inner = t[1:-1]
-                    if inner.strip().startswith("$") and not inner.strip().startswith("$("):
+                    data = out.files and _data_word(toks, k, ps, cwd, segs, si, command)
+                    if inner.strip().startswith("$") and not inner.strip().startswith("$(") and not data:
                         out.opaque.append("a shell handed a variable to run")
-                    expand(inner, cwd, depth + 1, out, inner_ps)
+                    if data:  # still read for the words it holds, but no file it names is read (0414)
+                        out.files = False
+                        try:
+                            expand(inner, cwd, depth + 1, out, inner_ps)
+                        finally:
+                            out.files = True
+                    else:
+                        expand(inner, cwd, depth + 1, out, inner_ps)
     cur, piped_files, prev_sep, prev_vis = cwd, [], "", False
-    for (seg, sep), toks in zip(ops, toks_all):
+    for si, ((seg, sep), toks) in enumerate(zip(ops, toks_all)):
+
+        def lit(tok: str, si: int = si) -> str:
+            """A script path held in a variable the line set to a literal (observation 0414)."""
+            return (None if ps else literal_var(tok, segs, si)) or tok
+
         target = cd_target(seg)
         if target:
             cur = resolve(target, cur)
@@ -896,7 +1007,7 @@ def expand(command: str, cwd: str = "", depth: int = 0, out: Expanded | None = N
                 if any("c" in o.lstrip("-") and not o.startswith("--") for o in opts) or p == "wsl":
                     pass  # the command string is unwrapped as a quoted token above
                 elif args:
-                    _run_file(args[0], cur, depth, out, shell=True)
+                    _run_file(lit(args[0]), cur, depth, out, shell=True)
                 elif i == 0:
                     stdin_runner = True
             elif p == "cmd":
@@ -904,7 +1015,7 @@ def expand(command: str, cwd: str = "", depth: int = 0, out: Expanded | None = N
                 if after and SHELL_FILE.search(unquote(after[0])):
                     _run_file(after[0], cur, depth, out, shell=True)
             elif p in ("source", ".") and i == 0 and rest:
-                _run_file(rest[0], cur, depth, out, shell=True)
+                _run_file(lit(rest[0]), cur, depth, out, shell=True)
             elif p in STDIN_EVAL and not rest:
                 stdin_runner = True
             elif p in INTERPRETERS:
@@ -918,12 +1029,16 @@ def expand(command: str, cwd: str = "", depth: int = 0, out: Expanded | None = N
                     if module:
                         pass
                     elif args:
-                        _run_file(args[0], cur, depth, out, shell=False)
+                        _run_file(lit(args[0]), cur, depth, out, shell=False)
                     elif i == 0 or rest == ["-"]:
                         stdin_runner = True
                 break
-        if toks:
-            first = toks[1] if toks[0] == "&" and len(toks) > 1 else toks[0].lstrip("&")
+        # The command word: past `NAME=value` assignments, which set a variable and run nothing
+        # (`S=x/new-observation.sh` alone, observation 0414; `FOO=1 ./run.sh` runs run.sh).
+        word0 = next((k for k, t in enumerate(toks) if not re.match(r"^[A-Za-z_]\w*=", t)), None)
+        if word0 is not None:
+            head = toks[word0:]
+            first = head[1] if head[0] == "&" and len(head) > 1 else head[0].lstrip("&")
             if SHELL_FILE.search(unquote(first.strip())):
                 _run_file(first, cur, depth, out, shell=True)
         if progs and progs[0] in READERS:
