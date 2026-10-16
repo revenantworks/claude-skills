@@ -138,6 +138,12 @@ blocks may be tables: the guard reads the first pipe table whose header holds `m
 and `surface` as the unit rows, and a refusal names the table it read (observation 0361). So no
 header block carries all three of those words in its header.
 
+- **Controller** (observation 0408) — one line, `controller session: <session id>`, written when
+  the run is claimed and rewritten when a resumed session takes it over. The run's actuals belong
+  to that session only: a cost record or hook that writes "for the active run" checks this line
+  (or the dispatch flag's session id, or `CLAUDE_DISPATCH_LEDGER`), never the newest ledger by
+  modification time (`references/mods.md`, D7).
+
 - **Plan status** (observations 0101, 0113, 0117, 0147, 0158) — one table, `item | built | next | blocked-by`, for the
   plan the run serves. Confirm each dependency exists at HEAD by symbol (a grep for the function
   or constant), never by a sentence in a plan file. A landing out of order records which items it
@@ -215,6 +221,13 @@ in the working tree but never committed is exactly as recoverable as a row never
 public repo the same commit goes to the private companion repo where one exists; otherwise the
 record is disk-only and the header says so. Run-record commits carry `[skip ci]` where the
 workflow's `paths-ignore` does not already cover them (`references/meters.md`).
+
+**The row write is the launch's precondition, never its batch-mate** (observation 0425). Write
+and verify the unit's `dispatched` row in one call — a read or grep of the new row — and launch
+the unit in a later call. In one batch, a write that fails (a parse error, a denied command) does
+not stop the launch, and the guard, which checks that *an* open row exists, passes it on an older
+row: twice in one run a unit ran with no row of its own. This rule is the interim; the structural
+fix is a guard that binds the launch to its own unit id.
 
 **Never edit tracked run records while that repo's local CI runs** (observation 0364). A local
 CI script that ends by resetting the tree (`git checkout -- .`, as hosted CI does) discards every

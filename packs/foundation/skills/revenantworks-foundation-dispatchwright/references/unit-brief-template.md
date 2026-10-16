@@ -86,6 +86,13 @@ touches this repo in this window."] No other unit writes here while you run.
 Reconcile diffs `<base>..<your sha>` by name; any other path makes the row unverified (observation
 0183). A needed file outside this list is a question to the controller, not an edit.]
 
+**Never read:** [mandatory, read-only units included — read-only is not a licence to look
+everywhere. The protected paths of the estate (frozen backups, credential files, the private
+names list) and the hard rules of every repo or store the question leads to, not only the repo
+under review. A question that can only be answered from a protected store is answered by the
+controller or by an owner step, never handed to a unit (observation 0411: two read-only review
+units opened a frozen backup folder because the brief named the question and not the rule).]
+
 **Shared content in your file:** [anything in the file you own that also appears in a file another
 writer owns — a table, a string set, a constant, a task id — and how it was settled: settled
 centrally (reproduce it exactly), owned by another unit (quote that file), or "none found". Shared
@@ -147,7 +154,10 @@ push, read the remote run's result and report a red run on your row. Resolve the
 databaseId,headSha,status,conclusion`); an empty run id fails loudly, never reads as green
 (observation 0251). **A step the local runner skips is not green** (observation 0354): when a CI
 step cannot run here (a missing linter, a Linux-only tool), the report says `partial: <step>
-skipped` and the land waits for a run that covers it. **A check that fails on any run of the same
+skipped` and the land waits for a run that covers it. The same holds for a gate that needs a
+secret only one task holds (a salted name scan, a key-bound check): the brief names the task that
+runs it, and the unit reports `<gate> pending — runs in <task>` as an open item, never as a pass
+(observation 0396). **A check that fails on any run of the same
 tree is red** (observation 0353): never call it a flake and push on a lucky pass. Fix it, or take
 the verdict of a clean environment (the CI container, a fresh clone). A check that fails only when
 units share state has a hidden input; that is a finding, not noise.]
@@ -168,7 +178,11 @@ batch split, so no call is cut off mid-run (observation 0196). **Large files:** 
 over about 20k characters the unit will meet, with its size, and say skim or grep, not read
 whole — read-only research units that read large references whole ran 1.5-1.9x their cap. The controller reads your actual
 tokens, calls and minutes from the harness notice; a count you report yourself is marked
-unverified (observations 0144, 0165). **Commit before the last 10 calls** of the cap, and verify
+unverified (observations 0144, 0165). **An owner budget stays one number** (observation 0400):
+a brief that carries an owner-approved figure says "in total" and names the split across
+everything that spends it, or asks the unit to propose a split; the verifier sums every cap the
+unit wrote and compares the sum with the decision record (one 800k approval became two 800k
+caps). **Commit before the last 10 calls** of the cap, and verify
 each edit landed (a read or a grep of the changed line) before a commit message names it
 (observation 0352): units that ran past their cap left half-landed work and a message claiming an
 edit that failed. Where a hook enforces the cap, it is the barrier; this line is the reminder.]
@@ -271,6 +285,15 @@ path.]
   land. A brief that says "copy it to the run dir" contradicts the guard.
 - **Scratch space is per unit:** `<scratchpad>/<unit_id>/` or unit-prefixed file names. Parallel
   units that shared one scratchpad overwrote each other's helper script.
+- **A worktree keeps its repo's folder name** (observations 0424, 0394) when the repo's tests
+  resolve paths from the checkout's location: `<scratch>/<unit_id>/<repo-name>`, never
+  `<scratch>/wt-<unit_id>`. A test that reads its parent folder's name, or counts sibling
+  worktrees as extra clones, fails in every copy but the original. Where the brief cannot avoid
+  such a location, it lists those tests as known location failures with the reason.
+- **"Fails on base too" is checked where the base normally runs** (observation 0424): in the main
+  checkout, or in a worktree with the same folder name — never only in the worktree under test.
+  A base re-run in the same unusual place proves the place, not the base; one such re-run logged
+  two location failures as "pre-existing on main".
 - Every prohibition in this brief carries its runnable exception where one exists: if you believe
   you need one, the exception names the exact command; otherwise stop and ask.
 
@@ -310,6 +333,11 @@ path.]
 - **Read the rebuild path before you cut anything from a generated collection.** Terminal states
   count as entries, so a cut is a tombstone the generator never re-adds. Read the regenerating
   function first and say what it treats as handled (observation #0053).
+- **A file pinned by hash is exempt from every conversion** (observation 0395). A row that pins a
+  file's bytes (a SHA-256 fixture, a golden file) adds a `-text` (or `binary`) line for those paths
+  to `.gitattributes` in the same commit, and its test asserts the attribute is set: on a Windows
+  checkout with `core.autocrlf` the files arrive with CRLF and every pinned hash fails, while Linux
+  CI stays green.
 - **A tool invocation pasted into this brief is a claim, not a measurement.** Meet a stated goal
   any way that works and report what you measured; an asserted result is calibrated here or marked
   unverified (observations #0035, #0036).
@@ -410,6 +438,11 @@ Add the block that matches the unit's job; leave the others out.
   incomplete, and that is a finding for the unit that owns the control, not a table to fill by
   hand. Its brief cites godotsmith `determinism-and-state.md` section 3a. Rows that move no pins
   (view lanes, tooling) are not in the arc and land when ready.
+- **Rename or retirement sweep** (observation 0397): two passes. First, a filter that keeps
+  record lines (`retired`, `folded`, `renamed`, `from the`, `was`), which must carry the old name.
+  Second, one line per successor on whether its mechanism matches the retired tool's; where it
+  does not, the unit rewrites the sentence, never swaps the word. Renaming a tool is not renaming
+  what it does: a word swap once nearly said a successor kept its definitions where it does not.
 - **Briefs written ahead**: write the next unit's brief while the current unit runs (a
   read-only prep unit or the controller), so a finishing unit is followed at once by its
   successor. A brief written ahead goes stale: before launch, run a join check against the
