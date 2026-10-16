@@ -2,6 +2,8 @@
 
 ## [1.0.0] — 2026-10-01
 
+2026-10-16 (full observation review, U21): `rewrite-recipes.md` carries a clean start's bindings (secrets, variables, security settings) before the first push and re-points claude.ai connections in After, step 7 (observation 0436); `policy-format.md` says an enforcing hook refuses, never only warns (observation 0434).
+
 First public release. Keeps the owner's identity and secrets out of anything public: what would
 leak if this were published now, what could steer or over-empower an agent that reads it, and which
 names and identities may appear on each surface. (The naming policy came from the retired

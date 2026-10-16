@@ -134,6 +134,15 @@ It lists the five largest new blobs and the total, and exits 1 when one is over 
     git push --force-with-lease origin <branch-1> <branch-2>
     git push --force-with-lease origin <tag-1> <tag-2>
 
+**Clean start: carry the bindings before the first push** (observation 0436). Rebuilding a repo
+under its old name (rename the old one to `<name>-old`, create a new one) moves everything bound
+to the repo itself, not its name, to the `-old` copy: claude.ai project connections, secrets and
+variables, branch protection, Dependabot and security settings, webhooks and app installs. Before
+the new repo's first push, list the old repo's secrets and variables by name (`gh secret list`,
+`gh variable list`), set each on the new repo from a local source or ask the owner (never print a
+value), and re-apply the security settings: a CI that reads a guard secret fails closed on the
+first push without it.
+
 ## After
 
 1. Re-clone every copy of the repo: the rig checkout, worktrees, other machines, cloud
@@ -157,3 +166,7 @@ It lists the five largest new blobs and the total, and exits 1 when one is over 
    the commit map until the user says otherwise.
 6. Record counts only: rules, commits rewritten, refs pushed, cited ids re-pointed. No values,
    no fingerprints of names in a tracked file.
+7. **After a clean start, re-point every connection.** List every claude.ai project and routine
+   that names the repo, each with the line "remove and re-add the connection" (a project connects
+   by repo id, so it keeps reading the frozen `-old` copy with no error). The `-old` repo is
+   deleted only once no binding points at it (observation 0436).

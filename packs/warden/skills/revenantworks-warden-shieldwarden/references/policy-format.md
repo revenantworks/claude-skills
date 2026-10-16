@@ -86,6 +86,12 @@ Rules for this file, in the order they matter:
 | `values-file-in-repo` / `values-file-legacy` | lint | A values file inside a git work tree, or one named by the legacy `values_file` field: not used; `fix` is the one `warden_private.py adopt` command that moves it |
 | `values-key-*`, `label-contains-value`, `codename-key-unknown`, `surface-class-unknown` | lint | Policy and values-file hygiene |
 
+**A hook that enforces this policy refuses; it never only warns** (observation 0434). A pre-commit
+or pre-push privacy hook in warn mode printed one line for 473 user-folder lines in a bulk move,
+and the commit went through. The shipped default blocks user-folder paths, names-list entries and
+email addresses; a warn mode needs an explicit, dated accepted list, and a warning seen during a
+bulk move is a stop.
+
 Each finding carries `rule`, `severity`, `where`, `field`, and where relevant `commit` (12 hex),
 `class`, `key`, `use`, `fp`, `fix`, `setup`. `fp` is an HMAC-SHA256 over the value, keyed by the
 environment variable `--salt-env` names: equal values give equal fingerprints within one salt, so
