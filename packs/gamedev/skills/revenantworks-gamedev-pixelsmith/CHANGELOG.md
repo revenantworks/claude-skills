@@ -7,6 +7,12 @@ with every asset drawn once.
 
 Description cut to about 600 characters, main use case first (2026-10-08).
 
+2026-10-16 (observation 0415, a live SDXL pilot): the diffusion prompt asks for a plain light grey
+ground, never a colour word, and lists drop and cast shadows as negatives; the contract gains step
+1b, a corner flood fill to the exact key (`pixel_post.py --flatten-tol`, default 8); the pre-screen's
+`opaque_pixels` counts pixels left after the key (`opaque_before_key` keeps the old figure).
+Selftest cases for both.
+
 `pixel_post.py` refuses an `--out` that is the candidate or the spec, and an existing file
 without `--force`, with two tests (K8c, K7-3-19). Trigger eval row 10 states that Direct is the
 bare-invocation reply (K7-3-21).
