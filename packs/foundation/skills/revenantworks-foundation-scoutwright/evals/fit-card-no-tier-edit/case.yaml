@@ -1,5 +1,7 @@
 schema_version: "1.1"
 name: fit-card-no-tier-edit
 description: "Behaviour: a fit card for a new model with per-class verdicts; the tier table is left alone and the replay trial is proposed with its cost, not run."
+# Needs --scaffold: scaffold.sh copies the fixture folders into the run's working
+# folder (context.add_dirs never reached the run on Windows; scaffold trial 2026-10-16).
 context:
-  add_dirs: [resources]
+  scaffold_script: scaffold.sh

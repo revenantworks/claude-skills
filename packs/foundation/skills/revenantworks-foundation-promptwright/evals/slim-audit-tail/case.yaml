@@ -1,5 +1,7 @@
 schema_version: "1.1"
 name: slim-audit-tail
 description: "Behaviour: an audit with the optional machine-readable tail writes one machine-readable line per finding and rewrites nothing."
+# Needs --scaffold: scaffold.sh copies the fixture folders into the run's working
+# folder (context.add_dirs never reached the run on Windows; scaffold trial 2026-10-16).
 context:
-  add_dirs: [resources]
+  scaffold_script: scaffold.sh

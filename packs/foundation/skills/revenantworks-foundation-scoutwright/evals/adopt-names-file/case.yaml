@@ -1,5 +1,7 @@
 schema_version: "1.1"
 name: adopt-names-file
 description: "Behaviour: a removed settings key present in this setup becomes an act-now row naming the file, the key and the owning skill; secret values are never printed."
+# Needs --scaffold: scaffold.sh copies the fixture folders into the run's working
+# folder (context.add_dirs never reached the run on Windows; scaffold trial 2026-10-16).
 context:
-  add_dirs: [resources]
+  scaffold_script: scaffold.sh

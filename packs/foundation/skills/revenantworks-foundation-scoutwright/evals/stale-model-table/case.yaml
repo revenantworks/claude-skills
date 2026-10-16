@@ -1,5 +1,7 @@
 schema_version: "1.1"
 name: stale-model-table
 description: "Behaviour: a skill's dated model table naming a retired id is flagged stale and the skill's own refresh entry is named."
+# Needs --scaffold: scaffold.sh copies the fixture folders into the run's working
+# folder (context.add_dirs never reached the run on Windows; scaffold trial 2026-10-16).
 context:
-  add_dirs: [resources]
+  scaffold_script: scaffold.sh

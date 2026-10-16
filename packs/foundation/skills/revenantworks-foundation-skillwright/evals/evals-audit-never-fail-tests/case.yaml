@@ -1,5 +1,7 @@
 schema_version: "1.1"
 name: evals-audit-never-fail-tests
 description: "Behaviour: the never-fail lint flags constant and assertion-free tests and leaves a real test alone."
+# Needs --scaffold: scaffold.sh copies the fixture folders into the run's working
+# folder (context.add_dirs never reached the run on Windows; scaffold trial 2026-10-16).
 context:
-  add_dirs: [resources]
+  scaffold_script: scaffold.sh
