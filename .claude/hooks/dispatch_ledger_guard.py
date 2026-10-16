@@ -539,17 +539,33 @@ def ledger_has_populated_row(path: Path) -> bool:
 # Wave-execution caps (SKILL.md section 6; audit finding P1-2, 2026-08-20).
 # ---------------------------------------------------------------------------
 MAX_CONCURRENT_UNITS = 6
-CEILING_LIMIT = 12   # the highest cap a budget file may set (owner raised to 10 on reset eve, 2026-10-06)
+# The highest cap a NUMERIC budget-file ceiling may set (owner raised to 10 on
+# reset eve, 2026-10-06; 12 on 2026-10-16). It stays for numbers on purpose: a
+# typed number is where a slip lives (40 for 4), and dispatch_budget_write.py
+# refuses one over it too. Turbo's no-cap is not a number: it is
+# `"mode": "turbo"` with `"parallel_ceiling": null`, a deliberate owner answer
+# that pacewright records at turbo entry ("No cap or a number?"), so it does
+# not pass through this clamp.
+CEILING_LIMIT = 12
+NO_CAP_WORDS = ("none",)
 
 
-def concurrent_cap() -> int:
-    """6, or pacewright's unexpired budget-file parallel_ceiling when it is
-    higher (never above CEILING_LIMIT). The owner sets that ceiling; a missing,
-    expired or malformed file keeps 6. Never raises."""
+def concurrent_cap() -> int | None:
+    """The open-unit cap, or None for no cap.
+
+    - An unexpired budget file with "mode": "turbo" and "parallel_ceiling"
+      null (or the string "none") -> None: turbo with no lane cap (owner
+      2026-10-16). The key must be present; a turbo file without it keeps 6.
+    - An unexpired numeric parallel_ceiling -> that number, never below 6 and
+      never above CEILING_LIMIT (unchanged, in any mode).
+    - A missing, expired or malformed file, or null outside turbo -> 6.
+    Never raises; every doubt keeps 6."""
     try:
         override = os.environ.get("DISPATCH_BUDGET_FILE")
         p = Path(override) if override else Path.home() / ".dispatch" / "budget-decision.json"
         d = json.loads(p.read_text(encoding="utf-8"))
+        if not isinstance(d, dict):
+            return MAX_CONCURRENT_UNITS
         exp = d.get("expires_at")
         if not isinstance(exp, str):
             return MAX_CONCURRENT_UNITS
@@ -557,6 +573,9 @@ def concurrent_cap() -> int:
         if datetime.strptime(exp, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc) <= datetime.now(timezone.utc):
             return MAX_CONCURRENT_UNITS
         c = d.get("parallel_ceiling")
+        if d.get("mode") == "turbo" and "parallel_ceiling" in d and (
+                c is None or (isinstance(c, str) and c.strip().lower() in NO_CAP_WORDS)):
+            return None
         if isinstance(c, bool) or not isinstance(c, int):
             return MAX_CONCURRENT_UNITS
         return max(MAX_CONCURRENT_UNITS, min(c, CEILING_LIMIT))
@@ -1261,7 +1280,33 @@ def selftest() -> int:
         bud.write_text("{not json", encoding="utf-8")
         if concurrent_cap() != 6:
             problems.append("concurrent_cap: a malformed budget file did not keep 6")
+        # Turbo with no lane cap (owner 2026-10-16): "mode": "turbo" plus a null
+        # (or "none") parallel_ceiling, unexpired, lifts the cap; every other
+        # shape keeps the numeric rules above.
+        turbo_cases = (
+            ("turbo + null ceiling = no cap", {"mode": "turbo", "parallel_ceiling": None, "expires_at": fut}, None),
+            ("turbo + 'none' ceiling = no cap", {"mode": "turbo", "parallel_ceiling": "None", "expires_at": fut}, None),
+            ("turbo expired = 6", {"mode": "turbo", "parallel_ceiling": None, "expires_at": past}, 6),
+            ("turbo + numeric 8 = 8", {"mode": "turbo", "parallel_ceiling": 8, "expires_at": fut}, 8),
+            ("turbo + numeric 40 still clamps", {"mode": "turbo", "parallel_ceiling": 40, "expires_at": fut},
+             CEILING_LIMIT),
+            ("turbo without the key = 6", {"mode": "turbo", "expires_at": fut}, 6),
+            ("null outside turbo = 6", {"mode": "pace", "parallel_ceiling": None, "expires_at": fut}, 6),
+            ("'none' outside turbo = 6", {"mode": "reset-eve", "parallel_ceiling": "none", "expires_at": fut}, 6),
+            ("turbo + junk string = 6", {"mode": "turbo", "parallel_ceiling": "lots", "expires_at": fut}, 6),
+            ("turbo + no expiry = 6", {"mode": "turbo", "parallel_ceiling": None}, 6),
+            ("a JSON list = 6", [1, 2], 6),
+        )
+        for label, body, want in turbo_cases:
+            bud.write_text(json.dumps(body), encoding="utf-8")
+            if concurrent_cap() != want:
+                problems.append(f"concurrent_cap: {label} gave {concurrent_cap()!r}, want {want!r}")
+        bud.write_text('{"mode": "turbo", "parallel_ceiling": nul', encoding="utf-8")
+        if concurrent_cap() != 6:
+            problems.append("concurrent_cap: a malformed turbo budget file did not keep 6")
         os.environ["DISPATCH_BUDGET_FILE"] = str(tmp / "no-budget.json")
+        if concurrent_cap() != 6:
+            problems.append("concurrent_cap: an absent budget file did not keep 6")
 
         mixed_terminal = tmp / "mixed_terminal.md"
         rows = [_row(f"U{i}") for i in range(1, 6)] + [
@@ -1426,6 +1471,31 @@ def selftest() -> int:
                 problems.append(f"{label}: expected exit {expected}, got {code}")
             if code not in (0, 2):
                 problems.append(f"{label}: exit {code} is neither allow (0) nor block (2)")
+
+        # Turbo with no lane cap, as real exit codes (owner 2026-10-16). The
+        # 7-open-unit ledger above is refused with no budget file (the positive
+        # control: the old cap still bites) and allowed under turbo + null.
+        overcap_payload = {"tool_name": "Task", "session_id": "abc", "cwd": str(tmp / "overcaprun")}
+        turbo_dir = tmp / "turbo-budgets"
+        turbo_dir.mkdir()
+        turbo_e2e = (
+            ("turbo e2e: no budget file, 7 open units -> blocked (old cap holds)", None, 2),
+            ("turbo e2e: turbo + null ceiling, 7 open units -> allowed",
+             {"mode": "turbo", "parallel_ceiling": None, "expires_at": fut}, 0),
+            ("turbo e2e: turbo expired, 7 open units -> blocked",
+             {"mode": "turbo", "parallel_ceiling": None, "expires_at": past}, 2),
+            ("turbo e2e: pace + null ceiling, 7 open units -> blocked",
+             {"mode": "pace", "parallel_ceiling": None, "expires_at": fut}, 2),
+        )
+        for i, (label, body, expected) in enumerate(turbo_e2e):
+            bf = turbo_dir / f"b{i}.json"
+            if body is not None:
+                bf.write_text(json.dumps(body), encoding="utf-8")
+            code, out, err = _run_guard_full(overcap_payload, fresh_flag, tmp, {"DISPATCH_BUDGET_FILE": str(bf)})
+            if code != expected:
+                problems.append(f"{label}: expected exit {expected}, got {code} ({(out + err).strip()[:200]!r})")
+            if expected == 2 and "wave cap" not in err:
+                problems.append(f"{label}: the refusal does not name the wave cap: {err.strip()[:200]!r}")
 
         # --- usage windows, dispatchwright 1.3.0 -----------------------------
         # Windows files in the shape usage_windows.py writes from the documented
@@ -1676,7 +1746,8 @@ def selftest() -> int:
         "dispatch_ledger_guard selftest: OK (flag states incl. uncorrelated, "
         "ledger currency, cell validators, agent-count token parsing, and 18 real "
         "exit-code cases covering all four 2026-08-18 defects, the 2026-08-20 "
-        "wave-cap enforcement, and the 2026-09-11 observation #0022 fix; plus "
+        "wave-cap enforcement, and the 2026-09-11 observation #0022 fix; plus 13 turbo no-cap "
+        "cap cases and 4 turbo exit-code cases with the old cap as positive control (2026-10-16); plus "
         f"{len(window_cases)} usage-window cases (2026-09-17, dispatchwright 1.3.0): "
         "silent on an absent or stale file, the stop-band block (95% default or the budget file, both windows) with its resume exemption, "
         "the calibration warning with its numbers, a pre-1.3.0 ledger unchanged, "
@@ -2171,8 +2242,8 @@ def _guard(data: dict) -> int:
         return 2
 
     open_count = open_unit_count(ledger)
-    cap = concurrent_cap()
-    if open_count > cap:
+    cap = concurrent_cap()   # None = turbo with no lane cap (pacewright budget file)
+    if cap is not None and open_count > cap:
         print(
             f"dispatch_ledger_guard: {ledger} already shows {open_count} open units (dispatched or "
             f"committed, not yet pushed) -- over the {cap}-unit wave cap in "
