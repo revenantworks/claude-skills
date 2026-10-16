@@ -59,6 +59,12 @@ Report in this order:
 4. **Proposed homes** — one row per rule and per hook: now, proposed home, why.
 5. **What was not read** — MDM or server-managed policy, a plugin's own settings, a project not
    named with `--project`.
+6. **Layers no settings file binds** (observation 0404) — for cloud and routine sessions, the
+   auto-mode classifier is its own layer: a project `permissions.allow` rule does not bind it, and
+   per-routine `autoMode` is marked "not settable" (the docs, as read 2026-10-11, load it from user,
+   managed and `--settings` scopes only). The map says so beside any routine-reached project, so no
+   session promises a fix that cannot land; what such a session may do in follow-up turns is an
+   agentwright spec field (`follow-up surface`) carried in the prompt itself.
 
 ## How a home is proposed
 
