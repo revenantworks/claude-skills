@@ -14,6 +14,11 @@ git, the PowerShell tool) it:
   4. refuses unless a local-CI stamp exists for the exact commit being pushed;
   5. otherwise allows, and shows the range to Claude and to the person watching.
 
+Wired on PostToolUse as well (same matcher), it checks after the call that the remote holds what was
+pushed: a remote that did not move is reported to Claude as a failed push (`decision: block` with the
+reason) and to the owner in one line, whatever git printed (observation 0399: "Everything up-to-date"
+with two commits ahead). That pass only reads; it asks for no intent or stamp.
+
 Record an intent (the range the request named) before pushing:
   python push_gate.py intend --repo <dir> --max <N> [--head <sha>] [--ttl 900]
 Write a CI stamp by running the repo's own CI steps through ci_stamp.py.
@@ -61,6 +66,7 @@ from __future__ import annotations
 
 import argparse
 import fnmatch
+import json
 import os
 import re
 import subprocess
@@ -1054,11 +1060,74 @@ def owner_line(views: list[dict]) -> str:
     return " · ".join([f"{hl.GLYPHS['cleared']} push gate", *parts, *proofs])
 
 
+def line_moves_head(cmd: str) -> bool:
+    """True when any segment of the line runs a git command that can move HEAD (0407's list)."""
+    for seg in hl.segments(cmd):
+        toks = hl.tokens(seg)
+        k = command_index(toks)
+        if k is None or hl.prog(toks[k]) != "git":
+            continue
+        j = k + 1
+        while j < len(toks) and toks[j].startswith("-"):
+            j += 2 if toks[j] in GIT_OPTS_WITH_VALUE else 1
+        if j < len(toks) and moves_head(hl.word(toks[j]), [arg(t) for t in toks[j + 1:j + 2]]
+                                        + (["--"] if "--" in toks[j + 1:] else [])):
+            return True
+    return False
+
+
+def verify_main(ev: dict, cmd: str) -> None:
+    """PostToolUse (observation 0399): after a shell call that pushed, ask the remote whether it now holds
+    what was pushed. git once printed "Everything up-to-date" with two commits still ahead; a push the
+    remote did not take is reported as a failure, never as done. Read-only: it never blocks or refuses,
+    and it asks for no intent or stamp. Silent when the line moves HEAD after the push (the local head
+    is then not what was pushed) or when nothing was pushed."""
+    if ev.get("tool_name") not in hl.SHELL_TOOLS or not PUSH_HINT.search(hl.despliced(cmd)):
+        hl.allow()
+    try:
+        pushes = all_pushes(cmd, ev.get("cwd") or os.getcwd(), head_moves=False)
+    except PushBlock:
+        hl.allow()  # the pre-push gate refused or could not read it: nothing to compare
+    if not pushes or line_moves_head(cmd):
+        hl.allow()
+    behind, unreached = [], []
+    for push in pushes:
+        for r in ranges(push["repo"], push["args"]):
+            if r["note"].startswith("remote not reached"):
+                unreached.append(f"{r['remote']}/{r['dst']}")
+            elif r["count"]:
+                behind.append(r)
+    if behind:
+        r = behind[0]
+        noun = "commit" if r["count"] == 1 else "commits"
+        reason = (f"push gate: the remote did not move. {r['remote']}/{r['dst']} still lacks {r['count']} "
+                  f"{noun} up to {r['sha'][:12]} after this push, whatever git printed (observation 0399). "
+                  f"The push is not done. Run `git push -v {r['remote']} {r['dst']}` once, then compare "
+                  f"`git ls-remote {r['remote']} {r['dst']}` with the local head, and report the push as "
+                  "failed until they match.")
+        line = (f"{hl.GLYPHS['refused']} push gate · remote did not move · {r['remote']}/{r['dst']} lacks "
+                f"{r['count']} {noun} · {r['sha'][:7]}")
+        sys.stdout.write(json.dumps({"decision": "block", "reason": reason, "systemMessage": line}) + "\n")
+        sys.exit(0)
+    if unreached:
+        hl.allow(context=f"push gate: could not reach {', '.join(unreached)} to confirm the push landed. "
+                         "Check `git ls-remote` against the local head before reporting it done.")
+    hl.allow()
+
+
 def hook_main() -> None:
     ev, raw = hl.read_event()
     if hl.stood_down("W2"):
         sys.exit(0)
     cmd = hl.command_of(ev) if ev else ""
+    if ev and ev.get("hook_event_name") == "PostToolUse":
+        try:
+            verify_main(ev, cmd)
+        except SystemExit:
+            raise
+        except Exception:
+            hl.allow()  # a check after the fact never fails the call it follows
+
     hl.start_budget("push_gate.shape", "push gate: this push could not be checked in time.",
                     lambda: names_push(cmd or raw))
     try:

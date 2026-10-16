@@ -226,6 +226,9 @@ class HardenTests(Base):
             self.assertIn(hook, cmds)
         self.assertIn("Bash|PowerShell|Read|Write|Edit|MultiEdit|mcp__.*", cmds)
         self.assertIn("call_cap.py", json.dumps(data["hooks"]["SubagentStop"]))
+        # Observation 0399: push_gate also checks after the push that the remote moved.
+        post = data["hooks"]["PostToolUse"]
+        self.assertEqual([e["matcher"] for e in post if "push_gate.py" in json.dumps(e)], ["Bash|PowerShell"])
         self.assertEqual(data["permissions"]["allow"], ["Read"])
 
     def test_harden_can_add_a_chosen_subset_of_hooks(self):
@@ -238,6 +241,7 @@ class HardenTests(Base):
         self.assertIn("heredoc_guard.py", cmds)
         self.assertNotIn("push_gate.py", cmds)
         self.assertNotIn("call_cap.py", cmds)
+        self.assertNotIn("PostToolUse", cmds)
 
     def test_harden_twice_adds_no_duplicate_hooks(self):
         p = self.settings({})

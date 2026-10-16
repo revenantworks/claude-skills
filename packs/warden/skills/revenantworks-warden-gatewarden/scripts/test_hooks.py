@@ -285,6 +285,41 @@ class PushGateTests(unittest.TestCase):
             self.assertEqual(code, 0, f"{line}: {err}")
             self.assertIn("commits  3", out, line)
 
+    def post(self, cmd: str, stderr: str = "Everything up-to-date\n") -> dict:
+        ev = bash(cmd, self.work, hook_event_name="PostToolUse")
+        ev["tool_response"] = {"stdout": "", "stderr": stderr, "interrupted": False}
+        return ev
+
+    def test_post_push_reports_a_remote_that_did_not_move(self):
+        # Observation 0399: git printed "Everything up-to-date" with commits still ahead. After the push
+        # the gate asks the remote; a remote that lacks the pushed head is a failed push, said loudly.
+        for line in ("git push origin main", "git push", "git push -q origin main && git status -sb"):
+            code, out, err = run_hook("push_gate.py", self.post(line))
+            self.assertEqual(code, 0, f"{line}: {err}")
+            data = json.loads(out)
+            self.assertEqual(data.get("decision"), "block", line)
+            self.assertIn("did not move", data["reason"], line)
+            self.assertIn("3 commits", data["reason"], line)
+            self.assertIn("did not move", data["systemMessage"], line)
+
+    def test_post_push_is_silent_when_the_remote_holds_the_head(self):
+        # 0399 negative controls: a push that landed, a line with no push, a line that moves HEAD after it.
+        git(self.work, "push", "origin", "main")
+        for line in ("git push origin main", "git status", "echo push it later",
+                     "git push origin main && git commit -qam y"):
+            if "commit" in line:
+                Path(self.work, "a.txt").write_text("5\n")
+                git(self.work, "commit", "-am", "after the push")
+            code, out, err = run_hook("push_gate.py", self.post(line, stderr=""))
+            self.assertEqual((code, out.strip()), (0, ""), f"{line}: {err}")
+
+    def test_post_event_never_runs_the_pre_push_checks(self):
+        # 0399: the PostToolUse pass only reads; no intent or stamp is asked for after the fact.
+        git(self.work, "push", "origin", "main")
+        code, out, err = run_hook("push_gate.py", self.post("git push --force origin main", stderr=""))
+        self.assertEqual(code, 0, err)
+        self.assertNotIn("intent", out + err)
+
     def test_powershell_tool_is_gated(self):
         code, _, _ = run_hook("push_gate.py", bash("git push", self.work, tool="PowerShell"))
         self.assertEqual(code, 2)

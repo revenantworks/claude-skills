@@ -251,6 +251,14 @@ def harden(args, platform) -> int:
                 cmd = f'python "{args.add_hooks.rstrip("/")}/call_cap.py"'
                 stop.append({"hooks": [{"type": "command", "command": cmd, "timeout": 30}]})
                 notes.append("hook call_cap.py on SubagentStop")
+        # push_gate also runs after a shell call, to check that a push moved the remote (observation 0399).
+        if wanted is None or "push_gate" in wanted:
+            post = data["hooks"].setdefault("PostToolUse", [])
+            if "push_gate.py" not in json.dumps(post):
+                cmd = f'python "{args.add_hooks.rstrip("/")}/push_gate.py"'
+                post.append({"matcher": "Bash|PowerShell",
+                             "hooks": [{"type": "command", "command": cmd, "timeout": 30}]})
+                notes.append("hook push_gate.py on PostToolUse")
         # The weekly digest: one line at session start, once a week, never a prompt.
         start = data["hooks"].setdefault("SessionStart", [])
         if "warden_digest.py" not in json.dumps(start):
