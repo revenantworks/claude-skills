@@ -144,7 +144,7 @@ verdict (never invent one). Then **one purchase link for the top pick, retrieved
 from memory; where price or seller varied, give the observed range and say to confirm.
 
 Then the **flip condition** (the single fact or weighting change that would move the pick) and
-the **confidence line**, from the **deciding cells** only. Any deciding cell that is
+the **confidence line**, each under its own label (`Flip condition:`, `Confidence:`), from the **deciding cells** only. Any deciding cell that is
 [vendor-reported], [estimate] or [unverified] is named, and the line does not claim high
 confidence. The line says whether the pick rests on a **figure** or on an **ordering or
 threshold**; where every readable source agrees on the ordering, say *the verdict is robust
