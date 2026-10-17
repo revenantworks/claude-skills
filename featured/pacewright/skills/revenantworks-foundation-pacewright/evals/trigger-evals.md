@@ -15,7 +15,7 @@ would invoke pacewright, and compare against the expected column.
 
 | # | Query | Why |
 |---|---|---|
-| 1 | "How much will this cost and will it fit in my window?" | "whether planned work fits before a reset" — a fit against the usage windows. Moved from dispatchwright #24. |
+| 1 | "Tonight's work is four Opus runs of about 300k tokens each. How much will this cost and will it fit in my window?" | "whether planned work fits before a reset" — a fit against the usage windows. Moved from dispatchwright #24; the planned work is named in the query since 2026-10-16 (a bare "this" drew a clarifying question and no load in the owner's eval run). |
 | 2 | "Fit the plan into what I have left this week." | The weekly window named as the constraint on planned work — `fit`. Moved from dispatchwright #25. |
 | 3 | "I have 40% of the 5-hour window left — what can we run now?" | A 5-hour reading handed in, asking what may launch — `check`. Moved from dispatchwright #26. |
 | 4 | "Break the waves up to fit." | The fit's split rule in the user's register. Moved from dispatchwright #27; a known exposure (see the boundary notes). |

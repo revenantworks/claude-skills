@@ -2,6 +2,8 @@
 
 ## [1.0.0] — 2026-10-01
 
+2026-10-16 (owner eval run, U38): trigger row 1 names the planned work; a bare "this" drew a clarifying question and no load.
+
 2026-10-16 (thread sweep, U28 and U35): the suite ceiling in modes.md is now CPU-gated (start below 2, else under the cap while CPU is under its target, default 75%) with the cap read from ~/.dispatch/suite-cap.json; a wrapper and its suite share one slot; runs log to ~/.dispatch/suite-perf.jsonl for `suite_slot.py report`.
 
 2026-10-16 (owner ruling "both" on observation 0446): beside the derived machine cap, a fixed ceiling of 4 suite processes machine-wide across every session and thread (the stricter holds), each process counted, every background suite at below-normal priority with no window, through dispatchwright's `scripts/suite_slot.py` where installed (`modes.md`, Turbo).
