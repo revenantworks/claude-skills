@@ -2,6 +2,8 @@
 
 ## [1.0.0] — 2026-10-13
 
+2026-10-16 (owner eval run, U38): a measured-break row carries the probe's own pixel figure; the reply to `behaviour-probe-overflow` cited a derived width, not the 92 and 37 px the probe reported.
+
 First public release. Design direction for screens and the measured proof that they fit. It never
 defines a palette and never builds the screen.
 

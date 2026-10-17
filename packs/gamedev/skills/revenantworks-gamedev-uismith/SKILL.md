@@ -66,7 +66,7 @@ Any request to design, lay out or review the design of a screen: "design the pau
 1. **Generated page first** (law 4), only when a generator builds the page: rebuild and probe that build. When the copy is older than its generator, the reply opens with the stale line, both commits named (the user's word counts when git cannot confirm), plans a rebuild from the generator into a scratch folder, and probes that build, never the copy. Fixes target the generator (`probe.md` section 1). A hand-written page, or a copy no older than its generator, gets no stale line.
 2. **Probe** it (web surfaces), or take the user's screenshots per resolution (game UI, `surfaces.md`).
 3. **Walk the checklist** from `direction.md` over the page and its source.
-4. **Rank the findings**: measured breaks first (overflow, clipped text, off-screen, focus lost), then missing states, then hierarchy and spacing, then taste questions. Each row carries where, what, the exact change and Apply, Optional or Skip.
+4. **Rank the findings**: measured breaks first (overflow, clipped text, off-screen, focus lost), then missing states, then hierarchy and spacing, then taste questions. Each row carries where, what (with the probe's own pixel figure for a measured break), the exact change and Apply, Optional or Skip.
 5. A clean audit names what was clean and what was not run. A critique of a built page that is not about fit, and a scored six-area review with a ship verdict, are brandscribe's `ui`; name it.
 
 ## Restraint
