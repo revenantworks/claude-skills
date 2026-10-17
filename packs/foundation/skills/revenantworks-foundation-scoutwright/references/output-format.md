@@ -15,6 +15,9 @@ inside a routine leaves the commit to the routine. With no file tools the change
 
 ## 2. The change report
 
+Keep the eight section headings word for word, even in a plain-language reply: readers and the
+next sweep find sections by them.
+
 ```markdown
 # Claude platform change report — YYYY-MM-DD
 

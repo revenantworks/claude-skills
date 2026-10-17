@@ -2,6 +2,8 @@
 
 ## [1.0.0] — 2026-10-01
 
+2026-10-16 (owner eval run, U38): `output-format.md` keeps the eight change-report headings word for word; a plain-language reply had renamed section 5 and dropped the word "undocumented" (case `docs-page-diff`).
+
 2026-10-08 (K8 fix round): trigger row 26 names a current feature (`/dash`); row 31 and a fourth edge note pair `fit` with pacewright's `baseline` (audit K7-2-10, -27).
 
 2026-10-08: description cut to about 600 characters, main use case first; trigger phrases and seams kept (routing proof: K9 evals).
