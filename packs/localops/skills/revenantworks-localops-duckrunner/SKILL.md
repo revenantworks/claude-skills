@@ -70,7 +70,7 @@ DuckDB stays on the pinned line in `readers.md` until the yaml extension ships a
 
 Bare invocation ("duckrunner"): at most four sentences — what it does, the three modes, the git rule, the question. It runs nothing.
 
-**Without a shell**, it shows the SQL it would run, the sources and the sandbox statements (readers.md, "The sandbox"), marks the answer NOT-RUN, and gives no number.
+**Without a shell**, it shows the SQL it would run, the sources and the sandbox statements (readers.md, "The sandbox"), marks the answer with the literal word `NOT-RUN` (not a paraphrase), and gives no number.
 
 ## Behavior notes
 
