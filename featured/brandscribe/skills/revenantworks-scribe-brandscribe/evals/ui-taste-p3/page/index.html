@@ -3,21 +3,27 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Fixture</title>
+<title>Release notes, version 3.4 (October 2026)</title>
 <style>
 body { background: #ffffff; color: #1a1a1a; font-family: system-ui, sans-serif; font-size: 1rem; }
 .wrap { max-width: 65ch; margin: 0 auto; padding: 24px; }
 .kicker { text-transform: uppercase; letter-spacing: 0.14em; color: #4b5563; }
 .title { background: linear-gradient(90deg, #6d28d9, #db2777); -webkit-background-clip: text; background-clip: text; color: transparent; }
 a { color: #1d4ed8; }
+li { padding: 6px 0; }
 ::selection { background: #dbeafe; }
 :focus-visible { outline: 2px solid #1d4ed8; outline-offset: 2px; }
 </style>
 </head>
 <body>
 <main class="wrap"><p class="kicker">Release notes</p>
-<h1 class="title">What changed this month</h1>
-<p>Three fixes landed and one setting moved. Each item below links to its change.</p>
-<ul><li><a href="#one">Faster search on large folders</a></li><li><a href="#two">Export keeps your filters</a></li></ul></main>
+<h1 class="title">What changed in version 3.4</h1>
+<p>Two fixes landed in October 2026. Each item below links to its change.</p>
+<ul><li><a href="#search">Faster search on large folders</a></li><li><a href="#export">Export keeps your filters</a></li></ul>
+<h2 id="search">Faster search on large folders</h2>
+<p>Search no longer reads every note in a folder before it shows the first results.</p>
+<h2 id="export">Export keeps your filters</h2>
+<p>An export now holds the tag and date filters that were active when you started it.</p>
+</main>
 </body>
 </html>

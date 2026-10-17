@@ -2,6 +2,8 @@
 
 ## [1.0.0] — 2026-10-01
 
+2026-10-16 (owner eval run, U38): rule 1 offers `build` by name; the reply to `no-definition-apply` described it without the name. Case `ui-taste-p3`'s fixture is now floor-clean as its description says (it had dead anchors, a count that did not match the list and a placeholder title).
+
 First public release. A brand-definition keeper that turns one written definition into the files
 Claude and people build on, plus a neutral UI floor for any built page. It ships with no brand.
 
