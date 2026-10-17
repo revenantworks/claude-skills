@@ -2,6 +2,8 @@
 
 ## [1.0.0] — 2026-10-01
 
+2026-10-16 (owner eval run, U38): case `trigger-slim-cost-cue` now carries the system prompt it asks to cut; with none pasted the run asked for it and never loaded the skill.
+
 2026-10-16 (weekly observation review): `anti-patterns.md` adds 13, assumed memory and frozen state in unattended prompts — every remembered item gets a source or a date rule, and a plan's target date is never a record (observations 0405, 0406).
 
 2026-10-08 (K8 fix round): states why it stays model-invocable; an edge note in the trigger evals routes a standalone suite to skillwright `evals` (audit K7-1-09, -11).
