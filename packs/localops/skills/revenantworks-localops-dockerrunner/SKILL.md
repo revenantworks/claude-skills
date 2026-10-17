@@ -57,7 +57,7 @@ Headroom is the user's number (`gpu-config.json`, key `docker`). Absent, the scr
 
 ## 3. The WSL memory cap
 
-The user's rule: **about a third of installed RAM**. The audit reads the real figure first and proposes `floor(RAM ÷ 3)` GB. `wslconfig_plan.py --memory-gb N` writes `.wslconfig.proposed` beside the original, keeps every other line and the line ending, and re-reads its own output before writing. Show its diff, then hand over its `owner_command` — one line that backs up the original, copies the proposal in and runs `wsl --shutdown` — with its warning: **that stops every distro and every running container.** Never edit `.wslconfig` in place.
+The user's rule: **about a third of installed RAM**. The audit reads the real figure first and proposes `floor(RAM ÷ 3)` GB. `wslconfig_plan.py --memory-gb N` writes `.wslconfig.proposed` beside the original, keeps every other line and the line ending, and re-reads its own output before writing. Show its diff, then hand over its `owner_command` — one line that backs up the original, copies the proposal in and runs `wsl --shutdown` — with its warning: **that stops every distro and every running container.** Never edit `.wslconfig` in place, and never tell the user to add the line by hand: without a shell, hand over the `wslconfig_plan.py` command and the same owner command shape.
 
 ## 4. up and down — the plan first
 

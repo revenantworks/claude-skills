@@ -2,6 +2,8 @@
 
 ## [1.0.0] — 2026-10-01
 
+2026-10-16 (owner eval run, U38): without a shell the WSL cap goes out as the plan command and owner command, never a line to add by hand (case `wslconfig-default`).
+
 First public release. Runs Docker Desktop on Windows and the WSL2 virtual machine under it, and
 checks RAM and disk before any container work starts.
 
