@@ -2,6 +2,8 @@
 
 ## [1.0.0] — 2026-10-01
 
+2026-10-16 (owner eval run, U38): humanize's closing line names a removed emoji or dash and never reprints it (case `humanize-facts-frozen`); the description's skillwright seam names a skill's own files (near-miss `nearmiss-skill-file` loaded commscribe); trigger row Y1 carries its text instead of `[paste]`.
+
 First public release. Writes and cleans up messages and docs for their channel and reader, in a
 plain human voice with no AI tells, and never moves a fact while doing it. It never sends.
 

@@ -10,7 +10,7 @@ Cold run 2026-10-01 (run J1): blind list from `tools/blind_queries.py`, judged o
 
 | # | Query | Expected | Native case |
 |---|---|---|---|
-| Y1 | "Make this Slack update less robotic, it reads like a chatbot wrote it: [paste]" | commscribe (humanize) | `trigger-slack-robotic` |
+| Y1 | "Make this Slack update less robotic, it reads like a chatbot wrote it: 'Great question! I'm excited to share that the onboarding revamp is now live. Moreover, sign-up completion rose from 61% to 74% this week.'" | commscribe (humanize) | `trigger-slack-robotic` |
 | Y2 | "Turn these commit notes into release notes for v2.4 on GitHub." | commscribe (draft, release notes) | `trigger-release-notes` |
 | Y3 | "Score this customer email for tone and AI tells. Don't rewrite it." | commscribe (audit) | `trigger-score-email` |
 | Y4 | "Learn my writing voice from these three LinkedIn posts so future drafts sound like me." | commscribe (voice learn) | `trigger-learn-voice` |
