@@ -2,6 +2,8 @@
 
 ## [1.0.0] — 2026-10-01
 
+2026-10-17 (eval rerun, U41): `contrast.md`: a table cell holds the gap and a verdict only, never a remedy, so an outline never reads as the first fix ahead of a value shift (case `behaviour-hut-contrast`).
+
 First public release. Art direction for pixel art that one camera must read at several zoom scales,
 with every asset drawn once.
 

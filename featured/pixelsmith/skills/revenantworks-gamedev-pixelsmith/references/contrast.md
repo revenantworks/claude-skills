@@ -33,7 +33,9 @@ Every asset class against every terrain type. Written once in the rule set and r
 | hut | 33 | hills 50 → 17 | forest 37 → 4 | | FAIL (forest) |
 ```
 
-A row fails when any cell is under 25 without an outline, or under 15 at all.
+A row fails when any cell is under 25 without an outline, or under 15 at all. A table cell holds
+the gap and PASS, MARGINAL or FAIL only, never a remedy: the first fix the reply names is the
+ladder's first rung that clears every terrain, so an outline never appears before a value shift.
 
 ## The fix ladder
 
