@@ -2,6 +2,8 @@
 
 ## [1.0.0] — 2026-10-01
 
+2026-10-17 (eval rerun, U41): the description names a one-file run that ran the whole suite, and the load list gives the single-script form (`-gconfig= -gtest=`, then `Scripts` must read 1); case `behaviour-single-script-gconfig` had loaded nothing.
+
 2026-10-16 (dash triage S1): ships one declared stdlib script, `scripts/godot_check.py`: the headless import, gdtoolkit's lint when installed (NOT-RUN otherwise, never a pass), then GUT or one `--script` headless with no window; engine error markers are read before the summary; scripts, tests and failures print as three numbers against `--expect-scripts` and `--expect-tests` with the slack, `--repeat K` prints each run, exit 0 only when all match. Check steps 1 and 3, the Load budget, `gut-traps.md` section 3 and the README name it; eval case G15; tests in `scripts/test_godot_check.py`.
 
 2026-10-16 (full observation review, U21): `gut-traps.md` section 4, a shared `user://` across worktrees voids a parallel run (observation 0438); `ci-guards.md` section 5, the local CI counts only on the pushed head and through the stamp (observation 0433).

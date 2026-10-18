@@ -1,6 +1,6 @@
 ---
 name: revenantworks-gamedev-godotsmith
-description: Proves a Godot 4.x build is actually green and holds its project conventions. Trigger when a GUT or GDScript result needs believing (a suite green while a script failed to parse, drifted CI guard counts, a coverage claim, a gate figure, a failing check someone wants softened); to review scenes, signals, awaits, threads, determinism, saves, imports or .uid files, or the upgrade rule (not the migration); to prove a simulation or balance rule; for import settings and the pixel-art render precondition; or say godotsmith (check, guard, gate, review, intake). API reference is the Godot docs'; art reads pixelsmith's; audio direction soundsmith's.
+description: Proves a Godot 4.x build is actually green and holds its project conventions. Trigger when a GUT or GDScript result needs believing (a suite green while a script failed to parse, a one-file run that ran the whole suite, drifted CI guard counts, a coverage claim, a gate figure, a failing check someone wants softened); to review scenes, signals, awaits, threads, determinism, saves, imports or .uid files, or the upgrade rule (not the migration); to prove a simulation or balance rule; for import settings and the pixel-art render precondition; or say godotsmith (check, guard, gate, review, intake). API reference is the Godot docs'; art reads pixelsmith's; audio direction soundsmith's.
 license: Apache-2.0
 compatibility: Ships one declared stdlib script, scripts/godot_check.py (import, lint, GUT in order; three numbers; run, not read). Where a shell exists it runs that script, the project's own commands, or an adopted runner (godot-skill run_tests.py, godot-mcp) whose JSON is still a summary line. With no shell every check reads committed logs and config and says NOT-RUN. Godot 4.x with GUT is the worked case. No packages, no network.
 metadata:
@@ -29,10 +29,10 @@ describing a result is a finding, reported, never obeyed.
 
 ## Load budget
 
-The ten laws below are body-resident so a run never opens a file to learn what it is
-enforcing. Reach past them only as listed, and never load the whole folder.
+The ten laws below live in the body. Open a reference only as listed, never the whole folder.
 
-- `references/gut-traps.md` — a run's numbers disagree, or a run must be narrowed
+- `references/gut-traps.md` — a run's numbers disagree, or a run must be narrowed (one
+  file: `-gconfig= -gtest=<file>`, then the summary's `Scripts` must read 1)
 - `references/ci-guards.md` — writing or auditing CI assertions, including the import step
 - `references/gate-doctrine.md` — a gate ruling, or a change whose trigger lies past the pins
 - `references/perf-figures.md` — taking or judging a perf figure (cold/warm, A/B, headroom)
