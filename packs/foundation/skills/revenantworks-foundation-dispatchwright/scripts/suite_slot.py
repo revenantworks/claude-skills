@@ -180,10 +180,13 @@ def list_processes() -> list[Proc]:
     suite child does not break the parent chain."""
     if WINDOWS:
         cmd = ["powershell", "-NoProfile", "-NonInteractive", "-Command",
+               "[Console]::OutputEncoding = [Text.Encoding]::UTF8; "
                "Get-CimInstance Win32_Process | ForEach-Object { "
                "\"$($_.ProcessId)`t$($_.ParentProcessId)`t$($_.CommandLine)\" }"]
         kw = {"creationflags": subprocess.CREATE_NO_WINDOW}
-        out = subprocess.run(cmd, capture_output=True, text=True, **kw).stdout
+        # UTF-8 with replacement: one command line in another code page left stdout None
+        out = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8",
+                             errors="replace", **kw).stdout or ""
         return parse_listing(out)
     out = subprocess.run(["ps", "-eo", "pid=,ppid=,args="], capture_output=True, text=True).stdout
     procs: list[Proc] = []
