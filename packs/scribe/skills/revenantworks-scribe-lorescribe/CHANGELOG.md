@@ -2,6 +2,8 @@
 
 ## [1.0.0] — 2026-10-01
 
+2026-10-17 (eval rerun, U41): case `branch-leak`'s judge no longer reads "flags only" as forbidding the ORPHAN the fixture really holds; the bible-contradiction FAIL stays.
+
 First public release. A story-bible keeper for fiction projects that live beyond one manuscript. It
 checks new text against canon and proposes changes; the owner writes canon. It never drafts prose.
 
