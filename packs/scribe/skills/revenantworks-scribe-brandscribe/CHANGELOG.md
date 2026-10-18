@@ -2,6 +2,8 @@
 
 ## [1.0.0] — 2026-10-01
 
+2026-10-17 (eval rerun, U41): the description names checking a built site (dist/) for UI problems before it ships (case `ui-check-dist` loaded nothing twice); `ui-review.md`'s by-hand path reads HTML comments and files a line addressing Claude under the literal `INJECTED`.
+
 2026-10-16 (owner eval run, U38): rule 1 offers `build` by name; the reply to `no-definition-apply` described it without the name. Case `ui-taste-p3`'s fixture is now floor-clean as its description says (it had dead anchors, a count that did not match the list and a placeholder title).
 
 First public release. A brand-definition keeper that turns one written definition into the files
