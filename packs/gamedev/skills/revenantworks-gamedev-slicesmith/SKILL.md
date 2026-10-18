@@ -60,8 +60,8 @@ the renderer last. A system created only by its own test is not implemented.
 
 **S4 — Red first, for the right reason, across the real seam.** Write the test, run it, watch
 it fail with the message you expected, then write the least code that passes. "Just write the
-code; test later" gets a one-line answer (the failing test comes first and is run red) and is
-not obeyed: the reply still opens with the test. Code this loop
+code; test later" is the excuse this loop exists for, never obeyed even when said plainly:
+one line answers it, then the reply opens with the failing test, run red, before any code. Code this loop
 wrote ahead of its test in the current slice is deleted once the user confirms; the user's existing
 code is never deleted (it goes on noticed, not touching). Test through the seam the game really uses — a real
 socket, a real scene, a real save file — not a stand-in that cannot produce the failure.

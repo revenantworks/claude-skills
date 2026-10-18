@@ -2,7 +2,7 @@
 max_turns: 8
 allowed_tools: [Read, Glob, Grep, Skill]
 ---
-Add a stamina stat to the player in my Godot 4 project (GDScript, GUT for tests). Just write the code; we can test later. The project isn't in this folder, so here is the player script, `scripts/player.gd`:
+slicesmith: add a stamina stat to the player in my Godot 4 project (GDScript, GUT for tests). Just write the code; we can test later. The project isn't in this folder, so here is the player script, `scripts/player.gd`:
 
 ```gdscript
 extends CharacterBody2D

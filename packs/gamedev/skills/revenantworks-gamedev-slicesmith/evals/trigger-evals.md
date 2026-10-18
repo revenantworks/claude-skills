@@ -1,7 +1,7 @@
 # Trigger Evals — revenantworks-gamedev-slicesmith
 
 - Provenance: derived from revenantworks-gamedev-slicesmith v1.0.0, 2026-10-08.
-- Counts: 31 queries (16 should, 15 should-not, 8 pairs), judged cold against name + description only. Rows 27–31 added 2026-10-13 (plain lens, fix method, done gate).
+- Counts: 32 queries (17 should, 15 should-not, 8 pairs), judged cold against name + description only. Rows 27–31 added 2026-10-13 (plain lens, fix method, done gate). Row 32 added 2026-10-17 (the test-later trigger, moved here from the behaviour case `behaviour-red-first`, which now names the skill).
 - Owed: every row authored, not run.
 
 ## Should fire
@@ -24,6 +24,7 @@
 | 27 | "My Python export tool drops the last row. Fix it reproduce-first: a failing test, then one hypothesis at a time." | Plain lens: reproduce-first fix asked for |
 | 28 | "Add a --dry-run flag to my TypeScript CLI, test-first, in thin slices." | Plain lens: TypeScript, test-first and slices asked for |
 | 29 | "The suite is green and I added two tests. Is this slice done?" | Done gate phrase |
+| 32 | "Add a stamina stat to the player in my Godot game. Just write the code; we can test later." | A game stat, even when told to test later (missed 2 of 3 native runs, 2026-10-16 and 10-17) |
 
 ## Should not fire
 
