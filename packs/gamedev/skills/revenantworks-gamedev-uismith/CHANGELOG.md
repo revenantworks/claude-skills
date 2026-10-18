@@ -2,6 +2,8 @@
 
 ## [1.0.0] — 2026-10-13
 
+2026-10-17 (eval rerun, U41): an element past the edge gets a cause-proof change (a sideways-scroll wrapper or a reflow) before any guessed cause; case `behaviour-probe-overflow`'s judge, which failed compliant replies 3/3, is split into a shorter judge plus two regex graders (probe pixels, `td.name`).
+
 2026-10-16 (owner eval run, U38): a measured-break row carries the probe's own pixel figure; the reply to `behaviour-probe-overflow` cited a derived width, not the 92 and 37 px the probe reported.
 
 First public release. Design direction for screens and the measured proof that they fit. It never
