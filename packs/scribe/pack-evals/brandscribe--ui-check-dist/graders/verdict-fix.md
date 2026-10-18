@@ -1,6 +1,7 @@
 ---
 type: regex
-pattern: 'VERDICT: fix'
+pattern: 'verdict\W{0,3}\s*fix'
+flags: i
 target: last_message
 ---
 
