@@ -2,6 +2,8 @@
 
 ## [1.0.0] — 2026-10-01
 
+2026-10-17 (eval rerun, U41): case `lease-busy-refusal` dates its "now" (2026-10-01); with a time only, the run read the lease against the real date and called it stale.
+
 First public release. Transcribes speech in local audio and video files with whisper.cpp, and proves
 the GPU actually did the work.
 
