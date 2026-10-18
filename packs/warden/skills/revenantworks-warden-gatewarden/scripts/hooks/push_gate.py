@@ -9,6 +9,9 @@ git, the PowerShell tool) it:
      remote's real branch tip (`git ls-remote`; it never fetches). A branch the remote
      lacks counts every commit the remote does not hold; when the remote cannot be
      reached it falls back to the local remote-tracking ref and says so (0356);
+  2b. refuses a branch carrying commits not on the remote's main when the repository is public
+     (`push_gate.public_branch`, observation 0441): visibility from a cached `gh api` answer
+     (`push_gate.py visibility`); unknown visibility checks the push as before and says so;
   3. refuses unless a push intent is recorded for this repo and the range fits it
      (`max_commits`, and `head` when the intent names one);
   4. refuses unless a local-CI stamp exists for the exact commit being pushed;
@@ -921,8 +924,24 @@ def ranges(repo: str, args: list[str]) -> list[dict]:
         span, note = remote_span(repo, remote, short_dst, dst, sha)
         count = int(hl.run_git(repo, "rev-list", "--count", *span) or 0)
         log = hl.run_git(repo, "log", "--oneline", "-n", "30", *span)
-        out.append({"remote": remote, "dst": short_dst, "sha": sha, "count": count, "log": log, "note": note})
+        out.append({"remote": remote, "dst": short_dst, "sha": sha, "count": count, "log": log, "note": note,
+                    "tag": is_tag_push(repo, src, dst)})
     return out
+
+
+def is_tag_push(repo: str, src: str, dst: str) -> bool:
+    """The destination is a tag: `refs/tags/…` named out, or a short name that is a local tag and no branch."""
+    if dst.startswith("refs/tags/"):
+        return True
+    if dst.startswith("refs/") or src.startswith("refs/heads/"):
+        return False
+    for ref, tag in ((f"refs/heads/{src}", False), (f"refs/tags/{src}", True)):
+        try:
+            hl.run_git(repo, "rev-parse", "--verify", "--quiet", ref)
+            return tag
+        except RuntimeError:
+            continue
+    return False
 
 
 def remote_span(repo: str, remote: str, short_dst: str, dst: str, sha: str) -> tuple[list[str], str]:
@@ -969,6 +988,191 @@ def gw_dir(repo: str) -> str:
     return os.path.join(hl.run_git(repo, "rev-parse", "--absolute-git-dir"), "gatewarden")
 
 
+# ---------------------------------------------------------------- public branch (observation 0441)
+# A branch pushed to a public repository publishes every commit it carries. On 2026-10-15 a branch cut
+# from a stale local main put 101 commits of rewritten history on a public repo. Owner decision
+# 2026-10-17: refuse a branch push to a public repo when the branch carries commits not on the remote's
+# main. Pushing main itself, a tag, and any push to a private repo are unchanged. Visibility comes from
+# a cache in the state folder (VISIBILITY_TTL), refreshed by one read-only `gh api` call; when it cannot
+# be known the push is checked as before and the cleared note says "visibility unknown".
+PUBLIC_RULE = "push_gate.public_branch"
+VISIBILITY_TTL = 86400.0
+VISIBILITY_FILE = "repo-visibility.json"
+GITHUB_URL = re.compile(r"(?i)^(?:https?://(?:[^@/\s]+@)?github\.com(?::\d+)?/|ssh://(?:[^@/\s]+@)?github\.com"
+                        r"(?::\d+)?/|[\w.-]+@github\.com:)([\w.-]+)/([\w.-]+?)(?:\.git)?/?$")
+_MAIN: dict[tuple[str, str], tuple[str, str, str]] = {}
+
+
+def github_slug(url: str) -> str | None:
+    """`owner/repo` (lower case) for a github.com remote URL; None for any other host or a path."""
+    m = GITHUB_URL.match((url or "").strip())
+    return f"{m.group(1)}/{m.group(2)}".lower() if m else None
+
+
+def remote_url(repo: str, remote: str) -> str:
+    """The URL a push to `remote` goes to, as configured (pushurl first; `insteadOf` not applied)."""
+    for key in (f"remote.{remote}.pushurl", f"remote.{remote}.url"):
+        try:
+            return hl.run_git(repo, "config", "--get", key)
+        except RuntimeError:
+            continue
+    return remote if re.search(r"[/:]", remote) else ""
+
+
+def gh_program() -> list[str]:
+    raw = os.environ.get("GATEWARDEN_GH") or "gh"
+    if raw.startswith("["):
+        try:
+            prog = json.loads(raw)
+            if isinstance(prog, list) and prog and all(isinstance(x, str) for x in prog):
+                return prog
+        except ValueError:
+            pass
+        return []
+    return [raw]
+
+
+def visibility(slug: str, refresh: bool = False) -> tuple[str, str]:
+    """("public" | "private" | "unknown", where it came from). A cached answer younger than the TTL is
+    used with no network call; otherwise one read-only `gh api repos/<slug> --jq .private` call refreshes
+    it. A failed call (gh missing, signed out, offline, no access) answers unknown and caches nothing."""
+    path = os.path.join(hl.state_dir(), VISIBILITY_FILE)
+    key = f"github.com/{slug}"
+    try:
+        cache = hl.load_json(path)
+        cache = cache if isinstance(cache, dict) else {}
+    except (OSError, ValueError):
+        cache = {}
+    entry = cache.get(key) if isinstance(cache.get(key), dict) else {}
+    now = time.time()
+    try:
+        age = now - float(entry.get("checked_at", 0))
+    except (TypeError, ValueError):
+        age = -1.0
+    if not refresh and isinstance(entry.get("private"), bool) and 0 <= age + 60 and age < VISIBILITY_TTL:
+        return ("private" if entry["private"] else "public"), f"cache, {int(age // 3600)} h old"
+    prog = gh_program()
+    if not prog:
+        return "unknown", "GATEWARDEN_GH unreadable"
+    env = dict(os.environ, GH_PROMPT_DISABLED="1", GH_NO_UPDATE_NOTIFIER="1", NO_COLOR="1")
+    try:
+        p = subprocess.run([*prog, "api", f"repos/{slug}", "--jq", ".private"], capture_output=True, text=True,
+                           encoding="utf-8", errors="replace", timeout=hl.budget_timeout(8), env=env,
+                           stdin=subprocess.DEVNULL, creationflags=hl.NO_WINDOW)
+    except (OSError, subprocess.SubprocessError):
+        return "unknown", "gh could not run"
+    said = (p.stdout or "").strip().lower()
+    if p.returncode != 0 or said not in ("true", "false"):
+        return "unknown", "gh could not read the repo"
+    cache[key] = {"private": said == "true", "checked_at": now}
+    try:
+        hl.write_json_atomic(path, cache)
+    except OSError:
+        pass  # the answer stands; the next push asks again
+    return ("private" if said == "true" else "public"), "gh api"
+
+
+def remote_main(repo: str, remote: str) -> tuple[str, str, str]:
+    """(the remote's default branch, its tip or "", a note), from `git ls-remote --symref <remote> HEAD`;
+    the local tracking refs when the remote cannot be reached. Read once per run."""
+    key = (os.path.normcase(os.path.abspath(repo or ".")), remote)
+    if key in _MAIN:
+        return _MAIN[key]
+    os.environ["GIT_TERMINAL_PROMPT"] = "0"
+    name, tip, note = "main", "", ""
+    try:
+        listed = hl.run_git(repo, "ls-remote", "--symref", remote, "HEAD", timeout=10)
+        for line in listed.splitlines():
+            m = re.match(r"^ref:\s*refs/heads/(\S+)\s+HEAD$", line.strip())
+            if m:
+                name = m.group(1)
+            elif re.match(r"^[0-9a-f]{40,64}\s+HEAD$", line.strip()):
+                tip = line.split()[0]
+        if not tip:
+            note = f"the remote has no {name} branch"
+    except Exception:
+        try:
+            name = hl.run_git(repo, "symbolic-ref", "--short", f"refs/remotes/{remote}/HEAD").split("/", 1)[-1]
+        except RuntimeError:
+            pass
+        try:
+            tip = hl.run_git(repo, "rev-parse", "--verify", "--quiet", f"refs/remotes/{remote}/{name}")
+            note = "remote not reached; measured against the local tracking ref"
+        except RuntimeError:
+            note = "remote not reached and no local tracking ref"
+    _MAIN[key] = (name, tip, note)
+    return _MAIN[key]
+
+
+def off_main(repo: str, remote: str, sha: str) -> tuple[str, int, str]:
+    """(main's name, how many commits `sha` carries that the remote's main does not hold, a note)."""
+    name, tip, note = remote_main(repo, remote)
+    if tip:
+        try:
+            hl.run_git(repo, "cat-file", "-e", f"{tip}^{{commit}}")
+            return name, int(hl.run_git(repo, "rev-list", "--count", sha, f"^{tip}") or 0), note
+        except RuntimeError:
+            note = f"the remote's {name} tip is not in this clone (moved or rewritten); fetch first"
+    return name, int(hl.run_git(repo, "rev-list", "--count", sha) or 0), note
+
+
+def public_branch(push: dict, rows: list[dict]) -> list[tuple[str, str]]:
+    """The public-branch rule for one push: refuses in guard, else returns rows for the cleared note
+    (the nudge, or "visibility unknown"). Watch logs only."""
+    out: list[tuple[str, str]] = []
+    repo = push["repo"]
+    for r in rows:
+        if not r["count"] or r.get("tag") or r["dst"] == "main":
+            continue
+        main, n, note = off_main(repo, r["remote"], r["sha"])
+        if r["dst"] == main or n == 0:
+            continue
+        noun = "commit" if n == 1 else "commits"
+        branch, where = r["dst"], f"{r['remote']}/{main}"
+        slug = github_slug(remote_url(repo, r["remote"]))
+        state, source = visibility(slug) if slug else ("unknown", "not a GitHub remote")
+        if state == "private":
+            continue
+        if state == "unknown":
+            out.append(("public", f"visibility unknown ({source}); `{branch}` has {n} {noun} not on {where}, "
+                                  "pushed as before"))
+            continue
+        why = (f"`{branch}` carries {n} {noun} not on {where}, and {slug} is a public repository: the push "
+               "would publish them (observation 0441).")
+        mode = hl.mode_for(PUBLIC_RULE)
+        if mode == "guard":
+            hl.block(hl.note("push gate", "refused", why=why,
+                             rows=[("read", push.get("segment", "?")), ("branch", f"{branch} → {r['remote']}"),
+                                   ("off main", f"{n} {noun}" + (f" ({note})" if note else "")),
+                                   ("visibility", f"public ({source})")],
+                             fix=f"land the commits on {main} first and push {main}, or push {branch} to a "
+                                 "private remote"),
+                     rule=PUBLIC_RULE)
+        nudged = mode == "nudge" and not hl._nudged_before(PUBLIC_RULE)
+        hl.log_event(PUBLIC_RULE, mode, "nudged" if nudged else "logged", why, False)
+        if nudged:
+            out.append(("public", f"nudge: {branch} carries {n} {noun} not on {where}; {slug} is public. "
+                                  f"Land them on {main} first"))
+    return out
+
+
+def visibility_main(argv: list[str]) -> int:
+    """`push_gate.py visibility --repo <dir> [--remote origin] [--refresh]`: print what the public-branch
+    rule reads for that remote. Read-only on GitHub; --refresh makes the one `gh api` call now."""
+    ap = argparse.ArgumentParser(prog="push_gate.py visibility")
+    ap.add_argument("--repo", default=".")
+    ap.add_argument("--remote", default="origin")
+    ap.add_argument("--refresh", action="store_true")
+    a = ap.parse_args(argv)
+    slug = github_slug(remote_url(a.repo, a.remote))
+    if not slug:
+        print(f"{a.remote}: visibility unknown (not a GitHub remote); the public-branch rule does not apply")
+        return 0
+    state, source = visibility(slug, refresh=a.refresh)
+    print(f"{slug}: {state} ({source})")
+    return 0
+
+
 def refuse_hard(pushes: list[dict]) -> None:
     """Every hard refusal for every push, before any slow range work (a timeout must not reach them)."""
     for check in (lambda p: refused_flag(p["args"]), lambda p: config_refusal(p["repo"], p["args"])):
@@ -1006,6 +1210,7 @@ def check_push(push: dict) -> dict:
     if total == 0:
         return {"rows": view + [("status", "nothing new to push")], "items": items, "partial": [],
                 "ranges": rows, "checked": False}
+    view += public_branch(push, rows)  # observation 0441: before the intent, so the fix comes first
     d = gw_dir(repo)
     head = rows[-1]["sha"][:12]
     intend = f'python "{os.path.join(HERE, "push_gate.py")}" intend --repo "{repo}"'
@@ -1313,4 +1518,6 @@ if __name__ == "__main__":
         sys.exit(intend_main(sys.argv[2:]))
     if len(sys.argv) > 1 and sys.argv[1] == "preflight":
         sys.exit(preflight_main(sys.argv[2:]))
+    if len(sys.argv) > 1 and sys.argv[1] == "visibility":
+        sys.exit(visibility_main(sys.argv[2:]))
     hook_main()

@@ -13,7 +13,7 @@ Summary · Modes: watch, nudge, guard · What the command hooks read · push_gat
 
 | Hook | Matcher | Blocks | Fail mode | Install mode |
 |---|---|---|---|---|
-| `push_gate.py` | `Bash\|PowerShell` (PreToolUse; PostToolUse reports a push that left the remote behind) | a `git push` with no live intent, a HEAD move before the push on one line, a range larger than the intent, no local-CI stamp for the pushed commit; any force, delete, mirror, `--all` or `--tags` push | closed for anything naming `push` | watch; force, delete, mirror, `--all`, `--tags`, an unreadable push and every shape refusal are hard |
+| `push_gate.py` | `Bash\|PowerShell` (PreToolUse; PostToolUse reports a push that left the remote behind) | a `git push` with no live intent, a HEAD move before the push on one line, a range larger than the intent, no local-CI stamp for the pushed commit, a branch carrying commits not on the remote's main pushed to a public repository; any force, delete, mirror, `--all` or `--tags` push | closed for anything naming `push` | watch; force, delete, mirror, `--all`, `--tags`, an unreadable push and every shape refusal are hard |
 | `hyperv_lock.py` | `Bash\|PowerShell\|Write\|Edit\|MultiEdit\|NotebookEdit` | Hyper-V restore and remove commands outside hypervrunner's one allowed script for each (`teardown.py` for remove, `cleanroom.py` for restore), the owner's `purge --entry`, writing them into any other script, and a run of those scripts that fails the owner's sha256 pin | closed for anything naming a blocked cmdlet or disk file | hard (guard) |
 | `call_cap.py` | `*`, and `SubagentStop` | a subagent's calls past its cap plus grace; logs warn, cap, block and each subagent's end to a local event log | open | watch |
 | `launch_throttle.py` | `Agent\|Task\|Workflow` | a launch in the stop band, or with `parallel_ceiling` 0 | open, with a "not enforced" note | watch |
@@ -61,7 +61,7 @@ folder name, a 12-character fingerprint of the command, the session id prefix an
 clause with secret shapes masked. Never the command text, never a matched value.
 
 **Rules** are `<hook>` or `<hook>.<rule>`: `push_gate.irreversible`, `push_gate.unreadable`,
-`push_gate.no_intent`, `push_gate.range`, `push_gate.head`, `push_gate.no_ci`, `push_gate.shape`,
+`push_gate.no_intent`, `push_gate.range`, `push_gate.head`, `push_gate.no_ci`, `push_gate.public_branch`, `push_gate.shape`,
 `hyperv_lock`, `golive_block`, `heredoc_guard`, `heredoc_guard.stdin`, `heredoc_guard.follow`, `call_cap`, `launch_throttle.ceiling`,
 `launch_throttle.stop`. A hook entry covers its soft rules; a rule entry wins over it.
 
@@ -263,6 +263,31 @@ in one call, push in the next. Path forms (`checkout --`, `reset --`) and comman
 push do not count, and the hard refusals still fire first. Force, delete, mirror, `--all` and `--tags` are
 refused outright: the owner runs those. `GATEWARDEN_PUSH_NO_INTENT=1` turns the intent check off.
 Files: `<git dir>/gatewarden/push-intent.json` and `ci-pass.json`, per worktree.
+
+**A branch to a public repository (`push_gate.public_branch`, observation 0441; owner decision
+2026-10-17).** A branch pushed to a public repository publishes every commit it carries. On
+2026-10-15 a branch cut from a stale local main put a rewritten 101-commit history on a public repo.
+The gate counts the commits the pushed branch holds that the remote's main does not (the default
+branch from `git ls-remote --symref <remote> HEAD`, the same ten-second read; the local tracking refs
+when the remote cannot be reached). When that count is above zero and the repository is public, the
+rule refuses, before the intent and stamp checks, naming the branch, the count and the fix: land the
+commits on main first and push main, or push the branch to a private remote. When the remote's main
+tip is not in the clone (the main moved or was rewritten), it counts every commit the branch holds
+and says to fetch first. Unchanged: a push of `main` or of the remote's default branch, a tag, a
+branch with nothing off main, and every push to a private repository. The rule follows the mode
+ladder: watch logs, nudge tells Claude once, guard refuses. The owner promotes it with
+`python warden_review.py set push_gate.public_branch guard`.
+
+Visibility is read without a network call where possible. A remote URL on github.com (https, ssh or
+scp form; `pushurl` first, as configured) maps to `owner/repo`. The answer is cached in
+`<state dir>/repo-visibility.json` for 24 hours; a missing or older entry is refreshed by one
+read-only `gh api repos/<owner>/<repo> --jq .private` call (eight seconds at most, no prompt). When
+the answer cannot be had (another host, a local path, gh missing or signed out, offline, no access),
+nothing is cached, the push is checked as before, and the cleared note carries a `public` row saying
+`visibility unknown`. `python push_gate.py visibility --repo <dir> [--remote origin] [--refresh]`
+prints what the rule reads. `GATEWARDEN_GH` names another gh program (a JSON list for a command with
+arguments; the tests stub it). Limits: the cache sits in the state folder, which Claude's tools can
+write (like `modes.json`); a tag push is out of scope (it can carry commits off main too).
 
 **After the push (PostToolUse, observation 0399).** `push_gate.py` also runs after every
 `Bash|PowerShell` call. After a call that pushed, it measures each pushed ref against the

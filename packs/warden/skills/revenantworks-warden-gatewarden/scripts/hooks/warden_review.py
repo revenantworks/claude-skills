@@ -32,6 +32,7 @@ DAY = 86400.0
 KNOWN = {
     "push_gate.irreversible": True, "push_gate.unreadable": True, "golive_block": True, "hyperv_lock": True,
     "push_gate.no_intent": False, "push_gate.range": False, "push_gate.head": False,
+    "push_gate.public_branch": False,
     "push_gate.no_ci": False, "push_gate.shape": True, "heredoc_guard": False, "heredoc_guard.stdin": True,
     "call_cap": False, "launch_throttle.ceiling": False, "launch_throttle.stop": False,
 }
