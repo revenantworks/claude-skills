@@ -2,6 +2,8 @@
 
 ## [1.0.0] — 2026-10-01
 
+2026-10-17 (eval rerun, U41): `eval-audit.md` files a never-fail test under its pattern name word for word (`constant`, `assertion-free`), names a clean test as clean, and fixes by asserting a computed value, never deletion or a swapped-in exception check (case `evals-audit-never-fail-tests`).
+
 2026-10-16 (owner eval run, U38): the description names the runner's seam ("running a suite, claude plugin eval's"); the near-miss `evals-nearmiss-run-plugin-eval` loaded skillwright.
 
 2026-10-16 (dash triage S4): `build-templates.md` Packaging gives the plugin validation one-liner, `claude plugin validate --strict <plugin folder>`, the line that means pass (`✔ Validation passed`, exit 0), and points at the claude-skills `tools/ci_local.py` run.

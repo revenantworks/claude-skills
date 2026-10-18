@@ -37,9 +37,12 @@ each hit, because a match is a candidate, not a finding.
 | **dead** — the assert never runs or the test is never collected | an assert after `return`/`raise`; an unconditional `skip`; a test name without the `test` prefix | `pending()` with no reason; a function without the `test_` prefix; a file that fails to parse (GUT drops it and still reports green, so check the expected test total) |
 | **assertion-free** — the test body checks nothing | no `assert`, `self.assert*`, `pytest.raises` or `fail(` in the function | no `assert_*`, `fail_test` or `pass_test` in the function |
 
-Each finding cites `file:line` and the pattern name. A never-fail test is P1; it is P0 when it is the
-only guard for a rule the target states. Fix by asserting a value the code computes, never by
-deleting the test without a replacement.
+Each finding cites `file:line` and the pattern name, word for word from the table (`constant`,
+`assertion-free`), never a paraphrase such as "checks nothing". A test the lint passes is named as
+clean. A never-fail test is P1; it is P0 when it is the only guard for a rule the target states.
+Fix by asserting a value the code computes from the test's own input (`assertEqual(slug("A b"),
+"a-b")`), never by deleting the test, offering deletion as an option, or swapping in a
+different check such as an expected exception.
 
 ## Results from an instrument
 
