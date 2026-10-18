@@ -2,6 +2,8 @@
 
 ## [1.0.0] — 2026-10-01
 
+2026-10-17 (eval rerun, U41): `verdict-mode.md`: table cells carry the bracket tag itself and the two labels print word for word in a plain-language reply (case `blocked-source-visible` lost the tags in one run and the label in the next).
+
 2026-10-16 (owner eval run, U38): `verdict-mode.md` labels the flip condition and confidence line (`Flip condition:`, `Confidence:`); a reply to `blocked-source-visible` renamed the flip condition.
 
 First public release. Research that ends in something usable, from any route, with every claim
