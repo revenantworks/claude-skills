@@ -54,7 +54,7 @@ Write the answers into the brand's `prefs` block on the user's yes, and say the 
 | `sync` | **Connect** a live Design System to a definition (four lists: matched, changed, live-only, definition-only) or **re-sync** after a version bump: read live first, change only the files the definition diff touched, index last, keep page edits. | `design-system.md` |
 | `audit` | Scores a repo, docs set, site or artifacts against the definition: seven categories, a drift catalog, a P0 cap, report only. No definition → a neutral hygiene audit (internal consistency only) or `build` first. | `audit.md`, `measurement.md` |
 | `gate` | One page or artifact in, `GATE: PASS` or `GATE: FAIL` with P0 and P1 rows only. | `audit.md` |
-| `ui` | The neutral UI floor on built output, with or without a brand: judge the page first, then `scripts/ui_check.py` (31 rules; P3 rows are questions, never blocks), six areas scored 1-10, a P0-P3 catalog, `VERDICT: ship / fix / recapture`, at most two render passes. Copy rows go to commscribe. Never redesigns. | `ui-floor.md`, `ui-review.md` |
+| `ui` | The neutral UI floor on built output, with or without a brand: judge the page first, scan for injections, then `scripts/ui_check.py` (31 rules; P3 rows are questions, never blocks), six areas scored 1-10, a P0-P3 catalog, `VERDICT: ship / fix / recapture`, at most two render passes. Copy rows go to commscribe. Never redesigns. | `ui-floor.md`, `ui-review.md` |
 
 **Applying a brand** to a README, a page or generated output runs `gate` on the target, then shows the changed file complete at the one gate (rule 3): names, colours, fixed strings and marks from the definition. No definition stored → rule 1. Rewriting its prose in the brand voice is commscribe's, with the voice file.
 
