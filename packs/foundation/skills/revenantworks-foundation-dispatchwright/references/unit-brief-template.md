@@ -376,7 +376,7 @@ path.]
   observation 0446): at most 4 suite processes run at once on the machine, across every session
   and thread (the owner may raise it for a while in `~/.dispatch/suite-cap.json`, and with 2 or more
   running a new suite also waits for CPU under its `cpu_target`, default 75%; `suite_slot.py
-  report` reads the per-run perf log to pick both), beside pacewright's derived machine cap (the stricter holds). Each separate suite counts, so a plain runner that fans out N headless Godots uses N slots; a wrapper and the suite it starts (ci_stamp over ci_local, ci_local over unittest) share one. Every
+  report` reads the per-run perf log to pick both), beside pacewright's derived machine cap (the stricter holds). Each separate suite counts, so a plain (non-suite) runner that fans out N headless Godots uses N slots; one land is one slot, whatever wraps it: a suite and every suite under it share one (ci_stamp over ci_local, ci_local over unittest or its Godots). Every
   background suite starts at below-normal priority with no window. A brief says: start every test
   or build run through the slot runner, `python <dispatchwright>/scripts/suite_slot.py --cwd
   <worktree> -- <command...>` (it waits for a slot, then runs the command at low priority with no
