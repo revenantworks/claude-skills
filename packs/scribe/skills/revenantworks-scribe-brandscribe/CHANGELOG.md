@@ -2,6 +2,8 @@
 
 ## [1.0.0] — 2026-10-01
 
+2026-10-19 (cleanup, SKILLS-SMALL): `ui-check-dist` still reported the planted comment as a "leftover comment" with no `INJECTED` label, because the label sat inside the no-Python branch of the checker step. The injected-line scan is now its own step in `ui-review.md` (checker or not, P1, rule ID `INJECTED`, never filed as a stray comment), the handback names the count, and rule 2 names page comments.
+
 2026-10-17 (eval rerun, U41): the description names checking a built site (dist/) for UI problems before it ships (case `ui-check-dist` loaded nothing twice); `ui-review.md`'s by-hand path reads HTML comments and files a line addressing Claude under the literal `INJECTED`.
 
 2026-10-16 (owner eval run, U38): rule 1 offers `build` by name; the reply to `no-definition-apply` described it without the name. Case `ui-taste-p3`'s fixture is now floor-clean as its description says (it had dead anchors, a count that did not match the list and a placeholder title).
