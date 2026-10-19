@@ -196,3 +196,8 @@ claude plugin eval packs/<pack> --runs 1 --ablation none --no-publish --trust-pl
 
 Add `--case <name>` for one case. On a machine with a shell sandbox, add
 `--scaffold --allow-tools Bash` to run the 6 shell cases.
+
+The shell cases (eight since U37: the six above plus keywarden's `behaviour-curl-preflight` and
+`behaviour-scope-no-token`) run in CI on Linux: `.github/workflows/shell-evals.yml`, on a push to
+main that touches duckrunner, gatewarden, keywarden or shieldwarden. Windows grants no confinable
+shell, so the rig's own run reports them failed; read their result from that workflow.
