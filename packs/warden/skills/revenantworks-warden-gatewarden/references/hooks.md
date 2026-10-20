@@ -589,7 +589,10 @@ Reads the meter file a statusline writes (`~/.claude/usage-windows.json`: `writt
 either window blocks; slow band (default 80) passes with "one unit at a time, cheaper tier". A
 reading older than 15 minutes, or none, passes with "not enforced" so nobody mistakes silence for a
 check. Overrides: `GATEWARDEN_USAGE_FILE`, `GATEWARDEN_BUDGET_FILE`, `GATEWARDEN_USAGE_MAX_AGE`.
-The bands are the pacing skill's decision; this hook only enforces them.
+The bands are the pacing skill's decision; this hook only enforces them, and a file may tighten
+them, never relax them: its stop band is clamped to 50-95 and its slow band to at most the stop
+band, the way dispatchwright's ledger guard reads the same field (a file's 97 once relaxed the 95
+hard stop here while the guard held it).
 
 ## heredoc_guard
 

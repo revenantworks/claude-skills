@@ -1010,6 +1010,37 @@ class ThrottleTests(unittest.TestCase):
             "parallel_ceiling": 2, "stop_bands": {"slow": 70, "stop": 90}}))
         self.assertEqual(self.launch()[0], 2)
 
+    def bands(self, **bands):
+        Path(self.budget).write_text(json.dumps({
+            "schema": 1, "expires_at": "2999-01-01T00:00:00Z", "mode": "turbo", "stop_bands": bands}))
+
+    def test_file_stop_band_above_95_is_clamped_and_blocks(self):
+        # TURBO-ADV fix 7 (observation 0470): a file's stop 97 relaxed the 95 hard stop here
+        # while the ledger guard clamped the same field. A 96% reading must block.
+        self.reading(96)
+        self.bands(slow=85, stop=97)
+        code, _, err = self.launch()
+        self.assertEqual(code, 2, err)
+        self.assertIn("95", err)
+
+    def test_file_stop_band_below_50_is_clamped_to_50(self):
+        self.reading(55)
+        self.bands(stop=40)
+        code, _, err = self.launch()
+        self.assertEqual(code, 2, err)
+        self.assertIn("50", err)
+
+    def test_file_slow_band_above_the_stop_band_is_clamped_to_it(self):
+        self.reading(91)
+        self.bands(slow=99, stop=90)
+        code, _, err = self.launch()
+        self.assertEqual(code, 2, err)
+        self.reading(89)
+        self.bands(slow=99, stop=97)   # stop clamps to 95, slow to 95: 89 is under both
+        code, out, _ = self.launch()
+        self.assertEqual(code, 0)
+        self.assertNotIn("slow band", out)
+
     def test_expired_budget_decision_is_ignored(self):
         self.reading(91)
         Path(self.budget).write_text(json.dumps({

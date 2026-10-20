@@ -8,7 +8,9 @@ Reads two data files, never writes either:
     `five_hour` / `seven_day`, each {used_percentage, resets_at};
   - the budget decision a pacing skill may write (GATEWARDEN_BUDGET_FILE, default
     ~/.dispatch/budget-decision.json): `expires_at` (ISO 8601), `stop_bands`
-    {slow, stop}, `parallel_ceiling`, `mode`. Used only while unexpired.
+    {slow, stop}, `parallel_ceiling`, `mode`. Used only while unexpired. The file may
+    tighten the bands, never relax them: its stop band is clamped to 50-95 and its
+    slow band to at most the stop band, as dispatch_ledger_guard.py reads the same field.
 
 Decision, per launch:
   - parallel_ceiling 0 in a live budget decision -> block;
@@ -33,6 +35,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import hooklib as hl  # noqa: E402
 
 LAUNCH_TOOLS = {"Agent", "Task", "Workflow"}
+STOP_RANGE = (50.0, 95.0)   # the stop band a budget file may set; the default stop is the top of it
 
 
 def iso_to_epoch(s: str) -> float:
@@ -60,6 +63,11 @@ def main() -> None:
                 ceiling = bd.get("parallel_ceiling")
         except Exception:
             pass
+        # A budget file may tighten the bands, never relax them (TURBO-ADV fix 7, observation
+        # 0470): its stop band was read raw, so a 97 relaxed the 95 hard stop while the ledger
+        # guard clamped the same field. Stop clamps to [50, 95]; slow to at most the stop band.
+        stop = min(max(stop, STOP_RANGE[0]), STOP_RANGE[1])
+        slow = min(slow, stop)
         # Only a number can set a zero ceiling. A null or "none" ceiling (turbo with
         # no lane cap) or any other word is no ceiling here; int() on it once raised
         # into the fail-open branch below and skipped the stop band.
