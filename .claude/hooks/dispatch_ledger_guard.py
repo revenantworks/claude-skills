@@ -2105,7 +2105,8 @@ def selftest() -> int:
         f"{rt_cases} rig-aware turbo cases (writers 6, all units 12, the rig gate, the turbo estimate, "
         "`checking` open, the top tier; owner 2026-10-20; and RV-SKILLS-WF: the gate inside the hook's "
         "budget, the fixer and join kinds, the writer cap on writers only, the turbo lower number, the "
-        "top tier outside dispatch mode); plus "
+        "top tier outside dispatch mode; and RV-SKILLS2-WF: the same with real unit ids and the "
+        "binding rule); plus "
         f"{len(window_cases)} usage-window cases (2026-09-17, dispatchwright 1.3.0): "
         "silent on an absent or stale file, the stop-band block (95% default or the budget file, both windows) with its resume exemption, "
         "the calibration warning with its numbers, a pre-1.3.0 ledger unchanged, "
@@ -2366,6 +2367,49 @@ def _selftest_rig_turbo(problems: list) -> int:
                                        dict(env_live, DISPATCH_RIG_GATE=str(gate_refuse)),
                                        argv=["--budget-file", str(tmp / "absent-budget.json")])
         check(code == 0, f"T15: an absent --budget-file fixture still read the environment's turbo file ({code}: {err[:200]!r})")
+
+        # T16-T19 (RV-SKILLS2-WF F1): T10-T12 again with this run's real unit ids, which carry more
+        # than three letters, a hyphen or no digit at all. Each binds to its own row, so its kind,
+        # fixer-of and read-only cells reach the gate and the writer cap.
+        def said(text):
+            return {"prompt": text}
+        code, _, err = launch(run_dir([row("HUT-F", notes="fixer-of: LAND31")]), "HUT-F", budget(turbo), gate_fixer)
+        check(code == 0, f"T16: fixer HUT-F (fixer-of: LAND31) was refused at a red land ({code}: {err[:200]!r})")
+        code, _, err = launch(run_dir([row("FIX-L9R", notes="fixer-of: LAND31")]), "FIX-L9R", budget(turbo), gate_fixer,
+                              tool_input=said("You are unit FIX-L9R (ledger row FIX-L9R). Fix the red land."))
+        check(code == 0, f"T16: fixer FIX-L9R named as `(ledger row FIX-L9R)` was refused at a red land ({code}: {err[:200]!r})")
+        code, _, err = launch(run_dir([row("FIX-SW")]), "FIX-SW", budget(turbo), gate_fixer)
+        check(code == 2, f"T16 control: FIX-SW with no fixer-of passed a red land ({code})")
+
+        code, _, err = launch(run_dir([row("LAND31", notes="kind: land")]), "LAND31", budget(turbo), gate_kind)
+        check(code == 0, f"T17: land LAND31 (kind: land) was refused at the WIP limit ({code}: {err[:200]!r})")
+        code, _, err = launch(run_dir([row("JOIN-31", notes="kind: join")]), "JOIN-31", budget(turbo), gate_kind)
+        check(code == 0, f"T17: join JOIN-31 (kind: join) was refused at the WIP limit ({code}: {err[:200]!r})")
+        code, _, err = launch(run_dir([row("OFFCTL-GATE")]), "OFFCTL-GATE", budget(turbo), gate_kind)
+        check(code == 2, f"T17 control: build OFFCTL-GATE passed the WIP limit ({code})")
+
+        real7 = [row(u) for u in ("LAND31-F", "LAND31-F2", "LAND31-F3", "FIX-ISO", "FIX-SW", "HUD-FIX", "MERGE-F9")]
+        seven_real_plus_r = real7 + [row("RV-SKILLS-WF", repo="—")]
+        code, _, err = launch(run_dir(seven_real_plus_r), "RV-SKILLS-WF", budget(turbo))
+        check(code == 0, f"T18: read-only RV-SKILLS-WF was refused beside 7 open writers ({code}: {err[:200]!r})")
+        code, _, err = launch(run_dir(seven_real_plus_r), "MERGE-F9", budget(turbo))
+        check(code == 2 and "writer" in err, f"T18 control: the seventh writer MERGE-F9 passed the writer cap ({code})")
+
+        # T19: the binding rule. An anchored token is looked up as a literal unit_id (never a prefix);
+        # an id-shaped token with no row is refused as before (0425); a lowercase English word after
+        # "you are unit" with no row names no unit.
+        code, _, err = launch(run_dir([row("SKILLS-FIX2", repo="—"), row("W1", status="pushed")]), "SKILLS-FIX2", None,
+                              tool_input=said("Work the brief (ledger row SKILLS-FIX2)."))
+        check(code == 0, f"T19: `(ledger row SKILLS-FIX2)` did not bind its dispatched row ({code}: {err[:200]!r})")
+        code, _, err = launch(run_dir([row("SKILLS-FIX2", status="pushed"), row("W1")]), "SKILLS-FIX2", None,
+                              tool_input=said("Work the brief (ledger row SKILLS-FIX2)."))
+        check(code == 2 and "SKILLS-FIX2" in err, f"T19: `(ledger row SKILLS-FIX2)` on a closed row passed on W1's open row ({code}: {err[:200]!r})")
+        code, _, err = launch(run_dir([row("W1")]), "HUT-F", None, tool_input=said("You are unit HUT-F."))
+        check(code == 2 and "HUT-F" in err, f"T19: HUT-F with no row was let through on another open row ({code}: {err[:200]!r})")
+        code, _, err = launch(run_dir([row("LAND31-F")]), "LAND31", None, tool_input=said("You are unit LAND31."))
+        check(code == 2 and "LAND31" in err, f"T19: LAND31 bound the LAND31-F row as a prefix ({code}: {err[:200]!r})")
+        code, _, err = launch(run_dir([row("W1")]), "-", None, tool_input=said("You are unit testing the parser."))
+        check(code == 0, f"T19 control: an English word after 'you are unit' was read as a unit id ({code}: {err[:200]!r})")
     return cases
 
 
@@ -2907,27 +2951,62 @@ def ledger_warnings(path: Path) -> list:
 
 
 # Observation 0425: the brief names its unit ("Unit U7a of run <run-id>", "You
-# are unit U7a"), so a launch binds to that unit's own row, not to any open row.
+# are unit U7a", "(ledger row U7a)"), so a launch binds to that unit's own row, not to any open row.
+# RV-SKILLS2-WF F1: the token is any unit id shape (LAND31, JOIN-31, FIX-SW, HUT-F, RV-SKILLS-WF),
+# still anchored on one of these three phrases, and is then looked up as a literal unit_id in the
+# ledger (references/ledger-schema.md, How a brief names its unit).
+_UNIT_TOKEN = r"`?([A-Za-z0-9][A-Za-z0-9._-]*)`?"
 UNIT_ID_PATTERNS = (
-    re.compile(r"(?i)\bunit\s+`?([A-Za-z]{0,3}\d+[A-Za-z0-9._-]*)`?\s+of\s+(?:the\s+)?run\b"),
-    re.compile(r"(?i)\byou\s+are\s+unit\s+`?([A-Za-z]{0,3}\d+[A-Za-z0-9._-]*)`?"),
+    re.compile(r"(?i)\byou\s+are\s+unit\s+" + _UNIT_TOKEN),
+    re.compile(r"(?i)\bunit\s+" + _UNIT_TOKEN + r"\s+of\s+(?:the\s+)?run\b"),
+    re.compile(r"(?i)\(\s*ledger\s+row\s+" + _UNIT_TOKEN + r"\s*\)"),
 )
+# The pre-F1 shape (up to three letters, then a digit). A token of this shape, or one with no
+# lowercase letter (HUT-F), names a unit even when the ledger has no row for it, and so is refused
+# for want of a row (0425). Any other token ("you are unit testing ...") binds only to a real row.
+_OLD_UNIT_SHAPE = re.compile(r"[A-Za-z]{0,3}\d+[A-Za-z0-9._-]*")
 
 
-def launch_unit_id(data: dict) -> str | None:
-    """The unit id the launch's brief names, prompt first; None when it names none."""
+def _id_shaped(token: str) -> bool:
+    return bool(_OLD_UNIT_SHAPE.fullmatch(token)) or (any(c.isalpha() for c in token) and token == token.upper())
+
+
+def ledger_unit_ids(path: Path | None) -> set:
+    """Every unit_id in the ledger's unit-row tables, normalised by `_unit_cell`."""
+    if path is None:
+        return set()
+    try:
+        text = path.read_text(encoding="utf-8", errors="replace")
+    except Exception:
+        return set()
+    return {_unit_cell(r.get("unit_id", "")) for r in _table_rows(text, path.suffix.lower(), ("unit_id", "status"))} - {""}
+
+
+def launch_unit_id(data: dict, ledger: Path | None = None) -> str | None:
+    """The unit id the launch's brief names, prompt first; None when it names none.
+
+    Every token after an anchor phrase is a candidate. The first one that is a literal unit_id in
+    `ledger` binds; with none in the ledger, the first id-shaped candidate binds (it has no row,
+    and the guard refuses it); with neither, the brief names no unit."""
     ti = data.get("tool_input")
     if not isinstance(ti, dict):
         return None
     texts = [ti.get("prompt")] + [v for k, v in ti.items() if k != "prompt"]
+    known = ledger_unit_ids(ledger)
+    fallback = None
     for text in texts:
         if not isinstance(text, str):
             continue
         for pat in UNIT_ID_PATTERNS:
-            m = pat.search(text)
-            if m:
-                return m.group(1).rstrip("._-")
-    return None
+            for m in pat.finditer(text):
+                token = m.group(1).rstrip("._-")
+                if not token:
+                    continue
+                if _unit_cell(token) in known:
+                    return token
+                if fallback is None and _id_shaped(token):
+                    fallback = token
+    return fallback
 
 
 def _unit_cell(cell: str) -> str:
@@ -3066,7 +3145,7 @@ def _guard(data: dict) -> int:
         return 2
 
     # Observation 0425: bind the launch to its own row when the brief names its unit.
-    unit = launch_unit_id(data)
+    unit = launch_unit_id(data, ledger)
     if unit:
         problem = unit_row_problem(ledger, unit)
         if problem:

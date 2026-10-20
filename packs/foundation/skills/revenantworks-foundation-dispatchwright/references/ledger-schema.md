@@ -15,7 +15,7 @@ reconstructed from memory after the fact.
   actuals
 - Closing a row — every end state, including `landed locally` and `unverified`
 - Worked example row
-- Writing the ledger
+- Writing the ledger — the row write before the launch; how a brief names its unit
 - Resuming a run
 
 ## Where it lives
@@ -77,7 +77,7 @@ carries anything but the bare word `done`.
 
 | Field | What it holds |
 |---|---|
-| `unit_id` | Short, stable — `U1`, `U2`, … The number a unit's own brief and its ledger row share. |
+| `unit_id` | Short, stable — `U1`, `U2`, `LAND31`, `FIX-SW`, … The id a unit's own brief and its ledger row share, written the same way in both (Writing the ledger, How a brief names its unit). |
 | `task` | One line: what the unit does. |
 | `class` | `mechanical` \| `structured` \| `judgment` — the three work classes one large rebuild's lesson names, and the input to Tier (§4). |
 | `model` | Read from this skill's own `references/tier-routing.md` — never invented, never rounded up "to be safe" (self-contained since 1.2.9, observation #0073). |
@@ -214,7 +214,7 @@ carries a numeric `estimated_tokens`** (a base sha is not one), and an optional 
 heavy and a read-only row light. A top-tier row carries `owner-called` in its notes. The writer
 count bounds writer launches only: a read-only launch runs beside six writers, even while a
 refused writer's row still reads `dispatched`. Two notes tokens reach the rig gate (review
-RV-SKILLS-WF F6, F7): `kind: join` or `kind: land` marks a launch that brings unlanded WIP down,
+RV-SKILLS-WF F6, F7), read only from the row a launch binds (How a brief names its unit, below): `kind: join` or `kind: land` marks a launch that brings unlanded WIP down,
 so the WIP bound passes it at the limit (a row without one is a build), and `fixer-of: <land>`
 marks the fixer of a red land or red main, which the red-verdict bound passes (a land walk in
 flight still holds it).
@@ -249,6 +249,18 @@ the unit in a later call. In one batch, a write that fails (a parse error, a den
 not stop the launch, and the guard, which checks that *an* open row exists, passes it on an older
 row: twice in one run a unit ran with no row of its own. This rule is the interim; the structural
 fix is a guard that binds the launch to its own unit id.
+
+**How a brief names its unit** (review RV-SKILLS2-WF F1). The guard binds a launch to its row
+only when the brief names the unit with one of three phrases: `You are unit <id>`,
+`Unit <id> of run <run>` (or `of the run`), or `(ledger row <id>)`. The id after the phrase is
+any unit token (letters, digits, `.`, `_`, `-`: `LAND31`, `JOIN-31`, `HUT-F`, `RV-SKILLS-WF`),
+and the guard looks it up as a literal `unit_id` in the ledger, case aside, never as a prefix:
+`LAND31` does not bind a `LAND31-F` row. An id with no row of its own is refused when it is
+id-shaped (a digit after at most three letters, or no lowercase letter); a lowercase word after
+the phrase that is no row's id names no unit. Only a bound launch has its row's cells read:
+`kind:`, `fixer-of:`, `lane`, `owner-called` and the read-only test reach the rig gate and the
+writer cap through that row, and a launch that binds no row is gated as a heavy writer build.
+So a brief names its own unit, and only its own, with one of the three phrases in its prompt.
 
 **Never edit tracked run records while that repo's local CI runs** (observation 0364). A local
 CI script that ends by resetting the tree (`git checkout -- .`, as hosted CI does) discards every
