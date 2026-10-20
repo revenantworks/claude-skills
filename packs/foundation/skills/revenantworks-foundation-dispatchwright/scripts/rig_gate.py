@@ -1,47 +1,76 @@
 #!/usr/bin/env python3
 """rig_gate.py -- the rig gate: may one more heavy unit launch on this machine now?
 
-    python rig_gate.py check [--heavy | --light] [--config PATH] [--json]
+    python rig_gate.py check [--heavy | --light] [--kind build|join|land] [--fixer-of LAND]
+                             [--config PATH] [--json]
     python rig_gate.py signals [--config PATH]
 
 pacewright's rig-aware turbo (modes.md, Turbo; owner 2026-10-20, observation 0470) lifts the spend
 throttle and never a machine limit. The ledger guard (`dispatch_ledger_guard.py`) runs this check
 before every heavy launch in turbo and refuses the launch on exit 1. A heavy launch is a unit that
 will run a local suite, build, render, measure or engine run; a light launch passes here at once
-(only the guard's writer, all-units and top-tier bounds apply to it).
+(only the guard's writer, all-units and top-tier bounds apply to it). The guard passes the row's
+launch kind (`kind: join` or `kind: land` in its notes; a build otherwise) and, for a red land's own
+fixer (`fixer-of: <land>`), `--fixer-of`.
 
 Exit codes: 0 the launch may go, 1 a bound refuses it (each refusal names the bound and its
 number), 2 the config file is unreadable (the guard then refuses: it fails closed).
 
-Signals, each read through a small adapter. A signal whose source is not configured, absent or
-unreadable is reported "not measured" and never refuses a launch on its own, so a repo without a
-run's own tooling passes with only the process and CPU readings. No adapter raises.
+Time budget (RV-SKILLS-WF F1): the guard gives this script GATE_BUDGET_S (6 s) inside a hook whose
+registered timeout must be at least 10 s; a hook the harness kills does not block, so the gate must
+answer first. The process listing (LISTING_TIMEOUT_S), the CPU sample (cpu_window_s, at most
+CPU_WINDOW_MAX_S) and git (GIT_TIMEOUT_S) run at the same time, each inside the budget.
+
+Signals, each read through a small adapter. A run-tool adapter (slot registry, check queue, land,
+unlanded branches) whose source is not configured, absent or unreadable is reported "not measured"
+and never refuses on its own, so a repo without a run's own tooling passes on the machine readings.
+The two machine signals are different: a process listing that fails, exits non-zero, times out or
+comes back empty is "not measured" (never a measured 0), and a heavy launch with busy engines AND
+cpu both not measured is refused, since no check would be left. No adapter raises.
 
   busy engines   Every headless engine or suite process on the machine, whoever started it, from
-                 one process listing (pid, parent, command line). A process under another matching
-                 process shares its slot. `engine_pattern` (a regex over the command line; default
-                 unittest, pytest, ci_local, warden_suites and `godot ... --headless`). Plus 2 while
-                 a self-hosted CI runner job runs (`runner_pattern`, default `Runner.Worker`), plus
-                 `busy` from `extra_busy_file` ({"busy": n, "why": ...}: container shards no host
-                 process shows). Bound: busy <= B - 2, B = `rig_budget` (default physical cores + 2,
-                 taken as logical threads / 2 + 2: 10 on 8 cores / 16 threads; at least 4).
-  cpu            Machine busy percent over `cpu_window_s` (default 3 s). Bound: under `cpu_max_pct`
-                 (default 85).
+                 one process listing (pid, parent, command line). An engine is the process that IS
+                 the engine: its own command (the part before a standalone `--`) matches
+                 `engine_pattern` (default unittest, pytest, ci_local, warden_suites and
+                 `godot ... --headless`), its executable is no shell or launcher (bash, sh, cmd,
+                 PowerShell, timeout, env, nice, ...) and it is no `wrapper_pattern` script
+                 (default suite_slot, run_queue, slot_ctl). So a suite_slot waiting for a slot, a
+                 Git Bash `bash -c` line and an MSYS `timeout.exe` (orphaned or not) never count;
+                 the engine under them counts once. A process under another engine shares its
+                 slot. A live slot-registry record in state `waiting` never counts, and the
+                 registry's live `running` count is a floor. Plus 2 while a self-hosted CI runner
+                 job runs (`runner_pattern`, default `Runner.Worker`), plus `busy` from
+                 `extra_busy_file` ({"busy": n, "why": ...}: container shards no host process
+                 shows). Bound: busy <= B - 2, B = `rig_budget` (default physical cores + 2, taken
+                 as logical threads / 2 + 2: 10 on 8 cores / 16 threads; at least 4).
+  cpu            Machine busy percent over `cpu_window_s` (default 3 s, at most 3). Bound: under
+                 `cpu_max_pct` (default 85).
   slot registry  `slot_registry`: a folder of `<pid>.json` records ({pid, state, class, worktree})
-                 a slot runner writes. Live records (pid alive) are counted by state; reported only.
+                 a slot runner writes. Live records (pid alive) are counted by state; the `waiting`
+                 pids and the `running` count feed busy engines.
   check queue    `queue_dir`, the queue runner's folder: `<unit>.json` requests ({unit, worktree,
-                 head, priority, queued, [expected_s]}), `runner.json` ({running: [...]}), `PAUSED`,
-                 `HOSTED` ({on, why, pid}: a land's branch CI run in flight on the rig's own runner;
-                 older than `hosted_max_age_h`, default 8, is a leftover). Expected wait =
-                 (each request's expected_s, else `default_check_s` 900, plus half that for each
-                 running check) / `check_lanes` (default 3). Bound: wait <= `queue_horizon_min`
-                 (default 45), and no heavy launch while HOSTED is on.
+                 head, priority, queued, [expected_s]}), `runner.json` ({running: {unit: head} or a
+                 list of units}), `verdicts/<unit>.json` ({unit, head, verdict, [superseded_by]}),
+                 `PAUSED`, `HOSTED` ({on, why, pid}: a land's branch CI run in flight on the rig's
+                 own runner; older than `hosted_max_age_h`, default 8, is a leftover). A request
+                 whose unit is running is counted once, as running. Expected wait = (each queued
+                 request's expected_s, else `default_check_s` 900, plus half that for each running
+                 check) / `check_lanes` (default 3). Bound: wait <= `queue_horizon_min` (default
+                 45), and no heavy launch while HOSTED is on.
   land           `land_flag` ({pid, started}: a land walk runs while the pid lives and the flag is
                  under `land_max_age_h`, default 4); `land_verdict` and `nightly_status`
-                 ({verdict: GREEN | RED | ...}). Bound: no walk running, neither verdict RED.
-  unlanded       `wip` = {repo, branch_glob (default claude/*), base (default origin/main)}: the
-  branches       local branches matching the glob that are not merged into base. Bound: under
-                 `wip_limit` (default 6); at the limit the next launch is a join or a land.
+                 ({verdict: GREEN | RED | ...}). Bound: no walk running, and neither verdict RED
+                 unless this launch is that red's fixer (`--fixer-of`; the walk still holds it).
+  unlanded       `wip` = {repo, base (default origin/main), [branch_glob], [verified_file]}: the
+  branches       VERIFIED local branches not merged into base, from one
+                 `git for-each-ref --no-merged=<base> refs/heads` call (any branch name, bare or
+                 `claude/...`; `branch_glob` narrows it when given). Verified means the branch tip
+                 is the head of a GREEN, not superseded verdict in `queue_dir/verdicts/`, or the
+                 branch is named in `verified_file` (a JSON list, or {"branches": [...]}). A running
+                 unit's branch, an abandoned one or a red one is not counted. With no verified
+                 source configured the signal is not measured. Bound: under `wip_limit` (default
+                 6) for a build; at the limit a join or a land still launches (that is how WIP
+                 falls).
 
 The config is `--config`, else RIG_GATE_CONFIG, else ~/.dispatch/rig-gate.json; an absent file is
 no config. A config is JSON; every key is optional; paths may start with `~`.
@@ -51,24 +80,35 @@ Stdlib only, no window, no network. Part of revenantworks-foundation-dispatchwri
 from __future__ import annotations
 
 import argparse
+import fnmatch
 import json
 import os
 import re
 import subprocess
 import sys
 import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Callable, Optional
 
 WINDOWS = os.name == "nt"
 NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+GATE_BUDGET_S = 6.0        # the guard's timeout for this script (dispatch_ledger_guard.RIG_GATE_TIMEOUT)
+LISTING_TIMEOUT_S = 4.0    # the process listing; the reads run at once, so each fits the budget alone
+GIT_TIMEOUT_S = 2.0
+CPU_WINDOW_MAX_S = 3.0
 ENGINE_PATTERN = r"unittest|pytest|ci_local|ci-local|warden_suites|godot.*--headless"
+WRAPPER_PATTERN = r"suite_slot\.py|run_queue\.py|slot_ctl\.py"
+WRAPPER_EXES = {"bash", "sh", "dash", "zsh", "fish", "cmd", "powershell", "pwsh", "timeout", "env",
+                "nice", "nohup", "ionice", "stdbuf", "time", "xargs", "start", "conhost", "wsl",
+                "winpty", "mintty", "sudo"}
+KINDS = ("build", "join", "land")
 DEFAULTS = {
     "rig_budget": None, "cpu_max_pct": 85, "cpu_window_s": 3.0, "queue_horizon_min": 45,
     "wip_limit": 6, "check_lanes": 3, "default_check_s": 900, "engine_pattern": ENGINE_PATTERN,
-    "runner_pattern": r"Runner\.Worker", "land_max_age_h": 4, "hosted_max_age_h": 8,
-    "slot_registry": None, "queue_dir": None, "land_flag": None, "land_verdict": None,
-    "nightly_status": None, "extra_busy_file": None, "wip": None,
+    "wrapper_pattern": WRAPPER_PATTERN, "runner_pattern": r"Runner\.Worker", "land_max_age_h": 4,
+    "hosted_max_age_h": 8, "slot_registry": None, "queue_dir": None, "land_flag": None,
+    "land_verdict": None, "nightly_status": None, "extra_busy_file": None, "wip": None,
 }
 NOT_REQUESTS = {"runner.json"}
 
@@ -83,6 +123,10 @@ def config(d: dict) -> dict:
     cfg.update({k: v for k, v in (d or {}).items() if v is not None})
     if not cfg.get("rig_budget"):
         cfg["rig_budget"] = default_budget(os.cpu_count())
+    try:
+        cfg["cpu_window_s"] = min(max(float(cfg["cpu_window_s"]), 0.2), CPU_WINDOW_MAX_S)
+    except (TypeError, ValueError):
+        cfg["cpu_window_s"] = DEFAULTS["cpu_window_s"]
     return cfg
 
 
@@ -104,24 +148,38 @@ def _signal(name, measured, value=None, detail=""):
 Proc = tuple  # (pid, parent pid, command line)
 
 
-def list_processes() -> list:
-    """Every live process with its parent and command line; the one live listing call."""
+class ListingError(RuntimeError):
+    """The process listing failed, exited non-zero or came back empty: not a measured 0."""
+
+
+def list_processes(run: Callable = subprocess.run) -> list:
+    """Every live process with its parent and command line; the one live listing call. Raises on a
+    non-zero exit, a timeout or an empty listing (a live machine always has processes)."""
     if WINDOWS:
         cmd = ["powershell", "-NoProfile", "-NonInteractive", "-Command",
                "[Console]::OutputEncoding = [Text.Encoding]::UTF8; "
                "Get-CimInstance Win32_Process | ForEach-Object { "
                "\"$($_.ProcessId)`t$($_.ParentProcessId)`t$($_.CommandLine)\" }"]
-        out = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace",
-                             timeout=20, creationflags=NO_WINDOW, stdin=subprocess.DEVNULL).stdout or ""
-        rows = [ln.split("\t", 2) for ln in out.splitlines()]
-        return [(int(a), int(b), c.strip()) for a, b, c in (r for r in rows if len(r) == 3)
-                if a.strip().isdigit() and b.strip().isdigit()]
-    out = subprocess.run(["ps", "-eo", "pid=,ppid=,args="], capture_output=True, text=True, timeout=20).stdout
+        p = run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace",
+                timeout=LISTING_TIMEOUT_S, creationflags=NO_WINDOW, stdin=subprocess.DEVNULL)
+    else:
+        p = run(["ps", "-eo", "pid=,ppid=,args="], capture_output=True, text=True,
+                timeout=LISTING_TIMEOUT_S, stdin=subprocess.DEVNULL)
+    if p.returncode != 0:
+        raise ListingError(f"the listing exited {p.returncode}: exit {p.returncode}")
+    out = p.stdout or ""
     procs = []
-    for raw in out.splitlines():
-        parts = raw.split(None, 2)
-        if len(parts) >= 2 and parts[0].isdigit() and parts[1].isdigit():
-            procs.append((int(parts[0]), int(parts[1]), parts[2] if len(parts) == 3 else ""))
+    if WINDOWS:
+        rows = [ln.split("\t", 2) for ln in out.splitlines()]
+        procs = [(int(a), int(b), c.strip()) for a, b, c in (r for r in rows if len(r) == 3)
+                 if a.strip().isdigit() and b.strip().isdigit()]
+    else:
+        for raw in out.splitlines():
+            parts = raw.split(None, 2)
+            if len(parts) >= 2 and parts[0].isdigit() and parts[1].isdigit():
+                procs.append((int(parts[0]), int(parts[1]), parts[2] if len(parts) == 3 else ""))
+    if not procs:
+        raise ListingError("the listing came back empty")
     return procs
 
 
@@ -188,7 +246,7 @@ def pid_alive(pid) -> bool:
 def git_run(args: list, cwd) -> tuple:
     try:
         p = subprocess.run(["git", "-C", str(cwd)] + list(args), capture_output=True, text=True,
-                           timeout=30, creationflags=NO_WINDOW, stdin=subprocess.DEVNULL)
+                           timeout=GIT_TIMEOUT_S, creationflags=NO_WINDOW, stdin=subprocess.DEVNULL)
         return p.returncode, p.stdout
     except (OSError, subprocess.SubprocessError) as e:
         return 1, str(e)
@@ -196,31 +254,68 @@ def git_run(args: list, cwd) -> tuple:
 
 # ---- adapters -----------------------------------------------------------------------------------
 
-def read_engines(cfg, listing) -> dict:
+def _exe_name(line: str) -> str:
+    """The executable's base name, lower case, without .exe: `"C:\\Program Files\\Git\\usr\\bin\\timeout.exe" 580 x`
+    -> timeout. An unquoted Windows path with spaces is cut at its first `.exe`."""
+    line = line.strip()
+    if line.startswith('"'):
+        head = line[1:].split('"', 1)[0]
+    else:
+        m = re.match(r"(.*?\.exe)(?=\s|$)", line, re.I)
+        head = m.group(1) if m else (line.split(None, 1)[0] if line else "")
+    name = re.split(r"[\\/]", head)[-1].lower()
+    return name[:-4] if name.endswith(".exe") else name
+
+
+def _own_command(line: str) -> str:
+    """The command line up to its first standalone `--`: what follows is a wrapped command's."""
+    return re.split(r"\s--(?=\s|$)", line, maxsplit=1)[0]
+
+
+def read_engines(cfg, listing, waiting=frozenset(), registry_running=None) -> dict:
     try:
         procs = list(listing())
+    except subprocess.TimeoutExpired:
+        return _signal("busy engines", False, detail="the process listing timed out")
     except Exception as e:  # noqa: BLE001 -- an adapter never raises
         return _signal("busy engines", False, detail=f"no process listing ({type(e).__name__}: {e})")
+    if not procs:
+        return _signal("busy engines", False, detail="the process listing came back empty")
     try:
         engine = re.compile(cfg["engine_pattern"], re.I)
+        wrapper = re.compile(cfg["wrapper_pattern"], re.I) if cfg.get("wrapper_pattern") else None
         runner = re.compile(cfg["runner_pattern"], re.I) if cfg.get("runner_pattern") else None
     except re.error as e:
         return _signal("busy engines", False, detail=f"bad pattern ({e})")
     me = os.path.basename(__file__)
-    match = lambda line: bool(line) and me not in line and bool(engine.search(line))  # noqa: E731
+
+    def is_engine(pid, line):
+        if not line or me in line or pid in waiting:
+            return False
+        own = _own_command(line)
+        if _exe_name(line) in WRAPPER_EXES or (wrapper and wrapper.search(own)):
+            return False
+        return bool(engine.search(own))
+
     by_pid = {pid: (ppid, line) for pid, ppid, line in procs}
 
     def under_an_engine(pid, ppid):
         seen = {pid}
         while ppid in by_pid and ppid not in seen:
             seen.add(ppid)
-            ppid, line = by_pid[ppid]
-            if match(line):
+            if is_engine(ppid, by_pid[ppid][1]):
                 return True
+            ppid = by_pid[ppid][0]
         return False
 
-    busy = sum(1 for pid, ppid, line in procs if match(line) and not under_an_engine(pid, ppid))
-    parts = [f"{busy} engine or suite processes"]
+    listed = sum(1 for pid, ppid, line in procs if is_engine(pid, line) and not under_an_engine(pid, ppid))
+    busy = listed
+    parts = [f"{listed} engine or suite processes"]
+    if waiting:
+        parts.append(f"{len(waiting)} waiting slot record(s) not counted")
+    if registry_running is not None and registry_running > busy:
+        busy = registry_running
+        parts.append(f"slot registry says {registry_running} running (the floor)")
     if runner and any(runner.search(line or "") for _, _, line in procs):
         busy += 2
         parts.append("+2 for a self-hosted runner job")
@@ -246,25 +341,47 @@ def read_cpu(cfg, cpu) -> dict:
         return _signal("cpu", False, detail=f"no reading ({type(e).__name__})")
     if pct is None:
         return _signal("cpu", False, detail="no reading on this platform")
-    return _signal("cpu", True, round(float(pct), 1), f"over {cfg['cpu_window_s']} s")
+    return _signal("cpu", True, round(float(pct), 1), f"over {cfg['cpu_window_s']:g} s")
 
 
-def read_registry(cfg, alive) -> dict:
+def read_registry(cfg, alive) -> tuple:
+    """(signal, waiting pids, running count or None). Never raises."""
     folder = _p(cfg.get("slot_registry"))
     if not folder:
-        return _signal("slot registry", False, detail="slot_registry not configured")
+        return _signal("slot registry", False, detail="slot_registry not configured"), frozenset(), None
     if not folder.is_dir():
-        return _signal("slot registry", False, detail=f"{folder.name} is not a folder")
+        return _signal("slot registry", False, detail=f"{folder.name} is not a folder"), frozenset(), None
     states: dict = {}
+    waiting, running = set(), 0
     for f in sorted(folder.glob("*.json")):
         try:
             r = _read_json(f)
         except Exception:  # noqa: BLE001
             continue
         if isinstance(r, dict) and alive(r.get("pid")):
-            key = f"{r.get('state', '?')}" + (f"/{r['class']}" if r.get("class") else "")
+            state = str(r.get("state", "?"))
+            key = state + (f"/{r['class']}" if r.get("class") else "")
             states[key] = states.get(key, 0) + 1
-    return _signal("slot registry", True, states, ", ".join(f"{k} {v}" for k, v in sorted(states.items())) or "no live run")
+            try:
+                pid = int(r.get("pid"))
+            except (TypeError, ValueError):
+                pid = None
+            if state == "waiting" and pid is not None:
+                waiting.add(pid)
+            elif state == "running":
+                running += 1
+    sig = _signal("slot registry", True, states, ", ".join(f"{k} {v}" for k, v in sorted(states.items())) or "no live run")
+    return sig, frozenset(waiting), running
+
+
+def _running_units(state) -> set:
+    """The units runner.json says are running: {unit: head}, or a list of units or {unit: ...}."""
+    run = state.get("running") if isinstance(state, dict) else None
+    if isinstance(run, dict):
+        return {str(u) for u in run}
+    if isinstance(run, list):
+        return {str(x.get("unit")) if isinstance(x, dict) else str(x) for x in run}
+    return set()
 
 
 def read_queue(cfg, now) -> dict:
@@ -274,6 +391,11 @@ def read_queue(cfg, now) -> dict:
     if not folder.is_dir():
         return _signal("check queue", False, detail=f"{folder.name} is not a folder")
     default = float(cfg["default_check_s"])
+    try:
+        running_units = _running_units(_read_json(folder / "runner.json"))
+    except Exception:  # noqa: BLE001
+        running_units = set()
+    running = len(running_units)
     pending, seconds, skipped = 0, 0.0, []
     for f in sorted(folder.glob("*.json")):
         if f.name.lower() in NOT_REQUESTS:
@@ -286,17 +408,13 @@ def read_queue(cfg, now) -> dict:
         if not isinstance(r, dict) or not r.get("unit"):
             skipped.append(f.name)
             continue
+        if str(r.get("unit")) in running_units:
+            continue  # its check is running: counted once, below
         pending += 1
         try:
             seconds += float(r.get("expected_s") or default)
         except (TypeError, ValueError):
             seconds += default
-    running = 0
-    try:
-        state = _read_json(folder / "runner.json")
-        running = len(state.get("running") or []) if isinstance(state, dict) else 0
-    except Exception:  # noqa: BLE001
-        running = 0
     seconds += running * default / 2
     lanes = max(1, int(cfg["check_lanes"]))
     wait_min = seconds / lanes / 60
@@ -346,36 +464,88 @@ def read_land(cfg, alive, now) -> dict:
     return _signal("land", True, value, "; ".join(notes))
 
 
+def _verified_sources(cfg, w) -> tuple:
+    """(GREEN heads, verified branch names, the sources read). A source not configured adds
+    nothing; an unreadable verdict is skipped."""
+    heads, names, sources = set(), set(), []
+    queue = _p(cfg.get("queue_dir"))
+    if queue and (queue / "verdicts").is_dir():
+        sources.append("GREEN queue verdicts")
+        for f in (queue / "verdicts").glob("*.json"):
+            try:
+                v = _read_json(f)
+            except Exception:  # noqa: BLE001
+                continue
+            if (isinstance(v, dict) and str(v.get("verdict", "")).upper() == "GREEN"
+                    and not v.get("superseded_by") and v.get("head")):
+                heads.add(str(v["head"]).lower())
+    vf = _p(w.get("verified_file"))
+    if vf:
+        try:
+            d = _read_json(vf)
+            listed = d.get("branches") if isinstance(d, dict) else d
+            if isinstance(listed, list):
+                names.update(str(n) for n in listed)
+                sources.append(vf.name)
+        except Exception:  # noqa: BLE001
+            pass
+    return heads, names, sources
+
+
 def read_wip(cfg, git) -> dict:
     w = cfg.get("wip")
     if not isinstance(w, dict) or not w.get("repo"):
         return _signal("unlanded branches", False, detail="wip.repo not configured")
-    glob, base = w.get("branch_glob") or "claude/*", w.get("base") or "origin/main"
+    heads, names, sources = _verified_sources(cfg, w)
+    if not sources:
+        return _signal("unlanded branches", False,
+                       detail="no verified source (queue_dir verdicts or wip.verified_file); "
+                              "unverified branches are never counted")
+    base, glob = w.get("base") or "origin/main", w.get("branch_glob")
     try:
-        code, out = git(["branch", "--list", glob, "--no-merged", base], _p(w["repo"]))
+        code, out = git(["for-each-ref", "--format=%(refname:short)%09%(objectname)",
+                         f"--no-merged={base}", "refs/heads/"], _p(w["repo"]))
     except Exception as e:  # noqa: BLE001
         return _signal("unlanded branches", False, detail=f"git failed ({type(e).__name__})")
     if code != 0:
         return _signal("unlanded branches", False, detail=f"git exit {code}")
-    names = [ln.strip().lstrip("*+ ").strip() for ln in out.splitlines() if ln.strip()]
-    return _signal("unlanded branches", True, len(names), f"{glob} not in {base}")
+    counted = []
+    for ln in (out or "").splitlines():
+        name, _, sha = ln.strip().partition("\t")
+        if not name or (glob and not fnmatch.fnmatchcase(name, glob)):
+            continue
+        sha = sha.strip().lower()
+        if name in names or (sha and any(h.startswith(sha) or sha.startswith(h) for h in heads)):
+            counted.append(name)
+    detail = f"verified ({', '.join(sources)}) and not merged into {base}" + (f", {glob} only" if glob else "")
+    return _signal("unlanded branches", True, len(counted), detail)
 
 
 def read_signals(cfg, listing=None, cpu=None, alive=None, git=None, now=None) -> dict:
+    """Every signal. The three slow reads (the listing, the CPU sample, git) run at once, so the
+    gate answers inside GATE_BUDGET_S however each one fares."""
     listing = listing or list_processes
     cpu = cpu or cpu_sampler(float(cfg["cpu_window_s"]))
     alive = alive or pid_alive
     git = git or git_run
     now = time.time() if now is None else now
-    return {"engines": read_engines(cfg, listing), "cpu": read_cpu(cfg, cpu),
-            "registry": read_registry(cfg, alive), "queue": read_queue(cfg, now),
-            "land": read_land(cfg, alive, now), "wip": read_wip(cfg, git)}
+    registry, waiting, registry_running = read_registry(cfg, alive)
+    with ThreadPoolExecutor(max_workers=3) as ex:
+        f_eng = ex.submit(read_engines, cfg, listing, waiting, registry_running)
+        f_cpu = ex.submit(read_cpu, cfg, cpu)
+        f_wip = ex.submit(read_wip, cfg, git)
+        queue, land = read_queue(cfg, now), read_land(cfg, alive, now)
+        return {"engines": f_eng.result(), "cpu": f_cpu.result(), "registry": registry,
+                "queue": queue, "land": land, "wip": f_wip.result()}
 
 
 # ---- the bounds ---------------------------------------------------------------------------------
 
-def evaluate(sig: dict, cfg: dict, heavy: bool = True) -> tuple:
-    """(ok, lines). Each line names one signal: its reading, `not measured (...)` or `REFUSED ...`."""
+def evaluate(sig: dict, cfg: dict, heavy: bool = True, kind: str = "build",
+             fixer_of: Optional[str] = None) -> tuple:
+    """(ok, lines). Each line names one signal: its reading, `not measured (...)` or `REFUSED ...`.
+    `kind` is the launch's kind (build, join, land): the WIP bound refuses builds only. `fixer_of`
+    names the red land (or main) this launch fixes: the red-verdict bound does not refuse it."""
     if not heavy:
         return True, ["light launch: the rig gate does not bound it (the ledger guard's writer, "
                       "all-units and top-tier bounds still apply)"]
@@ -412,29 +582,38 @@ def evaluate(sig: dict, cfg: dict, heavy: bool = True) -> tuple:
                 refuse("a branch CI run in flight on the rig's runner (queue HOSTED): no heavy writer "
                        "whose check would join the queue")
             if v["wait_min"] > float(cfg["queue_horizon_min"]):
-                refuse(f"queue wait {v['wait_min']:.0f} min over {cfg['queue_horizon_min']} ({s['detail']})")
+                refuse(f"queue wait {v['wait_min']:g} min over {cfg['queue_horizon_min']} ({s['detail']})")
             elif not v["hosted"]:
-                note(s, f"wait {v['wait_min']:.0f} min ok" + (", PAUSED" if v["paused"] else ""))
+                note(s, f"wait {v['wait_min']:g} min ok" + (", PAUSED" if v["paused"] else ""))
         elif key == "land":
             hit = False
             if v["walk"]:
                 refuse("a land walk running (land flag): no writer launch until it ends")
                 hit = True
-            if v["verdict"] == "RED":
-                refuse("land verdict RED: only its fixer and light lanes launch")
-                hit = True
-            if v["main"] == "RED":
-                refuse("main RED (nightly status): only its fixer and light lanes launch")
+            for which, label in (("verdict", "land verdict RED"), ("main", "main RED (nightly status)")):
+                if v[which] != "RED":
+                    continue
+                if fixer_of:
+                    lines.append(f"land: {label}, and this launch is the fixer of {fixer_of}: "
+                                 "the red bound does not hold it")
+                else:
+                    refuse(f"{label}: only its fixer (a row noting `fixer-of: <land>`) and light "
+                           "lanes launch")
                 hit = True
             if not hit:
                 note(s, f"no walk, land {v['verdict'] or 'none'}, main {v['main'] or 'none'}")
         elif key == "wip":
             limit = int(cfg["wip_limit"])
-            if v >= limit:
+            if v >= limit and kind == "build":
                 refuse(f"unlanded branches {v} at the limit {limit}: the next launch is a join or a land, "
                        "never a build")
+            elif v >= limit:
+                note(s, f"{v} at the limit {limit}; this launch is a {kind}, which brings WIP down")
             else:
                 note(s, f"{v} under {limit} ok")
+    if not sig["engines"]["measured"] and not sig["cpu"]["measured"]:
+        refuse("busy engines and cpu both not measured: a heavy launch needs at least one machine "
+               "reading (fix the process listing or the CPU sample)")
     return not refused, lines
 
 
@@ -458,6 +637,10 @@ def main(argv=None, listing=None, cpu=None, alive=None, git=None) -> int:
             g = s.add_mutually_exclusive_group()
             g.add_argument("--heavy", action="store_true")
             g.add_argument("--light", action="store_true")
+            s.add_argument("--kind", choices=KINDS, default="build",
+                           help="the launch's kind; the WIP bound refuses builds only")
+            s.add_argument("--fixer-of", default=None,
+                           help="the red land (or main) this launch fixes; the red bound passes it")
     a = p.parse_args(argv)
     path = config_path(a.config)
     raw = {}
@@ -477,9 +660,10 @@ def main(argv=None, listing=None, cpu=None, alive=None, git=None) -> int:
             f"{s['name']}: {s['value'] if s['measured'] else 'not measured'}"
             + (f" ({s['detail']})" if s["detail"] else "") for s in sig.values()))
         return 0
-    ok, lines = evaluate(sig, cfg, heavy=not a.light)
+    ok, lines = evaluate(sig, cfg, heavy=not a.light, kind=a.kind, fixer_of=a.fixer_of)
     if a.json:
-        print(json.dumps({"ok": ok, "heavy": not a.light, "lines": lines, "signals": sig}))
+        print(json.dumps({"ok": ok, "heavy": not a.light, "kind": a.kind, "fixer_of": a.fixer_of,
+                          "lines": lines, "signals": sig}))
     else:
         print("\n".join(lines + [f"rig_gate: {'PASS' if ok else 'REFUSED'}"]))
     return 0 if ok else 1
