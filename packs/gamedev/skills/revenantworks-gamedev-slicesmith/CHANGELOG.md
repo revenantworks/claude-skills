@@ -5,6 +5,8 @@ version follows Semantic Versioning.
 
 ## [1.0.0] — 2026-10-08
 
+2026-10-20 (FINAL-ADV C14): S5 names a repo's check queue as the suite rung; a dispatched unit runs only targeted red-first runs and queues the suite.
+
 2026-10-17 (eval rerun, U41): S4 says plainly that "test later" is never obeyed; case `behaviour-red-first` now names the skill (one run loaded it and still obeyed, two never loaded), and its trigger half moves to trigger row 32.
 
 2026-10-15 (lessons from a long Godot build): `spec-and-plan.md` gains the stacked pin round (one integration branch per arc, every unit proved with its OFF control on, one re-pin at a join row, and when not to stack); the cycle and the done gate run touched scripts while building and the whole suite once (observation 0432, 0422). Evals C19-C20 and `behaviour-stacked-pin-round`.

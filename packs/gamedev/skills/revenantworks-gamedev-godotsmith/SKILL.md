@@ -158,7 +158,10 @@ rather than passing.
 "godotsmith gate". Procedure in `gate-doctrine.md`. Two rules are body-resident: **re-derive
 every gate figure from raw counts at the gate**, never off a summary a previous step printed;
 and **name the measurement conditions beside the figure**. A figure nobody took is
-UNMEASURED, which is neither PASS nor FAIL and must never be written as either.
+UNMEASURED, which is neither PASS nor FAIL and must never be written as either. **Fit CI wall time
+to the step's real cost driver** (observation 0472), from the CI API's step times over several
+runs, never by test count when one test class dominates; raise a timeout inside the land's own
+commit when the projection passes 80% of it.
 
 ## Entry — Review
 

@@ -69,6 +69,8 @@ socket, a real scene, a real save file — not a stand-in that cannot produce th
 **S5 — Evidence, never a claim.** A slice is verified by the ladder in `slice-and-test.md`:
 import, build at zero warnings, the full suite with script and test counts stated beside the
 expected totals, a smoke-load of every changed scene. An exit code of zero is not evidence.
+**Where the repo has a check queue, the queued final check is the suite rung:** a dispatched
+unit runs only targeted red-first runs and queues the suite, never a whole suite of its own.
 Words like "should work" and "seems fine" are banned from a completion claim. **Done gate:**
 state the expected total before the run; a green run short of it, or one whose count lacks the
 new test seen red first, is not done.
