@@ -56,7 +56,21 @@ nothing (repo a dash or `none (...)`, files_allowed `none`) is no writer; the
 one-writer check keys on the repo column, never report or expected_artifacts;
 a conflict refuses the units in it by name, not the whole wave; a row whose
 cell count differs from its header's is reported and not read; open means
-`dispatched` or `committed`, exactly.
+`dispatched` or `committed`, exactly (and `checking` since 2026-10-20).
+
+The rig-aware turbo (owner 2026-10-20, observation 0470; reverses the 2026-10-16
+no-cap ruling). concurrent_cap() never returns None: a turbo budget file that
+carries dispatch_budget_write.py's writer stamp and a matching content hash
+gives 12 units in all, and an unstamped turbo file gives 6. Writer units (rows
+that write a repo) stay at 6 in every mode. In stamped turbo, every launch's row
+needs a numeric estimated-tokens cell, and every heavy launch (a `lane: heavy`
+row, or a writer row with no lane cell, or a brief that names no unit) runs
+dispatchwright's scripts/rig_gate.py (DISPATCH_RIG_GATE, beside this hook, or
+~/.dispatch/rig_gate.py); its refusal, its absence or its timeout refuses the
+launch. `checking` (a check queued, no verdict yet) counts as open. A `fable*`
+subagent type or model is refused in every mode unless the stamped budget file
+says `top_tier_open` with the user's quoted word and the unit's own row says
+`owner-called`.
 
 Extended 2026-08-20 (skillwright pack audit, finding P1-2 / S-3): SKILL.md
 section 6 states two wave-execution caps in prose -- max 6 concurrent units,
@@ -561,44 +575,87 @@ CEILING_LIMIT = 12
 NO_CAP_WORDS = ("none",)
 
 
-def concurrent_cap() -> int | None:
-    """The open-unit cap, or None for no cap.
+WRITER_CAP = MAX_CONCURRENT_UNITS   # writer units, in every mode (owner 2026-10-20)
+TURBO_ALL_UNITS = CEILING_LIMIT     # all units in turbo, writers included (owner 2026-10-20)
+BUDGET_WRITER_ID = "dispatch_budget_write"
+BUDGET_STAMP_KEY = "content_sha256"
 
-    - An unexpired budget file with "mode": "turbo" and "parallel_ceiling"
-      null (or the string "none") -> None: turbo with no lane cap (owner
-      2026-10-16). The key must be present; a turbo file without it keeps 6.
-    - An unexpired numeric parallel_ceiling -> that number, never below 6 and
-      never above CEILING_LIMIT (unchanged, in any mode).
-    - A missing, expired or malformed file, or null outside turbo -> 6.
-    Never raises; every doubt keeps 6."""
+
+def budget_file() -> dict | None:
+    """pacewright's budget file as a dict while it is unexpired, else None. Never raises."""
     try:
         override = os.environ.get("DISPATCH_BUDGET_FILE")
         p = Path(override) if override else Path.home() / ".dispatch" / "budget-decision.json"
         d = json.loads(p.read_text(encoding="utf-8"))
         if not isinstance(d, dict):
-            return MAX_CONCURRENT_UNITS
+            return None
         exp = d.get("expires_at")
         if not isinstance(exp, str):
-            return MAX_CONCURRENT_UNITS
+            return None
         from datetime import datetime, timezone
         if datetime.strptime(exp, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc) <= datetime.now(timezone.utc):
+            return None
+        return d
+    except Exception:
+        return None
+
+
+def budget_stamp_ok(d: dict | None) -> bool:
+    """True when the file carries dispatch_budget_write's writer id and a content hash that
+    matches it (SHA-256 of the canonical JSON without the hash key). A hand edit breaks it."""
+    if not isinstance(d, dict) or d.get("writer") != BUDGET_WRITER_ID:
+        return False
+    body = {k: v for k, v in d.items() if k != BUDGET_STAMP_KEY}
+    want = hashlib.sha256(json.dumps(body, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
+    return d.get(BUDGET_STAMP_KEY) == want
+
+
+def turbo_file() -> dict | None:
+    """The unexpired budget file when it says turbo and carries a valid writer stamp, else None.
+    A turbo file written or edited by hand is no turbo (TURBO-ADV fix 9): the base cap holds."""
+    d = budget_file()
+    return d if d is not None and d.get("mode") == "turbo" and budget_stamp_ok(d) else None
+
+
+def concurrent_cap() -> int:
+    """The all-units cap; never None (owner 2026-10-20: the rig-aware turbo).
+
+    - A stamped, unexpired turbo file -> TURBO_ALL_UNITS (12), or its numeric
+      parallel_ceiling clamped to 6..12. Writers stay at writer_cap() (6), and
+      each heavy launch passes the rig gate.
+    - A turbo file without a valid stamp -> 6, whatever its ceiling says.
+    - Any other unexpired file with a numeric parallel_ceiling -> that number,
+      never below 6 and never above CEILING_LIMIT.
+    - A missing, expired or malformed file, or a non-numeric ceiling -> 6.
+    Never raises; every doubt keeps 6."""
+    try:
+        d = budget_file()
+        if d is None:
             return MAX_CONCURRENT_UNITS
         c = d.get("parallel_ceiling")
-        if d.get("mode") == "turbo" and "parallel_ceiling" in d and (
-                c is None or (isinstance(c, str) and c.strip().lower() in NO_CAP_WORDS)):
-            return None
+        if d.get("mode") == "turbo":
+            if not budget_stamp_ok(d):
+                return MAX_CONCURRENT_UNITS
+            if c is None or (isinstance(c, str) and c.strip().lower() in NO_CAP_WORDS):
+                return TURBO_ALL_UNITS
         if isinstance(c, bool) or not isinstance(c, int):
             return MAX_CONCURRENT_UNITS
         return max(MAX_CONCURRENT_UNITS, min(c, CEILING_LIMIT))
     except Exception:
         return MAX_CONCURRENT_UNITS
 
+
+def writer_cap() -> int:
+    """Open writer units, in every mode: 6 (owner 2026-10-20; turbo no longer lifts it)."""
+    return WRITER_CAP
+
 # A row counts as "open" -- part of the concurrent-unit count -- from dispatch
 # until it reaches a terminal status. `committed` is still open (the unit is
-# still working toward a push); `pushed`, `verified`, `stalled`, `failed`, and
-# `resumed` are all terminal here, since stalled/failed/resumed all mean the
-# run has already noticed the unit is not quietly holding a wave slot.
-OPEN_STATUSES = {"dispatched", "committed"}
+# still working toward a push), and so is `checking` (its check is queued and
+# its verdict not yet written: TURBO-ADV A8); `pushed`, `verified`, `stalled`,
+# `failed`, and `resumed` are all terminal here, since stalled/failed/resumed
+# all mean the run has already noticed the unit is not quietly holding a wave slot.
+OPEN_STATUSES = {"dispatched", "committed", "checking"}
 
 
 def _column_index(header: list, wanted: tuple) -> dict:
@@ -791,6 +848,91 @@ def collision_units(path: Path, repo: str | None = None) -> list:
 
 
 # ---------------------------------------------------------------------------
+# The rig-aware turbo (owner 2026-10-20, observation 0470; pacewright modes.md, Turbo).
+# ---------------------------------------------------------------------------
+EST_COLUMNS = ("estimated_tokens", "est. tokens", "est_tokens", "est tokens")
+ROW_COLUMNS = ("status", "surface", "repo", "worktree", "files_allowed", "lane", "notes") + EST_COLUMNS
+LEADING_NUMBER_RE = re.compile(r"^\s*\d[\d,]*(?:\.\d+)?\s*[kKmM]?(?![A-Za-z0-9])")
+
+
+def _rows(path: Path) -> list:
+    try:
+        text = path.read_text(encoding="utf-8", errors="replace")
+    except Exception:
+        return []
+    return _table_rows(text, path.suffix.lower(), ROW_COLUMNS)
+
+
+def open_writer_count(path: Path) -> int:
+    """Agent weight of the open rows that write a repo (not `_reads_only`)."""
+    return sum(agent_multiplier(r.get("surface", "")) for r in _rows(path) if _is_open(r) and not _reads_only(r))
+
+
+def launch_row(path: Path, unit: str | None) -> dict | None:
+    """The launch's own row (its unit id), or None when the brief names no unit or it has no row."""
+    if not unit:
+        return None
+    for r in _rows(path):
+        if _unit_cell(r.get("unit_id", "")) == _unit_cell(unit):
+            return r
+    return None
+
+
+def row_estimate(row: dict) -> str | None:
+    """The row's estimated-tokens cell under any of its header spellings, or None with no column."""
+    for name in EST_COLUMNS:
+        if name in row:
+            return row[name]
+    return None
+
+
+def is_heavy(row: dict | None) -> bool:
+    """A heavy launch runs a local suite, build, render, measure or engine run. A `lane` cell of
+    heavy or light decides; else a writer row is heavy and a read-only row light; no row is heavy
+    (the doubt goes to the gate)."""
+    if row is None:
+        return True
+    lane = _norm(row.get("lane", ""))
+    if lane in ("heavy", "light"):
+        return lane == "heavy"
+    return not _reads_only(row)
+
+
+def rig_gate_path() -> Path | None:
+    """DISPATCH_RIG_GATE when set (an absent file there is no gate), else rig_gate.py beside this
+    hook, else ~/.dispatch/rig_gate.py (dispatchwright ships it as scripts/rig_gate.py)."""
+    env = os.environ.get("DISPATCH_RIG_GATE")
+    if env:
+        p = Path(os.path.expanduser(env))
+        return p if p.is_file() else None
+    for p in (HOOKS_DIR / "rig_gate.py", Path.home() / ".dispatch" / "rig_gate.py"):
+        if p.is_file():
+            return p
+    return None
+
+
+RIG_GATE_TIMEOUT = 45
+
+
+def run_rig_gate(gate: Path) -> tuple[int, str]:
+    """(exit code, its output). A timeout or a crash reads as exit 2: the guard fails closed."""
+    try:
+        p = subprocess.run([sys.executable, str(gate), "check", "--heavy"], capture_output=True, text=True,
+                           timeout=RIG_GATE_TIMEOUT, stdin=subprocess.DEVNULL,
+                           creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+        return p.returncode, (p.stdout + p.stderr).strip()
+    except subprocess.TimeoutExpired:
+        return 2, f"the rig gate did not answer in {RIG_GATE_TIMEOUT} s"
+    except Exception as e:
+        return 2, f"the rig gate could not run ({type(e).__name__}: {e})"
+
+
+def is_top_tier_launch(data: dict) -> bool:
+    ti = data.get("tool_input") if isinstance(data.get("tool_input"), dict) else {}
+    return any(str(ti.get(k) or "").strip().lower().startswith("fable") for k in ("subagent_type", "model"))
+
+
+# ---------------------------------------------------------------------------
 # Usage windows (dispatchwright 1.3.0, pacewright's references/window-fit.md). The reader
 # is duplicated in dispatch_gate.py on purpose: each hook installs alone into
 # ~/.claude/hooks/ and imports nothing beside itself.
@@ -942,7 +1084,8 @@ def parse_tokens(cell: str) -> int | None:
 
 
 def _is_open(row: dict) -> bool:
-    """Open means `dispatched` or `committed`, exactly (B4, observation 0437). A blank, a placeholder
+    """Open means `dispatched`, `committed` or `checking`, exactly (B4, observation 0437; `checking`
+    2026-10-20). A blank, a placeholder
     or another word (`running`) is not an open status; a misaligned row is not read at all."""
     return _norm(row.get("status", "")) in OPEN_STATUSES
 
@@ -1354,17 +1497,22 @@ def selftest() -> int:
         bud.write_text("{not json", encoding="utf-8")
         if concurrent_cap() != 6:
             problems.append("concurrent_cap: a malformed budget file did not keep 6")
-        # Turbo with no lane cap (owner 2026-10-16): "mode": "turbo" plus a null
-        # (or "none") parallel_ceiling, unexpired, lifts the cap; every other
-        # shape keeps the numeric rules above.
+        # Turbo (owner 2026-10-20, reversing the 2026-10-16 no-cap ruling): a stamped
+        # turbo file gives 12 for all units, never None; its numeric ceiling clamps to
+        # 6..12; an unstamped turbo file is no turbo (6). Every other shape keeps the
+        # numeric rules above.
         turbo_cases = (
-            ("turbo + null ceiling = no cap", {"mode": "turbo", "parallel_ceiling": None, "expires_at": fut}, None),
-            ("turbo + 'none' ceiling = no cap", {"mode": "turbo", "parallel_ceiling": "None", "expires_at": fut}, None),
-            ("turbo expired = 6", {"mode": "turbo", "parallel_ceiling": None, "expires_at": past}, 6),
-            ("turbo + numeric 8 = 8", {"mode": "turbo", "parallel_ceiling": 8, "expires_at": fut}, 8),
-            ("turbo + numeric 40 still clamps", {"mode": "turbo", "parallel_ceiling": 40, "expires_at": fut},
-             CEILING_LIMIT),
-            ("turbo without the key = 6", {"mode": "turbo", "expires_at": fut}, 6),
+            ("stamped turbo + null ceiling = 12, never no cap",
+             _test_stamp({"mode": "turbo", "parallel_ceiling": None, "expires_at": fut}), 12),
+            ("stamped turbo + 'none' ceiling = 12",
+             _test_stamp({"mode": "turbo", "parallel_ceiling": "None", "expires_at": fut}), 12),
+            ("unstamped turbo + null ceiling = 6", {"mode": "turbo", "parallel_ceiling": None, "expires_at": fut}, 6),
+            ("turbo expired = 6", _test_stamp({"mode": "turbo", "parallel_ceiling": None, "expires_at": past}), 6),
+            ("stamped turbo + numeric 8 = 8", _test_stamp({"mode": "turbo", "parallel_ceiling": 8, "expires_at": fut}), 8),
+            ("stamped turbo + numeric 40 still clamps",
+             _test_stamp({"mode": "turbo", "parallel_ceiling": 40, "expires_at": fut}), CEILING_LIMIT),
+            ("unstamped turbo + numeric 8 = 6", {"mode": "turbo", "parallel_ceiling": 8, "expires_at": fut}, 6),
+            ("unstamped turbo without the key = 6", {"mode": "turbo", "expires_at": fut}, 6),
             ("null outside turbo = 6", {"mode": "pace", "parallel_ceiling": None, "expires_at": fut}, 6),
             ("'none' outside turbo = 6", {"mode": "reset-eve", "parallel_ceiling": "none", "expires_at": fut}, 6),
             ("turbo + junk string = 6", {"mode": "turbo", "parallel_ceiling": "lots", "expires_at": fut}, 6),
@@ -1546,16 +1694,19 @@ def selftest() -> int:
             if code not in (0, 2):
                 problems.append(f"{label}: exit {code} is neither allow (0) nor block (2)")
 
-        # Turbo with no lane cap, as real exit codes (owner 2026-10-16). The
-        # 7-open-unit ledger above is refused with no budget file (the positive
-        # control: the old cap still bites) and allowed under turbo + null.
+        # Turbo as real exit codes (owner 2026-10-20). The 7-open-unit ledger above
+        # (read-only rows: no repo column) is refused with no budget file (the old
+        # cap still bites), allowed under a STAMPED turbo file (12 for all units; a
+        # read-only launch never meets the rig gate) and refused under an unstamped one.
         overcap_payload = {"tool_name": "Task", "session_id": "abc", "cwd": str(tmp / "overcaprun")}
         turbo_dir = tmp / "turbo-budgets"
         turbo_dir.mkdir()
         turbo_e2e = (
             ("turbo e2e: no budget file, 7 open units -> blocked (old cap holds)", None, 2),
-            ("turbo e2e: turbo + null ceiling, 7 open units -> allowed",
-             {"mode": "turbo", "parallel_ceiling": None, "expires_at": fut}, 0),
+            ("turbo e2e: stamped turbo, 7 open read-only units -> allowed",
+             _test_stamp({"mode": "turbo", "expires_at": fut}), 0),
+            ("turbo e2e: unstamped turbo + null ceiling, 7 open units -> blocked",
+             {"mode": "turbo", "parallel_ceiling": None, "expires_at": fut}, 2),
             ("turbo e2e: turbo expired, 7 open units -> blocked",
              {"mode": "turbo", "parallel_ceiling": None, "expires_at": past}, 2),
             ("turbo e2e: pace + null ceiling, 7 open units -> blocked",
@@ -1565,7 +1716,11 @@ def selftest() -> int:
             bf = turbo_dir / f"b{i}.json"
             if body is not None:
                 bf.write_text(json.dumps(body), encoding="utf-8")
-            code, out, err = _run_guard_full(overcap_payload, fresh_flag, tmp, {"DISPATCH_BUDGET_FILE": str(bf)})
+            # The brief names no unit, so the launch is heavy by doubt: a passing stub gate stands in.
+            gate_ok = turbo_dir / "gate_ok.py"
+            gate_ok.write_text("print('rig_gate: PASS')\n", encoding="utf-8")
+            code, out, err = _run_guard_full(overcap_payload, fresh_flag, tmp, {"DISPATCH_BUDGET_FILE": str(bf),
+                                                                                "DISPATCH_RIG_GATE": str(gate_ok)})
             if code != expected:
                 problems.append(f"{label}: expected exit {expected}, got {code} ({(out + err).strip()[:200]!r})")
             if expected == 2 and "wave cap" not in err:
@@ -1848,6 +2003,11 @@ def selftest() -> int:
     except Exception as e:  # a missing helper is a failure by name, not a crash
         problems.append(f"B4 and launch-history cases could not run: {type(e).__name__}: {e}")
         b4_cases = 0
+    try:
+        rt_cases = _selftest_rig_turbo(problems)
+    except Exception as e:  # a missing helper is a failure by name, not a crash
+        problems.append(f"rig-aware turbo cases could not run: {type(e).__name__}: {e}")
+        rt_cases = 0
 
     if problems:
         for p in problems:
@@ -1857,8 +2017,10 @@ def selftest() -> int:
         "dispatch_ledger_guard selftest: OK (flag states incl. uncorrelated, "
         "ledger currency, cell validators, agent-count token parsing, and 18 real "
         "exit-code cases covering all four 2026-08-18 defects, the 2026-08-20 "
-        "wave-cap enforcement, and the 2026-09-11 observation #0022 fix; plus 13 turbo no-cap "
-        "cap cases and 4 turbo exit-code cases with the old cap as positive control (2026-10-16); plus "
+        "wave-cap enforcement, and the 2026-09-11 observation #0022 fix; plus 15 turbo cap cases and 5 "
+        "turbo exit-code cases with the old cap as positive control (2026-10-20 stamped turbo); plus "
+        f"{rt_cases} rig-aware turbo cases (writers 6, all units 12, the rig gate, the turbo estimate, "
+        "`checking` open, the top tier; owner 2026-10-20); plus "
         f"{len(window_cases)} usage-window cases (2026-09-17, dispatchwright 1.3.0): "
         "silent on an absent or stale file, the stop-band block (95% default or the budget file, both windows) with its resume exemption, "
         "the calibration warning with its numbers, a pre-1.3.0 ledger unchanged, "
@@ -1868,6 +2030,165 @@ def selftest() -> int:
         f"{b4_cases} B4 row-reading and launch-history cases)"
     )
     return 0
+
+
+def _test_stamp(body: dict) -> dict:
+    """A budget file stamped the way dispatch_budget_write.py stamps it, computed here on its own
+    (a second implementation, so a drift between the writer and the guard fails a case)."""
+    d = dict(body)
+    d["writer"] = "dispatch_budget_write"
+    d.pop("content_sha256", None)
+    d["content_sha256"] = hashlib.sha256(
+        json.dumps(d, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
+    return d
+
+
+def _selftest_rig_turbo(problems: list) -> int:
+    """The rig-aware turbo (owner 2026-10-20, observation 0470): writers 6 in every mode, all units
+    12 in turbo and never None, the rig gate on heavy launches, a numeric estimate on a turbo row,
+    `checking` open, and the top tier closed to `fable-*` without the user's word. Real exit codes
+    against temp ledgers, budget files and stub gates. Appends to `problems`; returns the case count."""
+    cases = 0
+
+    def check(cond: bool, msg: str) -> None:
+        nonlocal cases
+        cases += 1
+        if not cond:
+            problems.append(msg)
+
+    from datetime import datetime, timedelta, timezone
+    fut = (datetime.now(timezone.utc) + timedelta(hours=1)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    past = (datetime.now(timezone.utc) - timedelta(hours=1)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    head = ("| unit_id | task | class | model | effort | surface | repo | worktree | est. tokens | lane | "
+            "notes | status |\n|---|---|---|---|---|---|---|---|---|---|---|---|\n")
+
+    def row(uid, status="dispatched", repo="evolution", est="120k", lane="", notes="n"):
+        wt = f"wt-{uid}" if repo != "—" else "—"
+        return f"| {uid} | t | judgment | Claude Opus 5 | high | subagent (background) | {repo} | {wt} | {est} | {lane} | {notes} | {status} |"
+
+    with tempfile.TemporaryDirectory() as td:
+        tmp = Path(td)
+        flag = {"session_id": "abc", "ts": time.time()}
+        n = [0]
+
+        def run_dir(rows):
+            n[0] += 1
+            d = tmp / f"run{n[0]}"
+            (d / ".dispatch" / "runs" / "r1").mkdir(parents=True)
+            (d / ".dispatch" / "runs" / "r1" / "ledger.md").write_text(head + "\n".join(rows) + "\n", encoding="utf-8")
+            return d
+
+        def budget(body, stamp=True):
+            n[0] += 1
+            p = tmp / f"budget{n[0]}.json"
+            p.write_text(json.dumps(_test_stamp(body) if stamp else body), encoding="utf-8")
+            return str(p)
+
+        gate_pass = tmp / "gate_pass.py"
+        gate_pass.write_text("print('rig_gate: PASS')\n", encoding="utf-8")
+        gate_refuse = tmp / "gate_refuse.py"
+        gate_refuse.write_text("import sys\nprint('REFUSED busy engines 9 over 8')\nsys.exit(1)\n", encoding="utf-8")
+        no_gate = str(tmp / "no-such-gate.py")
+        turbo = {"mode": "turbo", "expires_at": fut}
+
+        def launch(d, unit, budget_file=None, gate=gate_pass, tool_input=None):
+            payload = {"tool_name": "Agent", "session_id": "abc", "cwd": str(d),
+                       "tool_input": dict({"description": "u", "prompt": f"You are unit {unit} of the run."},
+                                          **(tool_input or {}))}
+            env = {"DISPATCH_BUDGET_FILE": budget_file or str(tmp / "no-budget.json"),
+                   "DISPATCH_RIG_GATE": str(gate)}
+            return _run_guard_full(payload, flag, tmp, env)
+
+        # T1: concurrent_cap() in turbo is 12 for all units and never None; writers stay 6.
+        saved = os.environ.get("DISPATCH_BUDGET_FILE")
+        try:
+            for label, path, want in (
+                    ("a stamped rig-aware turbo file", budget(turbo), 12),
+                    ("a stamped turbo file with a null ceiling", budget(dict(turbo, parallel_ceiling=None)), 12),
+                    ("a stamped turbo file with ceiling 8", budget(dict(turbo, parallel_ceiling=8)), 8),
+                    ("an UNstamped turbo file with a null ceiling", budget(dict(turbo, parallel_ceiling=None), False), 6),
+                    ("a stamped turbo file edited by hand", None, 6),
+                    ("an expired stamped turbo file", budget(dict(turbo, expires_at=past)), 6)):
+                if path is None:
+                    edited = _test_stamp(turbo)
+                    edited["parallel_ceiling"] = 12
+                    path = str(tmp / "edited.json")
+                    Path(path).write_text(json.dumps(edited), encoding="utf-8")
+                os.environ["DISPATCH_BUDGET_FILE"] = path
+                got = concurrent_cap()
+                check(got == want, f"T1: concurrent_cap() for {label} gave {got!r}, want {want}")
+            wc = globals().get("writer_cap")
+            check(callable(wc) and wc() == 6, "T1: writer_cap() is missing or not 6 under a turbo file")
+        finally:
+            if saved is None:
+                os.environ.pop("DISPATCH_BUDGET_FILE", None)
+            else:
+                os.environ["DISPATCH_BUDGET_FILE"] = saved
+
+        writers7 = [row(f"W{i}") for i in range(1, 8)]
+        code, _, err = launch(run_dir(writers7), "W7", budget(turbo))
+        check(code == 2 and "writer" in err, f"T2: 7 open writers under turbo were not refused by the writer cap ({code}: {err[:200]!r})")
+        code, _, err = launch(run_dir(writers7), "W7", budget(dict(turbo, parallel_ceiling=None), False))
+        check(code == 2, f"T2: 7 open writers under an unstamped no-cap turbo file were allowed ({code})")
+        mixed = [row(f"W{i}") for i in range(1, 7)] + [row(f"R{i}", repo="—") for i in range(1, 6)]
+        code, out, err = launch(run_dir(mixed), "R5", budget(turbo))
+        check(code == 0, f"T3: 6 writers + 5 read-only under turbo refused a read-only launch ({code}: {err[:200]!r})")
+        light13 = [row(f"R{i}", repo="—") for i in range(1, 14)]
+        code, _, err = launch(run_dir(light13), "R13", budget(turbo))
+        check(code == 2 and "12" in err, f"T4: 13 open units under turbo were not refused at 12 ({code}: {err[:200]!r})")
+        light7 = [row(f"R{i}", repo="—") for i in range(1, 8)]
+        code, _, err = launch(run_dir(light7), "R7", None)
+        check(code == 2, f"T4 control: 7 open units outside turbo were allowed ({code})")
+
+        # T5: the rig gate on a heavy launch in turbo; a light launch never consults it.
+        one = [row("W1")]
+        code, _, err = launch(run_dir(one), "W1", budget(turbo), gate_refuse)
+        check(code == 2 and "busy engines 9 over 8" in err, f"T5: a refusing rig gate let a heavy turbo launch go ({code}: {err[:200]!r})")
+        code, _, err = launch(run_dir(one), "W1", budget(turbo), gate_pass)
+        check(code == 0, f"T5 control: a passing rig gate refused a heavy turbo launch ({code}: {err[:200]!r})")
+        code, _, err = launch(run_dir(one), "W1", budget(turbo), no_gate)
+        check(code == 2 and "rig gate" in err, f"T5: a missing rig gate let a heavy turbo launch go ({code}: {err[:200]!r})")
+        code, _, err = launch(run_dir([row("W1", lane="light")]), "W1", budget(turbo), gate_refuse)
+        check(code == 0, f"T5: a row marked lane light consulted the rig gate ({code}: {err[:200]!r})")
+        code, _, err = launch(run_dir([row("R1", repo="—")]), "R1", budget(turbo), gate_refuse)
+        check(code == 0, f"T5: a read-only launch consulted the rig gate ({code}: {err[:200]!r})")
+        code, _, err = launch(run_dir(one), "W1", None, gate_refuse)
+        check(code == 0, f"T5: the rig gate ran outside turbo ({code}: {err[:200]!r})")
+
+        # T6: a turbo row with no numeric estimate is refused (a base sha is not one).
+        code, _, err = launch(run_dir([row("W1", est="b4a2447")]), "W1", budget(turbo))
+        check(code == 2 and "est" in err.lower(), f"T6: a turbo row whose estimate is a sha was allowed ({code}: {err[:200]!r})")
+        code, _, err = launch(run_dir([row("W1", est="4ffc3ff")]), "W1", budget(turbo))
+        check(code == 2, f"T6: a turbo row whose estimate is a digit-led sha was allowed ({code})")
+        code, _, _ = launch(run_dir([row("W1", est="b4a2447")]), "W1", None)
+        check(code == 0, f"T6 control: the estimate rule ran outside turbo ({code})")
+
+        # T7: `checking` and `committed` count as open.
+        six_checking = [row(f"W{i}", status="checking") for i in range(1, 7)] + [row("W7")]
+        code, _, err = launch(run_dir(six_checking), "W7", None)
+        check(code == 2, f"T7: six `checking` writers plus one did not reach the cap ({code}: {err[:200]!r})")
+        six_committed = [row(f"W{i}", status="committed") for i in range(1, 7)] + [row("W7")]
+        code, _, _ = launch(run_dir(six_committed), "W7", None)
+        check(code == 2, f"T7: six `committed` writers plus one did not reach the cap ({code})")
+        six_landed = [row(f"W{i}", status="landed locally") for i in range(1, 7)] + [row("W7")]
+        code, _, err = launch(run_dir(six_landed), "W7", None)
+        check(code == 0, f"T7 control: closed rows counted as open ({code}: {err[:200]!r})")
+
+        # T8: a fable-* subagent type needs top_tier_open (with the user's word) and `owner-called`.
+        fable = {"subagent_type": "fable-high"}
+        code, _, err = launch(run_dir([row("F1", notes="owner-called")]), "F1", None, tool_input=fable)
+        check(code == 2 and "top tier" in err, f"T8: a fable-high launch with no open top tier was allowed ({code}: {err[:200]!r})")
+        top = {"mode": "pace", "expires_at": fut, "top_tier_open": True, "top_tier_owner_word": "run the review"}
+        code, _, err = launch(run_dir([row("F1", notes="owner-called")]), "F1", budget(top), tool_input=fable)
+        check(code == 0, f"T8 control: an owner-called fable row with the top tier open was refused ({code}: {err[:200]!r})")
+        code, _, err = launch(run_dir([row("F1", notes="escalation")]), "F1", budget(top), tool_input=fable)
+        check(code == 2 and "owner-called" in err, f"T8: a fable row without owner-called was allowed ({code}: {err[:200]!r})")
+        code, _, err = launch(run_dir([row("F1", notes="owner-called")]), "F1", budget(top, False), tool_input=fable)
+        check(code == 2, f"T8: an unstamped top_tier_open let a fable launch go ({code})")
+        code, _, err = launch(run_dir([row("F1", notes="owner-called")]), "F1", None,
+                              tool_input={"subagent_type": "opus-high"})
+        check(code == 0, f"T8 control: an opus-high launch met the top-tier rule ({code}: {err[:200]!r})")
+    return cases
 
 
 def _selftest_b4_and_history(problems: list) -> int:
@@ -2279,8 +2600,8 @@ def ledger_version(path: Path) -> int:
 # Row validation (ledger v2), references/ledger-schema.md.
 V2_VALUED = {
     "class": {"mechanical", "structured", "judgment"},
-    "status": {"dispatched", "committed", "landed locally", "pushed", "verified", "done", "unverified",
-               "stalled", "failed", "resumed"},
+    "status": {"dispatched", "committed", "checking", "landed locally", "pushed", "verified", "done",
+               "unverified", "stalled", "failed", "resumed"},
     "ci_green": {"yes", "no", "n/a"},
     "bar_met": {"yes", "no", "advisory"},
     "round_reason": {"finding", "gate", "ci", "owner", "brief-defect"},
@@ -2559,14 +2880,42 @@ def _guard(data: dict) -> int:
             )
             return 2
 
+    # The top tier (owner 2026-10-20: "hold Fable till I call it"; dispatchwright SKILL.md section 7).
+    row = launch_row(ledger, unit)
+    if is_top_tier_launch(data):
+        bf = budget_file()
+        top_open = bool(bf and budget_stamp_ok(bf) and bf.get("top_tier_open") is True
+                        and str(bf.get("top_tier_owner_word") or "").strip())
+        called = bool(row and "owner-called" in row.get("_raw", "").lower())
+        if not (top_open and called):
+            missing = [w for w, ok in (("the budget file's top_tier_open with the user's quoted word "
+                                        "(dispatch_budget_write.py --top-open --owner-word \"<quote>\")", top_open),
+                                       ("`owner-called` in this unit's own ledger row", called)) if not ok]
+            print(
+                "dispatch_ledger_guard: this launch asks for the top tier (a fable model or agent type), "
+                f"and the top tier is closed without the user's word: missing {' and '.join(missing)}. "
+                "An escalation may propose the top tier; only the user opens it (SKILL.md section 7).",
+                file=sys.stderr,
+            )
+            return 2
+
     open_count = open_unit_count(ledger)
-    cap = concurrent_cap()   # None = turbo with no lane cap (pacewright budget file)
-    if cap is not None and open_count > cap:
+    cap = concurrent_cap()   # never None: 12 in a stamped turbo file, else 6 or a numeric ceiling
+    if open_count > cap:
         print(
-            f"dispatch_ledger_guard: {ledger} already shows {open_count} open units (dispatched or "
-            f"committed, not yet pushed) -- over the {cap}-unit wave cap in "
+            f"dispatch_ledger_guard: {ledger} already shows {open_count} open units (dispatched, "
+            f"committed or checking) -- over the {cap}-unit wave cap in "
             "SKILL.md section 6. Let some units reach pushed/verified before dispatching another, "
             "or split the remainder into a second wave.",
+            file=sys.stderr,
+        )
+        return 2
+    writers = open_writer_count(ledger)
+    if writers > writer_cap():
+        print(
+            f"dispatch_ledger_guard: {ledger} already shows {writers} open writer units -- over the "
+            f"{writer_cap()}-writer cap, which holds in every mode, turbo included (owner 2026-10-20). "
+            "Read-only lanes may run beside them; a writer waits for one to land.",
             file=sys.stderr,
         )
         return 2
@@ -2604,6 +2953,43 @@ def _guard(data: dict) -> int:
                 file=sys.stderr,
             )
             return 2
+
+    # The rig-aware turbo (owner 2026-10-20): a numeric estimate on the row, and the rig gate on
+    # every heavy launch. A turbo file without the writer's stamp is no turbo (cap 6 above).
+    if turbo_file() is not None:
+        targets = [row] if row is not None else ([] if unit else [r for r in _rows(ledger) if _is_open(r)])
+        for r in targets:
+            est = row_estimate(r)
+            if est is None or not LEADING_NUMBER_RE.match(est.replace("`", "")):
+                print(
+                    f"dispatch_ledger_guard: turbo row {r.get('unit_id', '?')} in {ledger} has no numeric "
+                    f"estimated tokens (the cell reads {est!r}). In turbo every row carries one, so the "
+                    "2x-estimate stop and the fit have a number to compare (dispatchwright SKILL.md section 6).",
+                    file=sys.stderr,
+                )
+                return 2
+        if is_heavy(row):
+            gate = rig_gate_path()
+            if gate is None:
+                print(
+                    "dispatch_ledger_guard: a heavy launch in turbo needs the rig gate, and none is installed "
+                    "(DISPATCH_RIG_GATE, rig_gate.py beside this hook, or ~/.dispatch/rig_gate.py; "
+                    "dispatchwright ships it as scripts/rig_gate.py). Install it, or mark a row that runs no "
+                    "local suite `lane: light`.",
+                    file=sys.stderr,
+                )
+                return 2
+            g_code, g_text = run_rig_gate(gate)
+            if g_code != 0:
+                refusals = [ln for ln in g_text.splitlines() if ln.startswith("REFUSED")] or [g_text[-400:]]
+                print(
+                    "dispatch_ledger_guard: the rig gate refuses this heavy turbo launch -- "
+                    + "; ".join(refusals)
+                    + ". A stall behind a closed gate is not a failure: hold the row and launch a light lane "
+                    "(pacewright modes.md, Turbo).",
+                    file=sys.stderr,
+                )
+                return 2
 
     # Usage windows (1.3.0): silent without a fresh reading; the stop-band block;
     # the calibration warning; the pct_at_dispatch cell.

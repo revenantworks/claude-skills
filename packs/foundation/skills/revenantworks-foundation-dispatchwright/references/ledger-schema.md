@@ -111,7 +111,7 @@ carries anything but the bare word `done`.
 | `push_ts` | Timestamp the row was updated after a confirmed push. |
 | `remote_sha` | What `git rev-parse origin/main` (or the unit's branch) actually shows — the field Reconcile checks, not `commit_sha`. |
 | `reversal` | How this unit's change is undone: the exact command, or the path of the file holding the prior state — written with `commit_sha` by the unit that made the change (observation #0045). A row whose only surface is a git commit may read `—`; every other surface carries its own. Reconcile treats an empty `reversal` on a landed non-git row as unverified. |
-| `status` | `dispatched` \| `committed` \| `landed locally` \| `pushed` \| `verified` \| `done` \| `unverified` \| `stalled` \| `failed` \| `resumed`. Only `verified` means `commit_sha == remote_sha` was checked and matched; `done` is the closing state for a unit that produces no commit. The open states are `dispatched` and `committed`: the guard counts them against the wave cap, binds a launch to its own open row, and logs each launch in `~/.claude/dispatch-launches.json`, so a second launch of a unit whose row was not rewritten since is refused (observation 0425). |
+| `status` | `dispatched` \| `committed` \| `checking` \| `landed locally` \| `pushed` \| `verified` \| `done` \| `unverified` \| `stalled` \| `failed` \| `resumed`. Only `verified` means `commit_sha == remote_sha` was checked and matched; `done` is the closing state for a unit that produces no commit; `checking` is a unit that exited with its final check queued, until the verdict exists. The open states are `dispatched`, `committed` and `checking`: the guard counts them against the wave cap, binds a launch to its own open row, and logs each launch in `~/.claude/dispatch-launches.json`, so a second launch of a unit whose row was not rewritten since is refused (observation 0425). |
 
 The optional columns are optional: `dispatch_ledger_guard.py` tolerates a ledger without them —
 every ledger written before they existed — and a plan that omits them loses only their record.
@@ -196,7 +196,7 @@ six-unit cap, sixteen of them units that had finished hours earlier.
 
 **The `status` cell of a closed row holds the bare word** (`done`, `verified`, …); the reason
 goes in a note column or after the table. The guard warns on a cell such as `done (no change)`.
-**Open means `dispatched` or `committed`, nothing else**: `running` is not a status, and a row
+**Open means `dispatched`, `committed` or `checking`, nothing else**: `running` is not a status, and a row
 written with it is not counted (observation 0437). **Every row has exactly the header's cell
 count**: one extra empty cell shifts `status` into the next column, and a day of such rows once
 read as 13 open units and refused every launch (observation 0437).
@@ -204,8 +204,14 @@ read as 13 open units and refused every launch (observation 0437).
 **The dispatcher closes the row when the unit returns, not at Reconcile.** Reconcile still
 verifies every writer row independently.
 
-**The wave cap counts only rows in `dispatched` or `committed`.** That is the rule that makes
-"what must I close before the next wave" answerable off the ledger instead of by memory.
+**The wave cap counts only rows in `dispatched`, `committed` or `checking`.** That is the rule
+that makes "what must I close before the next wave" answerable off the ledger instead of by
+memory. A unit that queued its check and exited stays `checking` until its verdict file exists;
+writing `done` at queue time frees a slot while the check still waits. **Writer rows** (a row
+that writes a repo) count again on their own against 6, in every mode. **In turbo every row
+carries a numeric `estimated_tokens`** (a base sha is not one), and an optional `lane` cell
+(`heavy` or `light`) says whether the launch meets the rig gate; without it a writer row is
+heavy and a read-only row light. A top-tier row carries `owner-called` in its notes.
 
 ## Worked example row
 

@@ -1,7 +1,7 @@
 {
   "positive": [
     {
-      "name": "dispatch-mode flag pinned live for session c383d83c-... (2026-09-13, observation 0062) + a cwd that genuinely has no .dispatch/runs ledger beneath it \u2014 guard fails closed. Session id is the literal one captured 2026-09-11; pin_dispatch_flag stamps it into a throwaway flag file with a fresh timestamp at check time, so this no longer depends on the real ~/.claude/dispatch-mode.json naming this same session, which stopped being true the first time any other real session armed that file for itself.",
+      "name": "dispatch-mode flag pinned live for session c383d83c-... (2026-09-13, observation 0062) + a cwd that genuinely has no .dispatch/runs ledger beneath it — guard fails closed. Session id is the literal one captured 2026-09-11; pin_dispatch_flag stamps it into a throwaway flag file with a fresh timestamp at check time, so this no longer depends on the real ~/.claude/dispatch-mode.json naming this same session, which stopped being true the first time any other real session armed that file for itself.",
       "argv": [],
       "stdin": "{\"tool_name\": \"Task\", \"session_id\": \"c383d83c-5af0-4a61-98ee-c4b6376d6fca\", \"cwd\": \"./.no-ledger-here\"}",
       "pin_dispatch_flag": true,
@@ -71,6 +71,19 @@
         2
       ],
       "expect_contains": "malformed rows"
+    },
+    {
+      "name": "a fable-high launch with no owner-called row (owner 2026-10-20: \"hold Fable till I call it\"; TURBO-ADV fix 11). The well-formed v2 fixture ledger is tiered and inside every cap, so the only reason to refuse is the top tier: the brief names no unit, so no row can say owner-called, and the guard refuses with exit 2 whatever the live budget file says. Same session file, flag pinning and argv route as the v2 controls; a refusal writes no launch record.",
+      "argv": [
+        "--ledger",
+        "fixtures/ledger-v2/wellformed/ledger.md"
+      ],
+      "stdin": "{\"tool_name\": \"Agent\", \"session_id\": \"c383d83c-5af0-4a61-98ee-c4b6376d6fca\", \"cwd\": \"./.no-ledger-here\", \"tool_input\": {\"description\": \"final review\", \"prompt\": \"review the land\", \"subagent_type\": \"fable-high\"}}",
+      "pin_dispatch_flag": true,
+      "expect_exit_in": [
+        2
+      ],
+      "expect_contains": "top tier"
     }
   ],
   "negative": [
