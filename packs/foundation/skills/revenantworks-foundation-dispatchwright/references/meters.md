@@ -92,9 +92,16 @@ planned rows (observation 0347):
 - **Every pace-motivated launch names the plan row it serves** in the plan table or the
   confirmation line. A row the plan does not need yet — an extra review of code a later planned
   pass covers, a brief written early only because lanes were idle — is filler and is not launched.
+- **Slow-step log** (owner 2026-10-20). Every unit report and every land records wall time per
+  step (launch to first commit, red-first runs, the queued check and its wait, review, join,
+  land walk, hosted run). A step past 2x its estimate, or past its class threshold, goes into
+  the run's slow-steps file (`slow-steps.md` beside the ledger): the step, the figure, the cause,
+  a fix. The controller applies a cheap fix (a flag, a lane, a timeout) at once and names the
+  rest at the next wave boundary.
 - **Spend pressure never creates a row.** When nothing real is unblocked, the line reads "the gap
   stands until <row> lands", and the lanes stay empty.
-- **Fill to the real count.** When the budget file sets a parallel ceiling on reset eve, launch
+- **Fill to the real count** — on reset eve only, and only with lanes the rig gate passes. When
+  the budget file sets a parallel ceiling on reset eve, launch
   every eligible planned row up to it before any other action (observation 0345): the gap is a
   rate problem, and a lane held back now cannot be spent later.
 - **No blocking question while a row is launchable** (observation 0348). Before a question tool

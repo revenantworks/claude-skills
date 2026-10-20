@@ -206,9 +206,9 @@ it is durable, not when it is written.**
 
 ## 6 · Wave execution
 
-- **Cap 6 concurrent units per wave, counting agents, not rows** (#0022). A fan-out costs N
-  units and N × per-agent budget. Turbo, null ceiling: no cap; CPU-heavy local lanes keep
-  pacewright's machine cap, land run first.
+- **Cap 6 concurrent writer units, counting agents, not rows** (#0022); turbo keeps it, and adds
+  read-only lanes up to 12 through pacewright's rig gate. CPU-heavy local lanes, the check queue
+  and the land state bound every turbo launch (pacewright modes.md, Turbo).
 - **Max 2 nesting levels.** A wave over 12 units is split and shown to the user first.
 - **Stagger dispatch**: units launched together race for files.
 - **No controller commit to a unit's repo between its brief and its launch** (#0083); the brief's
@@ -222,9 +222,16 @@ it is durable, not when it is written.**
   run it inside the worktree, diff after each exchange, re-list agents to stop what it started.
 - **Take a run's status from its last reviewer**; a reviewer marks a task unbuilt, never `major`
   (#0091). **A stage with a visible commit and no return continues from the commit** (#0089).
-- **Recovery state**: when the base branch is red or the CI runner is down, every writer stops,
+- **Recovery state**: when the base branch or the land in flight is red, or the CI runner is
+  down, every writer stops,
   one fixer unit runs, and nothing else lands until the base is green. The ledger header records
   entry and exit.
+- **Standing go**: the user's pre-approval of the next phase ("once A completes, move on to B")
+  is a go. Check A's written done-when, record the evidence, advance without asking; a failing
+  done-when stays a stop.
+- **Slow-step log**: every unit report and land records wall time per step. A step past 2x its
+  estimate or a class threshold goes into the run's slow-steps file with its cause and a fix;
+  cheap fixes are applied at once (meters.md).
 - **Silence is not liveness.** After any interrupt or rejected call, re-read the ledger and each
   unit's journal; unattended, watch with something a prompt cannot block (meters.md). **Cancelling stops the agent first, its processes second** (#0051).
 
@@ -256,12 +263,16 @@ stops launches at 95% and slows to one unit at 80% by default.
 - **Escalate only on a verifiable signal** — a failed check or test, a contract violation, a
   verifier's refutation. **One escalation per unit**; a second is a decomposition problem.
 - **Every writer unit gets a two-stage review in a fresh context (required)** — spec conformance,
-  then quality (`references/unit-review.md`; reviewer rules: tier-routing.md). Work longer than
+  then quality (`references/unit-review.md`; reviewer rules: tier-routing.md); a join review may
+  stand in for its rows' reviews when every line is read once by a skilled review. Work longer than
   one session keeps a decision map (same file).
 - **A fix unit proves its new test fails on the unfixed code.** No test is deleted and no assert
   edited unless the brief names it.
-- **Stop and ask the user before** any escalation into the top tier, any irreversible action the
-  brief did not name, or a unit past 2x its estimate. The **harness's own call and token count is
+- **Stuck goes one effort step up, unasked, in any mode**: a unit that returns blocked, stalls past
+  2x its estimate, or fails a check a second time goes to a fresh unit. A block from an owner
+  hold or a missing permission is not stuck: it waits, or goes to the morning file.
+- **Stop and ask the user before** any escalation into the top tier (Fable needs their word)
+  or any irreversible action the brief did not name. The **harness's own call and token count is
   the only evidence** for the 2x stop and the brief's `call_cap`.
 - **A unit stopped by the call cap:** run `gatewarden capreview` (warden pack, optional) before relaunching it.
 

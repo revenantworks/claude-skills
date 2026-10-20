@@ -101,7 +101,8 @@ Escalate to the next tier only when a raised-effort attempt at the current tier 
 verifiable signal (Escalation, §7) — never pre-emptively, and never because a unit "seems hard."
 
 **The ladder** (observations 0160, 0181): the mid tier at `medium` or `high` → the same model at
-`xhigh` → the top tier. The top-tier step is pre-authorised for escalations only; a unit is never
+`xhigh` → the top tier. An escalation may *propose* the top tier; the user's word opens it (SKILL.md
+§7, and the ledger guard refuses a `fable-*` launch without it). A unit is never
 *planned* onto the top tier to skip the xhigh step. Fix rounds on a design the top tier wrote go
 back to the mid tier at `medium` — fixing named findings is not the design's job. The controller
 runs at `medium`, set once at the start of the run.

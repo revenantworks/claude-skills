@@ -1,6 +1,9 @@
 # Unit brief template
 
-Copy this into every dispatched unit's own prompt. It carries the durability contract verbatim
+Write this into a brief file in the run folder (`briefs/<unit>.md`); the launch prompt only
+points at it: "Your brief is <path>. Read it now and re-read it after any context reset." A
+brief that lives only in a launch prompt is lost at the first reset (observation 0464: three
+units in one evening). It carries the durability contract verbatim
 (SKILL.md §5) so a unit that never saw this doctrine still behaves the way the doctrine requires.
 Fill the bracketed fields; do not paraphrase the contract itself.
 
@@ -268,6 +271,19 @@ path.]
   ask before any top-tier escalation, any irreversible action this brief did not name, or running
   past 2x your estimate.
 
+### Results, commits, worktrees and counts
+
+(observations 0464, 0465; stated generally, an Evolution run is the example.)
+
+- **Results go to the wave report as they arrive** (`waves/<unit>.md`: piece, sha, counts, wall
+  time per step), never only at the end. After a reset, that file plus `git log` say where you are.
+- **Commit each green piece at once**, by path. A green fix left uncommitted while anything
+  waits is lost at a reset.
+- **Use the repo's own worktree tool where it has one** (an Evolution run's `new_worktree.py`
+  writes the per-worktree engine user folder). A bare `git worktree add` skips that safety step.
+- **Leave count literals to the join.** A unit never edits the CI file's exact counts or the
+  suite counts in the docs; the join syncs them once, and the unit reports its end-state counts.
+
 ### Waiting on a job
 
 (observations 0167, 0160) When you must wait for a build, a test run or a helper:
@@ -276,7 +292,13 @@ path.]
 - Never poll in a loop and never sleep between checks — each poll spends tokens to learn nothing.
 - `run_in_background` is for the top-level session only. A subagent that backgrounds a job and
   goes quiet can be ended with the job still in flight.
-- Never end your turn while a job you need is still running.
+- **Where the repo has a check queue, queue the final check and exit.** The queue runner writes
+  the verdict and the row reads `checking` until it does; a red verdict goes to a fresh fix unit.
+  Never wait hours in your own turn on a suite.
+- **Every foreground wait is wrapped in `timeout <seconds>`** below the tool's own limit (for
+  example `timeout 580` inside a 600 s call), so a hung run fails inside the call instead of
+  being moved to the background by the tool (observation 0471). A "moved to background"
+  notice is a failed check: stop it, rerun under `timeout`.
 
 ### Process and git isolation
 
@@ -498,8 +520,8 @@ Add the block that matches the unit's job; leave the others out.
   head the finished unit left (every named symbol by name, `file:line` cites as hints,
   test counts as deltas, bases by ancestry). One join check of ten briefs found wrong
   facts about code that had since changed, and a later one fixed 46 findings, four of them
-  blocking. A brief is not edited while its unit runs; a correction goes in the launch prompt
-  and the brief is fixed after.
+  blocking. A brief is not edited while its unit runs; a correction is written into the brief file
+  and the unit is told to re-read it; the file wins over any prompt.
 
 ### Observations — return them, do not log them
 
