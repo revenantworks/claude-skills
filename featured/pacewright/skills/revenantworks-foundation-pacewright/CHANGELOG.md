@@ -2,6 +2,8 @@
 
 ## [1.0.0] — 2026-10-01
 
+2026-10-20 (review RV-SKILLS2-WF F2): `modes.md`'s busy-engines row counts leaf engines: an engine with an engine below it (ci_local over its Godot shards) counts none itself, the engines under it one each, and a headless Godot always counts, so a 6-shard walk is 6, as dispatchwright's `rig_gate.py` now reads it.
+
 2026-10-20 (review RV-SKILLS-WF F13, F14, F20): `plan-profiles.md`'s turbo row reads rig-aware (writers 6, all units 12, heavy launches through the rig gate) where it still said no lane cap; eval Case 10 is rewritten to the rig-aware turbo (the entry question, the writer's refusals, the two caps, the gate, a stall or `TIMEOUT` that does not escalate) and its provenance re-anchored. `modes.md` § Turbo names the gate's 6-second budget and the 10 s hook timeout, says a failed process listing is not measured and both machine signals unmeasured refuse, counts an engine once, counts verified unlanded branches only, passes a join or land at the WIP limit and a red land's fixer at the red bound, and says how to apply the bounds by hand without dispatchwright's gate (the compatibility field names the gate as optional); the Stop-launching line bounds busy engines at B - 2 like the table.
 
 2026-10-20 (review RV-SKILLS-WF F10, F16): the budget writer drops a kept `parallel_ceiling` when a write enters turbo with no `--parallel` (a pace `--parallel 2` had capped the documented `--mode turbo --ttl 2h` at 6, and no command cleared it), keeps the user's own lower number on a turbo renewal, and refuses a turbo `--parallel` above 6 (the answer is rig-aware or a lower number, n <= 6). Selftest R9-R10 (red first: 2 named failures) and a new negative control.

@@ -36,8 +36,11 @@ cpu both not measured is refused, since no check would be left. No adapter raise
                  PowerShell, timeout, env, nice, ...) and it is no `wrapper_pattern` script
                  (default suite_slot, run_queue, slot_ctl). So a suite_slot waiting for a slot, a
                  Git Bash `bash -c` line and an MSYS `timeout.exe` (orphaned or not) never count;
-                 the engine under them counts once. A process under another engine shares its
-                 slot. A live slot-registry record in state `waiting` never counts, and the
+                 the engine under them counts once. The leaf engines count: an engine with an
+                 engine below it (ci_local over its Godot shards, ci_stamp over unittest) does not
+                 count itself, the engines under it count one each, and a headless Godot always
+                 counts, even with an engine below it; so a 6-shard ci_local walk counts 6. A
+                 live slot-registry record in state `waiting` never counts, and the
                  registry's live `running` count is a floor. Plus 2 while a self-hosted CI runner
                  job runs (`runner_pattern`, default `Runner.Worker`), plus `busy` from
                  `extra_busy_file` ({"busy": n, "why": ...}: container shards no host process
@@ -98,6 +101,7 @@ LISTING_TIMEOUT_S = 4.0    # the process listing; the reads run at once, so each
 GIT_TIMEOUT_S = 2.0
 CPU_WINDOW_MAX_S = 3.0
 ENGINE_PATTERN = r"unittest|pytest|ci_local|ci-local|warden_suites|godot.*--headless"
+GODOT_HEADLESS = re.compile(r"godot.*--headless", re.I)   # always counts as an engine (RV-SKILLS2-WF F2)
 WRAPPER_PATTERN = r"suite_slot\.py|run_queue\.py|slot_ctl\.py"
 WRAPPER_EXES = {"bash", "sh", "dash", "zsh", "fish", "cmd", "powershell", "pwsh", "timeout", "env",
                 "nice", "nohup", "ionice", "stdbuf", "time", "xargs", "start", "conhost", "wsl",
@@ -298,17 +302,24 @@ def read_engines(cfg, listing, waiting=frozenset(), registry_running=None) -> di
         return bool(engine.search(own))
 
     by_pid = {pid: (ppid, line) for pid, ppid, line in procs}
+    engines = {pid for pid, _, line in procs if is_engine(pid, line)}
 
-    def under_an_engine(pid, ppid):
-        seen = {pid}
+    # RV-SKILLS2-WF F2: count the leaf engines. An engine with an engine below it (ci_local over its
+    # Godot shards, ci_stamp over unittest) wraps the work; the engines under it count, one each.
+    # A headless Godot always counts, even with an engine below it.
+    has_engine_below = set()
+    for pid in engines:
+        seen, ppid = {pid}, by_pid[pid][0]
         while ppid in by_pid and ppid not in seen:
             seen.add(ppid)
-            if is_engine(ppid, by_pid[ppid][1]):
-                return True
+            if ppid in engines:
+                has_engine_below.add(ppid)
             ppid = by_pid[ppid][0]
-        return False
 
-    listed = sum(1 for pid, ppid, line in procs if is_engine(pid, line) and not under_an_engine(pid, ppid))
+    def counts(pid):
+        return pid not in has_engine_below or bool(GODOT_HEADLESS.search(_own_command(by_pid[pid][1])))
+
+    listed = sum(1 for pid in engines if counts(pid))
     busy = listed
     parts = [f"{listed} engine or suite processes"]
     if waiting:

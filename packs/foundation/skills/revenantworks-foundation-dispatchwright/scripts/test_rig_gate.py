@@ -150,6 +150,58 @@ class EngineCount(Base):
         self.assertIn("slot registry", sig["engines"]["detail"])
 
 
+CI_LOCAL = "python.exe tools/ci_local_evolution_v2.py --shards 6"
+
+
+def sharded_walk(base, shards, parent=1):
+    """A ci_local walk that Popens `godot --headless` once per shard through the godot.cmd shim
+    (do_gut_sharded), not through suite_slot: ci_local -> cmd shim -> Godot, per shard."""
+    procs = [(base, parent, CI_LOCAL)]
+    for i in range(shards):
+        shim, exe = base + 1 + 2 * i, base + 2 + 2 * i
+        procs += [(shim, base, CMD_SHIM), (exe, shim, GODOT_EXE)]
+    return procs
+
+
+class LeafEngines(Base):
+    """RV-SKILLS2-WF F2: busy engines counts the leaf engines (an engine with no engine below it),
+    and a headless Godot always counts, even under a suite engine, so a 6-shard ci_local walk is 6."""
+
+    def engines(self, procs):
+        sig = rig_gate.read_signals(rig_gate.config({}), listing=lambda: list(procs), cpu=lambda: 10.0,
+                                    alive=lambda p: False, git=lambda a, c: (1, ""), now=time.time())
+        return sig["engines"]
+
+    def test_a_ci_local_parent_with_n_godot_shards_counts_n(self):
+        for n in (1, 2, 6):
+            with self.subTest(shards=n):
+                e = self.engines(sharded_walk(100, n))
+                self.assertEqual(e["value"], n, e)
+
+    def test_the_reviews_listing_reads_seven(self):
+        # One 6-shard walk plus one suite_slot Godot: 7 Godot processes, read as 2 before the fix.
+        procs = sharded_walk(100, 6) + [(200, 1, SLOT), (201, 200, CMD_SHIM), (202, 201, GODOT_EXE)]
+        self.assertEqual(self.engines(procs)["value"], 7)
+
+    def test_two_sharded_walks_and_a_slot_unit_count_every_godot(self):
+        procs = (sharded_walk(100, 6) + sharded_walk(300, 6)
+                 + [(500, 1, SLOT), (501, 500, CMD_SHIM), (502, 501, GODOT_EXE)])
+        self.assertEqual(self.engines(procs)["value"], 13)
+
+    def test_a_walk_with_no_engine_child_yet_counts_itself(self):
+        self.assertEqual(self.engines([(100, 1, CI_LOCAL)])["value"], 1)
+
+    def test_a_suite_chain_still_counts_once(self):
+        # ci_stamp over ci_local over unittest: one suite, its leaf counts.
+        procs = [(10, 1, "python.exe tools/ci_local.py --skip warden-suites"),
+                 (11, 10, "python.exe -m unittest discover -s tools")]
+        self.assertEqual(self.engines(procs)["value"], 1)
+
+    def test_a_headless_godot_under_a_headless_godot_counts_both(self):
+        procs = [(10, 1, GODOT_EXE), (11, 10, GODOT_EXE.replace("gut_cmdln.gd", "child.gd"))]
+        self.assertEqual(self.engines(procs)["value"], 2)
+
+
 class ListingFailures(Base):
     """RV-SKILLS-WF F2: a failed, empty or timed-out listing is "not measured", never a measured 0."""
 
