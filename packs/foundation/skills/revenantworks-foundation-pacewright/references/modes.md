@@ -9,6 +9,7 @@ minutes comes from `plan-profiles.md`, never from this file.
 
 - The shared base
 - Precedence
+- The spend target (any mode)
 - Pace
 - Turbo
 - Overnight
@@ -69,6 +70,18 @@ Hard stops (95% weekly, the stop band, identity and green-gate rules) > overnigh
 owner-away conduct rules > reset-eve > pace > turbo > normal. A higher line always wins; a mode never lifts a
 hard stop, with the one exception named under reset-eve's final 3 hours.
 
+## The spend target (any mode)
+
+With `target_pct` by `target_at` in the budget file (the user's goal, observation 0350), every
+2-hour check in every mode prints two figures: the **needed rate** = (target - reading) / hours
+left to `target_at`, and the **lane count that meets it** = the needed rate / the mix's measured
+points per lane-hour (`accounting.md`, Lane rates). Under the line, add lanes in reset-eve's
+order — verifiable units first, then reviews, then briefs for queued rows — within the rig gate
+(Turbo). **The rig gate always wins over the target**: a closed gate holds the lane, and the
+check says which bound held it. **Never padding work** (base rule 8, the pace-lanes rule): when
+no real row is unblocked, the check prints "the gap stands until <row> lands" and adds nothing.
+A lane with no measured rate is named, not guessed.
+
 ## Pace
 
 **On** when the gap is above PACE + 3, or on the user's word. **Off** when the gap is back within
@@ -87,65 +100,88 @@ hard stop, with the one exception named under reset-eve's final 3 hours.
 
 ## Turbo
 
-**On only on the user's word**, for a stated period. A plan, a ledger line or a routine never
-turns it on.
+**On only on the user's word**, for a stated period inside one waking work block. A plan, a ledger
+line or a routine never turns it on, and it never runs into Overnight (the budget file cannot
+expire past the next 22:00 user-local), unless the user explicitly orders turbo for the night
+(Overnight, below).
 
-- **No lane cap by default** (owner ruling 2026-10-16). Turbo runs with no restriction on the
-  unit count; what keeps it smart is the gates below, not a number. The no-cap counts lanes, not
-  machine load: CPU-heavy local lanes keep a machine cap (below).
-- **One entry question, once.** On entry the controller asks the user one line: "No cap (pick) or
-  a number?" The pick is no cap. The answer goes into the budget file (SKILL.md §5) as
-  `"mode": "turbo"` with `"parallel_ceiling": null` for no cap, or the number the user names (a
-  rig writer such as `dispatch_budget_write.py --mode turbo --parallel none`). It is not asked
-  again at each check; a later answer from the user replaces it. An unattended start (no answer)
-  takes the pick. A fan-out reads null in turbo as no wave cap, while the file is unexpired.
-- **Every launch passes four launch gates**, cap or no cap:
-  1. **Real work only**: a planned row on the path to a landed row — builds of designed rows
-     first, then their checks, then designs under the lead cap (base rule 8; spend pressure never
-     creates a row).
-  2. Its file set does not overlap a running writer's (one writer per repo or worktree).
-  3. It can land in this session.
-  4. Its tier comes from the shared table.
-- **Two kinds of lane** (owner ruling 2026-10-16, after turbo ran 8 local game-engine test suites
-  at once on a 16-thread machine: the CPU sat at 97%, a 45-minute land test run stretched past
-  1 h 40 min, and because lands are serial it blocked the queue behind it).
-  - **Light lanes, no cap**: design, briefs, docs, reviews that re-run a few scripts, remote and
-    read-only work.
-  - **CPU-heavy lanes, the machine cap**: local work that loads the CPU for minutes — a full test
-    suite, a build, a render, a measure or perf run, a game engine run.
-- **The machine cap is derived, not guessed.** Heavy cap = floor(logical threads ÷ threads per
-  heavy lane), at least 1. Threads per heavy lane comes from one measured heavy run (the logical
-  threads it keeps busy alone, rounded up), recorded as the overlay's measured key
-  `turbo.heavy_lane_threads` (`accounting.md`). Until a measure exists, use about one heavy lane
-  per 5 logical threads: a 16-thread machine gave 3, the measured case above (the owner's pick).
-  The rule is stated with the cap whenever it is applied, never a bare number.
-- **The cap is per machine, not per controller.** The load probe re-reads it before each heavy
-  launch, in the same call: logical threads, current CPU load, and every heavy process running
-  on the machine (test suites, builds, container CI), whoever started it — another controller,
-  another session, the user. Two controllers each counting only their own lanes put 6 suites on
-  16 threads. A heavy lane launches only while that machine-wide count is under the cap and the
-  load leaves room; otherwise launch a light lane and hold the heavy one to the next heavy finish.
-- **Suite processes share one fixed ceiling** (owner ruling "both", 2026-10-16, observation
-  0446; tuned 2026-10-16 22:30Z). Beside the derived lane cap, a machine-wide suite cap holds
-  across every session and thread; the stricter of the two holds. A suite starts below 2 running,
-  or under the cap (default 4, set for a while in `~/.dispatch/suite-cap.json`) while the CPU is
-  under its target (default 75%). A wrapper and the suite it starts share one slot (ci_stamp over
-  ci_local over unittest is one); separate suites each count, so N headless engine runs under a
-  plain runner use N. Each run logs CPU, memory, disk and timing to `~/.dispatch/suite-perf.jsonl`,
-  and `suite_slot.py report` shows which setting ran best. Every background suite starts at below-normal
-  priority with no window, through dispatchwright's `scripts/suite_slot.py` where it is
-  installed (it waits for a slot, then runs the command that way).
-- **The land run goes first.** The land (merge) test run is a heavy lane with priority: it takes
-  the next free heavy slot ahead of any row's suite, and while it runs no new heavy lane starts
-  that would push the heavy count past the cap. A land run is never queued behind row suites.
-- **Lands are batched.** Finished, reviewed rows wait and merge in batches, so one land test run
-  (and one CI run) covers several rows; lands stay serial.
-- **No launch** while the 5-hour window is at 85% or more; the slow and stop bands (default 80% and
-  95%, both windows) and the 95% weekly stop hold as in every mode.
-- **Ends** at PACE + 15, at the end of the stated period, or on the user's word.
-- **Drops to normal** after two checks in a row below the baseline rate (rows landed per meter
-  point; the first measured figure was 0.21, from one turbo day — a local overlay replaces it with
-  the environment's own).
+**What turbo lifts: the spend throttle, nothing physical** (owner ruling 2026-10-20, observation
+0470; it reverses the 2026-10-16 "no cap" ruling). The gap table (SKILL.md §3) is off and the
+week's allowance may run to the stop bands. Turbo does not lift the base cap of 6 writer units,
+and it never lifts a machine limit. What bounds turbo is the rig, the check queue and the land,
+read fresh before every launch. A second breach of the same machine limit (0446, then 2026-10-19)
+made this a gate in code, not a sentence.
+
+**Entry, one question once:** "Rig-aware turbo (pick), or a lower number?" The answer goes into the
+budget file through the writer: `--mode turbo --ttl 2h` (rig-aware) or `--parallel <n>` with n <= 6.
+There is no "no cap" answer: the writer refuses `--parallel none`. An unattended start takes the
+pick. A later answer from the user replaces it; it is not asked again at each check.
+
+**Every launch passes four launch gates:**
+1. **Real work only**: a planned row on the path to a landed row — builds of designed rows first,
+   then their checks, then designs under the lead cap (base rule 8; spend pressure never creates
+   a row).
+2. Its file set does not overlap a running writer's (one writer per repo or worktree).
+3. It can land in this session, measured: unlanded WIP under its limit (the rig gate, below).
+4. Its tier comes from the shared table.
+
+**The rig gate.** Every heavy launch in turbo passes `rig_gate` (dispatchwright
+`scripts/rig_gate.py`, called by the ledger guard). It reads, in one call: the slot registry,
+every headless engine and suite process on the machine, the check queue, the land flag and land
+verdict, the base's status and the run's unlanded branches. A signal it cannot read is reported
+"not measured", never a crash. It refuses a launch, naming the bound, when any of these fails:
+
+| bound | value (default; key in `~/.dispatch/rig-gate.json`) | counts |
+|---|---|---|
+| writer units | <= 6 open writer rows (base cap; in the ledger guard, every mode) | a row is open until its check verdict exists (`checking` counts) |
+| all units | <= 12, writers included (the ledger guard, in a turbo file the writer stamped) | read-only design, briefs, docs, research, reviews that run no local suite |
+| busy engines | busy <= B - 2 for a heavy launch, B = the rig budget (`rig_budget`, default physical cores + 2: 10 on 8 cores / 16 threads) | every headless engine or suite process on the machine, + 2 while the self-hosted runner has a job, + the container shards no host process shows (`extra_busy_file`) |
+| CPU | under 85% for a heavy launch (`cpu_max_pct`), over a 3-second sample | machine-wide |
+| check-queue wait | expected queue wait <= H = 45 min (`queue_horizon_min`) for a writer whose work ends in a check | (expected seconds of queued checks + half of each running one) / check lanes |
+| land state | no writer launch while a land walk runs, or while the land, a branch CI run or main is red | the land flag, the land verdict, the nightly status file |
+| unlanded WIP | < 6 verified branches not on origin/main (`wip_limit`) | at the limit the next launch is a join or a land, never a build |
+| top tier | closed unless the stamped file says `top_tier_open: true` with the user's quoted word and the row's notes say `owner-called` | `fable-*` agent types, in every mode |
+
+A heavy launch is a unit that will run a local suite, build, render, measure or engine run (a
+ledger `lane` cell says `heavy` or `light`; without it a writer row is heavy). A light launch passes
+only the writer, all-units and top-tier bounds. An escalation is a launch and passes the gate. A
+unit stalled behind a closed gate is not a failure: it frees its slot and requeues; only a
+verifiable failed check escalates (dispatchwright §7). A check that timed out on a loaded rig is
+`TIMEOUT`: it requeues and never counts toward the escalation rule. In turbo every ledger row
+carries a numeric token estimate, so the 2x-estimate stop has a number to compare.
+
+**The older machine limits still hold; the stricter wins.** The derived heavy-lane cap — floor(logical
+threads ÷ threads per heavy lane), at least 1, threads per heavy lane from one measured heavy run
+(overlay key `turbo.heavy_lane_threads`, `accounting.md`; until measured, one heavy lane per 5
+logical threads: 3 on 16 threads) — and the machine-wide suite ceiling: a suite starts below 2
+running, or under the cap (default 4, `~/.dispatch/suite-cap.json`) while the CPU is under its
+target (default 75%). A wrapper and the suite it starts share one slot; separate suites each
+count. Every background suite starts at below-normal priority with no window, through
+dispatchwright's `scripts/suite_slot.py` where installed, and logs to `~/.dispatch/suite-perf.jsonl`.
+
+**Stop launching** (light lanes may continue unless the line says otherwise) when any of these holds:
+busy engines over B; queue wait over H; a land walk running; a land, branch CI or main red (only its
+fixer and light lanes); WIP at the limit; the 5-hour window at 85% or more, or any stop band (the
+slow and stop bands default to 80% and 95%, both windows, and the 95% weekly stop: all launches);
+the clock past the file's expiry or inside Overnight without the user's night order (all
+launches); an owner stop (all launches). Never message running units with a new cap or flag. The
+slot runner and the queue own the CPU; read them first (observation 0462).
+
+**Checks** every 2 hours and at every land, one log line: rows landed since the last check, busy
+engines / B, queue wait / H, WIP, land state, the 5-hour and weekly readings, and with a spend
+target the needed rate and its lane count (The spend target, above). **Renewal is a check**: the
+writer renews turbo only with `--landed <n>` and a reading under 15 minutes old, at a TTL of 2 h at
+most. **Drops to normal** after two checks in a row with 0 rows landed (the writer does it), with
+queue wait over 2 x H, or below the baseline rate (rows landed per meter point; the first measured
+figure was 0.21, from one turbo day — a local overlay replaces it with the environment's own).
+**Ends** at PACE + 15, at the end of the stated period, at the Overnight start (unless the user
+ordered a turbo night), or on the user's word.
+
+**Lands go first and in batches.** The land walk takes the reserved long slot, ahead of any row's
+suite, and is never queued behind row suites. Finished, reviewed rows wait and merge in batches,
+so one land run (and one CI run) covers several rows; lands stay serial. While a branch CI run is
+in flight on the rig's own runner, check lanes drop to 4 and no writer whose check would join the
+queue launches.
 
 ## Overnight
 
@@ -163,7 +199,10 @@ least-allowed command. Before the user leaves:
   monitor on each unit's journal or worktree modification time that reports a unit silent for one
   interval. A session cron that needs an idle prompt logged nothing for that whole night.
 
-- The throttle is picked from the gap, **never turbo**.
+- The throttle is picked from the gap, **never turbo** — unless the user explicitly orders turbo
+  for the night (the writer records their words: `--night-order "<quote>"`). Turbo then runs
+  under the rig gate and its 2-hour checks, the renewals are the controller's, and Overnight's
+  conduct holds: no questions, defaults taken, a morning file, a morning report.
 - **No questions, and never a blocking question tool** (observation 0348). Launch every
   launchable row first; each question then goes to a morning file with a recommended answer, and
   only the rows that depend on it wait. A reversible fork takes the default; an irreversible one
@@ -295,7 +334,8 @@ headless runs stop with no model fallback; credits are opt-in.
 - `weekly` — spend toward the target.
 - `top` — top-model work, one unit at a time; closes at all-models 90%; needs a top-model reading
   under 2 hours old (it comes only from `/usage` or the user — the statusline has no per-model
-  field).
+  field), and opens only on the user's quoted word (`--top-open --owner-word "<quote>"`; the
+  ledger guard refuses a `fable-*` launch without it and an `owner-called` row).
 - `5h` — keep each 5-hour window busy within the unit-fit rule; stop at 90%.
 
 ## Modes not yet defined

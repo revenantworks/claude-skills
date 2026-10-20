@@ -18,7 +18,7 @@ A subscription's usage is a set of rolling meters, and a long run hits them with
 pacewright reads the meters, decides how fast the work may spend right now, and says so in one
 line and in one small data file. It never runs the work. Policy lives in percentages; every
 absolute number (tokens per meter point, parallel units, CI minutes) lives in one plan profile,
-so a plan change is a data edit, not a rule rewrite.
+so a plan change is a data edit.
 
 **Workflow:** Read the meters → Reconcile the reading (UBA) → Pick the mode → Fit → Write the
 budget decision → Check again (every 2 hours, and whenever a unit finishes)
@@ -135,13 +135,13 @@ Weekly 80–94%: one unit. Weekly 95%: stop.
 **The other modes** — full rules in `references/modes.md`:
 
 - **Pace** (above PACE + 3): a burn budget, %/h = 0.565 − gap ÷ hours to the weekly reset; one
-  builder plus an optional small read-only unit; a running budget, and a log line per check.
-- **Turbo**: **only on the user's word**, for a stated period. No lane cap unless the user names
-  one; heavy local lanes keep a derived machine cap, land run first; four launch gates.
-  Ends at PACE + 15; drops to normal after two checks below baseline.
+  builder plus an optional small read-only unit; a running budget; a log line per check.
+- **Turbo**: **only on the user's word**, for a stated period; lifts spend, never a machine
+  limit. Writers stay at 6, all units at 12; each heavy launch passes the rig gate; renewal is a
+  check. Ends at PACE + 15; drops to normal after two 0-landed checks.
 - **Overnight** (22:00–09:00 user time, by clock): entry is a gate — every queued command
-  allowed, liveness watched from outside the session; throttle from the gap, never turbo; no
-  blocking question — launch first, questions to a morning file; a morning report.
+  allowed, liveness watched from outside; throttle from the gap, turbo only on the user's
+  explicit order; questions to a morning file; a morning report.
 - **Work day** (on the user's word): overnight conduct, questions to a check-in file; each
   check-in (default 12:00 and 17:00, overlay `workday.checkins`) asks them one at a time, then
   owner tasks and a three-line status. Work never pauses.
@@ -150,7 +150,7 @@ Weekly 80–94%: one unit. Weekly 95%: stop.
 - **Reset-eve**: on when the projected close misses the target (else 36 hours out under 85%);
   target 93% or the user's; stop at 95%; under pace is a deficit, and each check prints the lane
   count from measured lane rates; the top model only in the last 12 hours; the last 3 hours aim at
-  100%, the last check one minute before the reset. Every fill lane serves a planned row.
+  100%, the last check at reset − 1 min. Every fill lane serves a planned row.
 
 **Every mode shares one base:** one tier table (the fan-out's, not this skill's), no rework, a
 small controller, a design lead cap, small briefs, and one scoreboard (`references/accounting.md`).
@@ -170,9 +170,9 @@ window. At the **slow band** (default 80%) launch one unit at a time on a cheape
 carries one re-arm line (the window, its reset time, the next action). A resume re-reads the
 meter first; it never launches on the reading taken before the stop.
 
-**Checks** every 2 hours, plus one whenever a unit finishes. The meter shows whole percent, so
-judge the trend across checks, never one check. Pace and turbo halt a launch when the gap did not
-move the way the plan said.
+**Checks** every 2 hours, plus one whenever a unit finishes; with a spend target each prints the
+needed rate and lanes (`modes.md`). Judge the whole-percent meter's trend, never one check. Pace
+and turbo halt a launch when the gap did not move the way the plan said.
 
 ## 4 · Reconcile the reading (UBA)
 
