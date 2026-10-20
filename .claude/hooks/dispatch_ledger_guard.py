@@ -140,8 +140,8 @@ by Reconcile from verified waves). The rule, kept simple on purpose:
     half of the calibration point Reconcile completes. Best-effort, never a
     reason to block, and skipped in fixture mode.
 
-`--windows-file PATH`, `--calibration-file PATH` and `--ledger PATH` on argv
-read fixtures instead of the live files (the windows file is then taken as
+`--windows-file PATH`, `--calibration-file PATH`, `--ledger PATH`, and (RV-SKILLS-WF
+F11) `--budget-file PATH` and `--rig-gate PATH` on argv read fixtures instead of the live files (the windows file is then taken as
 current, since a controls runner can hand a file but not a timestamp; the
 ledger write is skipped). CLAUDE_USAGE_WINDOWS / CLAUDE_USAGE_CALIBRATION
 override the live paths with the freshness check kept, for --selftest. Every
@@ -593,12 +593,20 @@ BUDGET_WRITER_ID = "dispatch_budget_write"
 BUDGET_STAMP_KEY = "content_sha256"
 
 
+def budget_path() -> Path:
+    """`--budget-file PATH` on argv (a controls fixture; RV-SKILLS-WF F11), else DISPATCH_BUDGET_FILE,
+    else ~/.dispatch/budget-decision.json. A fixture path that does not exist is no budget file."""
+    fixture = _argv_path("--budget-file")
+    if fixture is not None:
+        return fixture
+    override = os.environ.get("DISPATCH_BUDGET_FILE")
+    return Path(override) if override else Path.home() / ".dispatch" / "budget-decision.json"
+
+
 def budget_file() -> dict | None:
     """pacewright's budget file as a dict while it is unexpired, else None. Never raises."""
     try:
-        override = os.environ.get("DISPATCH_BUDGET_FILE")
-        p = Path(override) if override else Path.home() / ".dispatch" / "budget-decision.json"
-        d = json.loads(p.read_text(encoding="utf-8"))
+        d = json.loads(budget_path().read_text(encoding="utf-8"))
         if not isinstance(d, dict):
             return None
         exp = d.get("expires_at")
@@ -916,8 +924,12 @@ def is_heavy(row: dict | None) -> bool:
 
 
 def rig_gate_path() -> Path | None:
-    """DISPATCH_RIG_GATE when set (an absent file there is no gate), else rig_gate.py beside this
-    hook, else ~/.dispatch/rig_gate.py (dispatchwright ships it as scripts/rig_gate.py)."""
+    """`--rig-gate PATH` on argv (a controls fixture; RV-SKILLS-WF F11), else DISPATCH_RIG_GATE when
+    set (an absent file there is no gate), else rig_gate.py beside this hook, else
+    ~/.dispatch/rig_gate.py (dispatchwright ships it as scripts/rig_gate.py)."""
+    fixture = _argv_path("--rig-gate")
+    if fixture is not None:
+        return fixture if fixture.is_file() else None
     env = os.environ.get("DISPATCH_RIG_GATE")
     if env:
         p = Path(os.path.expanduser(env))
@@ -1020,9 +1032,7 @@ def stop_band() -> tuple[float, str]:
     documented 95% default. Never raises (K8a, audit K7-2-22: the guard held
     its own 97% literal on the 5-hour window only)."""
     try:
-        override = os.environ.get("DISPATCH_BUDGET_FILE")
-        p = Path(override) if override else Path.home() / ".dispatch" / "budget-decision.json"
-        d = json.loads(p.read_text(encoding="utf-8"))
+        d = json.loads(budget_path().read_text(encoding="utf-8"))
         exp = d.get("expires_at")
         from datetime import datetime, timezone
         if datetime.strptime(exp, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc) <= datetime.now(timezone.utc):
@@ -2343,6 +2353,19 @@ def _selftest_rig_turbo(problems: list) -> int:
         check(code == 0, f"T14 control: a fable launch with the top tier open was refused outside dispatch ({code}: {err[:200]!r})")
         code, _, err = bare({"subagent_type": "opus-high"})
         check(code == 0, f"T14 control: an opus launch outside dispatch mode was refused ({code}: {err[:200]!r})")
+
+        # T15 (F11): --budget-file and --rig-gate on argv replace the live files (a controls fixture),
+        # whatever the environment names.
+        payload = {"tool_name": "Agent", "session_id": "abc", "cwd": str(run_dir(one)),
+                   "tool_input": {"description": "u", "prompt": "You are unit W1 of the run."}}
+        env_live = {"DISPATCH_BUDGET_FILE": budget(turbo), "DISPATCH_RIG_GATE": str(gate_pass)}
+        code, _, err = _run_guard_full(payload, flag, tmp, env_live,
+                                       argv=["--budget-file", budget(turbo), "--rig-gate", str(gate_refuse)])
+        check(code == 2 and "busy engines 9 over 8" in err, f"T15: --rig-gate on argv was not the gate run ({code}: {err[:200]!r})")
+        code, _, err = _run_guard_full(dict(payload, cwd=str(run_dir(one))), flag, tmp,
+                                       dict(env_live, DISPATCH_RIG_GATE=str(gate_refuse)),
+                                       argv=["--budget-file", str(tmp / "absent-budget.json")])
+        check(code == 0, f"T15: an absent --budget-file fixture still read the environment's turbo file ({code}: {err[:200]!r})")
     return cases
 
 

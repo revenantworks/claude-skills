@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "mode": "turbo",
+  "basis": "fixture: stamped rig-aware turbo, no parallel_ceiling",
+  "top_tier_open": false,
+  "turbo_checks": [],
+  "written_at": "2026-10-20T12:00:00Z",
+  "expires_at": "2999-01-01T00:00:00Z",
+  "writer": "dispatch_budget_write",
+  "content_sha256": "c1152eb4ae2fc0c5d43bc23a39d401be0b72eb1973e353b3eb045ad67de052d6"
+}

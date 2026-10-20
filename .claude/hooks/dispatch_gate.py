@@ -43,7 +43,12 @@ the must-ask line rather than an exception. `--windows-file PATH` and
 `--calibration-file PATH` on argv read fixture files instead of the live ones
 and skip the freshness check (a controls runner can hand a file, not a
 timestamp); CLAUDE_USAGE_WINDOWS / CLAUDE_USAGE_CALIBRATION override the live
-paths with the freshness check kept, for --selftest.
+paths with the freshness check kept, for --selftest. The reset-eve line reads
+the same `--windows-file`, and `--budget-file PATH` for the budget file
+(RV-SKILLS-WF F19: it once read the live files whatever argv said, so for 48 h
+before each weekly reset the ordinary-prompt controls failed). Its cap reads the
+rig-aware turbo as the ledger guard does: a stamped turbo file gives 12 units
+and 6 writers, an unstamped one 6 (F12).
 
 Run `python dispatch_gate.py --selftest` to check the patterns file compiles,
 that the samples discriminate, that the flag it writes is one the guard can
@@ -321,6 +326,43 @@ def _num(v) -> float | None:
     return None if isinstance(v, bool) or not isinstance(v, (int, float)) else float(v)
 
 
+BUDGET_WRITER_ID = "dispatch_budget_write"
+BUDGET_STAMP_KEY = "content_sha256"
+TURBO_ALL_UNITS, TURBO_WRITERS = 12, 6
+
+
+def budget_stamp_ok(d) -> bool:
+    """The budget writer's stamp, checked the way dispatch_ledger_guard.py checks it (duplicated on
+    purpose: each hook installs alone): its writer id and the SHA-256 of the canonical JSON
+    without the hash key."""
+    import hashlib
+    if not isinstance(d, dict) or d.get("writer") != BUDGET_WRITER_ID:
+        return False
+    body = {k: v for k, v in d.items() if k != BUDGET_STAMP_KEY}
+    want = hashlib.sha256(json.dumps(body, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
+    return d.get(BUDGET_STAMP_KEY) == want
+
+
+def cap_text(b: dict) -> str:
+    """The cap the ledger guard will hold, as the reset-eve line states it (RV-SKILLS-WF F12; the
+    rig-aware turbo, owner 2026-10-20, reversed the 2026-10-16 no-cap ruling): a stamped turbo file
+    gives 12 units with 6 writers, or the user's lower number as written (1..6); an unstamped turbo
+    file gives 6; another file's number is printed as written; no file gives 6."""
+    ceiling = b.get("parallel_ceiling") if isinstance(b, dict) else None
+    numeric = isinstance(ceiling, int) and not isinstance(ceiling, bool)
+    if isinstance(b, dict) and b.get("mode") == "turbo":
+        if not budget_stamp_ok(b):
+            return f"cap = {DEFAULT_CEILING} (a turbo file without the writer's stamp)"
+        if numeric:
+            return (f"cap = {max(1, min(ceiling, TURBO_WRITERS))} (the turbo answer, a lower number; "
+                    "heavy launches through the rig gate)")
+        return (f"cap = {TURBO_ALL_UNITS} units, {TURBO_WRITERS} writers (stamped rig-aware turbo; "
+                "heavy launches through the rig gate)")
+    if numeric:
+        return f"cap = the budget file parallel_ceiling {ceiling}"
+    return f"cap = {DEFAULT_CEILING} (no unexpired budget file)"
+
+
 def reset_eve_line(windows: dict | None, now: float | None = None, budget: dict | None = None) -> str:
     """On reset eve, the fill target as a line; '' otherwise. Printed on EVERY
     prompt, not only a fan-out one: twice (2026-10-01, 2026-10-06) reset eve was
@@ -345,12 +387,7 @@ def reset_eve_line(windows: dict | None, now: float | None = None, budget: dict 
         else:
             src = "meter file"
         age = f", read {int((now - read_at) // 60)} min ago from the {src}" if read_at else ""
-        ceiling = b.get("parallel_ceiling")
-        no_cap = b.get("mode") == "turbo" and "parallel_ceiling" in b and (
-            ceiling is None or str(ceiling).strip().lower() == "none")
-        cap = ("cap = none (turbo, no lane cap; the launch gates still apply)" if no_cap else
-               f"cap = the budget file parallel_ceiling {ceiling}" if isinstance(ceiling, int)
-               and not isinstance(ceiling, bool) else f"cap = {DEFAULT_CEILING} (no unexpired budget file)")
+        cap = cap_text(b)
         rate_pl = _num(b.get("lane_pt_per_hour"))
         lane_src = "budget file lane_pt_per_hour" if rate_pl and rate_pl > 0 else LANE_RATE_SOURCE
         rate_pl = rate_pl if rate_pl and rate_pl > 0 else DEFAULT_PT_PER_LANE_HOUR
@@ -429,6 +466,7 @@ def _run_gate(payload, tmp: Path, env_extra: dict | None = None) -> tuple[int, s
     # must not change what the older cases see.
     env["CLAUDE_USAGE_WINDOWS"] = str(tmp / "no-usage-windows.json")
     env["CLAUDE_USAGE_CALIBRATION"] = str(tmp / "no-usage-calibration.json")
+    env["DISPATCH_BUDGET_FILE"] = str(tmp / "no-budget-decision.json")   # and the live budget file
     env.update(env_extra or {})
     proc = subprocess.run(
         [sys.executable, str(Path(__file__).resolve())],
@@ -757,6 +795,56 @@ def selftest() -> int:
         bf.write_text(json.dumps(tgt), encoding="utf-8")
         if (read_budget(now=t1, path=bf) or {}).get("parallel_ceiling") != 7:
             problems.append("reset-eve 0350: an unexpired budget file was not read")
+    # RV-SKILLS-WF F12: the cap line prints the guard's reading of the rig-aware turbo, never the
+    # reversed 2026-10-16 "no lane cap": a stamped turbo file gives 12 units (6 writers), its numeric
+    # answer holds as written (1..6), an unstamped turbo file gives 6.
+    import hashlib
+
+    def stamped(body):
+        d = dict(body, writer="dispatch_budget_write")
+        d["content_sha256"] = hashlib.sha256(
+            json.dumps(d, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
+        return d
+    eve_win = {"seven_day": {"used_percentage": 69, "resets_at": t0 + 32 * 3600}}
+    turbo_b = {"mode": "turbo", "expires_at": "2027-01-01T00:00:00Z"}
+    for label, b, want in (("a stamped rig-aware turbo file", stamped(turbo_b), "cap = 12 units, 6 writers"),
+                           ("a stamped turbo file with a null ceiling", stamped(dict(turbo_b, parallel_ceiling=None)),
+                            "cap = 12 units, 6 writers"),
+                           ("a stamped turbo answer of 3", stamped(dict(turbo_b, parallel_ceiling=3)), "cap = 3"),
+                           ("an unstamped turbo file with a null ceiling", dict(turbo_b, parallel_ceiling=None),
+                            "cap = 6 (a turbo file without the writer's stamp)")):
+        got = reset_eve_line(eve_win, now=t0, budget=b)
+        if want not in got or "no lane cap" in got:
+            problems.append(f"reset-eve F12: {label} printed {got[-160:]!r}, want {want!r}")
+    # RV-SKILLS-WF F19: the reset-eve line honours --windows-file and --budget-file in fixture mode,
+    # so a control never reads the live meter or budget file.
+    with tempfile.TemporaryDirectory() as td:
+        tdp = Path(td)
+        eve_file = tdp / "eve-windows.json"
+        eve_file.write_text(json.dumps({"seven_day": {"used_percentage": 50, "resets_at": time.time() + 10 * 3600}}),
+                            encoding="utf-8")
+        far_file = tdp / "far-windows.json"
+        far_file.write_text(json.dumps({"seven_day": {"used_percentage": 50, "resets_at": time.time() - 3600}}),
+                            encoding="utf-8")
+        bfile = tdp / "turbo.json"
+        bfile.write_text(json.dumps(stamped(dict(turbo_b, expires_at="2999-01-01T00:00:00Z"))), encoding="utf-8")
+        live_eve = tdp / "live-eve.json"
+        live_eve.write_text(json.dumps({"written_at": int(time.time()), "seven_day": {
+            "used_percentage": 50, "resets_at": time.time() + 10 * 3600}}), encoding="utf-8")
+
+        def gate_argv(argv, live):
+            env = dict(os.environ, CLAUDE_DISPATCH_FLAG=str(tdp / "flag.json"),
+                       CLAUDE_DISPATCH_PATTERNS=str(patterns_path()), CLAUDE_USAGE_WINDOWS=str(live),
+                       DISPATCH_BUDGET_FILE=str(tdp / "no-budget.json"))
+            return subprocess.run([sys.executable, str(Path(__file__).resolve())] + argv,
+                                  input=json.dumps({"session_id": "s", "prompt": ordinary_sample}),
+                                  capture_output=True, text=True, env=env)
+        r = gate_argv(["--windows-file", str(eve_file), "--budget-file", str(bfile)], tdp / "absent.json")
+        if "RESET-EVE" not in r.stdout or "cap = 12 units" not in r.stdout:
+            problems.append(f"reset-eve F19: --windows-file / --budget-file were not read in fixture mode: {r.stdout[-200:]!r}")
+        r = gate_argv(["--windows-file", str(far_file)], live_eve)
+        if r.stdout.strip():
+            problems.append(f"reset-eve F19: a far-from-reset --windows-file still printed the live eve line: {r.stdout[-200:]!r}")
     for case, win in (("far", {"seven_day": {"used_percentage": 50, "resets_at": t0 + 100 * 3600}}),
                       ("past", {"seven_day": {"used_percentage": 50, "resets_at": t0 - 3600}}),
                       ("full", {"seven_day": {"used_percentage": 99, "resets_at": t0 + 3600}}),
@@ -776,7 +864,8 @@ def selftest() -> int:
         f"{broken_input_cases} broken-input cases and still fires past an uncompilable pattern; "
         f"the usage-windows line reads a fresh file with its calibration state and says the plan "
         f"must ask on {len(windows_cases) - 2} stale/absent/corrupt files, fixture mode on argv "
-        f"skips freshness)"
+        f"skips freshness; the reset-eve cap reads the rig-aware turbo as the guard does and the "
+        f"reset-eve line honours the argv fixture files)"
     )
     if patterns and first_match(success, patterns):
         problems.append("the selftest's own success line matches a trigger pattern, so pasting it "
@@ -801,7 +890,11 @@ def main() -> int:
         patterns = load_patterns()
         hit = first_match(strip_pasted_terminal(prompt), patterns)
         try:
-            eve = reset_eve_line(read_windows(windows_path()), budget=read_budget())
+            # Fixture mode (RV-SKILLS-WF F19): --windows-file and --budget-file on argv replace the
+            # live files here too, so a control never reads the live meter or budget file.
+            wfix = _argv_path("--windows-file")
+            eve_windows = read_windows(wfix, fixture=True) if wfix else read_windows(windows_path())
+            eve = reset_eve_line(eve_windows, budget=read_budget(path=_argv_path("--budget-file")))
         except Exception:
             eve = ""
         if not hit and eve:
