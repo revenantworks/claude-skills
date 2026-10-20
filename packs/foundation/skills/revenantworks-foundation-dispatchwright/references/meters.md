@@ -21,6 +21,7 @@ and has spent. Neither skill loads the other's files.
 - Reading each meter — the command, or the user question
 - The loop — cheapest route, re-read at each land, brake, record
 - Pace-motivated launches — planned rows only, the plan row named, no blocking question first
+- Wave conduct — the standing go and asking the user (SKILL.md §6, in full)
 - Liveness in an unattended stretch — the allow list and a watcher a prompt cannot block
 - The fallback fit — when no budget decision file is fresh
 
@@ -109,6 +110,27 @@ planned rows (observation 0347):
   owner-away mode, never call a blocking question tool: write the questions to the morning file
   (pacewright `modes.md`) and let only the rows that depend on them wait. In work-day mode they go
   to the check-in file and are asked at the next check-in (pacewright `modes.md`, Work day).
+
+## Wave conduct
+
+SKILL.md §6 states these in one line each; the rules in full:
+
+- **Standing go** (owner 2026-10-20). The user's pre-approval of the next phase ("once A
+  completes, move on to B") is a go. The controller checks A's written done-when, records the
+  evidence, and advances without asking. A done-when that fails stays a stop.
+- **Slow steps**: the slow-step log above (Pace-motivated launches).
+- **Asking the user** (observations 0194, 0201, 0247, 0260). A gate over many rows prefills
+  Claude's call and reason on every row, offers bulk controls, and saves the answers to a file
+  that supersedes catalog calls. A figure names the exact property and where it was measured; one
+  taken from another check is re-measured first. Questions a prep brief depends on are asked
+  before it is written; with the user away, those sections are conditional, each option with its
+  delta. Launch every launchable row before any blocking question (No blocking question, above);
+  in work day, questions go to the check-in file.
+- **Meters in the plan.** The plan names every meter its units will spend — the Claude windows
+  and top-tier allowance, CI minutes per repo pushed to, the GitHub API rate limit, any paid API —
+  and says which are free; the cheapest route per meter, the brake under the user's floor and the
+  per-row spend record are The loop, above. The budget decision file's fields (ceiling, allowance,
+  top-tier and hosted-CI switches, stop band) are Reading each meter, above.
 
 ## Liveness in an unattended stretch
 

@@ -211,7 +211,13 @@ writing `done` at queue time frees a slot while the check still waits. **Writer 
 that writes a repo) count again on their own against 6, in every mode. **In turbo every row
 carries a numeric `estimated_tokens`** (a base sha is not one), and an optional `lane` cell
 (`heavy` or `light`) says whether the launch meets the rig gate; without it a writer row is
-heavy and a read-only row light. A top-tier row carries `owner-called` in its notes.
+heavy and a read-only row light. A top-tier row carries `owner-called` in its notes. The writer
+count bounds writer launches only: a read-only launch runs beside six writers, even while a
+refused writer's row still reads `dispatched`. Two notes tokens reach the rig gate (review
+RV-SKILLS-WF F6, F7): `kind: join` or `kind: land` marks a launch that brings unlanded WIP down,
+so the WIP bound passes it at the limit (a row without one is a build), and `fixer-of: <land>`
+marks the fixer of a red land or red main, which the red-verdict bound passes (a land walk in
+flight still holds it).
 
 ## Worked example row
 

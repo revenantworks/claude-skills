@@ -206,9 +206,9 @@ it is durable, not when it is written.**
 
 ## 6 · Wave execution
 
-- **Cap 6 concurrent writer units, counting agents, not rows** (#0022); turbo keeps it, and adds
-  read-only lanes up to 12 through pacewright's rig gate. CPU-heavy local lanes, the check queue
-  and the land state bound every turbo launch (pacewright modes.md, Turbo).
+- **Cap 6 concurrent writer units, counting agents, not rows** (#0022); turbo keeps it and adds
+  read-only lanes up to 12. Every heavy turbo launch passes this skill's rig gate
+  (`scripts/rig_gate.py`, run by the ledger guard; bounds: pacewright modes.md, Turbo).
 - **Max 2 nesting levels.** A wave over 12 units is split and shown to the user first.
 - **Stagger dispatch**: units launched together race for files.
 - **No controller commit to a unit's repo between its brief and its launch** (#0083); the brief's
@@ -222,40 +222,24 @@ it is durable, not when it is written.**
   run it inside the worktree, diff after each exchange, re-list agents to stop what it started.
 - **Take a run's status from its last reviewer**; a reviewer marks a task unbuilt, never `major`
   (#0091). **A stage with a visible commit and no return continues from the commit** (#0089).
-- **Recovery state**: when the base branch or the land in flight is red, or the CI runner is
-  down, every writer stops,
-  one fixer unit runs, and nothing else lands until the base is green. The ledger header records
-  entry and exit.
-- **Standing go**: the user's pre-approval of the next phase ("once A completes, move on to B")
-  is a go. Check A's written done-when, record the evidence, advance without asking; a failing
-  done-when stays a stop.
-- **Slow-step log**: every unit report and land records wall time per step. A step past 2x its
-  estimate or a class threshold goes into the run's slow-steps file with its cause and a fix;
-  cheap fixes are applied at once (meters.md).
+- **Recovery state**: when the base or the land in flight is red, or the CI runner is down, every
+  writer stops, one fixer unit runs (its row notes `fixer-of: <land>`), and nothing else lands
+  until the base is green. The ledger header records entry and exit.
+- **Standing go and slow steps** (meters.md, Wave conduct): a pre-approved next phase advances
+  once its written done-when is checked and recorded; a slow step is logged with its fix.
 - **Silence is not liveness.** After any interrupt or rejected call, re-read the ledger and each
   unit's journal; unattended, watch with something a prompt cannot block (meters.md). **Cancelling stops the agent first, its processes second** (#0051).
 
-**Asking the user** (#0194, #0201, #0247, #0260): a gate over many rows prefills Claude's call
-and reason on every row, offers bulk controls, and saves the answers to a file that supersedes
-catalog calls. A figure names the exact property and where it was measured; one taken from
-another check is re-measured first. Questions a prep brief depends on are asked before it is
-written; with the user away, those sections are conditional, each option with its delta.
-**Launch every launchable row before any blocking question**; overnight, questions go to the
-morning file; in work day, to the check-in file (#0348, meters.md). Times come from the clock in the writing command, never typed
-(#0343).
+**Asking the user** (#0194, #0201, #0247, #0260; meters.md, Wave conduct): prefill Claude's call
+on every gate row and save the answers to a file. **Launch every launchable row before any
+blocking question**; overnight, questions go to the morning file (#0348). Times come from the
+clock in the writing command, never typed (#0343).
 
 **Meters, fit and live gate** (`references/meters.md`). The plan names every meter its units will
-spend — the Claude windows and top-tier allowance, CI minutes per repo pushed to, the GitHub API
-rate limit, any paid API — and says which are free. Take the cheapest route per meter: lowest
-passing tier, local CI before a push, one push per landing, `[skip ci]` on run-record commits.
-**Re-read every meter at each land and each wave.** When any
-meter's room falls under the user's floor, launch one unit at a time or stop and report. Record each unit's spend
-per meter on its row. Before the table, obey pacewright's **budget decision file**
-(`~/.dispatch/budget-decision.json`) as data while it is unexpired — ceiling, allowance, top-tier
-and hosted-CI switches, stop band (meters.md). Without one, run the **fallback fit**: never guess
-a window, convert percent to tokens only with the user's figure (else `unfitted`), and an
-owner's advance go launches an unfitted plan smallest-first (#0093). The live gate
-stops launches at 95% and slows to one unit at 80% by default.
+spend and takes the cheapest route per meter. **Re-read every meter at each land and each wave.**
+Obey pacewright's unexpired **budget decision file** as data; without one, run the **fallback
+fit**: never guess a window (else `unfitted`). The live gate stops launches at 95% and slows to
+one unit at 80% by default.
 
 ## 7 · Escalation
 
@@ -269,11 +253,13 @@ stops launches at 95% and slows to one unit at 80% by default.
 - **A fix unit proves its new test fails on the unfixed code.** No test is deleted and no assert
   edited unless the brief names it.
 - **Stuck goes one effort step up, unasked, in any mode**: a unit that returns blocked, stalls past
-  2x its estimate, or fails a check a second time goes to a fresh unit. A block from an owner
-  hold or a missing permission is not stuck: it waits, or goes to the morning file.
+  2x its estimate, or fails a check a second time goes to a fresh unit. Not stuck: a block from an
+  owner hold or a missing permission (it waits, or goes to the morning file), and a stall behind a
+  closed rig gate or the check queue or a `TIMEOUT` verdict (the row requeues; pacewright
+  modes.md, Turbo).
 - **Stop and ask the user before** any escalation into the top tier (Fable needs their word)
   or any irreversible action the brief did not name. The **harness's own call and token count is
-  the only evidence** for the 2x stop and the brief's `call_cap`.
+  the only evidence** for the 2x-estimate stuck rule and the brief's `call_cap`.
 - **A unit stopped by the call cap:** run `gatewarden capreview` (warden pack, optional) before relaunching it.
 
 ## 8 · Reconcile
