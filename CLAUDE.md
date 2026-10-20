@@ -97,3 +97,7 @@ The read-only commands above are what report-only passes are allowed to run.)
   deliberately **not** wired in this repo's `settings.json`. A user installs
   them into `~/.claude/hooks/`, and that installed copy is the one that fires.
   Wiring them here as well would double-fire against an already-armed install.
+  Register `dispatch_ledger_guard.py` (PreToolUse, matcher `Task|Agent|Workflow`) with
+  `"timeout": 10` or more: a hook the harness kills does not block, so the guard ends its
+  own run within 8 s, giving dispatchwright's `scripts/rig_gate.py` (installed beside it)
+  at most 6 s.

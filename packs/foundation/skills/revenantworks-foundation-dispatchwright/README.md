@@ -66,8 +66,10 @@ stalled fan-out that needs to resume without redoing landed work. Self-contained
 without code. Two optional stdlib helpers ship: `scripts/suite_slot.py` (the machine-wide suite
 cap: waits for one of 4 suite slots, then runs the suite at low priority with no window), and
 `scripts/rig_gate.py` (the rig gate: may one more heavy unit launch now, read from busy engines,
-CPU, the check queue, the land state and unlanded branches; each signal it cannot read is reported
-"not measured"; the ledger guard runs it before every heavy launch in turbo). A run without them
+CPU, the check queue, the land state and verified unlanded branches; a run-tool signal it cannot
+read is reported "not measured", and a heavy launch with neither the process listing nor the CPU
+sample measured is refused; the ledger guard runs it before every heavy launch in turbo, inside a
+6-second budget, so register the guard with a hook timeout of 10 s or more). A run without them
 follows the same rules by hand. `git` and the surface's subagent/Task tools are optional — without `git` a run still
 plans, tiers and dispatches but reports an unverifiable row as unverified rather than done;
 without subagent tools a run ends at the tiered plan and the ledger.

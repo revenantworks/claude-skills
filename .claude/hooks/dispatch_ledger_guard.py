@@ -70,7 +70,19 @@ dispatchwright's scripts/rig_gate.py (DISPATCH_RIG_GATE, beside this hook, or
 launch. `checking` (a check queued, no verdict yet) counts as open. A `fable*`
 subagent type or model is refused in every mode unless the stamped budget file
 says `top_tier_open` with the user's quoted word and the unit's own row says
-`owner-called`.
+`owner-called`; outside dispatch mode (no live flag) the stamped
+`top_tier_open` alone opens it, since no row exists there.
+
+RV-SKILLS-WF fixes (2026-10-20). REGISTER THIS HOOK WITH `"timeout": 10` OR
+MORE: a hook the harness kills does not block, so the guard keeps its whole run
+under GUARD_BUDGET_S (8 s) and gives the rig gate at most RIG_GATE_TIMEOUT
+(6 s), failing closed when the gate does not answer in time. The guard hands
+the gate the row's launch kind (`kind: join` or `kind: land` in the row; a
+build otherwise: the WIP bound refuses builds only) and, for a red land's own
+fixer, `fixer-of: <land>` (the red-verdict bound passes it). The writer cap
+bounds writer launches only: a read-only launch runs beside six writers. In
+stamped turbo a numeric ceiling is the user's lower number and holds as written
+(1..6).
 
 Extended 2026-08-20 (skillwright pack audit, finding P1-2 / S-3): SKILL.md
 section 6 states two wave-execution caps in prose -- max 6 concurrent units,
@@ -620,9 +632,11 @@ def turbo_file() -> dict | None:
 def concurrent_cap() -> int:
     """The all-units cap; never None (owner 2026-10-20: the rig-aware turbo).
 
-    - A stamped, unexpired turbo file -> TURBO_ALL_UNITS (12), or its numeric
-      parallel_ceiling clamped to 6..12. Writers stay at writer_cap() (6), and
-      each heavy launch passes the rig gate.
+    - A stamped, unexpired turbo file -> TURBO_ALL_UNITS (12). A numeric
+      parallel_ceiling there is the user's "lower number" at turbo entry and
+      holds as written, clamped to 1..6 (RV-SKILLS-WF F16; the writer refuses a
+      turbo number above 6). Writers stay at writer_cap() (6), and each heavy
+      launch passes the rig gate.
     - A turbo file without a valid stamp -> 6, whatever its ceiling says.
     - Any other unexpired file with a numeric parallel_ceiling -> that number,
       never below 6 and never above CEILING_LIMIT.
@@ -638,6 +652,9 @@ def concurrent_cap() -> int:
                 return MAX_CONCURRENT_UNITS
             if c is None or (isinstance(c, str) and c.strip().lower() in NO_CAP_WORDS):
                 return TURBO_ALL_UNITS
+            if isinstance(c, bool) or not isinstance(c, int):
+                return MAX_CONCURRENT_UNITS
+            return max(1, min(c, MAX_CONCURRENT_UNITS))
         if isinstance(c, bool) or not isinstance(c, int):
             return MAX_CONCURRENT_UNITS
         return max(MAX_CONCURRENT_UNITS, min(c, CEILING_LIMIT))
@@ -911,20 +928,71 @@ def rig_gate_path() -> Path | None:
     return None
 
 
-RIG_GATE_TIMEOUT = 45
+# The hook's time budget (RV-SKILLS-WF F1). Claude Code kills a hook that runs past its registered
+# timeout, and a killed hook does NOT block: the launch runs with no check at all. So the guard's
+# whole run must end well inside that timeout. Register this hook with `"timeout": 10` or more
+# (HOOK_TIMEOUT_REQUIRED_S); the guard keeps its own work under GUARD_BUDGET_S, leaving the rest for
+# interpreter start-up, and gives the rig gate at most RIG_GATE_TIMEOUT of it (rig_gate.py sizes its
+# own listing, CPU sample and git call to fit, run at once).
+HOOK_TIMEOUT_REQUIRED_S = 10
+GUARD_BUDGET_S = 8.0
+RIG_GATE_TIMEOUT = 6.0
+_DEADLINE: float | None = None   # set by main() for a hook run; None in --selftest and imports
 
 
-def run_rig_gate(gate: Path) -> tuple[int, str]:
-    """(exit code, its output). A timeout or a crash reads as exit 2: the guard fails closed."""
+def _time_left() -> float:
+    """Seconds left in this hook run's budget (a large number outside a hook run)."""
+    return 1e9 if _DEADLINE is None else _DEADLINE - time.monotonic()
+
+
+def _sub_timeout(cap: float) -> float | None:
+    """A subprocess timeout that fits the budget: at most `cap`, or None when under 0.5 s is left."""
+    left = _time_left() - 0.3
+    return None if left < 0.5 else min(cap, left)
+
+
+KIND_RE = re.compile(r"(?i)\bkind\s*:\s*`?(build|join|land)\b")
+FIXER_RE = re.compile(r"(?i)\bfixer-of\s*:\s*`?([A-Za-z0-9][A-Za-z0-9._/-]*)")
+
+
+def launch_kind(row: dict | None) -> str:
+    """The row's launch kind for the gate's WIP bound (RV-SKILLS-WF F7): `kind: join` or
+    `kind: land` in any cell (notes, as a rule); a build otherwise, and with no row."""
+    m = KIND_RE.search((row or {}).get("_raw", ""))
+    return m.group(1).lower() if m else "build"
+
+
+def fixer_of(row: dict | None) -> str | None:
+    """The red land (or main) this row fixes, from `fixer-of: <land>` in any cell (RV-SKILLS-WF F6);
+    the gate's red-verdict bound then passes it, and every other bound still holds."""
+    m = FIXER_RE.search((row or {}).get("_raw", ""))
+    return m.group(1).rstrip(".,;") if m else None
+
+
+def run_rig_gate(gate: Path, kind: str = "build", fixer: str | None = None) -> tuple[int, str]:
+    """(exit code, its output). A timeout, a crash or no time left in the hook budget reads as
+    exit 2: the guard fails closed, and always before the harness's own timeout kills it."""
+    budget = _sub_timeout(RIG_GATE_TIMEOUT)
+    if budget is None or budget < 1.0:
+        return 2, "no time left in the hook's budget to run the rig gate"
+    cmd = [sys.executable, str(gate), "check", "--heavy", "--kind", kind]
+    if fixer:
+        cmd += ["--fixer-of", fixer]
     try:
-        p = subprocess.run([sys.executable, str(gate), "check", "--heavy"], capture_output=True, text=True,
-                           timeout=RIG_GATE_TIMEOUT, stdin=subprocess.DEVNULL,
+        p = subprocess.run(cmd, capture_output=True, text=True, timeout=budget, stdin=subprocess.DEVNULL,
                            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
         return p.returncode, (p.stdout + p.stderr).strip()
     except subprocess.TimeoutExpired:
-        return 2, f"the rig gate did not answer in {RIG_GATE_TIMEOUT} s"
+        return 2, f"the rig gate did not answer in {budget:g} s (the hook's budget)"
     except Exception as e:
         return 2, f"the rig gate could not run ({type(e).__name__}: {e})"
+
+
+def top_tier_open() -> bool:
+    """The stamped, unexpired budget file says top_tier_open with the user's quoted word."""
+    bf = budget_file()
+    return bool(bf and budget_stamp_ok(bf) and bf.get("top_tier_open") is True
+                and str(bf.get("top_tier_owner_word") or "").strip())
 
 
 def is_top_tier_launch(data: dict) -> bool:
@@ -1316,6 +1384,10 @@ def _run_guard_full(payload, flag: dict | None, tmp: Path, env_extra: dict | Non
     # reading on the rig must not change what the pre-1.3.0 cases see.
     env["CLAUDE_USAGE_WINDOWS"] = str(tmp / "no-usage-windows.json")
     env["CLAUDE_USAGE_CALIBRATION"] = str(tmp / "no-usage-calibration.json")
+    # ... and from the live budget file and rig gate (RV-SKILLS-WF F11): a case that wants either
+    # passes its own through env_extra.
+    env["DISPATCH_BUDGET_FILE"] = str(tmp / "no-budget-decision.json")
+    env["DISPATCH_RIG_GATE"] = str(tmp / "no-rig-gate.py")
     env.update(env_extra or {})
     proc = subprocess.run(
         [sys.executable, str(Path(__file__).resolve())] + list(argv or []),
@@ -1508,9 +1580,10 @@ def selftest() -> int:
              _test_stamp({"mode": "turbo", "parallel_ceiling": "None", "expires_at": fut}), 12),
             ("unstamped turbo + null ceiling = 6", {"mode": "turbo", "parallel_ceiling": None, "expires_at": fut}, 6),
             ("turbo expired = 6", _test_stamp({"mode": "turbo", "parallel_ceiling": None, "expires_at": past}), 6),
-            ("stamped turbo + numeric 8 = 8", _test_stamp({"mode": "turbo", "parallel_ceiling": 8, "expires_at": fut}), 8),
-            ("stamped turbo + numeric 40 still clamps",
-             _test_stamp({"mode": "turbo", "parallel_ceiling": 40, "expires_at": fut}), CEILING_LIMIT),
+            ("stamped turbo + numeric 8 = 6 (a turbo number is the lower answer, 1..6: F16)",
+             _test_stamp({"mode": "turbo", "parallel_ceiling": 8, "expires_at": fut}), 6),
+            ("stamped turbo + numeric 4 = 4 (the user's lower number holds as written: F16)",
+             _test_stamp({"mode": "turbo", "parallel_ceiling": 4, "expires_at": fut}), 4),
             ("unstamped turbo + numeric 8 = 6", {"mode": "turbo", "parallel_ceiling": 8, "expires_at": fut}, 6),
             ("unstamped turbo without the key = 6", {"mode": "turbo", "expires_at": fut}, 6),
             ("null outside turbo = 6", {"mode": "pace", "parallel_ceiling": None, "expires_at": fut}, 6),
@@ -2020,7 +2093,9 @@ def selftest() -> int:
         "wave-cap enforcement, and the 2026-09-11 observation #0022 fix; plus 15 turbo cap cases and 5 "
         "turbo exit-code cases with the old cap as positive control (2026-10-20 stamped turbo); plus "
         f"{rt_cases} rig-aware turbo cases (writers 6, all units 12, the rig gate, the turbo estimate, "
-        "`checking` open, the top tier; owner 2026-10-20); plus "
+        "`checking` open, the top tier; owner 2026-10-20; and RV-SKILLS-WF: the gate inside the hook's "
+        "budget, the fixer and join kinds, the writer cap on writers only, the turbo lower number, the "
+        "top tier outside dispatch mode); plus "
         f"{len(window_cases)} usage-window cases (2026-09-17, dispatchwright 1.3.0): "
         "silent on an absent or stale file, the stop-band block (95% default or the budget file, both windows) with its resume exemption, "
         "the calibration warning with its numbers, a pre-1.3.0 ledger unchanged, "
@@ -2105,7 +2180,7 @@ def _selftest_rig_turbo(problems: list) -> int:
             for label, path, want in (
                     ("a stamped rig-aware turbo file", budget(turbo), 12),
                     ("a stamped turbo file with a null ceiling", budget(dict(turbo, parallel_ceiling=None)), 12),
-                    ("a stamped turbo file with ceiling 8", budget(dict(turbo, parallel_ceiling=8)), 8),
+                    ("a stamped turbo file with ceiling 8 (no lower number: F16)", budget(dict(turbo, parallel_ceiling=8)), 6),
                     ("an UNstamped turbo file with a null ceiling", budget(dict(turbo, parallel_ceiling=None), False), 6),
                     ("a stamped turbo file edited by hand", None, 6),
                     ("an expired stamped turbo file", budget(dict(turbo, expires_at=past)), 6)):
@@ -2188,6 +2263,86 @@ def _selftest_rig_turbo(problems: list) -> int:
         code, _, err = launch(run_dir([row("F1", notes="owner-called")]), "F1", None,
                               tool_input={"subagent_type": "opus-high"})
         check(code == 0, f"T8 control: an opus-high launch met the top-tier rule ({code}: {err[:200]!r})")
+
+        # T9 (RV-SKILLS-WF F1): the gate answers inside the hook's budget. A killed hook does not
+        # block, so a gate slower than RIG_GATE_TIMEOUT is refused by the guard, well before the
+        # registered hook timeout, and never waited out.
+        check(RIG_GATE_TIMEOUT <= 6, f"T9: RIG_GATE_TIMEOUT is {RIG_GATE_TIMEOUT} s, over the 6 s gate budget")
+        check(globals().get("GUARD_BUDGET_S", 99) < globals().get("HOOK_TIMEOUT_REQUIRED_S", 0),
+              "T9: the guard's own budget does not sit under the required hook registration timeout")
+        gate_slow = tmp / "gate_slow.py"
+        gate_slow.write_text("import time\ntime.sleep(8)\nprint('rig_gate: PASS')\n", encoding="utf-8")
+        t0 = time.monotonic()
+        code, _, err = launch(run_dir(one), "W1", budget(turbo), gate_slow)
+        wall = time.monotonic() - t0
+        check(code == 2 and "did not answer" in err, f"T9: a gate slower than the budget let a heavy launch go ({code}: {err[:200]!r})")
+        check(wall < 8.5, f"T9: the guard waited {wall:.1f} s on a slow gate; a 10 s hook timeout kills it first")
+
+        # T10 (F6): a red land's own fixer passes the gate's red bound; the guard says so to the gate.
+        gate_fixer = tmp / "gate_fixer.py"
+        gate_fixer.write_text("import sys\nok = '--fixer-of' in sys.argv and 'LAND31' in sys.argv\n"
+                              "print('rig_gate: PASS' if ok else 'REFUSED land verdict RED: only its fixer')\n"
+                              "sys.exit(0 if ok else 1)\n", encoding="utf-8")
+        code, _, err = launch(run_dir([row("FX1", notes="fixer-of: LAND31")]), "FX1", budget(turbo), gate_fixer)
+        check(code == 0, f"T10: the red land's own fixer row was refused at the gate ({code}: {err[:200]!r})")
+        code, _, err = launch(run_dir([row("W1")]), "W1", budget(turbo), gate_fixer)
+        check(code == 2, f"T10 control: a heavy row that is no fixer passed a red land ({code})")
+
+        # T11 (F7): at the WIP limit a join passes; the guard hands the row's kind to the gate.
+        gate_kind = tmp / "gate_kind.py"
+        gate_kind.write_text("import sys\na = sys.argv\nok = '--kind' in a and a[a.index('--kind') + 1] in ('join', 'land')\n"
+                             "print('rig_gate: PASS' if ok else 'REFUSED unlanded branches 6 at the limit 6')\n"
+                             "sys.exit(0 if ok else 1)\n", encoding="utf-8")
+        code, _, err = launch(run_dir([row("J1", notes="kind: join")]), "J1", budget(turbo), gate_kind)
+        check(code == 0, f"T11: a join row was refused at the WIP limit ({code}: {err[:200]!r})")
+        code, _, err = launch(run_dir([row("L1", notes="kind: land")]), "L1", budget(turbo), gate_kind)
+        check(code == 0, f"T11: a land row was refused at the WIP limit ({code}: {err[:200]!r})")
+        code, _, err = launch(run_dir([row("B1")]), "B1", budget(turbo), gate_kind)
+        check(code == 2, f"T11 control: a build passed the WIP limit ({code})")
+
+        # T12 (F9): the writer cap bounds writer launches only. Seven writer rows open (W7 marked
+        # dispatched and refused) do not refuse a read-only launch beside them.
+        seven_plus_r = [row(f"W{i}") for i in range(1, 8)] + [row("R1", repo="—")]
+        code, _, err = launch(run_dir(seven_plus_r), "R1", budget(turbo))
+        check(code == 0, f"T12: a read-only launch was refused by the writer cap ({code}: {err[:200]!r})")
+        code, _, err = launch(run_dir(seven_plus_r), "R1", None)
+        check(code == 2, f"T12 control: 8 open units outside turbo passed the 6-unit cap ({code})")
+        code, _, err = launch(run_dir(seven_plus_r), "W7", budget(turbo))
+        check(code == 2 and "writer" in err, f"T12 control: the seventh writer passed the writer cap ({code})")
+
+        # T13 (F16): in stamped turbo the user's lower number holds as written (1..6); a stamped
+        # turbo number above 6 is no lower number and reads as 6.
+        saved = os.environ.get("DISPATCH_BUDGET_FILE")
+        try:
+            for ceiling, want in ((3, 3), (1, 1), (6, 6), (8, 6), (0, 1)):
+                os.environ["DISPATCH_BUDGET_FILE"] = budget(dict(turbo, parallel_ceiling=ceiling))
+                got = concurrent_cap()
+                check(got == want, f"T13: a stamped turbo ceiling {ceiling} gave a cap of {got}, want {want}")
+        finally:
+            if saved is None:
+                os.environ.pop("DISPATCH_BUDGET_FILE", None)
+            else:
+                os.environ["DISPATCH_BUDGET_FILE"] = saved
+        four = [row(f"W{i}") for i in range(1, 5)]
+        code, _, err = launch(run_dir(four), "W4", budget(dict(turbo, parallel_ceiling=3)))
+        check(code == 2, f"T13: a turbo answer of 3 let a fourth unit launch ({code}: {err[:200]!r})")
+
+        # T14 (F17): the top-tier refusal holds outside dispatch mode too (no live flag): only the
+        # stamped top_tier_open is needed there, since no ledger row exists to say owner-called.
+        def bare(tool_input, budget_file=None):
+            payload = {"tool_name": "Agent", "session_id": "abc", "cwd": str(tmp),
+                       "tool_input": dict({"description": "u", "prompt": "review it"}, **tool_input)}
+            env = {"DISPATCH_BUDGET_FILE": budget_file or str(tmp / "no-budget.json"),
+                   "DISPATCH_RIG_GATE": str(gate_pass)}
+            return _run_guard_full(payload, None, tmp, env)
+        code, _, err = bare({"subagent_type": "fable-high"})
+        check(code == 2 and "top tier" in err, f"T14: a fable launch outside dispatch mode was allowed ({code}: {err[:200]!r})")
+        code, _, err = bare({"model": "fable"})
+        check(code == 2, f"T14: a fable model outside dispatch mode was allowed ({code})")
+        code, _, err = bare({"subagent_type": "fable-high"}, budget(top))
+        check(code == 0, f"T14 control: a fable launch with the top tier open was refused outside dispatch ({code}: {err[:200]!r})")
+        code, _, err = bare({"subagent_type": "opus-high"})
+        check(code == 0, f"T14 control: an opus launch outside dispatch mode was refused ({code}: {err[:200]!r})")
     return cases
 
 
@@ -2509,10 +2664,13 @@ def ledger_is_ignored(path: Path) -> bool:
     0191): an ignored ledger is committed by nothing but `git add -f`, so the
     three-point durability rule silently records nothing. Any failure -- no git,
     not a repo -- reads as not ignored; this is a warning, never a block."""
+    timeout = _sub_timeout(2.0)
+    if timeout is None:
+        return False
     try:
-        import subprocess
         r = subprocess.run(["git", "check-ignore", "-q", str(path.name)], cwd=str(path.parent),
-                           capture_output=True, timeout=10)
+                           capture_output=True, timeout=timeout,
+                           creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
         return r.returncode == 0
     except Exception:
         return False
@@ -2561,9 +2719,14 @@ def _header_lines(path: Path) -> list:
 
 
 def _git_out(cwd: Path, *args: str) -> tuple:
-    """(returncode, stdout) of a git call; (-1, "") on any failure."""
+    """(returncode, stdout) of a git call; (-1, "") on any failure or with no time left in the
+    hook's budget (these calls only feed warnings)."""
+    timeout = _sub_timeout(2.0)
+    if timeout is None:
+        return -1, ""
     try:
-        r = subprocess.run(["git", *args], cwd=str(cwd), capture_output=True, text=True, timeout=10)
+        r = subprocess.run(["git", *args], cwd=str(cwd), capture_output=True, text=True, timeout=timeout,
+                           creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
         return r.returncode, (r.stdout or "").strip()
     except Exception:
         return -1, ""
@@ -2820,6 +2983,19 @@ def _guard(data: dict) -> int:
     session_id = str(data.get("session_id") or "")
     state = flag_state(read_flag(), session_id)
     if state in ("absent", "stale", "other-session"):
+        # The top tier holds in every mode (owner 2026-10-20: "hold Fable till I call it";
+        # RV-SKILLS-WF F17). Outside dispatch mode there is no ledger row to say owner-called, so
+        # only the stamped budget file's top_tier_open with the user's word opens it.
+        if is_top_tier_launch(data) and not top_tier_open():
+            print(
+                "dispatch_ledger_guard: this launch asks for the top tier (a fable model or agent type), "
+                "and the top tier is closed without the user's word: outside dispatch mode it needs the "
+                "budget file's top_tier_open with the user's quoted word (dispatch_budget_write.py "
+                "--top-open --owner-word \"<quote>\"). An escalation may propose the top tier; only the "
+                "user opens it (dispatchwright SKILL.md section 7).",
+                file=sys.stderr,
+            )
+            return 2
         return 0  # dispatch mode is not active for this session
 
     cwd = data.get("cwd") or os.getcwd()
@@ -2883,9 +3059,7 @@ def _guard(data: dict) -> int:
     # The top tier (owner 2026-10-20: "hold Fable till I call it"; dispatchwright SKILL.md section 7).
     row = launch_row(ledger, unit)
     if is_top_tier_launch(data):
-        bf = budget_file()
-        top_open = bool(bf and budget_stamp_ok(bf) and bf.get("top_tier_open") is True
-                        and str(bf.get("top_tier_owner_word") or "").strip())
+        top_open = top_tier_open()
         called = bool(row and "owner-called" in row.get("_raw", "").lower())
         if not (top_open and called):
             missing = [w for w, ok in (("the budget file's top_tier_open with the user's quoted word "
@@ -2910,8 +3084,11 @@ def _guard(data: dict) -> int:
             file=sys.stderr,
         )
         return 2
+    # The writer cap bounds a launch that writes a repo (RV-SKILLS-WF F9): a read-only launch runs
+    # beside the writers even when a refused writer's row still reads `dispatched`. A launch with no
+    # row of its own is taken as a writer (the doubt goes to the cap).
     writers = open_writer_count(ledger)
-    if writers > writer_cap():
+    if writers > writer_cap() and (row is None or not _reads_only(row)):
         print(
             f"dispatch_ledger_guard: {ledger} already shows {writers} open writer units -- over the "
             f"{writer_cap()}-writer cap, which holds in every mode, turbo included (owner 2026-10-20). "
@@ -2979,7 +3156,7 @@ def _guard(data: dict) -> int:
                     file=sys.stderr,
                 )
                 return 2
-            g_code, g_text = run_rig_gate(gate)
+            g_code, g_text = run_rig_gate(gate, launch_kind(row), fixer_of(row))
             if g_code != 0:
                 refusals = [ln for ln in g_text.splitlines() if ln.startswith("REFUSED")] or [g_text[-400:]]
                 print(
@@ -3013,8 +3190,10 @@ def _guard(data: dict) -> int:
 
 
 def main() -> int:
+    global _DEADLINE
     if "--selftest" in sys.argv[1:]:
         return selftest()
+    _DEADLINE = time.monotonic() + GUARD_BUDGET_S
     # D2. Every path below returns 0 or 2. Claude Code blocks a PreToolUse call
     # ONLY on exit code 2 -- a bare traceback exits 1, which it reads as a
     # non-blocking error and runs the tool anyway. So the whole body is wrapped,
