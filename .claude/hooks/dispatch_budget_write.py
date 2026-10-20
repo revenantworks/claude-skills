@@ -24,7 +24,10 @@ limit, so this writer refuses every turbo file that could stand for "no cap":
 
   - `--parallel none` is refused in every mode. Rig-aware turbo writes no
     number: the ledger guard keeps writers at 6 and all units at 12, and its
-    rig gate bounds each heavy launch. A number stays 0 to 12.
+    rig gate bounds each heavy launch. A number stays 0 to 12, and in turbo
+    (the "lower number" answer) 0 to 6. Entering turbo with no `--parallel`
+    drops a number kept from the old file (a pace `--parallel 2` once capped
+    turbo at 6); a turbo renewal keeps the user's own lower number.
   - A turbo `--ttl` is at most 2 h (one check interval); other modes keep 5 h.
   - A turbo file never expires past the next Overnight start (22:00
     user-local) and is not written inside Overnight (22:00-09:00), unless
@@ -67,6 +70,7 @@ from pathlib import Path
 
 MODES = ("normal", "pace", "turbo", "overnight", "owner-away", "reset-eve")
 CEILING_LIMIT = 12          # the same ceiling dispatch_ledger_guard.py clamps numbers to
+TURBO_LOWER_LIMIT = 6       # turbo's "lower number" answer: n <= 6 (the guard holds it as written)
 REFUSED_WORDS = ("none", "null", "no cap", "nocap", "unlimited")
 MAX_TTL_SECONDS = 5 * 3600  # the file never outlives a 5-hour window
 TURBO_MAX_TTL_SECONDS = 2 * 3600   # turbo: one check interval
@@ -184,7 +188,16 @@ def build(existing: dict, args: argparse.Namespace, now: float, notes: list | No
             raise ValueError(f"--parallel {args.parallel!r}: a whole number 0 to {CEILING_LIMIT}") from None
         if not 0 <= n <= CEILING_LIMIT:
             raise ValueError(f"--parallel {n}: 0 to {CEILING_LIMIT}")
+        if turbo and n > TURBO_LOWER_LIMIT:
+            raise ValueError(f"--parallel {n} in turbo: the turbo answer is rig-aware (no --parallel: writers "
+                             f"6, all units 12) or a lower number, at most {TURBO_LOWER_LIMIT} (pacewright "
+                             "modes.md, Turbo)")
         d["parallel_ceiling"] = n
+    elif turbo and not was_turbo:
+        # Entering turbo with no --parallel is the rig-aware answer: a pace or reset-eve number kept
+        # from the old file would cap turbo at 6 (RV-SKILLS-WF F10). A renewal keeps the user's own
+        # lower number.
+        d.pop("parallel_ceiling", None)
     if "parallel_ceiling" in d and d["parallel_ceiling"] is None:
         del d["parallel_ceiling"]   # an old no-cap file: readers fall back to their default
     if args.basis is not None:
@@ -543,6 +556,34 @@ def selftest() -> int:
         dd["parallel_ceiling"] = 12
         if dd.get(STAMP_KEY) == content_hash(dd):
             problems.append("R8: a hand edit did not change the content hash")
+        # R9 (RV-SKILLS-WF F10): entering turbo with no --parallel drops a pace file's number, so the
+        # documented `--mode turbo --ttl 2h` is rig-aware turbo (12) and not a stale 2 the guard reads
+        # as 6. A renewal keeps the user's own lower number.
+        t.write_text(json.dumps({"schema": 1, "mode": "pace", "parallel_ceiling": 2}), encoding="utf-8")
+        code, out, _ = turbo(["--mode", "turbo", "--ttl", "2h"])
+        d = load(t)
+        if code != 0 or d.get("mode") != "turbo" or "parallel_ceiling" in d:
+            problems.append(f"R9: turbo entry kept the pace file's parallel_ceiling {d.get('parallel_ceiling')!r} "
+                            f"(exit {code}: {out[:160]})")
+        t.unlink(missing_ok=True)
+        code, out, _ = turbo(["--mode", "turbo", "--ttl", "2h", "--parallel", "3"])
+        code, out, _ = turbo(["--mode", "turbo", "--ttl", "2h", "--landed", "1", "--owner-reading", "40"],
+                             now_=day + 600)
+        d = load(t)
+        if code != 0 or d.get("parallel_ceiling") != 3:
+            problems.append(f"R9 control: a turbo renewal dropped the user's lower number 3 ({d.get('parallel_ceiling')!r}, "
+                            f"exit {code}: {out[:160]})")
+        # R10 (F16): the turbo answer is "rig-aware, or a lower number": n <= 6. Other modes keep 0..12.
+        t.unlink(missing_ok=True)
+        code, out, _ = turbo(["--mode", "turbo", "--ttl", "2h", "--parallel", "8", "--dry-run"])
+        if code != 2 or "6" not in out:
+            problems.append(f"R10: a turbo --parallel 8 was accepted (exit {code}: {out[:160]})")
+        code, _, _ = turbo(["--mode", "turbo", "--ttl", "2h", "--parallel", "6", "--dry-run"])
+        if code != 0:
+            problems.append(f"R10 control: a turbo --parallel 6 was refused (exit {code})")
+        code, _, _ = turbo(["--mode", "pace", "--ttl", "2h", "--parallel", "8", "--dry-run"])
+        if code != 0:
+            problems.append(f"R10 control: a pace --parallel 8 was refused (exit {code})")
     if problems:
         for p in problems:
             print(f"DISPATCH_BUDGET_WRITE SELFTEST FAIL: {p}")
@@ -553,7 +594,8 @@ def selftest() -> int:
           "22:00 user-local or inside Overnight without the user's night order, R4 renewal needs "
           "--landed and a reading under 15 min and two 0-landed checks drop to normal, R5 the top "
           "tier opens only on --top-open --owner-word, R6 unknown keys dropped and named, R7 stop "
-          "band above 95 refused, R8 writer id and content hash; each with its control)")
+          "band above 95 refused, R8 writer id and content hash; RV-SKILLS-WF: R9 turbo entry drops a kept "
+          "number and a renewal keeps the user's, R10 a turbo number at most 6; each with its control)")
     return 0
 
 

@@ -113,6 +113,27 @@
         2
       ],
       "expect_not_contains": "\"stop_bands\":"
+    },
+    {
+      "name": "turbo with --parallel 8 (RV-SKILLS-WF F16): the turbo answer is rig-aware (no number) or a lower number, at most 6, and the guard holds that number as written. The writer refuses with exit 2 before the ttl and Overnight rules are read, so the control holds at any clock time, and prints no budget JSON. Same --dry-run and throwaway paths.",
+      "argv": [
+        "--dry-run",
+        "--mode",
+        "turbo",
+        "--parallel",
+        "8",
+        "--ttl",
+        "1h",
+        "--windows-file",
+        "fixtures/window-fit/.control-no-usage-windows.json",
+        "--file",
+        "fixtures/window-fit/.control-budget-decision.json"
+      ],
+      "stdin": "",
+      "expect_exit_in": [
+        2
+      ],
+      "expect_not_contains": "\"expires_at\":"
     }
   ]
 }
