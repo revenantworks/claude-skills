@@ -1041,6 +1041,37 @@ class ThrottleTests(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertNotIn("slow band", out)
 
+    def test_a_nan_stop_band_keeps_the_95_stop(self):
+        # RV-SKILLS-WF F3: float("nan") and a bare NaN both parse, min(max(nan, 50), 95) is nan,
+        # and 96 >= nan is False: every launch passed at 96-99%. A 96% reading must block.
+        self.reading(96)
+        for raw in ('"nan"', "NaN", '"inf"', '"-nan"'):
+            Path(self.budget).write_text(
+                '{"schema": 1, "expires_at": "2999-01-01T00:00:00Z", "mode": "turbo", '
+                '"stop_bands": {"slow": 85, "stop": %s}}' % raw)
+            code, _, err = self.launch()
+            self.assertEqual(code, 2, (raw, err))
+            self.assertIn("95", err)
+
+    def test_a_nan_or_word_slow_band_keeps_the_80_slow_note(self):
+        self.reading(85)
+        for raw in ('"nan"', "NaN", '"lots"', "-5"):
+            Path(self.budget).write_text(
+                '{"schema": 1, "expires_at": "2999-01-01T00:00:00Z", "stop_bands": {"slow": %s, "stop": 95}}' % raw)
+            code, out, _ = self.launch()
+            self.assertEqual(code, 0, raw)
+            self.assertIn("slow band (80%)", out, raw)
+
+    def test_a_word_stop_band_keeps_the_ceiling_check(self):
+        # One unreadable band once threw away the whole file, the zero ceiling with it.
+        self.reading(10)
+        Path(self.budget).write_text(json.dumps({
+            "schema": 1, "expires_at": "2999-01-01T00:00:00Z", "parallel_ceiling": 0,
+            "stop_bands": {"stop": "high"}}))
+        code, _, err = self.launch()
+        self.assertEqual(code, 2)
+        self.assertIn("parallel_ceiling", err)
+
     def test_expired_budget_decision_is_ignored(self):
         self.reading(91)
         Path(self.budget).write_text(json.dumps({

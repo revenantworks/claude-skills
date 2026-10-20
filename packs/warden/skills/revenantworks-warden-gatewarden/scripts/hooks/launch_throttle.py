@@ -11,6 +11,7 @@ Reads two data files, never writes either:
     {slow, stop}, `parallel_ceiling`, `mode`. Used only while unexpired. The file may
     tighten the bands, never relax them: its stop band is clamped to 50-95 and its
     slow band to at most the stop band, as dispatch_ledger_guard.py reads the same field.
+    A band that is NaN, a word or not positive keeps its default (stop 95, slow 80).
 
 Decision, per launch:
   - parallel_ceiling 0 in a live budget decision -> block;
@@ -26,6 +27,7 @@ subscription plans, after a session's first response.
 """
 from __future__ import annotations
 
+import math
 import os
 import sys
 import time
@@ -36,6 +38,21 @@ import hooklib as hl  # noqa: E402
 
 LAUNCH_TOOLS = {"Agent", "Task", "Workflow"}
 STOP_RANGE = (50.0, 95.0)   # the stop band a budget file may set; the default stop is the top of it
+DEFAULT_STOP, DEFAULT_SLOW = 95.0, 80.0
+
+
+def band_value(raw, default: float) -> float:
+    """A budget-file band as a finite positive number, else the default. A NaN would compare
+    False against every reading (RV-SKILLS-WF F3), so it never reaches the comparison."""
+    if raw is None or isinstance(raw, bool):
+        return default
+    try:
+        v = float(raw)
+    except (TypeError, ValueError):
+        return default
+    if math.isnan(v) or v <= 0:
+        return default
+    return v
 
 
 def iso_to_epoch(s: str) -> float:
@@ -53,19 +70,23 @@ def main() -> None:
         usage_path = os.environ.get("GATEWARDEN_USAGE_FILE") or os.path.join(home, ".claude", "usage-windows.json")
         budget_path = os.environ.get("GATEWARDEN_BUDGET_FILE") or os.path.join(home, ".dispatch", "budget-decision.json")
         max_age = float(os.environ.get("GATEWARDEN_USAGE_MAX_AGE", "900"))
-        slow, stop, ceiling = 80.0, 95.0, None
+        slow, stop, ceiling = DEFAULT_SLOW, DEFAULT_STOP, None
         try:
             bd = hl.load_json(budget_path)
             if iso_to_epoch(bd.get("expires_at")) > time.time():
                 bands = bd.get("stop_bands") or {}
-                slow = float(bands.get("slow", slow))
-                stop = float(bands.get("stop", stop))
+                if not isinstance(bands, dict):
+                    bands = {}
                 ceiling = bd.get("parallel_ceiling")
+                stop = band_value(bands.get("stop"), DEFAULT_STOP)
+                slow = band_value(bands.get("slow"), DEFAULT_SLOW)
         except Exception:
             pass
         # A budget file may tighten the bands, never relax them (TURBO-ADV fix 7, observation
         # 0470): its stop band was read raw, so a 97 relaxed the 95 hard stop while the ledger
         # guard clamped the same field. Stop clamps to [50, 95]; slow to at most the stop band.
+        # A NaN, a word or a non-positive band keeps the default (RV-SKILLS-WF F3: a NaN stop
+        # once compared False against every reading and switched the hard stop off).
         stop = min(max(stop, STOP_RANGE[0]), STOP_RANGE[1])
         slow = min(slow, stop)
         # Only a number can set a zero ceiling. A null or "none" ceiling (turbo with

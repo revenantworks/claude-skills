@@ -592,7 +592,9 @@ check. Overrides: `GATEWARDEN_USAGE_FILE`, `GATEWARDEN_BUDGET_FILE`, `GATEWARDEN
 The bands are the pacing skill's decision; this hook only enforces them, and a file may tighten
 them, never relax them: its stop band is clamped to 50-95 and its slow band to at most the stop
 band, the way dispatchwright's ledger guard reads the same field (a file's 97 once relaxed the 95
-hard stop here while the guard held it).
+hard stop here while the guard held it). A band that is NaN, a word or not positive keeps its
+default (stop 95, slow 80): a NaN stop once compared false against every reading and switched the
+hard stop off.
 
 ## heredoc_guard
 
