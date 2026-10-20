@@ -2,6 +2,8 @@
 
 ## [1.0.0] — 2026-10-01
 
+2026-10-20 (owner ruling "adopt the rig gate", observation 0470; reverses the 2026-10-16 no-cap ruling): the rig's budget writer `dispatch_budget_write.py` refuses `--parallel none` in every mode (rig-aware turbo writes no number), a turbo ttl over 2 h, a turbo file written inside Overnight or expiring past the next 22:00 user-local unless `--night-order "<the user's words>"` records a turbo night, and a turbo renewal without `--landed N` and a reading under 15 minutes old; two renewals in a row with 0 landed write normal instead. `top_tier_open` is false unless `--top-open --owner-word "<quote>"`; keys outside the schema are dropped and named; a stop band outside 50-95 or a slow band above the stop band is refused (`--stop-band`, `--slow-band`); every file carries `"writer"` and `content_sha256`. Selftest R1-R8 with a control each (red first on the old writer: 18 named failures); three new negative controls.
+
 2026-10-16 (owner eval run, U38): trigger row 1 names the planned work; a bare "this" drew a clarifying question and no load.
 
 2026-10-16 (thread sweep, U28 and U35): the suite ceiling in modes.md is now CPU-gated (start below 2, else under the cap while CPU is under its target, default 75%) with the cap read from ~/.dispatch/suite-cap.json; a wrapper and its suite share one slot; runs log to ~/.dispatch/suite-perf.jsonl for `suite_slot.py report`.

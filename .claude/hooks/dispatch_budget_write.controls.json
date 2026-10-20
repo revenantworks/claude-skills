@@ -54,6 +54,65 @@
         2
       ],
       "expect_not_contains": "\"expires_at\":"
+    },
+    {
+      "name": "turbo with --parallel none (owner 2026-10-20, observation 0470: the null ceiling read as no cap and ten units ran on an 8-core rig on 2026-10-19). The writer refuses with exit 2 and prints no budget JSON. --dry-run and the throwaway --file as above, so nothing is read from or written to ~/.dispatch even if the refusal regressed; --windows-file names a path that does not exist.",
+      "argv": [
+        "--dry-run",
+        "--mode",
+        "turbo",
+        "--parallel",
+        "none",
+        "--ttl",
+        "1h",
+        "--windows-file",
+        "fixtures/window-fit/.control-no-usage-windows.json",
+        "--file",
+        "fixtures/window-fit/.control-budget-decision.json"
+      ],
+      "stdin": "",
+      "expect_exit_in": [
+        2
+      ],
+      "expect_not_contains": "\"parallel_ceiling\":"
+    },
+    {
+      "name": "a turbo ttl of 3h: turbo renews at every 2-hour check, so its file lives at most 2h (the 2026-10-19 file was renewed by hand for 5h). The writer refuses with exit 2 at any clock time, before the Overnight rule is read, and prints no budget JSON. Same --dry-run and throwaway paths.",
+      "argv": [
+        "--dry-run",
+        "--mode",
+        "turbo",
+        "--ttl",
+        "3h",
+        "--windows-file",
+        "fixtures/window-fit/.control-no-usage-windows.json",
+        "--file",
+        "fixtures/window-fit/.control-budget-decision.json"
+      ],
+      "stdin": "",
+      "expect_exit_in": [
+        2
+      ],
+      "expect_contains": "at most 2h"
+    },
+    {
+      "name": "a stop band of 97 (the 2026-10-16 file carried 85/97, and launch_throttle read it raw, relaxing the 95 hard stop). The writer refuses any stop band outside 50-95 with exit 2 and prints no budget JSON. Same --dry-run and throwaway paths.",
+      "argv": [
+        "--dry-run",
+        "--mode",
+        "pace",
+        "--stop-band",
+        "97",
+        "--windows-file",
+        "fixtures/window-fit/.control-no-usage-windows.json",
+        "--file",
+        "fixtures/window-fit/.control-budget-decision.json"
+      ],
+      "stdin": "",
+      "expect_exit_in": [
+        2
+      ],
+      "expect_not_contains": "\"stop_bands\":"
     }
   ]
 }
