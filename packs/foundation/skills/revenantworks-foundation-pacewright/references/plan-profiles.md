@@ -24,7 +24,7 @@ ci_plan: free         # free | pro | team
 | Parallel units, ceiling | 5 | 3 | 1 |
 | Largest unit before a split | 0.8 × the smaller room left (every plan) | same | same |
 | Top-model switch | yes | yes | no |
-| Turbo available | yes, no lane cap unless the user names one; CPU-heavy local lanes keep the machine cap (`modes.md`) | yes; the entry question offers 3 as the number | no |
+| Turbo available | yes, rig-aware: writers 6, all units 12, heavy launches through the rig gate (`modes.md`) | yes, rig-aware as max-20x; the entry question offers 3 as the lower number | no |
 
 - **Relative allowance** is the provider's own plan naming, used only as a scaling ratio.
 - **Tokens per weekly point is in harness-reported tokens**, never cache-inclusive

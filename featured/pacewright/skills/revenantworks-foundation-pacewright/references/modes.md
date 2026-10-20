@@ -113,8 +113,10 @@ read fresh before every launch. A second breach of the same machine limit (0446,
 made this a gate in code, not a sentence.
 
 **Entry, one question once:** "Rig-aware turbo (pick), or a lower number?" The answer goes into the
-budget file through the writer: `--mode turbo --ttl 2h` (rig-aware) or `--parallel <n>` with n <= 6.
-There is no "no cap" answer: the writer refuses `--parallel none`. An unattended start takes the
+budget file through the writer: `--mode turbo --ttl 2h` (rig-aware; entering turbo this way drops
+a number kept from an earlier file) or `--parallel <n>` with n <= 6, which the ledger guard then
+holds as written. There is no "no cap" answer: the writer refuses `--parallel none` and a turbo
+number above 6. An unattended start takes the
 pick. A later answer from the user replaces it; it is not asked again at each check.
 
 **Every launch passes four launch gates:**
@@ -126,20 +128,26 @@ pick. A later answer from the user replaces it; it is not asked again at each ch
 4. Its tier comes from the shared table.
 
 **The rig gate.** Every heavy launch in turbo passes `rig_gate` (dispatchwright
-`scripts/rig_gate.py`, called by the ledger guard). It reads, in one call: the slot registry,
-every headless engine and suite process on the machine, the check queue, the land flag and land
-verdict, the base's status and the run's unlanded branches. A signal it cannot read is reported
-"not measured", never a crash. It refuses a launch, naming the bound, when any of these fails:
+`scripts/rig_gate.py`, called by the ledger guard inside a 6-second budget; register the guard with
+a hook timeout of 10 s or more, since a killed hook does not block). It reads, in one call: the
+slot registry, every headless engine and suite process on the machine, the check queue, the land
+flag and land verdict, the base's status and the run's verified unlanded branches. A run-tool
+signal it cannot read is reported "not measured", never a crash. A process listing that fails,
+exits non-zero, times out or comes back empty is "not measured" too, never a measured 0, and a
+heavy launch with neither the listing nor the CPU sample measured is refused. **Without
+dispatchwright's rig gate or its ledger guard** (pacewright alone), apply the bounds table below by
+hand before each heavy launch and state "rig gate: by hand" in the check line. It refuses a launch,
+naming the bound, when any of these fails:
 
 | bound | value (default; key in `~/.dispatch/rig-gate.json`) | counts |
 |---|---|---|
 | writer units | <= 6 open writer rows (base cap; in the ledger guard, every mode) | a row is open until its check verdict exists (`checking` counts) |
 | all units | <= 12, writers included (the ledger guard, in a turbo file the writer stamped) | read-only design, briefs, docs, research, reviews that run no local suite |
-| busy engines | busy <= B - 2 for a heavy launch, B = the rig budget (`rig_budget`, default physical cores + 2: 10 on 8 cores / 16 threads) | every headless engine or suite process on the machine, + 2 while the self-hosted runner has a job, + the container shards no host process shows (`extra_busy_file`) |
+| busy engines | busy <= B - 2 for a heavy launch, B = the rig budget (`rig_budget`, default physical cores + 2: 10 on 8 cores / 16 threads) | every headless engine or suite process on the machine, counted once as the process that is the engine (a slot waiter, a shell or a `timeout` wrapper is none; a waiting slot never counts; the slot registry's running count is a floor), + 2 while the self-hosted runner has a job, + the container shards no host process shows (`extra_busy_file`) |
 | CPU | under 85% for a heavy launch (`cpu_max_pct`), over a 3-second sample | machine-wide |
-| check-queue wait | expected queue wait <= H = 45 min (`queue_horizon_min`) for a writer whose work ends in a check | (expected seconds of queued checks + half of each running one) / check lanes |
-| land state | no writer launch while a land walk runs, or while the land, a branch CI run or main is red | the land flag, the land verdict, the nightly status file |
-| unlanded WIP | < 6 verified branches not on origin/main (`wip_limit`) | at the limit the next launch is a join or a land, never a build |
+| check-queue wait | expected queue wait <= H = 45 min (`queue_horizon_min`) for a writer whose work ends in a check | (expected seconds of queued checks + half of each running one, a running check counted once) / check lanes |
+| land state | no writer launch while a land walk runs, or while the land, a branch CI run or main is red | the land flag, the land verdict, the nightly status file; a row noting `fixer-of: <land>` is that red's fixer and passes the red bound (a land walk still holds it) |
+| unlanded WIP | < 6 verified branches not on origin/main (`wip_limit`) for a build | verified = the branch tip carries a GREEN, current queue verdict, or the branch is named in `wip.verified_file`; any branch name; a running unit's branch, an abandoned or a red one is not counted. At the limit the next launch is a join or a land (a row noting `kind: join` or `kind: land`), never a build |
 | top tier | closed unless the stamped file says `top_tier_open: true` with the user's quoted word and the row's notes say `owner-called` | `fable-*` agent types, in every mode |
 
 A heavy launch is a unit that will run a local suite, build, render, measure or engine run (a
@@ -160,7 +168,7 @@ count. Every background suite starts at below-normal priority with no window, th
 dispatchwright's `scripts/suite_slot.py` where installed, and logs to `~/.dispatch/suite-perf.jsonl`.
 
 **Stop launching** (light lanes may continue unless the line says otherwise) when any of these holds:
-busy engines over B; queue wait over H; a land walk running; a land, branch CI or main red (only its
+busy engines over B - 2; queue wait over H; a land walk running; a land, branch CI or main red (only its
 fixer and light lanes); WIP at the limit; the 5-hour window at 85% or more, or any stop band (the
 slow and stop bands default to 80% and 95%, both windows, and the 95% weekly stop: all launches);
 the clock past the file's expiry or inside Overnight without the user's night order (all
