@@ -17,7 +17,7 @@ metadata:
 A game can pass hundreds of tests and still be a warehouse of systems no player can reach.
 slicesmith writes code in the order that prevents it: a proof obligation before the
 spec closes, the risky unknown spiked for real before the plan leans on it, then thin slices
-a player can reach, each one red, then green, then verified with evidence, then committed.
+a player can reach, each red, green, verified with evidence and committed.
 
 **Loop:** Spec → Plan → Slice (red → green → verify → commit) → Exit
 
@@ -69,8 +69,7 @@ socket, a real scene, a real save file — not a stand-in that cannot produce th
 **S5 — Evidence, never a claim.** A slice is verified by the ladder in `slice-and-test.md`:
 import, build at zero warnings, the full suite with script and test counts stated beside the
 expected totals, a smoke-load of every changed scene. An exit code of zero is not evidence.
-**Where the repo has a check queue, the queued final check is the suite rung:** a dispatched
-unit runs only targeted red-first runs and queues the suite, never a whole suite of its own.
+**A queued final check is the suite rung** (`verify-and-exit.md`).
 Words like "should work" and "seems fine" are banned from a completion claim. **Done gate:**
 state the expected total before the run; a green run short of it, or one whose count lacks the
 new test seen red first, is not done.

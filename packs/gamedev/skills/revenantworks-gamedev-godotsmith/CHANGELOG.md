@@ -2,6 +2,8 @@
 
 ## [1.0.0] — 2026-10-01
 
+2026-10-20 (review RV-SKILLS-WF F15): SKILL.md is back under its 3200-token row (≈3198): Entry — Gate keeps the CI-time rule in one line and its detail moved to `gate-doctrine.md` §3 with L1's worked +9 example; no rule dropped.
+
 2026-10-20 (observation 0472): the Gate entry fits CI wall time to the step's real cost driver from the CI API's step times, never by test count when one class dominates, and raises a timeout inside the land's own commit past 80% of the projection.
 
 2026-10-17 (eval rerun, U41): the description names a one-file run that ran the whole suite, and the load list gives the single-script form (`-gconfig= -gtest=`, then `Scripts` must read 1); case `behaviour-single-script-gconfig` had loaded nothing.

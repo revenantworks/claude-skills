@@ -2,6 +2,8 @@
 
 ## [1.0.0] — 2026-10-01
 
+2026-10-20 (review RV-SKILLS-WF F15): `pack-registry.md` records the measured bodies after the dispatchwright, godotsmith and slicesmith slims (≈4938, ≈3198, ≈2198), each under its unchanged row.
+
 2026-10-17 (eval rerun, U41): `eval-audit.md` files a never-fail test under its pattern name word for word (`constant`, `assertion-free`), names a clean test as clean, and fixes by asserting a computed value, never deletion or a swapped-in exception check (case `evals-audit-never-fail-tests`).
 
 2026-10-16 (owner eval run, U38): the description names the runner's seam ("running a suite, claude plugin eval's"); the near-miss `evals-nearmiss-run-plugin-eval` loaded skillwright.

@@ -58,7 +58,7 @@ silently, and the count is the one witness that needs no engine marker. **State 
 together, always, and state the expected totals before the run.** A total merely lower than
 expected reads exactly like a total nobody predicted. The expected total is a claim too: when a
 brief states a test delta and numbers its tests, count the list against the delta before anyone
-builds. A stated +9 over eight named tests makes the honest build look short and sends it to rework.
+builds (`gate-doctrine.md` §3).
 
 **L2 — The coverage population is everything that executes the code.** "Is this tested?" is
 a question about a search, and it is only as good as the population searched. Scoping to
@@ -158,10 +158,8 @@ rather than passing.
 "godotsmith gate". Procedure in `gate-doctrine.md`. Two rules are body-resident: **re-derive
 every gate figure from raw counts at the gate**, never off a summary a previous step printed;
 and **name the measurement conditions beside the figure**. A figure nobody took is
-UNMEASURED, which is neither PASS nor FAIL and must never be written as either. **Fit CI wall time
-to the step's real cost driver** (observation 0472), from the CI API's step times over several
-runs, never by test count when one test class dominates; raise a timeout inside the land's own
-commit when the projection passes 80% of it.
+UNMEASURED: neither PASS nor FAIL, never written as either. **Fit CI wall time to the step's
+cost driver, not test count** (`gate-doctrine.md` §3).
 
 ## Entry — Review
 

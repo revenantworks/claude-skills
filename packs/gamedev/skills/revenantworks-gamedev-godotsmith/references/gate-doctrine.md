@@ -9,7 +9,7 @@ everything after it is built on the answer.
 
 1. The two kinds of gate
 2. The four verdicts
-3. Re-deriving a figure, and the thin pass
+3. Re-deriving a figure, the thin pass, the expected total and CI wall time
 4. The gate sheet
 5. Failure shapes
 6. Populations: what the gate seeds represent
@@ -82,6 +82,15 @@ than the run's noise (+0.182 against a +0.2 ms/tick bar), recompute the mean, th
 a trimmed or steady-window mean from the raw pairs. Then confirm the verdict rule (which
 statistic, over which rounds) was fixed **before** any extra rounds were added. A rule
 chosen after seeing the numbers is not a rule.
+
+**The expected total is a figure too** (SKILL.md L1). When a brief states a test delta and
+numbers its tests, count the list against the delta before anyone builds: a stated +9 over
+eight named tests makes the honest build look short and sends it to rework.
+
+**Fit CI wall time to the step's real cost driver** (observation 0472; SKILL.md, Entry — Gate).
+Project a CI step's time from the CI API's step times over several runs, never by test count
+when one test class dominates the step. When the projection passes 80% of the step's timeout,
+raise the timeout inside the land's own commit, not after a red run.
 
 ## 4. The gate sheet
 

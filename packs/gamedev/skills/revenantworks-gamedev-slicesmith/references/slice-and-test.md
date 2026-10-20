@@ -24,7 +24,8 @@ Read on every slice and every `fix`.
 3. **Green.** Write the least code that passes. While iterating, run the **touched scripts**
    (the new test's file and every file whose subject the slice changed), confirmed narrowed by
    their own script count; the **whole** suite runs once at the done gate in
-   `verify-and-exit.md`, never skipped. A suite that takes tens of minutes makes every red/green
+   `verify-and-exit.md`, never skipped (where the repo has a check queue, as the queued final
+   check, its counts checked against the stated total). A suite that takes tens of minutes makes every red/green
    loop on the full run a wait, and a narrowing flag that silently runs everything costs the
    same (godotsmith `gut-traps.md`, section 4: GUT's `-gtest` needs `-gconfig=` too).
 4. **Wire.** Reach the new code from a path the player uses — an input, a scene, a menu. A
@@ -156,6 +157,8 @@ The same method in either lens, in any repo. A fix built on a guess is not a fix
    ruled out, and the next hypothesis with what testing it would need. Ask the user before a
    third. This holds when the user has already said keep going: write the evidence up first,
    then take the third probe only on a fresh yes given after the write-up.
-6. **Fix** the confirmed cause with the least change. Run the whole suite through the done gate.
+6. **Fix** the confirmed cause with the least change. Run the whole suite through the done gate
+   (where the repo has a check queue, queue it; the verdict's counts are checked against the stated
+   total, and the row stays `checking` until then).
 7. **Revert** the fix once and watch the test fail again; restore the fix.
 8. **Commit** with the reproduction and the cause named in the body.
