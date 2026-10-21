@@ -13,7 +13,7 @@ Commands:
   status                                lease, last audit, last run
 
 Run options: --bin PATH  --model PATH  --formats txt,srt,vtt,json  --cpu
-  --mode interactive|unattended  --out DIR  --language auto  --vad-model PATH
+  --mode interactive|unattended  --out DIR  --language auto  --vad-model PATH  --no-vad
   --threads N  --flash-attn  --overwrite  --take-stale  --timeout SECONDS
 
 Rules the code enforces (never softened by a flag the user did not give):
@@ -22,6 +22,8 @@ Rules the code enforces (never softened by a flag the user did not give):
   - A stale lease: interactive needs --take-stale (the user's yes); unattended refuses.
   - Unattended: the binary hash must match the user's recorded hash, and a file
     whose transcript check fails goes to _failed/, never to the final folder.
+  - run takes vad_model from whisperrunner.json when --vad-model is not given
+    (--no-vad opts out); the JSON says vad: on|off. check never defaults it.
   - Nothing is downloaded, nothing leaves the machine, no existing output is
     overwritten without --overwrite.
 
@@ -327,6 +329,26 @@ def preflight(a, cfg: dict) -> tuple[str | None, list[str]]:
     return binary, stops
 
 
+def vad_choice(a, cfg: dict, flags: dict, single_clip: bool) -> dict:
+    """Settle a.vad_model and say whether VAD is on. `run` takes the config's vad_model when no
+    --vad-model is passed: a long take without VAD loops on its silences. `check` (one short
+    clip, the backend proof) and --no-vad keep it off unless --vad-model is explicit."""
+    if a.no_vad:
+        a.vad_model = None
+        return {"vad": "off", "vad_note": "--no-vad"}
+    if a.vad_model:
+        return {"vad": "on", "vad_source": "--vad-model"}
+    configured = cfg.get("vad_model")
+    if single_clip or not configured:
+        return {"vad": "off"}
+    if not Path(configured).is_file():
+        return {"vad": "off", "vad_note": "vad_model in whisperrunner.json not found; ran without VAD"}
+    if not flags.get("vad"):
+        return {"vad": "off", "vad_note": "this whisper-cli build lists no --vad flag; ran without VAD"}
+    a.vad_model = configured
+    return {"vad": "on", "vad_source": "whisperrunner.json"}
+
+
 def cmd_run(a, single_clip: bool = False) -> dict:
     cfg = read_json(paths()["config"]) or {}
     binary, stops = preflight(a, cfg)
@@ -349,6 +371,7 @@ def cmd_run(a, single_clip: bool = False) -> dict:
     if "json" not in formats:
         formats.append("json")  # the transcript check reads it
     flags = help_flags(binary)
+    out.update(vad_choice(a, cfg, flags, single_clip))
     if a.out:
         out_dir = Path(a.out)
     elif single_clip:
@@ -492,7 +515,8 @@ def main(argv=None) -> int:
         s.add_argument("--mode", choices=("interactive", "unattended"), default="interactive")
         s.add_argument("--out")
         s.add_argument("--language", default="auto")
-        s.add_argument("--vad-model")
+        s.add_argument("--vad-model", help="run defaults to vad_model in whisperrunner.json")
+        s.add_argument("--no-vad", action="store_true", help="run without VAD even when one is configured")
         s.add_argument("--threads", type=int)
         s.add_argument("--flash-attn", action="store_true")
         s.add_argument("--overwrite", action="store_true")

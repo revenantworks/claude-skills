@@ -50,6 +50,8 @@ if "--help" in args:
 def val(flag):
     return args[args.index(flag) + 1]
 base, wav_path = val("-of"), val("-f")
+if "--vad" in args:
+    print("fake-vad: " + val("-vm"), file=sys.stderr)
 with wave.open(wav_path, "rb") as w:
     ms = int(w.getnframes() * 1000 / w.getframerate())
 kind = os.environ.get("FAKE_KIND", "good")
@@ -176,6 +178,13 @@ class RunnerEndToEnd(unittest.TestCase):
         digest = hashlib.sha256(self.bin.read_bytes()).hexdigest()
         self.config.write_text(json.dumps({"sha256": digest, "source": "fixture"}), encoding="utf-8")
 
+    def write_config(self, **fields):
+        self.config.parent.mkdir(parents=True, exist_ok=True)
+        self.config.write_text(json.dumps(fields), encoding="utf-8")
+
+    def run_log(self, r):
+        return Path(r["results"][0]["log"]).read_text(encoding="utf-8")
+
     def base_args(self, *extra):
         return ["run", str(self.clip), "--bin", str(self.bin), "--model", str(self.model),
                 "--out", str(self.out), *extra]
@@ -251,6 +260,37 @@ class RunnerEndToEnd(unittest.TestCase):
         r = self.run_cli(*self.base_args("--cpu"))
         self.assertEqual(r["verdict"], "pass", r)
         self.assertEqual(r["results"][0]["backend"]["verdict"], "CPU-OK")
+
+    def test_run_defaults_vad_from_the_config_and_records_it(self):
+        # A long take without VAD loops on silence (a 21-minute session looped one line 88 times):
+        # run reads vad_model from whisperrunner.json when no --vad-model is passed.
+        vad = Path(self.td.name) / "ggml-silero-fixture.bin"
+        vad.write_bytes(b"v")
+        self.write_config(vad_model=str(vad))
+        r = self.run_cli(*self.base_args())
+        self.assertEqual(r["verdict"], "pass", r)
+        self.assertEqual(r["vad"], "on")
+        self.assertIn("fake-vad: " + str(vad), self.run_log(r))
+
+    def test_run_without_a_vad_model_records_off(self):
+        r = self.run_cli(*self.base_args())
+        self.assertEqual(r["vad"], "off")
+        self.assertNotIn("fake-vad", self.run_log(r))
+
+    def test_no_vad_flag_overrides_the_config(self):
+        vad = Path(self.td.name) / "ggml-silero-fixture.bin"
+        vad.write_bytes(b"v")
+        self.write_config(vad_model=str(vad))
+        r = self.run_cli(*self.base_args("--no-vad"))
+        self.assertEqual(r["vad"], "off")
+        self.assertNotIn("fake-vad", self.run_log(r))
+
+    def test_a_configured_vad_file_that_is_missing_runs_off_with_a_note(self):
+        self.write_config(vad_model=str(Path(self.td.name) / "absent-vad.bin"))
+        r = self.run_cli(*self.base_args())
+        self.assertEqual(r["verdict"], "pass", r)
+        self.assertEqual(r["vad"], "off")
+        self.assertIn("not found", r["vad_note"])
 
     def test_check_writes_nothing_beside_the_clip(self):
         r = self.run_cli("check", str(self.clip), "--bin", str(self.bin), "--model", str(self.model))

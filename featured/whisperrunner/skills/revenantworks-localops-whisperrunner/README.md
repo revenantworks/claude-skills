@@ -69,7 +69,9 @@ plugin marketplace, or upload the folder as a skill on claude.ai.
 | `whisperrunner refresh` | re-verify `engine.md` against the whisper.cpp sources |
 
 Switches on `run`: `--cpu`, `--mode unattended`, `--formats`, `--language`, `--vad-model`,
-`--flash-attn`, `--overwrite`, `--take-stale` (each one is the user's call).
+`--no-vad`, `--flash-attn`, `--overwrite`, `--take-stale` (each one is the user's call). `run`
+uses the configured `vad_model` by default and records `vad: on|off` in its JSON; a long file
+goes to `run`, never to `check`.
 
 ## Staying current
 

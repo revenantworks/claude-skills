@@ -2,6 +2,8 @@
 
 ## [1.0.0] — 2026-10-01
 
+2026-10-21 (a recorded playtest: `check` on a 21-minute file without VAD looped one line 88 times; `run` with VAD on the same file passed with a longest repeat of 2): `whisper_run.py run` takes `vad_model` from `whisperrunner.json` when no `--vad-model` is passed (the file must exist and the build must list `--vad`), `--no-vad` opts out, `check` never defaults it, and the run JSON records `vad: on|off` with a `vad_note` when it fell back. SKILL.md says a long file goes to `run` with VAD, never `check`. Four tests, red first (28 in `test_whisper_run.py`); test case T15.
+
 2026-10-17 (eval rerun, U41): case `lease-busy-refusal` dates its "now" (2026-10-01); with a time only, the run read the lease against the real date and called it stale.
 
 First public release. Transcribes speech in local audio and video files with whisper.cpp, and proves

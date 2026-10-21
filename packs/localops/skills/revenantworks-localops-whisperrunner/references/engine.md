@@ -72,7 +72,7 @@ From `examples/cli/README.md` (defaults in brackets as printed there):
 | `-t N` [4] | threads | `--threads` |
 | `-ng` [false] | disable GPU | the CPU path |
 | `-fa` [false] | flash attention | only with `--flash-attn` (rule in section 6) |
-| `--vad -vm FNAME` | Silero VAD and its model (README VAD section) | when `--vad-model` is given |
+| `--vad -vm FNAME` | Silero VAD and its model (README VAD section) | `run`: `--vad-model`, else the config's `vad_model`; off with `--no-vad` |
 
 The CLI README printed `-fa` off by default on 2026-10-01. A build whose `--help` lists
 `--no-flash-attn` has it on by default; the runner reads `--help` and passes `-nfa` there, so

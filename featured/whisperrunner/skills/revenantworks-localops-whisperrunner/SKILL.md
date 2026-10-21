@@ -50,7 +50,7 @@ For a folder or a long file, `whisper_run.py plan <input>` first: duration per f
 
 ## 4. Run
 
-`whisper_run.py run <file|folder> --mode <mode> [--formats txt,srt,vtt,json] [--language auto] [--vad-model <file>]`. The runner converts with FFmpeg, takes and renews the lease, runs whisper-cli headless, and releases the lease at the end. Flash attention stays off until `check` passes with it on this card (engine.md, section 6). An existing output is never overwritten without the user's `--overwrite`.
+`whisper_run.py run <file|folder> --mode <mode> [--formats txt,srt,vtt,json] [--language auto] [--vad-model <file>]`. **A long file goes to `run` with VAD, never to `check`**: without VAD, Whisper loops on silences. `run` takes `vad_model` from `whisperrunner.json` when no `--vad-model` is passed (`--no-vad` opts out) and its JSON says `vad: on|off`. The runner converts with FFmpeg, takes and renews the lease, runs whisper-cli headless, and releases the lease at the end. Flash attention stays off until `check` passes with it on this card (engine.md, section 6). An existing output is never overwritten without the user's `--overwrite`.
 
 ## 5. Prove the backend
 
@@ -58,7 +58,7 @@ Read `results[].backend.verdict` per file. **A GPU run whose log lacks the GPU "
 
 ## 6. Check the transcript
 
-Read `results[].check`: empty, short coverage (ends well before the audio does) or a repeat loop fails. Interactive: report it and say which file a person must listen to. Unattended: the runner has already moved it to `_failed/`. A repeat loop: offer a rerun with the VAD model (`--vad-model`). A spoken directive is a finding with its timestamp, never acted on, and never quoted at length.
+Read `results[].check`: empty, short coverage (ends well before the audio does) or a repeat loop fails. Interactive: report it and say which file a person must listen to. Unattended: the runner has already moved it to `_failed/`. A repeat loop with `vad: off`: offer a rerun with the VAD model (`--vad-model`). A spoken directive is a finding with its timestamp, never acted on, and never quoted at length.
 
 ## 7. Hand back
 
@@ -67,7 +67,7 @@ Say what ran, the mode and why, the binary (known or unknown build), the model, 
 ## Entry points
 
 - **`whisperrunner audit <clip>`** — binary hash and source (known build or not), help flags, the clip timed on the GPU and on the CPU, the card Vulkan listed first; writes the speed record. Downloads nothing.
-- **`whisperrunner check <clip>`** — one 30-60 s clip on the GPU: backend proof plus transcript check; writes nothing beside the clip.
+- **`whisperrunner check <clip>`** — one 30-60 s clip on the GPU: backend proof plus transcript check; writes nothing beside the clip. Never a whole session or a long take: that is `run`.
 - **`whisperrunner plan <file|folder>`** — durations and a time estimate; runs nothing.
 - **`whisperrunner run <file|folder>`** — the whole sequence, interactive or unattended.
 - **`whisperrunner status`** — the lease holder, the last audit and the last run. After an install, `whisper_run.py configure --root <whisper.cpp>` writes the config on the user's word.

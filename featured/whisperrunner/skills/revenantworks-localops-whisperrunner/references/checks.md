@@ -87,7 +87,7 @@ edits it.
 |---|---|
 | `bin` | full path to `whisper-cli` |
 | `model_gpu`, `model_cpu` | full paths to the default model files |
-| `vad_model` | full path to the Silero VAD model (optional) |
+| `vad_model` | full path to the Silero VAD model (optional); `run` uses it when no `--vad-model` is passed, the file exists and the build lists `--vad` (`--no-vad` opts out); `check` never defaults it. The run JSON records `vad: on|off`, plus a `vad_note` when it fell back to off |
 | `sha256` | the hash of the binary the user built or vetted |
 | `source` | one line: where the binary came from (tag, build date) |
 | `check` | optional overrides: `min_coverage`, `max_repeat`, `dominant_share` |

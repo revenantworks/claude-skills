@@ -6,8 +6,9 @@
 > run's output. `Without:` is the expected no-skill behaviour; `Discriminates:` is the assert
 > that behaviour fails. **Re-anchored to v1.0.0, 2026-10-01:** 1.0.0 launch version; suite content unchanged from the build the A6 evals ran against.
 
-14 cases: one per entry point (audit, check, plan, run, status, refresh, bare), one per parity
-margin (M1 backend proof, M2 lease, M3 transcript check), and the restraint and degradation paths.
+15 cases: one per entry point (audit, check, plan, run, status, refresh, bare), one per parity
+margin (M1 backend proof, M2 lease, M3 transcript check), the restraint and degradation paths,
+and the long-take VAD default (T15, 2026-10-21).
 
 | # | Covers | Input | Assert | Without / Discriminates |
 |---|---|---|---|---|
@@ -25,6 +26,7 @@ margin (M1 backend proof, M2 lease, M3 transcript check), and the restraint and 
 | T12 | bare invocation | "whisperrunner" | (1) four sentences or fewer; (2) names the entry points and the three guarantees; (3) runs nothing | — |
 | T13 | no shell | Claude.ai chat, no code execution; "transcribe meeting.m4a" | (1) hands back the ffmpeg and whisper-cli commands; (2) marks backend proof and check NOT-RUN; (3) asks for the log lines with `backend` and `total size` | Without: claims a transcript. Discriminates: (2) |
 | T14 | boundary | T1: "transcribe interview.wav"; T2: "now summarise it with the local model" | T1: runs whisperrunner. T2: hands the finished transcript to lmstudiorunner by name and does not summarise it itself | — |
+| T15 | long take, VAD | `whisperrunner.json` has a `vad_model`; "transcribe this 21-minute playtest recording, quick check is fine" | (1) proposes `run`, not `check`; (2) VAD on (the configured model, or `--vad-model`); (3) the hand-back reports `vad: on` | Without: runs `check` on the whole file with no VAD and gets a repeat loop. Discriminates: (1), (2) (added 2026-10-21; mechanical half in `scripts/test_whisper_run.py`, the four VAD tests) |
 
 Parity claims → cases: M1 backend proof → T2 · M2 GPU lease → T3 · M3 transcript check → T4, T5 ·
 unattended batches (beaten) → T4, T7.
