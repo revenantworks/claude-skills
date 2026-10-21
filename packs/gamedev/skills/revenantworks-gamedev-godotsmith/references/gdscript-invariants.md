@@ -230,6 +230,13 @@ Section 1's derivation, applied before the build rather than after the bug.
   count reversals, and add the property test that no walker oscillates beyond a bound on the
   gate seeds. A probe's non-arrival flag is keyed per walk, not per walker and spot, or a
   second trip to the same spot fires it.
+- **Draw polygons near the origin, not at world coordinates.** `draw_colored_polygon` and
+  `draw_polygon` triangulate in float32; at world coordinates in the thousands the area sum
+  cancels, a thin piece reads the wrong winding and every ear fails ("triangulation failed",
+  flooding the log). Measured: 1,236 of 92,241 random pieces failed at x and y near 9,000, none
+  of the same pieces made local. Subtract the piece's own origin, draw under
+  `draw_set_transform(origin)`, skip near-zero-area pieces, and test the failing count on
+  generated pieces at the game's real coordinate range.
 
 A guard must fail on the behaviour it exists for, not only on the case its author pictured.
 

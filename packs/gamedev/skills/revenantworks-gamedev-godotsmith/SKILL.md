@@ -41,7 +41,7 @@ The ten laws below live in the body. Open a reference only as listed, never the 
 - `references/structure-and-wiring.md` — scene composition, signal direction, dependencies
 - `references/lifecycle-and-safety.md` — freeing, await validity, signals, worker threads
 - `references/determinism-and-state.md` — reproducibility, saves, hashing, pin rounds
-- `references/systems-and-export.md` — save files, state machines, an event bus, C# signals, export
+- `references/systems-and-export.md` — saves, a play log, state machines, an event bus, C# signals, export
 - `references/project-hygiene.md` — imports, uid files, naming, version pinning, upgrades,
   and asset intake (section 8): import settings and the render precondition
 - `references/design-and-balance.md` — a simulation or balance rule's claims, arms and fallbacks

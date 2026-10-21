@@ -2,6 +2,8 @@
 
 ## [1.0.0] — 2026-10-01
 
+2026-10-21 (a recorded game playtest, seam with obsrunner's new `playtest` mode): `systems-and-export.md` section 6, a play log and engine errors: one autoload writing JSON Lines per launch (wall ms, `Time.get_ticks_msec()`, session, seg, tick, day, kind, detail), views and IO only with the state hash unchanged, the mark key, engine errors through a `Logger` registered with `OS.add_logger()` (threads and a Mutex, `push_error` routing, no `print`, backtraces need Always Track Call Stacks in a release export), dedupe on (file, line, code), and `godot.log` rotation (pick by span). `gdscript-invariants.md` section 8: draw polygons near the origin, since float32 triangulation fails at world coordinates in the thousands (1,236 of 92,241 pieces failed near 9,000, none made local). The Load budget line names the play log; SKILL.md stays at its 3200-token row (≈3200).
+
 2026-10-20 (review RV-SKILLS-WF F15): SKILL.md is back under its 3200-token row (≈3198): Entry — Gate keeps the CI-time rule in one line and its detail moved to `gate-doctrine.md` §3 with L1's worked +9 example; no rule dropped.
 
 2026-10-20 (observation 0472): the Gate entry fits CI wall time to the step's real cost driver from the CI API's step times, never by test count when one class dominates, and raises a timeout inside the land's own commit past 80% of the projection.
