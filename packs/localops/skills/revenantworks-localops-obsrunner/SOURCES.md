@@ -38,6 +38,26 @@
 - Enhanced Broadcasting and enhanced-RTMP guides (RX 6000 support, HEVC ingest, 2 s keyframes,
   CBR); disclosure and music-muting guidance (secondary sources; never legal advice).
 
+## Playtest mode (read 2026-10-21; `references/playtest.md`)
+
+- **obs-websocket `docs/generated/protocol.md`**, raw: events carry no timestamp field;
+  `RecordStateChanged` names `outputPath` only at stop; `GetRecordStatus.outputDuration` in ms;
+  `CreateRecordChapter` works only with Hybrid MP4 as of OBS 30.2.0. OBS 30.2.0 release notes
+  (2024-07-12): Hybrid MP4 with chapter markers via a hotkey or the API.
+- **whisper.cpp README** (VAD section), raw: with `--vad` only detected speech reaches Whisper.
+  Koenecke et al., "Careless Whisper" (FAccT 2024, arXiv 2402.08021): hallucinated phrases linked
+  to longer non-vocal stretches.
+- **Godot docs** (Logger class 4.7, logging tutorial, `Time`): custom loggers since 4.5, threads,
+  monotonic ticks; the Godot side is godotsmith's.
+- **jsonlines.org** (the format rules); **MDN Same-origin policy** (`file://` origins, `<script
+  src>` embedding allowed where `fetch` is not).
+- Bug-report fields (a game-developer trade article, 2018), timestamped playtest notes (a
+  playtest service's help pages), think-aloud prompting (NN/g, 2012).
+- **Measured locally, 2026-10-21**, on one 21-minute Game Bar recording: birth time vs name vs
+  `creation_time` vs modified time and duration; variable frame rate; one mixed audio track; a
+  save anchor inside a 2 s frame window; `check` without VAD looping one line 88 times against
+  `run` with VAD passing; cue-word recall 4/25 strict and 22/25 with the soft tier.
+
 ## Claude platform
 
 - **Plugin evals** — code.claude.com/docs/en/plugin-evals, read 2026-10-01: case layout

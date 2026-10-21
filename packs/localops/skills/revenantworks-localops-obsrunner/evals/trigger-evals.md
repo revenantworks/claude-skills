@@ -1,6 +1,6 @@
 # Trigger evals — revenantworks-localops-obsrunner
 
-Counts: 20 queries (10 should, 10 should-not, 1 pairs)
+Counts: 22 queries (11 should, 11 should-not, 2 pairs)
 
 > Provenance: written for 0.1.0 (2026-10-01) against the description as built (999 characters).
 > **Authored, not run.** Read each query cold against name + description only and route it. The
@@ -8,7 +8,9 @@ Counts: 20 queries (10 should, 10 should-not, 1 pairs)
 > `trigger-dropped-frames`, N1 `near-miss-podcast-srt`) plus three behaviour cases from
 > `test-cases.md` (T1, T2/T3, T6). **Re-anchored to v1.0.0, 2026-10-01:** 1.0.0 launch version; suite content unchanged from the build the A6 evals ran against.
 
-20 queries: 10 should fire, 10 should not.
+22 queries: 11 should fire, 11 should not.
+
+**Re-anchored to the `playtest` mode, 2026-10-21:** the description gained "to line a recorded playtest up with a game's log" and `playtest` in the verb list; rows Y11 and N11 added as a pair (the recording and its log against the fix the evidence asks for). Every other row re-read against the new text; none flipped. A reader re-read, not a cold judge.
 
 **Re-anchored to the K6b description cut, 2026-10-08 (commit b338715):** every row re-read against the cut text; row wording only, no row added, removed or flipped; a row whose routing words left the description says so in its reason. A reader re-read, not a cold judge: the `tools/blind_queries.py` cold re-judge is still owed.
 
@@ -28,6 +30,7 @@ Should-fire ids renamed S<n> to Y<n> on 2026-10-08: S<n> names a source in SOURC
 | Y8 | "Normalize the loudness of this VOD to -14 LUFS without re-encoding the video." | fire (post loudness) |
 | Y9 | "obsrunner status" | fire |
 | Y10 | "Go live now and paste my stream key so I can check it's right." | fire, then refuses both actions and hands the user the button |
+| Y11 | "I recorded my playtest with Game Bar and the game wrote a play log. Line the video up with the log and pull out my remarks with frames." | fire (playtest) |
 
 ## Should not fire
 
@@ -43,6 +46,7 @@ Should-fire ids renamed S<n> to Y<n> on 2026-10-08: S<n> names a source in SOURC
 | N8 | "Is this OBS plugin I downloaded from a forum safe to install?" | no fire | trustwarden |
 | N9 | "Add motion-graphics titles and a picture-in-picture effect to my edit in a video editor." | no fire | out of scope (an editor) |
 | N10 | "Set up a Docker container for a self-hosted clip app." | no fire | dockerrunner |
+| N11 | "Here's the evidence row from the playtest (save slot, tick, the log lines). Write the failing test and fix the bug." | no fire | slicesmith (`fix`; the row is its reproduction) |
 
 ## Edge notes
 
@@ -51,5 +55,7 @@ Should-fire ids renamed S<n> to Y<n> on 2026-10-08: S<n> names a source in SOURC
 - **obsrunner ↔ comfyrunner**: frame grabs are obsrunner's; generating any image is comfyrunner's.
 - N8 is a near-miss on the word OBS; the job is vetting, not driving.
 - Y10 must fire: the refusal is the skill's job, and an unrouted "go live" is the risk.
+- **obsrunner ↔ slicesmith** (Y11/N11): turning a recording into evidence rows is obsrunner's
+  `playtest`; the fix one row asks for is slicesmith's `fix`, with the row as its reproduction.
 - Tuning rule: misses on the yes-set → make triggers pushier; fires on the no-set → tighten the
   boundary sentence.

@@ -6,9 +6,10 @@
 > Input plus mechanical checks on the run's output. `Without:` is the expected no-skill
 > behaviour; `Discriminates:` is the assert that behaviour fails. **Re-anchored to v1.0.0, 2026-10-01:** 1.0.0 launch version; suite content unchanged from the build the A6 evals ran against.
 
-21 cases: one per entry point (audit, check, set, mark, post, sheet, status/hold, refresh, bare),
-one per parity margin (M1 live-safe, M2 one-GPU lease, M3 fully local), and the restraint and
-degradation paths.
+24 cases: one per entry point (audit, check, set, mark, post, sheet, status/hold, refresh, bare),
+one per parity margin (M1 live-safe, M2 one-GPU lease, M3 fully local), the restraint and
+degradation paths, and three for `playtest` (T22-T24, added 2026-10-21; T22 runs natively as
+`behaviour-playtest-anchor`).
 
 | # | Covers | Input | Assert | Without / Discriminates |
 |---|---|---|---|---|
@@ -33,6 +34,9 @@ degradation paths.
 | T19 | **refresh** | "obsrunner refresh" | (1) re-reads the OBS releases, settings sources and platform rules; (2) restamps only the two dated files; (3) lists seen-not-applied changes | — |
 | T20 | boundary | "Add a picture-in-picture effect and animated titles" | (1) says it is out of scope; (2) does not build a complex filter graph | — |
 | T21 | bare + overwrite | T1: "obsrunner". T2: render into a folder that exists | T1: four sentences or fewer, runs nothing. T2: `REFUSED`, names overwrite | — |
+| T22 | **playtest** anchor | A Game Bar file named `Game 2026-10-21 17-33-41.mp4`, birth time 17:33:41.07, MP4 `creation_time` 17:54:49, duration 1269 s; "when did this recording start, so I can line it up with my game log?" | (1) the start is the birth time (or the name), 17:33:41; (2) says `creation_time` is the end, not the start; (3) aligns by the wall clock, never the tick | Without: reads `creation_time` as the start, 21 minutes off. Discriminates: (1), (2) |
+| T23 | **playtest** transcript | "Transcribe the 21-minute playtest so we can pull the remarks" | (1) hands the voice track to whisperrunner `run` with VAD; (2) never `check` on the whole file; (3) the mic track when OBS recorded one on its own | Without: `check` on the whole file, no VAD. Discriminates: (1), (2) |
+| T24 | **playtest** owner wins | The checklist data file holds recorded ticks; the owner unticked one; "add what the new recording showed to the checklist" | (1) appends to `recorded` only; (2) never writes, clears or changes an owner value; (3) the owner's untick still decides the box | Without: rewrites the checklist's ticks from the recording. Discriminates: (2) |
 
 Parity claims → cases: M1 live-safe → T2, T3, T4, T15 · M2 one-GPU lease → T6, T7, T17 · M3 fully
 local → T1, T10 · audit vs GPU (beaten) → T1 · lease (beaten) → T6, T7 · moments on locality

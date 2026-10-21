@@ -46,6 +46,7 @@ revenantworks-localops-obsrunner/
 │   ├── obs-settings.md          # dated: versions, profile keys, encoder ids, GPU table
 │   ├── post-recipes.md          # render loop, sub-modes, checks, receipts, moments, lease part
 │   ├── platform-notes.md        # dated: chapters, thumbnails, upload rules, policy pointers
+│   ├── playtest.md              # recorded playtest: anchors, play-log contract, ingest, evidence rows, owner-wins checklist
 │   ├── install-walkthrough.md   # owner-run steps, each with a verify and a rollback
 │   ├── gpu-seam.md              # pack-shared, byte-identical across the GPU runners
 │   └── pack.md                  # the localops roster
@@ -76,6 +77,7 @@ the localops pack from the plugin marketplace, or upload the folder as a skill o
 | `obsrunner mark [label]` | record chapter + a line in the marks sidecar; `--replay` saves the replay buffer |
 | `obsrunner post <sub-mode> <recording>` | `cut`, `vertical`, `captions`, `loudness`, `frames`, `chapters`, `moments` |
 | `obsrunner sheet <clip>` | the upload sheet you upload from |
+| `obsrunner playtest <recording>` | a recorded playtest (OBS or Game Bar) lined up with the game's play log by wall clock: the anchor, the voice to whisperrunner `run` with VAD, remarks from the mark key and cue words, frames at each remark, evidence rows; recorded findings append beside your checklist entries, never over them. The game repo's own ingest tool does the joining when it has one |
 | `obsrunner status` | OBS version and output state, record folder, the lease |
 | `obsrunner hold` / `release` | take or drop the GPU lease around a live or recorded session |
 | `obsrunner refresh` | re-verify the two dated reference files |

@@ -2,6 +2,8 @@
 
 ## [1.0.0] — 2026-10-01
 
+2026-10-21 (a recorded game playtest, joined to the game's log by hand and then by a repo tool): new `playtest` mode and `references/playtest.md`, a contract with no new script. Recorder setup (OBS: Hybrid MP4, the mic on its own track; or Game Bar), the time anchor per recorder (Game Bar: the file's birth time is the start and the MP4 `creation_time` tag is the END; OBS: `now - GetRecordStatus.outputDuration`), the mark fit with residuals, a load mid-recording as a new segment, the game-side play-log contract (wall ms, mono ms, session, seg, tick/day, kind, detail; the mark key; errors deduplicated; an engine log picked by span, not name), the ingest steps (whisperrunner `run` with VAD, never `check`), remarks (strict cue words caught 4 of 25 on real speech, a soft tier 22 of 25; the mark key is the reliable flag), the evidence row and line, and the checklist's data split under the owner-wins invariant (recorded findings append-only, stable explicit ids, the owner's store never written; fit-check the fullest state). The description names the mode; trigger rows Y11/N11 (the slicesmith pair), test cases T22-T24, native case `behaviour-playtest-anchor`.
+
 First public release. Drives OBS Studio through its built-in WebSocket, read-only by default, and
 turns its recordings into clips, vertical versions, chapters and upload sheets on the same machine.
 
