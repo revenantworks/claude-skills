@@ -142,7 +142,9 @@ The same method in either lens, in any repo. A fix built on a guess is not a fix
 
 1. **Reproduce.** Find the smallest steps that show the bug and run them. Record what was
    expected and what happened. If it will not reproduce, stop and report what was tried; never
-   fix a bug nobody has seen.
+   fix a bug nobody has seen. An evidence row from a recorded playtest (obsrunner `playtest`:
+   video time, frames, play-log lines, seg/tick and the save) is the starting reproduction: load
+   its save, step to its tick, and confirm the symptom before step 2.
 2. **Failing test.** Write a test that reproduces it through the path the player or user hit.
    Run it and watch it fail with the bug's own symptom.
 3. **List hypotheses.** Before touching code, write each candidate cause with the evidence for

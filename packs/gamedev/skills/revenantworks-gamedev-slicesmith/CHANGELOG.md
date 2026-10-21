@@ -5,6 +5,8 @@ version follows Semantic Versioning.
 
 ## [1.0.0] — 2026-10-08
 
+2026-10-21 (seam with obsrunner's new `playtest` mode): `slice-and-test.md`, Fix step 1, takes an evidence row from a recorded playtest as the starting reproduction (load its save, step to its tick, confirm the symptom before the failing test). No body change.
+
 2026-10-20 (review RV-SKILLS-WF F15, F21): SKILL.md is back under its 2200-token row (≈2198): S5 keeps the queue rung in one line, its detail in `verify-and-exit.md`. The done gate's step 2 and `slice-and-test.md` steps 3 and 6 now say the same as S5: where the repo has a check queue, the queued final check is the suite run, a dispatched unit runs only targeted red-first runs, the verdict's script and test counts are checked against the stated total, and the row stays `checking` until then.
 
 2026-10-20 (FINAL-ADV C14): S5 names a repo's check queue as the suite rung; a dispatched unit runs only targeted red-first runs and queues the suite.
