@@ -1,0 +1,11 @@
+{
+  "name": "godot-mcp",
+  "version": "1.0.0",
+  "description": "A small, security-first Godot MCP server for Claude Code: an editor plugin (loopback port, per-session token) and a Python stdlib stdio server. Eight tools: status, run and stop a scene, read game and editor output, scene tree, add a node and set a property (both undoable), save the open scene. Read-only switch on both sides; nothing deletes, writes other files or runs code sent to it. Installs nothing.",
+  "author": {
+    "name": "Revenantworks"
+  },
+  "repository": "https://github.com/revenantworks/claude-skills",
+  "license": "Apache-2.0",
+  "keywords": ["godot", "gdscript", "mcp", "editor", "game-dev"]
+}

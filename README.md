@@ -22,7 +22,7 @@ Claude API, or in any compatible agent.
 > reads them. Installing one is the opt-in; no skill needs one.
 
 [Quick start](#quick-start) · [Packs](#the-packs) · [Featured](#featured-skills) ·
-[Mods](#mods) · [Capstones](#capstones) · [How skills route](#how-skills-route) · [Safety](#safety-posture) ·
+[Godot tooling](#godot-tooling) · [Mods](#mods) · [Capstones](#capstones) · [How skills route](#how-skills-route) · [Safety](#safety-posture) ·
 [Testing](#testing-and-contributing) · [Licence](#licence)
 
 ## Quick start
@@ -200,6 +200,16 @@ evals. Install it **or** its pack, never both.
 
 Each skill's page in `featured/` has the full story, more prompts to try, and what it needs.
 
+## Godot tooling
+
+Two opt-in Claude Code plugins sit beside the gamedev pack, in `packs/gamedev/plugins/`.
+Installing the pack never starts either one; each README has its install steps.
+
+| Plugin | What it gives Claude | Safety |
+|---|---|---|
+| [godot-mcp](packs/gamedev/plugins/godot-mcp/) | A Godot MCP server: run and stop scenes, read game and editor output and errors, list the open scene, add nodes and set properties (undoable), save the scene. Eight tools; an editor plugin plus a Python stdlib server | Loopback only, a token per editor session, a read-only switch on both sides, logs returned as untrusted data; nothing deletes, writes other files or runs code sent to it |
+| [gdscript-lsp](packs/gamedev/plugins/gdscript-lsp/) | Godot's own GDScript language server (diagnostics after each edit, go-to-definition, hover), plus a check-only format hook | Loopback only; the hook never edits a file |
+
 ## Mods
 
 Mods are optional Claude Code plugins in [`mods/`](mods/README.md). A skill tells Claude how to do
@@ -317,6 +327,7 @@ the featured copies and fails the check on drift. The pack tables in skillwright
 .claude-plugin/marketplace.json   # the catalog: one entry per pack and per featured plugin
 packs/<pack>/                     # a plugin: plugin.json · skills/ · README.md (the pack rule) · NOTICE · capstone/ · pack-evals/
 packs/localops/shared/            # pack-shared sources (holders.json); build.py writes each holder's copy
+packs/gamedev/plugins/<plugin>/   # opt-in Godot plugins beside the pack: godot-mcp (MCP server), gdscript-lsp
 featured/<skill>/                 # a one-skill plugin generated from its pack member
 tools/build.py                    # registry-derived sync, validation and dist zips (--check is the CI mode)
 tools/release.py                  # the release loop: bump, build, check, tests, commit, tag, upload list

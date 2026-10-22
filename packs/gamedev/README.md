@@ -46,6 +46,12 @@ server through a loopback stdio-to-TCP bridge (port 6005), plus a check-only for
 reports NOT-RUN without a formatter. It is a separate plugin, so installing this pack never starts
 a language server; its README has the install line and every setting.
 
+**Opt-in plugin:** `plugins/godot-mcp/` is a small, security-first Godot MCP server: an editor
+plugin plus a stdlib stdio server. Claude runs scenes, reads output and errors, lists the open
+scene and adds or edits nodes through the editor's undo history; eight tools, a per-session token,
+a read-only switch, and nothing that deletes or runs code sent to it. Its README has the install
+steps and the tool table.
+
 **Capstone:** the Forge Run in `capstone/` takes one playable scene through the pack; uismith has no leg on the card yet.
 
 ## Pack rule

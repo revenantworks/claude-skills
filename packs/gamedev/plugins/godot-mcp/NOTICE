@@ -1,0 +1,8 @@
+godot-mcp (a plugin of the Revenantworks claude-skills gamedev pack)
+Copyright 2026 Revenantworks
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+This product includes no third-party code or text. Godot is a separate program the user
+installs and runs; none of its code is redistributed. Practices adopted from other Godot MCP
+servers (read-only mode, pre-auth limits, untrusted-output wrapping) are ideas, not code.
