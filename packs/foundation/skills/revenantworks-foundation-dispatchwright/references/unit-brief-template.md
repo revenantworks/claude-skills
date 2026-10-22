@@ -96,6 +96,11 @@ under review. A question that can only be answered from a protected store is ans
 controller or by an owner step, never handed to a unit (observation 0411: two read-only review
 units opened a frozen backup folder because the brief named the question and not the rule).]
 
+**Tools you never call:** [first-line rule, written out: every `mcp__hearthbot__` tool (the owner's
+thread is the controller's alone), plus any family this run adds. The tier agent definitions deny
+`mcp__hearthbot__*` through `disallowedTools`, so the deny binds even where this line is missed;
+a unit launched without a definition has only this line (observation 0449).]
+
 **Shared content in your file:** [anything in the file you own that also appears in a file another
 writer owns — a table, a string set, a constant, a task id — and how it was settled: settled
 centrally (reproduce it exactly), owned by another unit (quote that file), or "none found". Shared
@@ -398,6 +403,11 @@ path.]
   measure; then record the push intent in its own call (the push hook reads the whole command
   before the intent runs); then push. A suite run bare, or before the land commit, is not the
   verdict, and a 55-minute suite once ran twice for it.
+- **Code that talks to the operating system lands on every CI platform's proof** (observation
+  0447): a row whose diff touches processes or pids, file locks, paths, line endings or exit
+  cleanup runs its tests on each platform the CI file runs before the land (the repo's local
+  container for Linux where one exists). A one-platform stamp does not land it; a pid check once
+  passed on Windows and raised on Linux, and main went red.
 - **An "apply" command that ends in an install crosses an owner boundary.** Write a `repo_apply`
   half this unit runs and an `owner_install` half it only reports, never one command string
   (observation #0026).
@@ -424,6 +434,10 @@ Add the block that matches the unit's job; leave the others out.
 - **Design brief** (observation 0094): two tables in the head — **notes absorbed** (each owner
   note and where the design answers it) and **findings absorbed** (each prior finding id and its
   answer). Say whether an addendum may add a task, and who owns that task's budget.
+- **Sources in order** (observation 0460), for design and brief-writing units: name the decision
+  log as the governing input and the research or design docs as background. The output carries a
+  **sources disagree** section listing each conflict and the dated ruling that wins it; an owner
+  ruling replaces a research proposal from the day it is made.
 - **Prep brief ahead of a ruling** (observation 0260): ask the open owner questions this brief
   depends on before writing it, one at a time. With the user away, the dependent sections are
   marked conditional and each non-recommended option carries its count delta (tests, files,

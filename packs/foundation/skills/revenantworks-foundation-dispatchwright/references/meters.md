@@ -131,6 +131,12 @@ SKILL.md §6 states these in one line each; the rules in full:
   and says which are free; the cheapest route per meter, the brake under the user's floor and the
   per-row spend record are The loop, above. The budget decision file's fields (ceiling, allowance,
   top-tier and hosted-CI switches, stop band) are Reading each meter, above.
+- **Taking over a PR** (observation 0459). A PR this run did not open (another session's, a bot's,
+  a draft) inherits its claims, not its proof. Before any merge, a fresh-context review unit
+  re-derives the verdict: it reads the diff, checks the stamp's sha against the head sha, and reruns
+  the local CI where the stamp cannot be read back. The controller never marks a draft ready
+  without that verdict. A blanket "take over everything" authorises review-then-merge, not the
+  merge alone.
 
 ## Liveness in an unattended stretch
 

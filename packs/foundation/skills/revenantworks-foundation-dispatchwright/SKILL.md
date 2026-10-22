@@ -253,7 +253,8 @@ one unit at 80% by default.
 - **A fix unit proves its new test fails on the unfixed code.** No test is deleted and no assert
   edited unless the brief names it.
 - **Stuck goes one effort step up, unasked, in any mode**: a unit that returns blocked, stalls past
-  2x its estimate, or fails a check a second time goes to a fresh unit. Not stuck: a block from an
+  2x its estimate, or fails a check a second time goes to a fresh unit; the count is per row, so
+  a controller hand-fixing one stops there too (#0461). Not stuck: a block from an
   owner hold or a missing permission (it waits, or goes to the morning file), and a stall behind a
   closed rig gate or the check queue or a `TIMEOUT` verdict (the row requeues; pacewright
   modes.md, Turbo).
@@ -261,6 +262,7 @@ one unit at 80% by default.
   or any irreversible action the brief did not name. The **harness's own call and token count is
   the only evidence** for the 2x-estimate stuck rule and the brief's `call_cap`.
 - **A unit stopped by the call cap:** run `gatewarden capreview` (warden pack, optional) before relaunching it.
+- **A PR this run did not open** gets a fresh review unit before any merge (meters.md; #0459).
 
 ## 8 · Reconcile
 
