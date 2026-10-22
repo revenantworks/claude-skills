@@ -697,6 +697,11 @@ def _column_index(header: list, wanted: tuple) -> dict:
             if name in cell and not (name == "repo" and "report" in cell):
                 idx[name] = i
                 break
+        if name == "unit_id" and name not in idx:
+            # Observation 0463: a ledger opened before the column was named `unit_id` heads it `id`.
+            alias = [i for i, cell in enumerate(header) if _col_name(cell) == "id"]
+            if alias:
+                idx[name] = alias[0]
     return idx
 
 
@@ -2410,6 +2415,29 @@ def _selftest_rig_turbo(problems: list) -> int:
         check(code == 2 and "LAND31" in err, f"T19: LAND31 bound the LAND31-F row as a prefix ({code}: {err[:200]!r})")
         code, _, err = launch(run_dir([row("W1")]), "-", None, tool_input=said("You are unit testing the parser."))
         check(code == 0, f"T19 control: an English word after 'you are unit' was read as a unit id ({code}: {err[:200]!r})")
+
+        # T20 (observations 0463, 0529, 0532, 0536): the binding reads the explicit row id first,
+        # a hyphenated tail, the `id` column and `dispatched unit`; a duplicated id is refused.
+        fix1 = [row(f"FIX1-U2.{i}") for i in (1, 2)]
+        code, _, err = launch(run_dir(fix1), "-", None,
+                              tool_input=said("Ledger row FIX1-U2.1 (wave 2). You are unit U2.1."))
+        check(code == 0, f"T20: `Ledger row FIX1-U2.1` lost to the prose `unit U2.1` ({code}: {err[:200]!r})")
+        code, _, err = launch(run_dir(fix1), "-", None, tool_input=said("You are unit U2.2."))
+        check(code == 0, f"T20: U2.2 did not bind its one FIX1-U2.2 row by tail ({code}: {err[:200]!r})")
+        code, _, err = launch(run_dir(fix1 + [row("FIX2-U2.2")]), "-", None, tool_input=said("You are unit U2.2."))
+        check(code == 2 and "FIX1-U2.2" in err and "FIX2-U2.2" in err,
+              f"T20: an ambiguous tail U2.2 bound a row or named no near match ({code}: {err[:200]!r})")
+        code, _, err = launch(run_dir([row("W1")]), "-", None, tool_input=said("You are dispatched unit PLAYLOG."))
+        check(code == 2 and "PLAYLOG" in err, f"T20: `dispatched unit PLAYLOG` with no row passed on W1 ({code}: {err[:200]!r})")
+        d = run_dir([row("K6-F2"), row("W1")])
+        led = d / ".dispatch" / "runs" / "r1" / "ledger.md"
+        led.write_text(led.read_text(encoding="utf-8").replace("| unit_id |", "| id |", 1), encoding="utf-8")
+        code, _, err = launch(d, "K6-F2", None)
+        check(code == 0, f"T20: an `id` column was not read as unit_id ({code}: {err[:200]!r})")
+        code, _, err = launch(run_dir([row("PLAYTEST-SHEET", status="pushed"), row("W1"), row("PLAYTEST-SHEET")]),
+                              "PLAYTEST-SHEET", None)
+        check(code == 2 and "2 rows" in err and "R2" in err,
+              f"T20: a unit id in two rows was launched ({code}: {err[:200]!r})")
     return cases
 
 
@@ -2943,6 +2971,12 @@ def ledger_warnings(path: Path) -> list:
         shown = "; ".join(widths[:5]) + (f"; and {len(widths) - 5} more" if len(widths) > 5 else "")
         notes.append(f"dispatch_ledger_guard WARNING: {shown} (observation 0437). Fix the row to the "
                      "header's width; until then it counts neither as open nor as closed.")
+    dups = duplicate_unit_ids(path)
+    if dups:
+        shown = "; ".join(f"{u.upper()} at lines {', '.join(map(str, ns))}" for u, ns in list(dups.items())[:5])
+        more = f"; and {len(dups) - 5} more" if len(dups) > 5 else ""
+        notes.append(f"dispatch_ledger_guard WARNING: unit ids in more than one row: {shown}{more} "
+                     "(observation 0529). A launch of one of them is refused; give a re-run a suffix (`-R2`).")
     bad = status_lint(path)
     if bad:
         notes.append("dispatch_ledger_guard WARNING: status cells start with `done` but are not exactly "
@@ -2955,11 +2989,14 @@ def ledger_warnings(path: Path) -> list:
 # RV-SKILLS2-WF F1: the token is any unit id shape (LAND31, JOIN-31, FIX-SW, HUT-F, RV-SKILLS-WF),
 # still anchored on one of these three phrases, and is then looked up as a literal unit_id in the
 # ledger (references/ledger-schema.md, How a brief names its unit).
+# Observation 0536: `Ledger row <id>` is the explicit id and is read first, with or without
+# parentheses. Observation 0532: `You are dispatched unit <id>` names a unit too.
 _UNIT_TOKEN = r"`?([A-Za-z0-9][A-Za-z0-9._-]*)`?"
 UNIT_ID_PATTERNS = (
-    re.compile(r"(?i)\byou\s+are\s+unit\s+" + _UNIT_TOKEN),
+    re.compile(r"(?i)\bledger\s+row\s+" + _UNIT_TOKEN),
+    re.compile(r"(?i)\byou\s+are\s+(?:the\s+)?(?:dispatched\s+)?unit\s+" + _UNIT_TOKEN),
+    re.compile(r"(?i)\bdispatched\s+unit\s+" + _UNIT_TOKEN),
     re.compile(r"(?i)\bunit\s+" + _UNIT_TOKEN + r"\s+of\s+(?:the\s+)?run\b"),
-    re.compile(r"(?i)\(\s*ledger\s+row\s+" + _UNIT_TOKEN + r"\s*\)"),
 )
 # The pre-F1 shape (up to three letters, then a digit). A token of this shape, or one with no
 # lowercase letter (HUT-F), names a unit even when the ledger has no row for it, and so is refused
@@ -2985,15 +3022,17 @@ def ledger_unit_ids(path: Path | None) -> set:
 def launch_unit_id(data: dict, ledger: Path | None = None) -> str | None:
     """The unit id the launch's brief names, prompt first; None when it names none.
 
-    Every token after an anchor phrase is a candidate. The first one that is a literal unit_id in
-    `ledger` binds; with none in the ledger, the first id-shaped candidate binds (it has no row,
-    and the guard refuses it); with neither, the brief names no unit."""
+    Every token after an anchor phrase is a candidate, `Ledger row <id>` first. The first one that
+    is a literal unit_id in `ledger` binds. Else an id-shaped candidate that is the hyphenated tail
+    of exactly one unit_id binds that row (observation 0536: `U2.1` for `FIX1-U2.1`; never a
+    prefix). Else the first id-shaped candidate binds (it has no row, and the guard refuses it);
+    with none, the brief names no unit."""
     ti = data.get("tool_input")
     if not isinstance(ti, dict):
         return None
     texts = [ti.get("prompt")] + [v for k, v in ti.items() if k != "prompt"]
     known = ledger_unit_ids(ledger)
-    fallback = None
+    shaped = []
     for text in texts:
         if not isinstance(text, str):
             continue
@@ -3004,13 +3043,37 @@ def launch_unit_id(data: dict, ledger: Path | None = None) -> str | None:
                     continue
                 if _unit_cell(token) in known:
                     return token
-                if fallback is None and _id_shaped(token):
-                    fallback = token
-    return fallback
+                if _id_shaped(token):
+                    shaped.append(token)
+    for token in shaped:
+        tails = [k for k in known if k.endswith("-" + _unit_cell(token))]
+        if len(tails) == 1:
+            return tails[0].upper()
+    return shaped[0] if shaped else None
 
 
 def _unit_cell(cell: str) -> str:
     return re.sub(r"[`*_\s]", "", cell or "").lower()
+
+
+def duplicate_unit_ids(path: Path) -> dict:
+    """{normalised unit_id: [line numbers]} for every id written in more than one row (observation
+    0529); a line number is 0 where the row cannot be found as written (a re-quoted CSV row)."""
+    try:
+        text = path.read_text(encoding="utf-8", errors="replace")
+    except Exception:
+        return {}
+    lines = {}
+    for n, ln in enumerate(text.splitlines(), 1):
+        lines.setdefault(ln.strip(), []).append(n)
+    seen: dict = {}
+    for r in _table_rows(text, path.suffix.lower(), ("unit_id", "status")):
+        uid = _unit_cell(r.get("unit_id", ""))
+        if not uid:
+            continue
+        at = lines.get(r.get("_raw", ""), [])
+        seen.setdefault(uid, []).append(at.pop(0) if at else 0)
+    return {u: ns for u, ns in seen.items() if len(ns) > 1}
 
 
 def unit_row_problem(path: Path, unit: str) -> str | None:
@@ -3019,10 +3082,25 @@ def unit_row_problem(path: Path, unit: str) -> str | None:
         text = path.read_text(encoding="utf-8", errors="replace")
     except Exception as e:
         return f"the ledger could not be read ({e})"
-    rows = _table_rows(text, path.suffix.lower(), ("unit_id", "status"))
+    widths: list = []
+    rows = _table_rows(text, path.suffix.lower(), ("unit_id", "status"), widths)
     mine = [r for r in rows if _unit_cell(r.get("unit_id", "")) == _unit_cell(unit)]
     if not mine:
-        return f"has no row for unit {unit}"
+        why = f"has no row for unit {unit}"
+        if not any("unit_id" in r for r in rows):
+            why += " (its unit-row table has no `unit_id` or `id` column)"
+        if any(_unit_cell(str(w[0])) == _unit_cell(unit) for w in widths):
+            why += f" it can read: the {unit} row's cell count differs from its header's (observation 0437)"
+        near = sorted({r.get("unit_id", "").strip() for r in rows
+                       if _unit_cell(unit) in _unit_cell(r.get("unit_id", ""))} - {""})
+        if near:
+            why += f"; rows that nearly match: {', '.join(near[:5])}"
+        return why
+    if len(mine) > 1:
+        lines = duplicate_unit_ids(path).get(_unit_cell(unit), [])
+        where = f" (lines {', '.join(map(str, lines))})" if lines else ""
+        return (f"has {len(mine)} rows for unit {unit}{where}; an id names one row, so give the re-run "
+                "a suffix (`-R2`) (observation 0529)")
     if any(_norm(r.get("status", "")) == "dispatched" for r in mine):
         return None
     states = ", ".join(sorted({r.get("status", "").strip() or "(blank)" for r in mine}))

@@ -225,7 +225,11 @@ flight still holds it).
 | unit_id | task                            | class      | model     | effort | surface                                | repo     | worktree/branch     | files_allowed | call_cap | expected_artifacts       | estimated_tokens | actual            | rework | dispatch_ts       | commit_sha | remote_sha | status   |
 |---------|---------------------------------|------------|-----------|--------|----------------------------------------|----------|---------------------|---------------|----------|--------------------------|------------------|-------------------|--------|-------------------|------------|------------|----------|
 | U3      | rewrite README paths after move | mechanical | claude-haiku-5-5 | low  | subagent (background) · def: haiku-low | workshop | wt-u3 / dispatch-u3 | README.md     | 30       | README.md diff, 1 commit | 4000 (owner)     | 5200 / 11 / 3     | 0      | 2026-08-18 14:02Z | a1b2c3d    | a1b2c3d    | verified |
+| R1      | survey the hook docs            | judgment   | claude-opus-5-5  | medium | subagent (background)           | —        | —                   | —             | 60       | waves/R1.md              | 50000 (owner)    |                   |        | 2026-08-18 14:05Z |            |            | dispatched |
 ```
+
+R1 is a read-only research row (observation 0416): `—` in `repo`, `worktree/branch` and
+`files_allowed`, and a report path of its own, so two research rows never read as two writers.
 
 The example omits `reversal`, `commit_ts` and `push_ts` for width; this unit's surface is a git
 commit, so `reversal` would read `—`. The `model` cell holds a full model id or name with its
@@ -251,16 +255,22 @@ row: twice in one run a unit ran with no row of its own. This rule is the interi
 fix is a guard that binds the launch to its own unit id.
 
 **How a brief names its unit** (review RV-SKILLS2-WF F1). The guard binds a launch to its row
-only when the brief names the unit with one of three phrases: `You are unit <id>`,
-`Unit <id> of run <run>` (or `of the run`), or `(ledger row <id>)`. The id after the phrase is
-any unit token (letters, digits, `.`, `_`, `-`: `LAND31`, `JOIN-31`, `HUT-F`, `RV-SKILLS-WF`),
-and the guard looks it up as a literal `unit_id` in the ledger, case aside, never as a prefix:
-`LAND31` does not bind a `LAND31-F` row. An id with no row of its own is refused when it is
-id-shaped (a digit after at most three letters, or no lowercase letter); a lowercase word after
-the phrase that is no row's id names no unit. Only a bound launch has its row's cells read:
+only when the brief names the unit with one of these phrases, read in this order:
+`Ledger row <id>` (with or without parentheses; the explicit id, so it wins over the prose),
+`You are unit <id>` or `You are dispatched unit <id>`, and `Unit <id> of run <run>` (or
+`of the run`). The id after the phrase is any unit token (letters, digits, `.`, `_`, `-`:
+`LAND31`, `JOIN-31`, `HUT-F`, `RV-SKILLS-WF`), and the guard looks it up as a literal `unit_id`
+in the ledger, case aside, never as a prefix: `LAND31` does not bind a `LAND31-F` row. A short
+id that is the hyphenated tail of exactly one row binds that row (`U2.1` binds `FIX1-U2.1`,
+observation 0536); a tail two rows share binds neither, and the refusal names both. An id with
+no row of its own is refused when it is id-shaped (a digit after at most three letters, or no
+lowercase letter); a lowercase word after the phrase that is no row's id names no unit. A column
+headed `id` reads as `unit_id` (observation 0463). An id names one row: a launch whose id has
+two rows is refused, and the guard warns with their line numbers, so a re-run takes a suffix
+(`-R2`, observation 0529). Only a bound launch has its row's cells read:
 `kind:`, `fixer-of:`, `lane`, `owner-called` and the read-only test reach the rig gate and the
 writer cap through that row, and a launch that binds no row is gated as a heavy writer build.
-So a brief names its own unit, and only its own, with one of the three phrases in its prompt.
+So a brief names its own unit, and only its own, with `Ledger row <id>` in its prompt.
 
 **Never edit tracked run records while that repo's local CI runs** (observation 0364). A local
 CI script that ends by resetting the tree (`git checkout -- .`, as hosted CI does) discards every
