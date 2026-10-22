@@ -194,3 +194,9 @@ The consequences:
   commit them on the branch, and let the branch go green. `main` fast-forwards only to the
   green commit, so it never goes red. Landing on `main` and re-pinning afterwards spends the
   green base every later merge depends on.
+- **Code that talks to the operating system needs each CI platform's proof before the land**
+  (observation 0447). `OS.is_process_running`, `OS.kill`, file locks, absolute paths, line
+  endings and cleanup on quit behave differently across platforms: on Linux,
+  `is_process_running` raises for a pid that is not the caller's child. A change touching any of
+  them runs its tests on every platform the CI file runs (the local Linux container where one
+  exists) before it lands; a Windows-only green is a one-platform verdict.
