@@ -2,6 +2,8 @@
 
 ## [1.0.0] — 2026-10-01
 
+2026-10-22 (weekly observation review, observation 0451): `hooks.md` gives the clean-worktree route for a shared checkout another session left dirty: stamp, record the intent and push from one detached worktree, never cleaning the other session's tree.
+
 2026-10-20 (review RV-SKILLS-WF F3): `launch_throttle` reads each budget-file band on its own and keeps the default for a NaN, a word or a non-positive value (stop 95, slow 80). A NaN stop had compared false against every reading, so every launch passed at 96-99%, and one unreadable band had thrown away the whole file, its zero ceiling with it. Tests: ThrottleTests 15 -> 18 (red first: 3 failing).
 
 2026-10-20 (TURBO-ADV fix 7, observation 0470): `launch_throttle` clamps the budget file's stop band to 50-95 and its slow band to at most the stop band, the way dispatchwright's ledger guard reads the same field; a file's stop of 97 had relaxed the 95 hard stop here. Three tests in `ThrottleTests`, red first (a stop 97 file with a 96% reading passed; a stop 40 file with 55% passed), plus a slow-band control.

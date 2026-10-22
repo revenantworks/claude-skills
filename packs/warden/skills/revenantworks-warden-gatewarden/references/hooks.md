@@ -264,6 +264,13 @@ push do not count, and the hard refusals still fire first. Force, delete, mirror
 refused outright: the owner runs those. `GATEWARDEN_PUSH_NO_INTENT=1` turns the intent check off.
 Files: `<git dir>/gatewarden/push-intent.json` and `ci-pass.json`, per worktree.
 
+**A shared checkout another session left dirty** (observation 0451). `ci_stamp` refuses a dirty
+tree, and the stamp and the intent are kept per worktree, so a stamp made in a second worktree
+does not clear a push from the first. Take the clean-worktree route end to end: add a worktree at
+the commit (`git worktree add --detach <path> <sha>`), stamp there, record the intent there, and
+push from there (`git push origin HEAD:<branch>`). Never clean the other session's tree to make
+the stamp pass.
+
 **A branch to a public repository (`push_gate.public_branch`, observation 0441; owner decision
 2026-10-17).** A branch pushed to a public repository publishes every commit it carries. On
 2026-10-15 a branch cut from a stale local main put a rewritten 101-commit history on a public repo.
