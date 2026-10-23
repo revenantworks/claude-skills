@@ -101,6 +101,8 @@ headers in plain text, never escape codes.
 |---|---|---|
 | `neutral` | bundled, **the default** | Every colour is a key of your own Claude Code theme, so it follows light and dark |
 | `revenantworks` | bundled, opt-in | The Revenantworks brand, cursor-block headers. Two variants: **dark** (threshold-blue, ember warn, magenta error, ash-grey) and **light** (each accent's `ink` companion and the brand's light muted text and border) |
+| `hc-light` | bundled, the default under more contrast on a light console | The brand's high-contrast light set on warm bone |
+| `off` | bundled, opt-in | No colour: every role is your own text colour, plain headers |
 | your own | `~/.claude/revenantworks/themes/<name>.json` | Anything you make; a file named like a bundled theme replaces it |
 
 ```
@@ -118,6 +120,13 @@ reads the terminal's `COLORFGBG`; if that is not set, it uses dark and labels it
 pick, for example when `auto` guesses wrong; when set, it wins. The VS Code status bar follows the
 editor's own theme kind. A theme with one palette works as before on
 every console; `show` says how it reads on the other one.
+
+**Order and more contrast.** `/rw-vigil theme` lists the themes in picker order: `neutral` (dark or
+light, following the app), `revenantworks` (dark or light), `hc-light`, `off`, then your own A to Z.
+When you have not picked a theme and the console is light, vigil opens in `hc-light` if you ask
+for more contrast. A terminal has no `prefers-contrast` query, so set `VIGIL_THEME_CONTRAST=more`,
+or use a Claude Code theme whose name says high contrast. On a dark console your own theme keeps
+its contrast. The VS Code status bar takes `hc-light` under a high-contrast light editor theme.
 
 **`show` previews; the bare name applies.** `/rw-vigil theme show <name>` changes nothing. It lists
 each variant's roles with a swatch, the hex, the contrast on that console (#121212 dark, #FFFFFF

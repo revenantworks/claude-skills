@@ -326,6 +326,8 @@ const HEX = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/
 const BUNDLED_HEX = {
   neutral: {},
   revenantworks: { accent: '#00E5FF', warn: '#FF8B00', bad: '#FF0099', dim: '#8D9FA2', rule: '#6C7678' },
+  'hc-light': { accent: '#044C56', warn: '#6B3704', bad: '#86044D', dim: '#4C4236', rule: '#746D64' },
+  off: {},
 }
 // The light variant (the brand's ink values), for a light VS Code theme; also checked against theme-logic.ts.
 const BUNDLED_HEX_LIGHT = {
@@ -337,11 +339,16 @@ function consoleKind(kind) {
   return kind === 1 || kind === 4 ? 'light' : 'dark'
 }
 
-/** The active theme's name: VIGIL_THEME, else theme.json's "active", else neutral. */
-function activeThemeName(envName, activeText) {
+/**
+ * The active theme's name: VIGIL_THEME, else theme.json's "active", else hc-light under a
+ * high-contrast light editor theme (ColorThemeKind 4), else neutral (a high-contrast dark editor
+ * theme keeps its own colours).
+ */
+function activeThemeName(envName, activeText, kind) {
   if (typeof envName === 'string' && envName.trim()) return envName.trim().toLowerCase()
   const o = parseJson(activeText)
-  return o && typeof o.active === 'string' ? o.active.toLowerCase() : 'neutral'
+  if (o && typeof o.active === 'string') return o.active.toLowerCase()
+  return kind === 4 ? 'hc-light' : 'neutral'
 }
 
 /**

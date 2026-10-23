@@ -7,7 +7,7 @@ import { statusText, type Live } from './meters-logic'
 import { ruleCheck, ruleSummary, type Rule } from './rules-logic'
 import { groupAction, grouped, resolveRef, type Suggestion } from './suggest-logic'
 import {
-  BACKGROUNDS, NEUTRAL, bar, columns, consoleVerdict, headerText, madeFor, resolveVariant, roleChecks, themeVerdict,
+  BACKGROUNDS, NEUTRAL, bar, columns, consoleVerdict, headerText, madeFor, orderThemes, resolveVariant, roleChecks, themeVerdict,
   type ConsoleBg, type ConsoleInfo, type ConsoleVerdict, type Role, type RoleCheck, type Theme, type ThemeEntry, type Tone,
 } from './theme-logic'
 
@@ -375,7 +375,7 @@ const consoleLines = (th: Theme, con: ConsoleInfo): Line[] => con.sure
 export const themeLines = (themes: Record<string, ThemeEntry>, active: string, theme: Theme, errors: readonly string[], con?: ConsoleInfo): Line[] => {
   const t = theme
   const here = con ?? { bg: madeFor(theme.background), sure: false, source: '' }
-  const names = Object.keys(themes).sort((a, b) => (a === 'neutral' ? -1 : b === 'neutral' ? 1 : a.localeCompare(b)))
+  const names = orderThemes(Object.keys(themes))
   // Each theme on two lines: the mark, name and source; then its description and what it carries.
   const rows = columns(names.map(n => {
     const e = themes[n]!
