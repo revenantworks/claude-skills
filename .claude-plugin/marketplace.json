@@ -182,9 +182,9 @@
       "displayName": "Revenantworks Pixelsmith"
     },
     {
-      "name": "privacy",
-      "source": "./mods/privacy",
-      "description": "Revenantworks privacy mod for Claude Code 2.1.287+: masks secrets and stream keys before Claude reads them (restoring a value only into the gitignored file it came from), flags a credential keywarden marked for rotation, and marks web, MCP and mail results and messages from routines or other sessions as data. Kept apart from the dash plugin, so safety never depends on the dashboard. Never blocks your work; keeps no record; contacts no service.",
+      "name": "shroud",
+      "source": "./mods/shroud",
+      "description": "Revenantworks shroud mod for Claude Code 2.1.287+: masks secrets and stream keys before Claude reads them (restoring a value only into the gitignored file it came from), flags a credential keywarden marked for rotation, and marks web, MCP and mail results and messages from routines or other sessions as data. Kept apart from the vigil plugin, so safety never depends on the dashboard. Never blocks your work; keeps no record; contacts no service.",
       "version": "1.0.0",
       "license": "Apache-2.0",
       "category": "productivity",
@@ -194,12 +194,13 @@
         "claude-code",
         "optional"
       ],
-      "repository": "https://github.com/revenantworks/claude-skills"
+      "repository": "https://github.com/revenantworks/claude-skills",
+      "displayName": "Revenantworks Shroud"
     },
     {
-      "name": "dash",
-      "source": "./mods/dash",
-      "description": "Revenantworks dashboard mod for Claude Code 2.1.287+: which skills are enabled and how each fires (slash or automatic), failures, likely misroutes, tokens and cost by skill; the 5-hour, weekly, context and cache meters on the status line; health (mods loaded, hook drift, gatewarden's event counts); background tasks; optional research, GPU-lease, Godot and PR panels; and a suggestion queue that proposes, never builds. /dash opens it; Claude reads it only through dash_read. Counts only, never text; counts stay in this session until /dash records on.",
+      "name": "vigil",
+      "source": "./mods/vigil",
+      "description": "Revenantworks dashboard mod for Claude Code 2.1.287+: which skills are enabled and how each fires (slash or automatic), failures, likely misroutes, tokens and cost by skill; the 5-hour, weekly, context and cache meters on the status line; health (mods loaded, hook drift, gatewarden's event counts); background tasks; optional research, GPU-lease, Godot and PR panels; and a suggestion queue that proposes, never builds. /rw-vigil opens it; Claude reads it only through vigil_read. Counts only, never text; counts stay in this session until /rw-vigil records on.",
       "version": "1.0.0",
       "license": "Apache-2.0",
       "category": "productivity",
@@ -209,7 +210,8 @@
         "claude-code",
         "optional"
       ],
-      "repository": "https://github.com/revenantworks/claude-skills"
+      "repository": "https://github.com/revenantworks/claude-skills",
+      "displayName": "Revenantworks Vigil"
     }
   ]
 }

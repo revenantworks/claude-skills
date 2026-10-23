@@ -30,7 +30,7 @@ const feed = (over = {}) => JSON.stringify({
     { name: 'revenantworks-foundation-alpha', listed: true, fires7: 4, fires30: 9, slash30: 2, auto30: 7, failures30: 1, misroutes30: 2, tokens7: 50000, cost7: 1.2 },
     { name: 'beta', listed: true, fires7: 1, fires30: 1, slash30: 1, auto30: 0, failures30: 0, misroutes30: 0, tokens7: 10, cost7: null },
   ],
-  health: { plugins: { dash: { loaded: true }, privacy: { loaded: false } }, drift: [{ hook: 'x.py', state: 'differs' }], gatewarden: { total7: 7, byMode: { watch: 6, guard: 1 } } },
+  health: { plugins: { vigil: { loaded: true }, shroud: { loaded: false } }, drift: [{ hook: 'x.py', state: 'differs' }], gatewarden: { total7: 7, byMode: { watch: 6, guard: 1 } } },
   ...over,
 })
 
@@ -42,8 +42,8 @@ test('PACE is 95 times the fraction of the week elapsed; gap is weekly minus PAC
   assert.equal(L.pacewrightPace(10, NOW - DAY, NOW).pace, 95)
 })
 
-test('the PACE formula matches the dash plugin, so the two never disagree', () => {
-  const src = fs.readFileSync(path.join(__dirname, '..', 'dash', 'hooks', 'collector-logic.ts'), 'utf8')
+test('the PACE formula matches the vigil plugin, so the two never disagree', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'vigil', 'hooks', 'collector-logic.ts'), 'utf8')
   assert.match(src, /export const DAY = 86_400_000/)
   assert.match(src, /const fraction = Math\.min\(1, Math\.max\(0, \(now - \(resetMs - 7 \* DAY\)\) \/ \(7 \* DAY\)\)\)/)
   assert.match(src, /const pace = Math\.round\(95 \* fraction \* 10\) \/ 10/)
@@ -144,13 +144,13 @@ test('the readout names both windows with resets, context, budget and switches',
   assert.match(lines, /Top tier: closed/)
   assert.match(lines, /Mods kill switch: ON/)
   assert.match(lines, /Features switched on: D1/)
-  assert.match(lines, /dash: dash 5 fires 7d · 3 flags · 1 new/)
+  assert.match(lines, /vigil: vigil 5 fires 7d · 3 flags · 1 new/)
   assert.match(lines, /alpha: 1 failed, 2 likely misroute/)
   const bare = L.readoutLines({ now: NOW, usage: { error: 'missing' }, budget: null, switches: L.parseSwitches(null), feed: L.parseFeed(null, NOW) }).join('\n')
   assert.match(bare, /Meter file: absent/)
   assert.match(bare, /no current decision file/)
   assert.match(bare, /not written yet/)
-  assert.match(bare, /dash feed: absent/)
+  assert.match(bare, /vigil feed: absent/)
 })
 
 test('the extension and installer stay offline and write nothing outside install', () => {
@@ -160,8 +160,8 @@ test('the extension and installer stay offline and write nothing outside install
   assert.equal(pkg.engines.vscode, '^1.90.0')
   assert.deepEqual(pkg.activationEvents, ['onStartupFinished'])
   assert.equal(pkg.dependencies, undefined)
-  const dash = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'dash', '.claude-plugin', 'plugin.json'), 'utf8'))
-  assert.equal(pkg.version, dash.version, 'the extension carries the dash plugin version')
+  const vigil = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'vigil', '.claude-plugin', 'plugin.json'), 'utf8'))
+  assert.equal(pkg.version, vigil.version, 'the extension carries the vigil plugin version')
   assert.match(ext, /enableScripts: false/)
 })
 
@@ -170,8 +170,8 @@ test('the feed: counts parsed and typed; absent or malformed says so', () => {
   assert.equal(f.stale, false)
   assert.equal(f.skills.length, 2)
   assert.equal(f.health.drift, 1)
-  assert.deepEqual(f.health.plugins, [{ name: 'dash', loaded: true }, { name: 'privacy', loaded: false }])
-  assert.equal(L.feedText(f), 'dash 5 fires 7d · 3 flags · 1 new')
+  assert.deepEqual(f.health.plugins, [{ name: 'vigil', loaded: true }, { name: 'shroud', loaded: false }])
+  assert.equal(L.feedText(f), 'vigil 5 fires 7d · 3 flags · 1 new')
   assert.equal(L.parseFeed(feed({ generatedAt: NOW - 31 * 60_000 }), NOW).stale, true)
   assert.deepEqual(L.parseFeed(null, NOW), { error: 'missing' })
   assert.deepEqual(L.parseFeed('{"version":2,"skills":[]}', NOW), { error: 'malformed' })
@@ -187,15 +187,15 @@ test('the panel is static, escaped HTML with a CSP and no script', () => {
   assert.match(html, /&lt;img src=x onerror=alert\(1\)&gt;/)
   assert.match(html, /gatewarden 7 event\(s\)/)
   const none = L.panelHtml({ now: NOW, usage: { error: 'missing' }, budget: null, feed: L.parseFeed(null, NOW) })
-  assert.match(none, /\/dash records on/)
+  assert.match(none, /\/rw-vigil records on/)
 })
 
 test('activate wires the status items and a script-free panel (against a stub of the vscode API)', () => {
   const os = require('node:os')
   const Module = require('node:module')
-  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'dash-vscode-'))
-  fs.mkdirSync(path.join(home, '.claude', 'revenantworks', 'dash'), { recursive: true })
-  fs.writeFileSync(path.join(home, '.claude', 'revenantworks', 'dash', 'feed.json'), feed({ generatedAt: Date.now() }))
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'vigil-vscode-'))
+  fs.mkdirSync(path.join(home, '.claude', 'revenantworks', 'vigil'), { recursive: true })
+  fs.writeFileSync(path.join(home, '.claude', 'revenantworks', 'vigil', 'feed.json'), feed({ generatedAt: Date.now() }))
   const items = []
   const commands = {}
   let panelOptions = null
@@ -224,9 +224,9 @@ test('activate wires the status items and a script-free panel (against a stub of
   try {
     delete require.cache[require.resolve('./extension.js')]
     require('./extension.js').activate({ subscriptions: subs })
-    const dash = items.find(i => i.id === 'revenantworks.dash.feed')
-    assert.equal(dash.shown, true)
-    assert.equal(dash.text, '$(graph) dash 5 fires 7d · 3 flags · 1 new')
+    const vigil = items.find(i => i.id === 'revenantworks.vigil.feed')
+    assert.equal(vigil.shown, true)
+    assert.equal(vigil.text, '$(graph) vigil 5 fires 7d · 3 flags · 1 new')
     commands['revenantworksDash.openPanel']()
     assert.equal(panelOptions.enableScripts, false)
     assert.match(panel.webview.html, /<td>alpha<\/td>/)
@@ -240,7 +240,7 @@ test('activate wires the status items and a script-free panel (against a stub of
   }
 })
 
-test('theme: DASH_THEME wins, then theme.json, then neutral', () => {
+test('theme: VIGIL_THEME wins, then theme.json, then neutral', () => {
   assert.equal(L.activeThemeName('RevenantWorks', '{"active":"mine"}'), 'revenantworks')
   assert.equal(L.activeThemeName(undefined, '{"active":"mine"}'), 'mine')
   assert.equal(L.activeThemeName(undefined, null), 'neutral')
@@ -253,8 +253,8 @@ test('theme: hex colours only; a person\'s file wins over the bundled theme', ()
   assert.deepEqual(L.themeColors('revenantworks', mine), { accent: '#112233', ok: null, warn: null, bad: null, dim: null })
 })
 
-test('theme: the bundled revenantworks colours match the dash plugin\'s theme-logic.ts', () => {
-  const src = fs.readFileSync(path.join(__dirname, '..', 'dash', 'hooks', 'theme-logic.ts'), 'utf8')
+test('theme: the bundled revenantworks colours match the vigil plugin\'s theme-logic.ts', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'vigil', 'hooks', 'theme-logic.ts'), 'utf8')
   const block = /export const REVENANTWORKS: Theme = \{[\s\S]*?colors: \{([^}]*)\}/.exec(src)
   assert.ok(block, 'REVENANTWORKS block found')
   for (const [role, hex] of Object.entries(L.BUNDLED_HEX.revenantworks)) assert.match(block[1], new RegExp(`${role}: '${hex}'`))

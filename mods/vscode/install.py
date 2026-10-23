@@ -1,7 +1,7 @@
-"""Install the Revenantworks dash extension into VS Code without the marketplace.
+"""Install the Revenantworks vigil extension into VS Code without the marketplace.
 
 Copies the extension files from this folder into
-~/.vscode/extensions/revenantworks.dash-<version>, and into the matching
+~/.vscode/extensions/revenantworks.vigil-<version>, and into the matching
 ~/.vscode-insiders/extensions folder when VS Code Insiders is installed. Older copies of
 this extension, and of the mods status bar it replaced, are removed so only one loads.
 
@@ -28,10 +28,10 @@ from typing import Callable
 HERE = Path(__file__).resolve().parent
 FILES = ("package.json", "extension.js", "logic.js")
 PUBLISHER = "revenantworks"
-NAME = "dash"
+NAME = "vigil"
 PREFIX = f"{PUBLISHER}.{NAME}-"
-# The extension's id before 2026-10-08; it is uninstalled on install.
-LEGACY_IDS = ("revenantworks.mods-statusbar",)
+# The extension's ids before (mods-statusbar until 2026-10-08, dash until 2026-10-23); each is uninstalled on install.
+LEGACY_IDS = ("revenantworks.mods-statusbar", "revenantworks.dash")
 LEGACY = tuple(f"{i}-" for i in LEGACY_IDS)
 # Each extensions folder and the command line that owns it.
 CLI = {".vscode": "code", ".vscode-insiders": "code-insiders"}
@@ -111,7 +111,7 @@ def prune_registry(ext_dir: Path, dry_run: bool = False) -> list[str]:
     for d in dropped:
         print(f"unregister {d} from {reg}")
     if dropped and not dry_run:
-        tmp = reg.with_name(reg.name + ".dash-tmp")
+        tmp = reg.with_name(reg.name + ".vigil-tmp")
         tmp.write_text(json.dumps(keep, separators=(",", ":")), encoding="utf-8")
         os.replace(tmp, reg)
     return dropped

@@ -74,18 +74,18 @@ class ParityCoversMods(unittest.TestCase):
         self.addCleanup(tmp.cleanup)
         self.home = Path(tmp.name)
         plugins = self.home / ".claude" / "plugins"
-        self.cache = plugins / "cache" / "revenantworks" / "dash" / "1.0.0"
-        shutil.copytree(build.MODS / "dash", self.cache,
+        self.cache = plugins / "cache" / "revenantworks" / "vigil" / "1.0.0"
+        shutil.copytree(build.MODS / "vigil", self.cache,
                         ignore=shutil.ignore_patterns(*build.PARITY_SKIP, "*.pyc", "node_modules"))
-        (plugins / "installed_plugins.json").write_text(json.dumps({"plugins": {"dash@revenantworks": [
+        (plugins / "installed_plugins.json").write_text(json.dumps({"plugins": {"vigil@revenantworks": [
             {"scope": "user", "version": "1.0.0", "installPath": str(self.cache)}]}}), encoding="utf-8")
 
     def run_parity(self):
         out = io.StringIO()
-        folders = {"dash@revenantworks": str(build.MODS / "dash")}
+        folders = {"vigil@revenantworks": str(build.MODS / "vigil")}
         with mock.patch("pathlib.Path.home", return_value=self.home), \
                 mock.patch.object(build, "_plugin_folders", return_value=folders), redirect_stdout(out):
-            rc = build.parity({}, mods=["dash"])
+            rc = build.parity({}, mods=["vigil"])
         return rc, out.getvalue()
 
     def test_mod_cache_matching_the_checkout_is_clean(self):
@@ -102,7 +102,7 @@ class ParityCoversMods(unittest.TestCase):
         self.assertIn(f"differs: {stale.relative_to(self.cache).as_posix()}", out)
 
     def test_the_mod_list_holds_dash_and_privacy(self):
-        self.assertEqual(build.mod_plugins(), ["dash", "privacy"])
+        self.assertEqual(build.mod_plugins(), ["shroud", "vigil"])
 
 
 class PluginFolders(unittest.TestCase):

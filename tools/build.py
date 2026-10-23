@@ -1795,7 +1795,7 @@ def check_mods(root: Path | None = None) -> int:
     return len(found)
 
 
-LAUNCHER_MOD = "dash"  # the mod that serves /rw-<skill> (owner 2026-10-23, build plan phase 1)
+LAUNCHER_MOD = "vigil"  # the mod that serves /rw-<skill> (owner 2026-10-23, build plan phase 1)
 LAUNCHER_FILE = Path("hooks") / "rw-skills.ts"
 
 
@@ -2502,7 +2502,7 @@ def parity(packs: dict[str, str], mods: list[str] | None = None) -> int:
     A plugin that `claude plugin list --json` reports as `readFromFolder` inside THIS checkout
     is said by the CLI to load from the working tree. Its `installPath` cache copy is still
     compared and its drift counted (B7, observation 0420): a desktop-app session ran a stale
-    cache copy of the dash mod while the CLI said "Read from" the checkout. The mods (dash,
+    cache copy of the vigil mod while the CLI said "Read from" the checkout. The mods (dash,
     privacy) are compared like the packs, on both surfaces.
     """
     home = Path.home() / ".claude" / "plugins"

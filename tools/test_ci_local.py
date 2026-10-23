@@ -15,8 +15,8 @@ def make_tree(root: Path) -> None:
     for pack in ("foundation", "warden"):
         (root / "packs" / pack / ".claude-plugin").mkdir(parents=True)
         (root / "packs" / pack / ".claude-plugin" / "plugin.json").write_text("{}")
-    (root / "mods" / "dash" / ".claude-plugin").mkdir(parents=True)
-    (root / "mods" / "dash" / ".claude-plugin" / "plugin.json").write_text("{}")
+    (root / "mods" / "vigil" / ".claude-plugin").mkdir(parents=True)
+    (root / "mods" / "vigil" / ".claude-plugin" / "plugin.json").write_text("{}")
     s = root / "packs" / "foundation" / "skills" / "m-one" / "scripts"
     s.mkdir(parents=True)
     (s / "test_one.py").write_text("")
@@ -54,7 +54,7 @@ class Steps(unittest.TestCase):
         self.assertLess(names.index("pii-tree"), names.index("name-leak"))
         self.assertIn("mods-sync", names)
         self.assertIn("validate:packs/foundation", names)
-        self.assertIn("validate:mods/dash", names)
+        self.assertIn("validate:mods/vigil", names)
         self.assertEqual(names[-1], "suite:m-one")
 
     def test_member_suites_skip_warden_and_folders_without_tests(self):

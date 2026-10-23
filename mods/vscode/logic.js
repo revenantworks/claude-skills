@@ -1,18 +1,18 @@
 'use strict'
-// Pure logic for the Revenantworks dash extension (no `vscode`, no fs, no network): the status bar
+// Pure logic for the Revenantworks vigil extension (no `vscode`, no fs, no network): the status bar
 // item, its readout and the panel's HTML. extension.js reads the files and hands their text here,
 // so node:test covers every rule. The panel is static HTML with no script.
 
 const HOUR_MS = 3_600_000
 const WEEK_MS = 7 * 24 * HOUR_MS
-/** A meter file older than this is stale (the same 15 minutes the dash plugin uses). */
+/** A meter file older than this is stale (the same 15 minutes the vigil plugin uses). */
 const STALE_MS = 15 * 60_000
 /** Weekly percent at which the pace item turns amber, then red. */
 const AMBER_AT = 80
 const RED_AT = 90
 
 /**
- * pacewright's PACE, exactly as the dash plugin computes it (hooks/collector-logic.ts, paceOf):
+ * pacewright's PACE, exactly as the vigil plugin computes it (hooks/collector-logic.ts, paceOf):
  * PACE = 95 x the fraction of the 7-day window elapsed; gap = weekly % - PACE.
  * A test reads that TypeScript source so the two cannot drift apart.
  */
@@ -188,14 +188,14 @@ function readoutLines(args) {
   }
   const f = args.feed
   if (f && !f.error) {
-    out.push(`dash: ${feedText(f)}`)
+    out.push(`vigil: ${feedText(f)}`)
     const flagged = f.skills.filter(x => x.failures30 + x.misroutes30 > 0).slice(0, 5)
     for (const x of flagged) out.push(`  ${x.name.replace(/^revenantworks-[a-z]+-/, '')}: ${x.failures30} failed, ${x.misroutes30} likely misroute(s) in 30 days`)
   } else {
-    out.push(f && f.error === 'malformed' ? 'dash feed: unreadable' : 'dash feed: absent (/dash records on in Claude Code writes it)')
+    out.push(f && f.error === 'malformed' ? 'vigil feed: unreadable' : 'vigil feed: absent (/rw-vigil records on in Claude Code writes it)')
   }
   if (s) {
-    out.push(`Mods kill switch: ${s.off ? 'ON (every feature stopped; /dash on restores)' : 'off'}`)
+    out.push(`Mods kill switch: ${s.off ? 'ON (every feature stopped; /rw-vigil on restores)' : 'off'}`)
     const on = Object.entries(s.features).filter(([, v]) => v).map(([k]) => k).sort()
     const off = Object.entries(s.features).filter(([, v]) => !v).map(([k]) => k).sort()
     out.push(`Features switched on: ${on.length ? on.join(', ') : 'none beyond the shipped defaults'}`)
@@ -205,7 +205,7 @@ function readoutLines(args) {
   return out
 }
 
-// ---------- the dash feed (~/.claude/revenantworks/dash/feed.json) ----------
+// ---------- the vigil feed (~/.claude/revenantworks/vigil/feed.json) ----------
 
 /** A feed older than this is shown as stale (the plugin rolls it up every 5 minutes while it runs). */
 const FEED_STALE_MS = 30 * 60_000
@@ -266,12 +266,12 @@ function kTokens(n) {
   return String(Math.round(n))
 }
 
-/** The status bar item's text: "dash 41 fires · 2 new"; null hides it when no feed exists. */
+/** The status bar item's text: "vigil 41 fires · 2 new"; null hides it when no feed exists. */
 function feedText(f) {
   if (!f || f.error) return null
   const fires = f.skills.reduce((n, s) => n + s.fires7, 0)
   const flags = f.skills.reduce((n, s) => n + s.failures30 + s.misroutes30, 0)
-  const parts = [`dash ${fires} fire${fires === 1 ? '' : 's'} 7d`]
+  const parts = [`vigil ${fires} fire${fires === 1 ? '' : 's'} 7d`]
   if (flags) parts.push(`${flags} flag${flags === 1 ? '' : 's'}`)
   if (f.suggestionsNew) parts.push(`${f.suggestionsNew} new`)
   if (f.stale) parts.push('stale')
@@ -290,13 +290,13 @@ function esc(v) {
 function panelHtml(args) {
   const { feed: f, usage: u, budget: b, now } = args
   const rows = []
-  rows.push(`<h1>dash</h1><p class="dim">${esc(u && !u.error ? paceText(u) : 'No meter file (the status line writes it).')}</p>`)
+  rows.push(`<h1>vigil</h1><p class="dim">${esc(u && !u.error ? paceText(u) : 'No meter file (the status line writes it).')}</p>`)
   if (b) rows.push(`<p class="dim">${esc(budgetText(b))}</p>`)
   if (!f || f.error) {
-    rows.push(`<p>${f && f.error === 'malformed' ? 'The feed is unreadable.' : 'No feed yet.'} In Claude Code, <code>/dash records on</code> keeps counts (never text) and writes <code>~/.claude/revenantworks/dash/feed.json</code>, which this panel reads.</p>`)
+    rows.push(`<p>${f && f.error === 'malformed' ? 'The feed is unreadable.' : 'No feed yet.'} In Claude Code, <code>/rw-vigil records on</code> keeps counts (never text) and writes <code>~/.claude/revenantworks/vigil/feed.json</code>, which this panel reads.</p>`)
   } else {
     rows.push(`<p>Week: ${esc(f.sessions7)} session(s) · ${esc(kTokens(f.tokens7))} tokens${f.cost7 === null ? '' : ` · $${esc(f.cost7.toFixed(2))}`} · rolled up ${esc(f.generatedAt === null ? 'at an unknown time' : `${countdown(now - f.generatedAt)} ago`)}${f.stale ? ' <span class="warn">(stale)</span>' : ''}</p>`)
-    if (f.suggestionsNew) rows.push(`<p class="warn">${esc(f.suggestionsNew)} new suggestion(s): <code>/dash suggest</code> in Claude Code.</p>`)
+    if (f.suggestionsNew) rows.push(`<p class="warn">${esc(f.suggestionsNew)} new suggestion(s): <code>/rw-vigil suggest</code> in Claude Code.</p>`)
     rows.push('<h2>Skills</h2><table><tr><th>skill</th><th>listed</th><th>7d</th><th>30d</th><th>slash</th><th>auto</th><th>failed</th><th>misroutes</th><th>tokens 7d</th></tr>')
     for (const s of f.skills.slice(0, 60)) {
       const flag = s.failures30 + s.misroutes30 > 0 ? ' class="warn"' : s.fires30 === 0 ? ' class="dim"' : ''
@@ -318,7 +318,7 @@ function panelHtml(args) {
   ].join('\n')
 }
 
-// ---------- the dash theme (mods/dash/hooks/theme-logic.ts) ----------
+// ---------- the vigil theme (mods/vigil/hooks/theme-logic.ts) ----------
 // The status bar takes a foreground colour as hex; a theme colour that names a Claude Code theme
 // key has no VS Code meaning, so it stays the editor's own (null). The bundled revenantworks hex
 // values are read from theme-logic.ts by a test, so the two cannot drift apart.
@@ -337,7 +337,7 @@ function consoleKind(kind) {
   return kind === 1 || kind === 4 ? 'light' : 'dark'
 }
 
-/** The active theme's name: DASH_THEME, else theme.json's "active", else neutral. */
+/** The active theme's name: VIGIL_THEME, else theme.json's "active", else neutral. */
 function activeThemeName(envName, activeText) {
   if (typeof envName === 'string' && envName.trim()) return envName.trim().toLowerCase()
   const o = parseJson(activeText)
