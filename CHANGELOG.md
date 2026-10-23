@@ -38,6 +38,11 @@ Claude Code plugin marketplace.
   only, as the Agent Skills spec requires; each member's volatile surfaces are listed in a
   `volatile.json` beside its SKILL.md. `tools/release.py` runs the release loop.
   `tools/name_leak.py` checks for listed names kept outside the repo.
+- **vigil opens on a board (2026-10-23).** Seven tiles you can collapse, pin and move, drawn as
+  pictures where the app draws them and as glyphs in the terminal; a glance strip above the
+  prompt; suggestion cards with Do it, Not now and Undo; switches for pacewright's auto spend
+  modes in `~/.dispatch/spend-modes.json`, which pacewright honours. The old first page is
+  `/rw-vigil overview`.
 - **Mods renamed (2026-10-23).** `dash` is `vigil` (`/rw-vigil`) and `privacy` is `shroud`
   (`/rw-shroud`); the old commands answer, hidden, for one release, and vigil carries the old
   records over.
