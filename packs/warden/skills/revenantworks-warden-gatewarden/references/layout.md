@@ -21,7 +21,7 @@ file.
 | Settings levels | managed (the three OS paths), `<project>/.claude/settings.local.json`, `<project>/.claude/settings.json`, `~/.claude/settings.json`; or the `--settings` list | `permissions.allow`, `ask`, `deny`, `additionalDirectories`, `defaultMode`, `enabledPlugins` names, every `hooks` entry; tracked state per file |
 | Hooks | the `hooks` block of each level | event, matcher, the hook's **script file name** (never the command line), family: gatewarden's hooks (`push_gate`, `call_cap`, `hyperv_lock`, `launch_throttle`, `heredoc_guard`, `golive_block`, `warden_digest`, `ci_stamp`), dispatchwright's (`dispatch_gate`, `dispatch_ledger_guard`) or other |
 | Plugin hooks | every `hooks/hooks.json` under `~/.claude/plugins/` | plugin name and events; a `"modules"` list marks a Revenantworks mod (the skills repo's `mods/`) |
-| Mod switches | `~/.claude/revenantworks/switches.json` | present or absent only; `/dash switches` shows the features |
+| Mod switches | `~/.claude/revenantworks/switches.json` | present or absent only; `/rw-vigil switches` shows the features |
 | Event log | `GATEWARDEN_EVENTS`, else `<state>/events.jsonl` and its `.1` rotation (`<state>`: `GATEWARDEN_STATE`, else `~/.claude/gatewarden`) | rule, outcome (`blocked`, `nudged`, `logged`), session, within `--since` days (default 28) |
 | Modes | `GATEWARDEN_MODES`, else `<state>/modes.json` | the current mode per rule (`hooks.md`, "Modes": rule entry, hook entry, hard is guard, the default) |
 

@@ -16,9 +16,9 @@ featured skill from every pack also ships on its own. Every skill follows the
 Claude API, or in any compatible agent.
 
 > [!NOTE]
-> **New: mods.** [`mods/`](mods/README.md) adds two optional Claude Code plugins: `dash`, one
+> **New: mods.** [`mods/`](mods/README.md) adds two optional Claude Code plugins: `vigil`, one
 > dashboard that counts how the skills fire, fail and misroute, shows the meters, and suggests
-> what to change (it never builds anything), and `privacy`, which masks secrets before Claude
+> what to change (it never builds anything), and `shroud`, which masks secrets before Claude
 > reads them. Installing one is the opt-in; no skill needs one.
 
 [Quick start](#quick-start) · [Packs](#the-packs) · [Featured](#featured-skills) ·
@@ -219,22 +219,22 @@ the dashboard in its status bar.
 
 | Plugin | Holds | At install |
 |---|---|---|
-| `dash` | Skill fires (slash or automatic), failures, likely misroutes, tokens and cost by skill; the 5-hour, weekly, context and cache meters; health; background tasks; research, GPU, Godot and PR panels; a suggestion queue that proposes, never builds | On; records and PR reads opt-in |
-| `privacy` | Secret and stream-key masking, the rotate tripwire, untrusted-content and received-message markers | On |
+| `vigil` | Skill fires (slash or automatic), failures, likely misroutes, tokens and cost by skill; the 5-hour, weekly, context and cache meters; health; background tasks; research, GPU, Godot and PR panels; a suggestion queue that proposes, never builds | On; records and PR reads opt-in |
+| `shroud` | Secret and stream-key masking, the rotate tripwire, untrusted-content and received-message markers | On |
 
 **Installing a mod is the opt-in.** Its features run from install, as with any Claude Code plugin;
-`/dash off <name>` turns any off and `/dash off` stops them all. No mod blocks your work: blocking
+`/rw-vigil off <name>` turns any off and `/rw-vigil off` stops them all. No mod blocks your work: blocking
 lives in hooks and permissions. No mod sends your data anywhere, and no mod keeps a record of your
-work on disk until you say yes: the dashboard asks once, and `/dash records on` answers it. Its
+work on disk until you say yes: the dashboard asks once, and `/rw-vigil records on` answers it. Its
 records hold counts, names, hashes and shapes, never prompt or command text. No mod contacts GitHub
-until you say yes (`/dash network on`); the read then runs only when you act, never on a timer.
+until you say yes (`/rw-vigil network on`); the read then runs only when you act, never on a timer.
 
 ```
-/plugin install dash@revenantworks
+/plugin install vigil@revenantworks
 ```
 
 ```
-/plugin install privacy@revenantworks
+/plugin install shroud@revenantworks
 ```
 
 [mods/README.md](mods/README.md) covers all 18 features, the commands, the suggestion thresholds,

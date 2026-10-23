@@ -51,5 +51,5 @@ everything but the prompt text, and renders it into the surface that runs it.
 
 - Prompt text is promptwright's; standing config a person reads in session, rigwright's; skill
   packages, skillwright's; what a built agent may do at runtime, gatewarden's scan.
-- Optional mods: `privacy` (received and untrusted markers) and `dash` (task pane); they never
+- Optional mods: `shroud` (received and untrusted markers) and `vigil` (task pane); they never
   block.

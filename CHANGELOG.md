@@ -34,22 +34,25 @@ Claude Code plugin marketplace.
   only, as the Agent Skills spec requires; each member's volatile surfaces are listed in a
   `volatile.json` beside its SKILL.md. `tools/release.py` runs the release loop.
   `tools/name_leak.py` checks for listed names kept outside the repo.
+- **Mods renamed (2026-10-23).** `dash` is `vigil` (`/rw-vigil`) and `privacy` is `shroud`
+  (`/rw-shroud`); the old commands answer, hidden, for one release, and vigil carries the old
+  records over.
 - **Mods (optional; on by default once installed).** `mods/` adds two Claude Code function-hook
-  plugins, separate from the packs and each with its own marketplace entry: `dash`, one dashboard
+  plugins, separate from the packs and each with its own marketplace entry: `vigil`, one dashboard
   (skill fires by slash or automatic, failures, likely misroutes, tokens and cost by skill; the
   5-hour, weekly, context and cache meters; health, including gatewarden's event counts;
-  background tasks; research, GPU-lease, Godot and PR panels; a `/dash publish` snapshot for a
+  background tasks; research, GPU-lease, Godot and PR panels; a `/rw-vigil publish` snapshot for a
   private mobile page; a suggestion queue that proposes, never builds; and `/rw-<skill>` short
   commands for every skill, generated from the registry, with the long names hidden from the `/`
-  list), and `privacy` (secret
+  list), and `shroud` (secret
   and stream-key masking with restore, the rotate tripwire, untrusted-content and
   received-message markers), kept apart so safety never depends on the dashboard. A local VS Code
   extension (`mods/vscode`) keeps the dashboard in the status bar. Mods never block: blocking
   lives in hooks and permissions. Once a mod plugin is installed, its features are on by default.
-  Local records are opt-in and asked about once (`/dash records on|off`): no mod keeps a record
+  Local records are opt-in and asked about once (`/rw-vigil records on|off`): no mod keeps a record
   of your work on disk until you say yes, the dashboard's records hold counts, names, hashes and
   shapes and never prompt or command text, and records never leave the machine. PR state reads
-  GitHub only after `/dash network on`, and only when you act. `/dash off` stops every feature.
+  GitHub only after `/rw-vigil network on`, and only when you act. `/rw-vigil off` stops every feature.
   No skill needs a mod; each skill a mod feeds carries `references/mods.md`. Needs Claude Code
   2.1.287 or later. `build.py --check` keeps mod code out of every skill zip, and CI validates and
   tests every mod plugin. (The six per-pack mod plugins and the `all-mods` bundle drafted

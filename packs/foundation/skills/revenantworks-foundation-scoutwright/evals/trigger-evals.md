@@ -34,7 +34,7 @@ Counts: 35 queries (18 should, 17 should-not, 5 pairs)
 | 23 | audit this skill against current best practices | SHOULD NOT — skillwright |
 | 24 | what version of Claude Code am I running right now? | SHOULD NOT — a direct answer; no sweep |
 | 25 | Haiku 5.5 just came out — can we use it for coding? | SHOULD (fit, model) · native: trigger-fit-new-model |
-| 26 | what's the best way to use the new `/dash` view in my setup? | SHOULD (fit, feature) |
+| 26 | what's the best way to use the new `/rw-vigil` view in my setup? | SHOULD (fit, feature) |
 | 27 | should our mechanical units move to the new small model? | SHOULD (fit, model; a trial proposed, not run) · native: fit-card-no-tier-edit |
 | 28 | what changed in Claude since Monday? | SHOULD (since, not `fit`: the change list, no fit card) |
 | 29 | which model should run this prompt? | SHOULD NOT — promptwright (model) · native: nearmiss-which-model-prompt |
