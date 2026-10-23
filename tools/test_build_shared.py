@@ -56,10 +56,10 @@ def make(test: unittest.TestCase, holders: dict | None = None) -> Path:
                    "scripts/pre.py": ["hammerwright", "sawwright"]}
     (shared / "holders.json").write_bytes(json.dumps({"files": holders}, indent=2).encode())
     (pack / ".claude-plugin").mkdir()
-    (pack / ".claude-plugin" / "plugin.json").write_bytes(b'{"name": "tools", "version": "1.0.0"}\n')
+    (pack / ".claude-plugin" / "plugin.json").write_bytes(b'{"name": "tools", "displayName": "Revenantworks Tools", "version": "1.0.0"}\n')
     (root / ".claude-plugin" / "marketplace.json").write_bytes(json.dumps(
         {"name": "acme", "owner": {"name": "Acme"},
-         "plugins": [{"name": "tools", "source": "./packs/tools", "version": "1.0.0"}]}, indent=2).encode())
+         "plugins": [{"name": "tools", "displayName": "Revenantworks Tools", "source": "./packs/tools", "version": "1.0.0"}]}, indent=2).encode())
     return root
 
 

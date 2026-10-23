@@ -1459,7 +1459,7 @@ def _featured_plugin(src: Path, pack_pj: dict, short: str) -> dict:
     fm = _frontmatter(src / "SKILL.md")
     ver = re.search(r'version:\s*"?([\d.]+)"?', fm)
     desc = re.search(r"^description:\s*(.+)$", fm, re.M)
-    plugin = {"name": short, "version": ver.group(1) if ver else "0.0.0",
+    plugin = {"name": short, "displayName": display_name(short), "version": ver.group(1) if ver else "0.0.0",
               "description": desc.group(1).strip().strip("\"'") if desc else ""}
     for key in ("author", "repository", "license"):
         if key in pack_pj:
@@ -1588,18 +1588,19 @@ def sync_featured(names: list[str], rosters: dict[str, list[str]], root: Path | 
                                     f"is unique about it, and how it fits its pack. Everything under `skills/` is "
                                     f"generated; edit the pack source, never this copy.\n")
         pack_entry = entries.get(pack, {})
-        want_entry = {"name": short, "source": f"./featured/{short}", "description": plugin["description"],
+        want_entry = {"name": short, "displayName": plugin["displayName"], "source": f"./featured/{short}",
+                      "description": plugin["description"],
                       "version": plugin["version"], "license": plugin.get("license", DEFAULT_LICENSE),
                       "category": pack_entry.get("category", "productivity"),
                       "keywords": ["agent-skills", "skills", "featured"]}
         if "repository" in plugin:
             want_entry["repository"] = plugin["repository"]
         have = entries.get(short)
-        if not have or any(have.get(k) != want_entry[k] for k in ("source", "version", "description")):
+        if not have or any(have.get(k) != want_entry[k] for k in ("displayName", "source", "version", "description")):
             drift.append("marketplace entry")
             if write:
                 if have:
-                    have.update({k: want_entry[k] for k in ("source", "version", "description")})
+                    have.update({k: want_entry[k] for k in ("displayName", "source", "version", "description")})
                 else:
                     cat.setdefault("plugins", []).append(want_entry)
                     entries[short] = want_entry
@@ -2094,6 +2095,14 @@ def sync_pack_evals(pack: str, roster: list[str], root: Path | None = None, writ
     return len(expected)
 
 
+DISPLAY_PREFIX = "Revenantworks"  # owner 2026-10-23: install screens show the brand; plugin ids stay
+
+
+def display_name(name: str) -> str:
+    """The `displayName` a pack or featured plugin carries: "Revenantworks <Name>"."""
+    return f"{DISPLAY_PREFIX} {name[:1].upper()}{name[1:]}"
+
+
 def check_marketplace(packs: dict[str, str]) -> None:
     """Cross-check the catalog: every pack has an entry; every entry's source exists;
     the pack's own plugin.json version matches the catalog (added 2026-07-24 —
@@ -2116,7 +2125,13 @@ def check_marketplace(packs: dict[str, str]) -> None:
                 if not pj.is_file():
                     fail(f"'{pack}': missing {pj.relative_to(ROOT)}")
                 else:
-                    pj_ver = json.loads(pj.read_text(encoding="utf-8")).get("version")
+                    pj_data = json.loads(pj.read_text(encoding="utf-8"))
+                    pj_ver = pj_data.get("version")
+                    want_dn = display_name(pack)
+                    if pj_data.get("displayName") != want_dn:
+                        fail(f"'{pack}': plugin.json displayName {pj_data.get('displayName')!r} != {want_dn!r}")
+                    if entries[pack].get("displayName") != want_dn:
+                        fail(f"marketplace.json: '{pack}' displayName {entries[pack].get('displayName')!r} != {want_dn!r}")
                     if pj_ver != cat_ver:
                         fail(f"'{pack}': plugin.json version {pj_ver!r} != marketplace entry {cat_ver!r} "
                              f"(use --bump-pack to write both in one stroke)")
@@ -2202,7 +2217,7 @@ def new_pack(name: str, motif: str | None, profile: str | None, root: Path | Non
 
     pj = pack_dir / ".claude-plugin" / "plugin.json"
     if not pj.exists():
-        data = {"name": name, "version": "0.1.0", "description": desc}
+        data = {"name": name, "displayName": display_name(name), "version": "0.1.0", "description": desc}
         data["experimental"] = {"evals": PACK_EVAL_DIR}  # one discovery route (unit K8e)
         if cat.get("owner", {}).get("name"):
             data["author"] = {"name": cat["owner"]["name"]}
@@ -2212,7 +2227,8 @@ def new_pack(name: str, motif: str | None, profile: str | None, root: Path | Non
         _write_text(pj, json.dumps(data, indent=2, ensure_ascii=False) + "\n")
         created.append(pj.relative_to(root).as_posix())
     if not any(p.get("name") == name for p in plugins):
-        entry = {"name": name, "source": f"./packs/{name}", "description": desc, "version": "0.1.0",
+        entry = {"name": name, "displayName": display_name(name), "source": f"./packs/{name}", "description": desc,
+                 "version": "0.1.0",
                  "license": licence, "category": template.get("category", "productivity"),
                  "keywords": ["agent-skills", "skills", "pack"]}
         if repo_url:

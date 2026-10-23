@@ -13,6 +13,9 @@ Claude Code plugin marketplace.
 - **Five packs.** foundation (9 members, standalone profile), scribe (4), warden (4), localops (7)
   and gamedev (4), each installed as one plugin. Every member follows the Agent Skills open standard
   and works alone on any surface that supports it.
+- **Brand on the install screens.** Every pack and featured plugin carries a `displayName`
+  ("Revenantworks Foundation", "Revenantworks Pacewright"); plugin ids and skill names stay as they
+  are, so no install breaks.
 - **Five featured plugins, one per pack.** pacewright, brandscribe, trustwarden, whisperrunner and
   pixelsmith also ship as one-skill plugins, generated from the pack source.
   Install a featured plugin or its pack, not both.

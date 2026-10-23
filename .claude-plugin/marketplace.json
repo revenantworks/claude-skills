@@ -8,6 +8,7 @@
   "plugins": [
     {
       "name": "foundation",
+      "displayName": "Revenantworks Foundation",
       "source": "./packs/foundation",
       "description": "Nine standalone wrights: skillwright (skills & packs, their eval suites, slims and trigger diagnosis), promptwright (prompts & model tiers), grillwright (the interview before any build), agentwright (agent systems), rigwright (standing Claude config), dispatchwright (fan-out dispatch), handoffwright (committed session handoffs), pacewright (usage pacing), scoutwright (Claude platform change watch). Each routes on its own description and works alone; together they cover the full build-audit-ship loop.",
       "version": "1.0.0",
@@ -25,6 +26,7 @@
     },
     {
       "name": "gamedev",
+      "displayName": "Revenantworks Gamedev",
       "source": "./packs/gamedev",
       "description": "Game-development skills on the -smith motif. Five members: pixelsmith — art direction for pixel art that must read at several zoom scales at once, including a pixelated-3D band; godotsmith — Godot 4.x project conventions, the proof that a build is actually green, and asset intake (import settings and the render precondition); soundsmith — game audio direction judged by numbers (palette, SFX lists, licence-gated briefs, a stdlib measuring script); slicesmith — the coding loop for game code: spec, plan, thin slices, red first, a Godot verify ladder, one commit per slice; uismith — design direction for game menus and HUD, dashboards, artifacts and plugin panes, with a rendered fit probe at phone-to-desktop widths in every theme (optional Playwright). Each routes on its own description and works alone.",
       "version": "1.0.0",
@@ -44,6 +46,7 @@
     },
     {
       "name": "localops",
+      "displayName": "Revenantworks Localops",
       "source": "./packs/localops",
       "description": "Skills for running work on this machine, on the -runner motif, one program per runner. Seven members: lmstudiorunner (local LM Studio models, verified), comfyrunner (ComfyUI renders behind GPU guards), dockerrunner (Docker Desktop and WSL), duckrunner (DuckDB over a repo's data files), whisperrunner (local transcripts with whisper.cpp), hypervrunner (Hyper-V VMs and Windows Sandbox), obsrunner (OBS Studio, read-only by default, and FFmpeg post-processing). Each routes on its own description and works alone.",
       "version": "1.0.0",
@@ -68,6 +71,7 @@
     },
     {
       "name": "scribe",
+      "displayName": "Revenantworks Scribe",
       "source": "./packs/scribe",
       "description": "Skills on the -scribe motif for words and knowledge. Four members: researchscribe (graded research verdicts, playbooks and reports), brandscribe (brand definitions, design systems and voice files), commscribe (messages and docs shaped to their channel, with a fact check), lorescribe (a fiction project's story bible and canon checks). Each routes on its own description and works alone.",
       "version": "1.0.0",
@@ -86,6 +90,7 @@
     },
     {
       "name": "warden",
+      "displayName": "Revenantworks Warden",
       "source": "./packs/warden",
       "description": "Skills that guard what Claude writes or manages, on the -warden motif. Four members: shieldwarden (leak and injection scans, the naming and identity policy per surface, names that advertise secrets, gated history rewrites that never push), trustwarden (pre-install vets of third-party code), keywarden (credential lifecycle, fingerprints only), gatewarden (runtime permission policy, owner-installed hooks, a settings map, and disk space and Claude's reach from evidence). Each routes on its own description and works alone.",
       "version": "1.0.0",
@@ -113,7 +118,8 @@
         "skills",
         "featured"
       ],
-      "repository": "https://github.com/revenantworks/claude-skills"
+      "repository": "https://github.com/revenantworks/claude-skills",
+      "displayName": "Revenantworks Pacewright"
     },
     {
       "name": "whisperrunner",
@@ -127,7 +133,8 @@
         "skills",
         "featured"
       ],
-      "repository": "https://github.com/revenantworks/claude-skills"
+      "repository": "https://github.com/revenantworks/claude-skills",
+      "displayName": "Revenantworks Whisperrunner"
     },
     {
       "name": "trustwarden",
@@ -141,7 +148,8 @@
         "skills",
         "featured"
       ],
-      "repository": "https://github.com/revenantworks/claude-skills"
+      "repository": "https://github.com/revenantworks/claude-skills",
+      "displayName": "Revenantworks Trustwarden"
     },
     {
       "name": "brandscribe",
@@ -155,7 +163,8 @@
         "skills",
         "featured"
       ],
-      "repository": "https://github.com/revenantworks/claude-skills"
+      "repository": "https://github.com/revenantworks/claude-skills",
+      "displayName": "Revenantworks Brandscribe"
     },
     {
       "name": "pixelsmith",
@@ -169,7 +178,8 @@
         "skills",
         "featured"
       ],
-      "repository": "https://github.com/revenantworks/claude-skills"
+      "repository": "https://github.com/revenantworks/claude-skills",
+      "displayName": "Revenantworks Pixelsmith"
     },
     {
       "name": "privacy",

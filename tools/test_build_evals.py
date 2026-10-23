@@ -54,7 +54,7 @@ def build_tree(test: unittest.TestCase) -> Path:
 
 def manifest(root: Path, experimental: dict | None) -> Path:
     pj = root / "packs" / "tools" / ".claude-plugin" / "plugin.json"
-    data = {"name": "tools", "version": "1.0.0"}
+    data = {"name": "tools", "displayName": "Revenantworks Tools", "version": "1.0.0"}
     if experimental is not None:
         data["experimental"] = experimental
     pj.write_bytes((json.dumps(data, indent=2) + "\n").encode())

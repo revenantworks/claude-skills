@@ -97,7 +97,8 @@ blocking; no `ask` rules anywhere in this repo.
    chars, `compatibility` <=500 chars — the only field limit confirmed
    against a real upload error, and the reason `description` carries no
    second one, body <=500 lines, CHANGELOG head == frontmatter version,
-   plugin.json == marketplace version, eval provenance freshness + table
+   plugin.json == marketplace version, `displayName` "Revenantworks <Name>" on every
+   pack and featured plugin and its marketplace entry, eval provenance freshness + table
    integrity, string-only `metadata`, and each `volatile.json`: legal classes, files
    exist, calendar surfaces stamped `Last verified:` with a sane cadence),
    builds `dist/` zips. `--check` = CI mode, writes nothing.
@@ -175,7 +176,8 @@ marketplace locally first, then add + install under the new name.
 New member: build it, add its registry row (registry members table), run
 `python tools/build.py`, upload per policy. New pack: add the pack row +
 `**<pack> members**` table to the registry, create `packs/<pack>/` with its
-`.claude-plugin/plugin.json`, add the marketplace catalog entry, run the build.
+`.claude-plugin/plugin.json` (with `"displayName": "Revenantworks <Pack>"`; `--new-pack` writes it),
+add the marketplace catalog entry with the same `displayName`, run the build.
 
 A pack needs **four** registry surfaces, not one — `**<pack> members**`,
 `**<pack> budgets**` (one row per member, honest ceiling + stated reason; the

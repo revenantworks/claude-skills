@@ -220,5 +220,21 @@ class Launcher(unittest.TestCase):
         self.assertEqual(build.sync_launcher(self.ROSTERS, self.DESCS, Path(tempfile.mkdtemp()), write=False), 0)
 
 
+class DisplayName(unittest.TestCase):
+    """displayName (build plan phase 2): install screens show the brand; plugin ids stay."""
+    def test_form(self):
+        self.assertEqual(build.display_name("foundation"), "Revenantworks Foundation")
+        self.assertEqual(build.display_name("pacewright"), "Revenantworks Pacewright")
+
+    def test_every_pack_and_its_entry_carry_it(self):
+        cat = json.loads((build.ROOT / ".claude-plugin" / "marketplace.json").read_text(encoding="utf-8"))
+        for entry in cat["plugins"]:
+            if not entry["source"].startswith(("./packs/", "./featured/")):
+                continue
+            pj = json.loads((build.ROOT / entry["source"] / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))
+            self.assertEqual(pj.get("displayName"), build.display_name(entry["name"]), entry["name"])
+            self.assertEqual(entry.get("displayName"), pj.get("displayName"), entry["name"])
+
+
 if __name__ == "__main__":
     unittest.main()

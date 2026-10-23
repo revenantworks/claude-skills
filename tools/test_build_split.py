@@ -400,10 +400,10 @@ class FeaturedGenerator(unittest.TestCase):
         (member / "references" / "notes.md").write_bytes(b"notes\n")
         (root / "packs" / "tools" / ".claude-plugin").mkdir(parents=True)
         (root / "packs" / "tools" / ".claude-plugin" / "plugin.json").write_bytes(
-            b'{"name": "tools", "version": "1.0.0", "author": {"name": "Acme"}, "license": "Apache-2.0"}\n')
+            b'{"name": "tools", "displayName": "Revenantworks Tools", "version": "1.0.0", "author": {"name": "Acme"}, "license": "Apache-2.0"}\n')
         (root / ".claude-plugin" / "marketplace.json").write_bytes(json.dumps(
             {"name": "acme", "owner": {"name": "Acme"},
-             "plugins": [{"name": "tools", "source": "./packs/tools", "version": "1.0.0"}]}, indent=2).encode())
+             "plugins": [{"name": "tools", "displayName": "Revenantworks Tools", "source": "./packs/tools", "version": "1.0.0"}]}, indent=2).encode())
         return root
 
     def run_main(self, root: Path, check: bool):
