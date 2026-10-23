@@ -5,13 +5,14 @@
 // builds. Every `$` use lives in this file; pure logic sits in *-logic.ts and lib/.
 // Hook work is kept cheap: hooks push counts to memory; a timer writes them.
 import { atom, read, update } from 'claude-code'
-import type { EngineInterface, Register } from 'claude-code'
+import type { CommandRunResult, EngineInterface, Register } from 'claude-code'
 
 import {
   METER_EVERY_MS, commandShape, emptyHealth, emptyMisroute, gatewardenCounts, isRevertCommand, onEdit, onRevertCommand,
   onSkillFire, parseEvents, permissionShape, publishSnapshot, pruneEvents, purgeArgv, rollup, serializeEvents, sessionKey, skillKey,
   type DashEvent, type Feed, type Health, type MisrouteState, type Via,
 } from './collector-logic'
+import { HANDOFF_MS, RW, RW_PREFIX, bySkill, isLongName, parseRw, resolveTarget, rwDescription, rwListLines } from './launcher-logic'
 import { featuresOf } from './lib/catalog'
 import { applySwitchCommand } from './lib/commands'
 import { parseShell, writeTargets } from './lib/shell'
@@ -39,6 +40,7 @@ import {
   HELP, head, healthLines, linesText, metersLines, navLines, overviewLines, panelLines, parseDashArgs, skillsLines, suggestLines, themeApplied, themeLines, themePreview, dupesLines, findDupes,
   type Line, type Press, type View,
 } from './view-logic'
+import { RW_SKILLS } from './rw-skills'
 
 const PLUGIN = 'dash'
 const VERSION = '1.0.0'
@@ -714,6 +716,7 @@ async function dsSetup($: EngineInterface): Promise<void> {
   } catch {
     // A name the host refuses is skipped; setup goes on.
   }
+  if (dsOn('D14')) await dsRegisterShort($)
   if (dsOn('D4')) {
     try {
       await $.tool.register({
@@ -770,6 +773,44 @@ async function dsSkillFired($: EngineInterface, skill: string, via: Via): Promis
   dsMis = r.st
   if (r.misroute) dsPush({ t: now, s: dsSKey, k: 'misroute', skill: r.misroute, why: 'switch' })
   dsTurnSkill = name
+}
+
+/** D14: /rw and every /rw-<short>. A name the host refuses is skipped; the rest still register. */
+async function dsRegisterShort($: EngineInterface): Promise<void> {
+  const specs = [
+    { name: RW, description: 'Revenantworks skills: /rw <name> runs one; bare /rw lists them', argumentHint: '<skill> [what you want]' },
+    ...RW_SKILLS.map(s => ({ name: `${RW_PREFIX}${s.short}`, description: rwDescription(s), argumentHint: '[what you want]' })),
+  ]
+  for (const spec of specs) {
+    try {
+      await $.command.register(spec)
+    } catch {
+      // Skipped; the long name still works.
+    }
+  }
+}
+
+/**
+ * Hand a short command to the skill's long command. The run is queued on the clock, after this
+ * hook returns: a $.command.run inside the hook the turn waits on is refused (PC test, 2026-10-23).
+ */
+async function dsLaunch($: EngineInterface, name: string, args: string): Promise<CommandRunResult> {
+  await dsEnsure($)
+  if (!dsOn('D14')) return { text: 'Short commands are off. /dash on short-commands turns them on; the long names still work.' }
+  const s = bySkill(name)
+  if (!s) return { text: [`No Revenantworks skill named "${name}".`, ...rwListLines()].join('\n') }
+  let names: string[] = []
+  try {
+    names = (await $.command.list()).map(c => c.name)
+  } catch {
+    // An unreadable list falls back to the pack's own command.
+  }
+  const target = resolveTarget(s, names) ?? (names.length === 0 ? `${s.pack}:${s.member}` : null)
+  if (!target) return { text: `${s.short} is not installed. Install its pack: /plugin install ${s.pack}@revenantworks` }
+  $.clock.after(HANDOFF_MS, () => {
+    void $.command.run({ command: target, args }).catch(() => undefined)
+  })
+  return {}
 }
 
 export const register: Register = on => {
@@ -1086,6 +1127,25 @@ export const register: Register = on => {
     await dsEnsure($)
     await dsRoll($).catch(() => undefined)
     return next(e)
+  })
+
+  // D14: one command.run hook per name (the engine matches a hook to one command).
+  on('command.run', { command: RW }, async ($, e) => {
+    const { skill, rest } = parseRw(e.args ?? '')
+    if (!skill) {
+      await dsEnsure($)
+      return { text: rwListLines().join('\n') }
+    }
+    return dsLaunch($, skill, rest)
+  })
+  for (const s of RW_SKILLS) on('command.run', { command: `${RW_PREFIX}${s.short}` }, ($, e) => dsLaunch($, s.short, e.args ?? ''))
+
+  // D14: the long names leave the typeahead and /help while the short ones serve them.
+  on('command.describe', async ($, e, next) => {
+    const r = await next(e)
+    if (!isLongName(e.command)) return r
+    await dsEnsure($)
+    return dsOn('D14') ? { ...r, isHidden: true } : r
   })
 
   on('command.run', { command: 'dash' }, async ($, e) => {

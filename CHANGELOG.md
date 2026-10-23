@@ -36,7 +36,9 @@ Claude Code plugin marketplace.
   (skill fires by slash or automatic, failures, likely misroutes, tokens and cost by skill; the
   5-hour, weekly, context and cache meters; health, including gatewarden's event counts;
   background tasks; research, GPU-lease, Godot and PR panels; a `/dash publish` snapshot for a
-  private mobile page; and a suggestion queue that proposes, never builds), and `privacy` (secret
+  private mobile page; a suggestion queue that proposes, never builds; and `/rw-<skill>` short
+  commands for every skill, generated from the registry, with the long names hidden from the `/`
+  list), and `privacy` (secret
   and stream-key masking with restore, the rotate tripwire, untrusted-content and
   received-message markers), kept apart so safety never depends on the dashboard. A local VS Code
   extension (`mods/vscode`) keeps the dashboard in the status bar. Mods never block: blocking

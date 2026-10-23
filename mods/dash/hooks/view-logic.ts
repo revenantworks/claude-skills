@@ -478,6 +478,7 @@ export const HELP: readonly string[] = columns([
   ['/dash switches | on|off <name> | off', 'features; bare off = kill switch'],
   ['/dash records on|off | network on|off', 'keep counts; allow network reads'],
   ['/dash doctor | purge', 'check the install; delete counts'],
+  ['/rw | /rw-<skill> [what you want]', 'list or run a Revenantworks skill'],
 ], [], '')
 
 /** What dash_read hands Claude: one view as plain text, so a surface that cannot draw still reads it. */

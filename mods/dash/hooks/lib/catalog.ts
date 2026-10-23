@@ -44,6 +44,7 @@ export const CATALOG: readonly Feature[] = [
   f('D11', 'godot-panel', 'dash', 'lens', 'Godot proof panel and import warning', ['G1'], 'Shows in a Godot repo; /dash godot.'),
   f('D12', 'pr-state', 'dash', 'lens', 'Your open PRs: checks, review, conflicts', ['X5'], '/dash network on (reads GitHub through your gh login, only when you act); /dash prs.'),
   f('D13', 'publish', 'dash', 'assist', 'Snapshot for a private mobile page', [], '/dash publish writes snapshot.json; ask Claude to publish it as a private Artifact.'),
+  f('D14', 'short-commands', 'dash', 'assist', 'Short skill commands: /rw-<skill> and /rw <skill>', [], 'On at install. /rw lists them; /dash off short-commands brings back the long names.'),
   // ---- privacy: safety that never depends on the dashboard ----
   f('W3', 'secret-redact', 'privacy', 'privacy', 'Secret masking before Claude reads, and restore', ['W3'], 'Automatic; /dash off secret-redact stops it.'),
   f('W3b', 'rotate-alert', 'privacy', 'privacy', 'Rotate tripwire', ['W3b'], 'Automatic, when keywarden lists fingerprints in rotate.txt.'),
