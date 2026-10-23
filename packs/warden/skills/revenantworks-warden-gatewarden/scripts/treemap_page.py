@@ -8,7 +8,8 @@ Run, never read into context. Stdlib only.
 The page loads nothing from the network (no CDN, no fonts, no images): the squarified
 treemap is an inline script over the embedded data. It lists private paths, so it is a
 local file; it is published only on the owner's word. Links are drawn as hatched tiles of
-zero size, so a junction is visible without being counted twice.
+zero size, so a junction is visible without being counted twice. Colours are the house
+Neutral palette (owner, 2026-10-23: tools and reports ship Neutral), light and dark.
 Exit codes: 0 ok, 2 input error.
 """
 from __future__ import annotations
@@ -24,18 +25,18 @@ PAGE = """<!doctype html>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>__TITLE__</title>
 <style>
-:root{--bg:#fafaf8;--fg:#1d1d1b;--sub:#5f5e5a;--line:rgba(0,0,0,.18);--dir:#8fb3d9;--repo:#9ccf9a;--file:#d9c08f;--link:#c9c9c9}
-@media (prefers-color-scheme:dark){:root{--bg:#161615;--fg:#ecebe6;--sub:#a3a29c;--line:rgba(255,255,255,.2);--dir:#3e6189;--repo:#3f7a3d;--file:#86703f;--link:#4a4a4a}}
+:root{--bg:#f0eee6;--card:#faf9f5;--fg:#141413;--sub:#5e5d59;--accent:#a9472a;--line:#e0ddd2;--dir:#e8e6dc;--repo:#f2d9cc;--file:#e0ddd2;--link:#87867f}
+@media (prefers-color-scheme:dark){:root{--bg:#141413;--card:#1f1e1d;--fg:#faf9f5;--sub:#b0aea5;--accent:#e8957a;--line:#33322f;--dir:#262624;--repo:#4a2a1f;--file:#33322f;--link:#6b6a64}}
 body{margin:0;padding:16px;background:var(--bg);color:var(--fg);font:14px/1.4 system-ui,sans-serif}
 h1{font-size:18px;margin:0 0 4px}p{margin:0 0 8px;color:var(--sub)}
 #crumbs{margin:8px 0;font-family:ui-monospace,monospace;font-size:12px;word-break:break-all}
-#crumbs a{color:inherit;cursor:pointer;text-decoration:underline}
-#map{position:relative;width:100%;height:70vh;min-height:320px;border:1px solid var(--line)}
-.t{position:absolute;box-sizing:border-box;border:1px solid var(--bg);overflow:hidden;font-size:11px;padding:2px 3px;cursor:pointer}
+#crumbs a{color:var(--accent);cursor:pointer;text-decoration:underline}
+#map{position:relative;width:100%;height:70vh;min-height:320px;border:1px solid var(--line);background:var(--card)}
+.t{position:absolute;box-sizing:border-box;border:1px solid var(--card);overflow:hidden;font-size:11px;padding:2px 3px;cursor:pointer}
 .t.dir{background:var(--dir)}.t.repo{background:var(--repo)}.t.file{background:var(--file)}
 .t.link{background:repeating-linear-gradient(45deg,var(--link) 0 4px,transparent 4px 8px);cursor:default}
 .legend span{display:inline-block;width:10px;height:10px;margin:0 4px 0 12px;vertical-align:middle}
-table{border-collapse:collapse;margin-top:12px;font-size:12px;width:100%}td,th{border-bottom:1px solid var(--line);padding:3px 6px;text-align:left}
+table{border-collapse:collapse;margin-top:12px;font-size:12px;width:100%;background:var(--card)}td,th{border-bottom:1px solid var(--line);padding:3px 6px;text-align:left}
 td.n{text-align:right;font-variant-numeric:tabular-nums}
 </style></head><body>
 <h1>__TITLE__</h1>
