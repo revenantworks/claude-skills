@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """claude-skills — ci_local: the repo's whole local CI as one plain Python process.
 
-    python tools/ci_local.py [--only NAME ...] [--skip NAME ...] [--list] [--verbose]
+    python tools/ci_local.py [--only NAME ...] [--skip NAME ...] [--list] [--verbose] [--jobs N]
 
 Runs, in order, the read-only list in CLAUDE.md and the CI workflows' checks:
 build.py --check, the tools suite, warden_suites.py, pii_scan.py --tree, name_leak.py
@@ -12,6 +12,10 @@ ran and failures where the step prints them. A failed step prints its last lines
 runs and reports. A step whose tool is absent (`claude`, `node`, the name list) prints NOT-RUN,
 never a pass. No `bash -c`: each step is a plain process with no window, so it is the single
 command for `ci_stamp.py run --repo . -- python tools/ci_local.py`.
+
+Independent steps run side by side, at most --jobs at once (default min(6, cpu count));
+--jobs 1 runs them one after another as before. Output stays in the fixed step order: each
+step's line prints when it and every step before it have finished.
 
 Exit 0 every step passed; 1 any step failed (or a suite ran 0 tests); 3 nothing failed but a
 step was NOT-RUN; 2 a usage error. --skip names a step deliberately left out (printed SKIPPED,
@@ -25,6 +29,7 @@ import re
 import shutil
 import subprocess
 import sys
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable
@@ -98,6 +103,11 @@ def run_step(step: Step) -> tuple[int, str]:
     return p.returncode, p.stdout.decode("utf-8", "replace")
 
 
+def default_jobs() -> int:
+    """Steps at once by default: min(6, cpu count)."""
+    return min(6, os.cpu_count() or 1)
+
+
 def main(argv: list[str] | None = None, root: Path = ROOT, run: Callable = run_step,
          which: Callable[[str], str | None] = shutil.which) -> int:
     ap = argparse.ArgumentParser(prog="ci_local.py", description=__doc__.split("\n\n")[0])
@@ -105,7 +115,11 @@ def main(argv: list[str] | None = None, root: Path = ROOT, run: Callable = run_s
     ap.add_argument("--skip", nargs="+", default=[], metavar="NAME", help="leave these steps out")
     ap.add_argument("--list", action="store_true", help="print the steps and run nothing")
     ap.add_argument("--verbose", action="store_true", help="print every step's whole output")
+    ap.add_argument("--jobs", type=int, default=default_jobs(), metavar="N",
+                    help="steps at once (default min(6, cpu count); 1 = one after another)")
     a = ap.parse_args(sys.argv[1:] if argv is None else argv)
+    if a.jobs < 1:
+        ap.error("--jobs must be at least 1")
     steps = plan(root, which)
     known = {s.name for s in steps}
     unknown = [n for n in a.only + a.skip if n not in known]
@@ -115,10 +129,12 @@ def main(argv: list[str] | None = None, root: Path = ROOT, run: Callable = run_s
         for s in steps:
             print(f"{s.name}: {' '.join(s.cmd)}" + (f"  [NOT-RUN: {s.not_run}]" if s.not_run else ""))
         return 0
+    chosen = [s for s in steps if not (a.only and s.name not in a.only)]
+    live = [s for s in chosen if s.name not in a.skip and not s.not_run]
+    pool = ThreadPoolExecutor(max_workers=a.jobs)
+    futures = {s.name: pool.submit(run, s) for s in live}   # submitted in plan order
     failed, not_run = [], []
-    for s in steps:
-        if a.only and s.name not in a.only:
-            continue
+    for s in chosen:
         if s.name in a.skip:
             print(f"{s.name}: SKIPPED (--skip)")
             continue
@@ -126,7 +142,7 @@ def main(argv: list[str] | None = None, root: Path = ROOT, run: Callable = run_s
             print(f"{s.name}: NOT-RUN ({s.not_run})")
             not_run.append(s.name)
             continue
-        rc, out = run(s)
+        rc, out = futures[s.name].result()
         ran, bad = counts(out)
         if rc in s.not_run_codes:
             print(f"{s.name}: NOT-RUN (exit {rc})")
@@ -145,6 +161,8 @@ def main(argv: list[str] | None = None, root: Path = ROOT, run: Callable = run_s
                 print(f"    {ln}")
         if not ok:
             failed.append(s.name)
+        sys.stdout.flush()
+    pool.shutdown()
     if failed:
         print(f"ci_local: FAIL ({len(failed)}: {', '.join(failed)})"
               + (f"; NOT-RUN: {', '.join(not_run)}" if not_run else ""))
