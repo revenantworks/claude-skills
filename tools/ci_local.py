@@ -61,17 +61,30 @@ def counts(log: str) -> tuple[int | None, int]:
     bad = 0
     m = FAILED.findall(log)
     if m:
-        bad = sum(int(n) for n in re.findall(r"(?:failures|errors)=(\d+)", m[-1]))
+        bad = sum(int(n) for n in re.findall(r"\b(?<!expected )(?:failures|errors)=(\d+)", m[-1]))
     return (int(ran[-1]) if ran else None), bad
 
 
-def plan(root: Path = ROOT, which: Callable[[str], str | None] = shutil.which) -> list[Step]:
+def cpus() -> int:
+    return os.cpu_count() or 1
+
+
+def warden_jobs(jobs: int, cpu: int) -> int:
+    """warden-suites' own process budget: serial under --jobs 1, else the cpus left after
+    the other jobs - 1 step slots, at least 1 (no nested pool oversubscribes the rig)."""
+    return 1 if jobs <= 1 else max(1, cpu - (jobs - 1))
+
+
+def plan(root: Path = ROOT, which: Callable[[str], str | None] = shutil.which,
+         jobs: int | None = None) -> list[Step]:
     tools = root / "tools"
+    wj = warden_jobs(default_jobs() if jobs is None else jobs, cpus())
     steps = [
         Step("build-check", [PY, str(tools / "build.py"), "--check"], root),
         Step("tools-tests", [PY, "-m", "unittest", "discover", "-s", "tools", "-p", "test_*.py"],
              root, suite=True),
-        Step("warden-suites", [PY, str(tools / "warden_suites.py")], root),
+        Step("warden-suites", [PY, str(tools / "warden_suites.py"), "--jobs", str(wj)]
+             + (["--shards", "1"] if wj == 1 and jobs == 1 else []), root),
         Step("pii-tree", [PY, str(tools / "pii_scan.py"), "--tree"], root),
         Step("name-leak", [PY, str(tools / "name_leak.py")], root, not_run_codes=(NOT_RUN,)),
         Step("mods-sync", [PY, str(root / "mods" / "sync_shared.py"), "--check"], root),
@@ -105,7 +118,7 @@ def run_step(step: Step) -> tuple[int, str]:
 
 def default_jobs() -> int:
     """Steps at once by default: min(6, cpu count)."""
-    return min(6, os.cpu_count() or 1)
+    return min(6, cpus())
 
 
 def main(argv: list[str] | None = None, root: Path = ROOT, run: Callable = run_step,
@@ -120,7 +133,7 @@ def main(argv: list[str] | None = None, root: Path = ROOT, run: Callable = run_s
     a = ap.parse_args(sys.argv[1:] if argv is None else argv)
     if a.jobs < 1:
         ap.error("--jobs must be at least 1")
-    steps = plan(root, which)
+    steps = plan(root, which, a.jobs)
     known = {s.name for s in steps}
     unknown = [n for n in a.only + a.skip if n not in known]
     if unknown:
@@ -132,37 +145,39 @@ def main(argv: list[str] | None = None, root: Path = ROOT, run: Callable = run_s
     chosen = [s for s in steps if not (a.only and s.name not in a.only)]
     live = [s for s in chosen if s.name not in a.skip and not s.not_run]
     pool = ThreadPoolExecutor(max_workers=a.jobs)
-    futures = {s.name: pool.submit(run, s) for s in live}   # submitted in plan order
-    failed, not_run = [], []
-    for s in chosen:
-        if s.name in a.skip:
-            print(f"{s.name}: SKIPPED (--skip)")
-            continue
-        if s.not_run:
-            print(f"{s.name}: NOT-RUN ({s.not_run})")
-            not_run.append(s.name)
-            continue
-        rc, out = futures[s.name].result()
-        ran, bad = counts(out)
-        if rc in s.not_run_codes:
-            print(f"{s.name}: NOT-RUN (exit {rc})")
-            not_run.append(s.name)
-            continue
-        zero = s.suite and not ran
-        line = f"{s.name}: exit {rc}"
-        if ran is not None:
-            line += f", {ran} tests, {bad} failures"
-        elif s.suite:
-            line += ", 0 tests"
-        ok = rc == 0 and not zero
-        print(line + ("" if ok else " -> FAIL" + (" (0 tests)" if zero and rc == 0 else "")))
-        if a.verbose or not ok:
-            for ln in out.rstrip().splitlines()[-TAIL if not a.verbose else None:]:
-                print(f"    {ln}")
-        if not ok:
-            failed.append(s.name)
-        sys.stdout.flush()
-    pool.shutdown()
+    try:
+        futures = {s.name: pool.submit(run, s) for s in live}   # submitted in plan order
+        failed, not_run = [], []
+        for s in chosen:
+            if s.name in a.skip:
+                print(f"{s.name}: SKIPPED (--skip)")
+                continue
+            if s.not_run:
+                print(f"{s.name}: NOT-RUN ({s.not_run})")
+                not_run.append(s.name)
+                continue
+            rc, out = futures[s.name].result()
+            ran, bad = counts(out)
+            if rc in s.not_run_codes:
+                print(f"{s.name}: NOT-RUN (exit {rc})")
+                not_run.append(s.name)
+                continue
+            zero = s.suite and not ran
+            line = f"{s.name}: exit {rc}"
+            if ran is not None:
+                line += f", {ran} tests, {bad} failures"
+            elif s.suite:
+                line += ", 0 tests"
+            ok = rc == 0 and not zero
+            print(line + ("" if ok else " -> FAIL" + (" (0 tests)" if zero and rc == 0 else "")))
+            if a.verbose or not ok:
+                for ln in out.rstrip().splitlines()[-TAIL if not a.verbose else None:]:
+                    print(f"    {ln}")
+            if not ok:
+                failed.append(s.name)
+            sys.stdout.flush()
+    finally:
+        pool.shutdown(cancel_futures=True)
     if failed:
         print(f"ci_local: FAIL ({len(failed)}: {', '.join(failed)})"
               + (f"; NOT-RUN: {', '.join(not_run)}" if not_run else ""))

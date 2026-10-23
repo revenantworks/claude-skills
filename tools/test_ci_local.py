@@ -81,6 +81,28 @@ class Parse(unittest.TestCase):
         self.assertEqual(ci_local.counts("Ran 1 test in 0s\n\nOK\n"), (1, 0))
         self.assertEqual(ci_local.counts("check: clean\n"), (None, 0))
 
+    def test_expected_failures_are_not_failures(self):
+        log = "Ran 5 tests in 0s\n\nFAILED (failures=1, expected failures=2)\n"
+        self.assertEqual(ci_local.counts(log), (5, 1))
+
+
+class WardenBudget(unittest.TestCase):
+    def test_serial_ci_local_runs_warden_serially(self):
+        self.assertEqual(ci_local.warden_jobs(1, 16), 1)
+
+    def test_parallel_leaves_the_other_slots_their_cpus(self):
+        self.assertEqual(ci_local.warden_jobs(6, 16), 11)
+        self.assertEqual(ci_local.warden_jobs(6, 4), 1)
+
+    def test_plan_passes_the_budget(self):
+        with tempfile.TemporaryDirectory() as t:
+            make_tree(Path(t))
+            for jobs in (1, 6):
+                w = [s for s in ci_local.plan(Path(t), which=lambda n: n, jobs=jobs)
+                     if s.name == "warden-suites"][0]
+                i = w.cmd.index("--jobs")
+                self.assertEqual(w.cmd[i + 1], str(ci_local.warden_jobs(jobs, ci_local.cpus())))
+
 
 class Main(unittest.TestCase):
     def setUp(self):
@@ -107,7 +129,8 @@ class Main(unittest.TestCase):
         rc, out = self.go([], fake)
         self.assertEqual(rc, 1)
         self.assertIn("tools-tests: exit 1", out)
-        self.assertIn("suite:m-one", fake.calls)
+        live = [s.name for s in ci_local.plan(self.root, which=lambda n: n) if not s.not_run]
+        self.assertEqual(sorted(fake.calls), sorted(live))
         self.assertIn("ci_local: FAIL", out)
 
     def test_zero_tests_is_a_failure(self):
