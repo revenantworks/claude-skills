@@ -109,7 +109,7 @@
     {
       "name": "pacewright",
       "source": "./featured/pacewright",
-      "description": "Paces a Claude subscription's usage — how fast to spend this week, what can still run at N% weekly, whether planned work fits before a reset. Reads the 5-hour, weekly, per-model and CI-minutes meters, sets a spend mode (normal, pace, turbo, overnight, work-day, owner-away, reset-eve) and re-cuts waves that don't fit. Also when something ate usage overnight, CI minutes run low, context runs high (compact or clear?), a new model needs a measured baseline, or which skill or subagent used tokens; or say pacewright (check, mode, fit, context, uba, baseline, spend, refresh). The plan table is dispatchwright's; the handoff, handoffwright's; one artifact's cost, skillwright's slim; the meter statusline, rigwright's; a scheduled check, agentwright's.",
+      "description": "Paces a Claude subscription's usage — how fast to spend this week, what can still run at N% weekly, whether planned work fits before a reset. Reads the 5-hour, weekly, per-model and CI-minutes meters, sets a spend mode (normal, pace, turbo, overnight, work-day, owner-away, reset-eve) and re-cuts waves that don't fit. Also when something ate usage overnight, CI minutes run low, context runs high (compact or clear?), a new model needs a measured baseline, or which skill or subagent used tokens; or say /rw-pacewright (check, mode, fit, context, uba, baseline, spend, refresh). The plan table is dispatchwright's; the handoff, handoffwright's; one artifact's cost, skillwright's slim; the meter statusline, rigwright's; a scheduled check, agentwright's.",
       "version": "1.0.0",
       "license": "Apache-2.0",
       "category": "productivity",
@@ -124,7 +124,7 @@
     {
       "name": "whisperrunner",
       "source": "./featured/whisperrunner",
-      "description": "Transcribes local audio and video to txt, srt, vtt and json with timestamps using whisper.cpp, and proves which backend ran. Trigger to transcribe, caption or subtitle a recording, meeting, podcast or video locally; to pick a Whisper model for this GPU or estimate a batch; when a transcript is empty, cut short or repeating; when Whisper ran on the CPU or a pasted log must prove the GPU ran; when it shares the GPU with LM Studio or ComfyUI; or say whisperrunner (audit, check, plan, run, status, refresh). Never a cloud API or a download. Voice-overs are comfyrunner's; clips and burned-in captions obsrunner's; game audio soundsmith's; summarising transcripts lmstudiorunner's.",
+      "description": "Transcribes local audio and video to txt, srt, vtt and json with timestamps using whisper.cpp, and proves which backend ran. Trigger to transcribe, caption or subtitle a recording, meeting, podcast or video locally; to pick a Whisper model for this GPU or estimate a batch; when a transcript is empty, cut short or repeating; when Whisper ran on the CPU or a pasted log must prove the GPU ran; when it shares the GPU with LM Studio or ComfyUI; or say /rw-whisperrunner (audit, check, plan, run, status, refresh). Never a cloud API or a download. Voice-overs are comfyrunner's; clips and burned-in captions obsrunner's; game audio soundsmith's; summarising transcripts lmstudiorunner's.",
       "version": "1.0.0",
       "license": "Apache-2.0",
       "category": "productivity",
@@ -139,7 +139,7 @@
     {
       "name": "trustwarden",
       "source": "./featured/trustwarden",
-      "description": "Vets third-party skills, plugins, MCP servers, GitHub Actions and model weights before install, with a verdict (PASS, CONDITIONAL, HOLD, FAIL) and install terms. Trigger on any should-I-install question, even with its files or hooks pasted in or a scan already clean; is this skill safe, vet this MCP server, check this GitHub Action, is this checkpoint safe or commercially usable, what does this installer write, a licence check before a fold-in, what changed in a plugin update; or say trustwarden (vet, revet, terms, refresh). Uses skillspector, zizmor, pinact and Scorecard when present; lists files no scanner read. Runtime permissions are gatewarden's; secrets shieldwarden's; your own skills skillwright's; sandboxing a download hypervrunner's.",
+      "description": "Vets third-party skills, plugins, MCP servers, GitHub Actions and model weights before install, with a verdict (PASS, CONDITIONAL, HOLD, FAIL) and install terms. Trigger on any should-I-install question, even with its files or hooks pasted in or a scan already clean; is this skill safe, vet this MCP server, check this GitHub Action, is this checkpoint safe or commercially usable, what does this installer write, a licence check before a fold-in, what changed in a plugin update; or say /rw-trustwarden (vet, revet, terms, refresh). Uses skillspector, zizmor, pinact and Scorecard when present; lists files no scanner read. Runtime permissions are gatewarden's; secrets shieldwarden's; your own skills skillwright's; sandboxing a download hypervrunner's.",
       "version": "1.0.0",
       "license": "Apache-2.0",
       "category": "productivity",
@@ -154,7 +154,7 @@
     {
       "name": "brandscribe",
       "source": "./featured/brandscribe",
-      "description": "Keeps brand definitions, several side by side, and turns one into a Claude Design System, DESIGN.md, VOICE.md or guide. Trigger to define a brand, palette, type or voice; turn a style guide or site into tokens; make, connect or sync a design system; audit for brand drift (off-palette colours, old names); pass or fail a page against a brand, or apply one to a README or generated output; critique or check a built UI, or a built site (dist/) for UI problems before it ships (hierarchy, spacing, states, generic look); or say brandscribe (setup, build, export, sync, audit, gate, ui). Microcopy and messages are commscribe's; React libraries design-sync's; charts dataviz's; canon lorescribe's; a pre-build brief, fit across widths and themes, and game UI uismith's; no logos.",
+      "description": "Keeps brand definitions, several side by side, and turns one into a Claude Design System, DESIGN.md, VOICE.md or guide. Trigger to define a brand, palette, type or voice; turn a style guide or site into tokens; make, connect or sync a design system; audit for brand drift (off-palette colours, old names); pass or fail a page against a brand, or apply one to a README or generated output; critique or check a built UI, or a built site (dist/) for UI problems before it ships (hierarchy, spacing, states, generic look); or say /rw-brandscribe (setup, build, export, sync, audit, gate, ui). Microcopy and messages are commscribe's; React libraries design-sync's; charts dataviz's; canon lorescribe's; a pre-build brief, fit across widths and themes, and game UI uismith's; no logos.",
       "version": "1.0.0",
       "license": "Apache-2.0",
       "category": "productivity",
@@ -169,7 +169,7 @@
     {
       "name": "pixelsmith",
       "source": "./featured/pixelsmith",
-      "description": "Directs pixel art that must read at several zoom scales at once — per-scale palette and silhouette rules, terrain-versus-unit contrast, a one-scene look test, and briefs for an artist or image generator. Trigger when a game renders one world through zoom bands or levels of detail, a pixelated 3D or 2.5D band with billboards included; when a sprite, unit or icon vanishes against terrain zoomed out; for a cross-band look test or pixel-art style guide; or say pixelsmith (test, brief, audit, 3d). Works from a described scene. Drawing is an art tool's job; rendering and LOD code the game's engineering; a brand palette brandscribe's; game audio soundsmith's.",
+      "description": "Directs pixel art that must read at several zoom scales at once — per-scale palette and silhouette rules, terrain-versus-unit contrast, a one-scene look test, and briefs for an artist or image generator. Trigger when a game renders one world through zoom bands or levels of detail, a pixelated 3D or 2.5D band with billboards included; when a sprite, unit or icon vanishes against terrain zoomed out; for a cross-band look test or pixel-art style guide; or say /rw-pixelsmith (test, brief, audit, 3d). Works from a described scene. Drawing is an art tool's job; rendering and LOD code the game's engineering; a brand palette brandscribe's; game audio soundsmith's.",
       "version": "1.0.0",
       "license": "Apache-2.0",
       "category": "productivity",
