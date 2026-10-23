@@ -1,8 +1,8 @@
 // vigil themes: pure logic (no $). A theme names a colour for each role the views use, a glyph set
 // and a header style. Four themes ship in the mod, in picker order: `neutral` (the default; every
 // colour is a key of the person's own Claude Code theme, so it follows the app's light or dark),
-// `revenantworks` (opt-in, a dark and a light variant), `hc-dark` (the default when the person asks
-// for more contrast) and `off` (no colour). The person's own themes live as
+// `revenantworks` (opt-in, a dark and a light variant), `hc-light` (the default when the person asks
+// for more contrast on a light console) and `off` (no colour). The person's own themes live as
 // JSON files in ~/.claude/revenantworks/themes/ and win over a bundled theme of the same name.
 // Colour shows only where a surface paints (the /rw-vigil pane); text surfaces get the glyphs and
 // headers, never escape codes.
@@ -57,14 +57,16 @@ export const REVENANTWORKS: Theme = {
   },
 }
 
-// The brand's high-contrast dark tokens (owner decision 2026-10-23): pure black ground, the accents
-// lifted to clear 7:1 on it, the muted text and border from the brand's hc-dark set. Picked by
-// itself only when the person asks for more contrast (pickTheme); otherwise opt-in like revenantworks.
-export const HC_DARK: Theme = {
-  name: 'hc-dark',
-  description: 'High contrast on a black ground',
-  background: '#000000',
-  colors: { accent: '#00E5FF', ok: 'success', warn: '#FF8F1F', bad: '#FF84B8', dim: '#9DAFB2', rule: '#6C7678' },
+// The brand's high-contrast light tokens (definition v2.27.0; owner 2026-10-23: high contrast is the
+// light set, not the dark one): a warm bone ground, never pure white, the inks clearing 7:1 on it and
+// the border 4.5:1. Picked by itself only when the person asks for more contrast on a light console
+// (pickTheme); otherwise opt-in like revenantworks. The brand names no success colour, so `ok` keeps
+// the person's theme key.
+export const HC_LIGHT: Theme = {
+  name: 'hc-light',
+  description: 'High contrast on a light ground',
+  background: '#FAF6F1',
+  colors: { accent: '#044C56', ok: 'success', warn: '#6B3704', bad: '#86044D', dim: '#4C4236', rule: '#746D64' },
   glyphs: GLYPHS.unicode,
   header: 'block',
 }
@@ -79,10 +81,10 @@ export const OFF: Theme = {
   header: 'plain',
 }
 
-export const BUNDLED: Record<string, Theme> = { neutral: NEUTRAL, revenantworks: REVENANTWORKS, 'hc-dark': HC_DARK, off: OFF }
+export const BUNDLED: Record<string, Theme> = { neutral: NEUTRAL, revenantworks: REVENANTWORKS, 'hc-light': HC_LIGHT, off: OFF }
 
 /** The picker order (owner, 2026-10-23): neutral, the brand, high contrast, off; the person's own after. */
-export const THEME_ORDER: readonly string[] = ['neutral', 'revenantworks', 'hc-dark', 'off']
+export const THEME_ORDER: readonly string[] = ['neutral', 'revenantworks', 'hc-light', 'off']
 
 /** Names sorted for the picker: the bundled order first, then the person's themes A to Z. */
 export const orderThemes = (names: readonly string[]): string[] => {
@@ -221,11 +223,11 @@ export const discoverThemes = (userFiles: ReadonlyArray<{ file: string; text: st
 }
 
 /**
- * The active theme: the env name, else the saved choice, else hc-dark when the person asked for more
- * contrast, else neutral; a name not found falls back with a notice.
+ * The active theme: the env name, else the saved choice, else hc-light when the person asked for more
+ * contrast (on a light console: the caller decides), else neutral; a name not found falls back with a notice.
  */
 export const pickTheme = (themes: Record<string, ThemeEntry>, envName: string | null, saved: string | null, contrast = false): { theme: Theme; notice: string | null } => {
-  const want = (envName || saved || (contrast ? 'hc-dark' : 'neutral')).trim().toLowerCase()
+  const want = (envName || saved || (contrast ? 'hc-light' : 'neutral')).trim().toLowerCase()
   const hit = themes[want]
   if (hit) return { theme: hit.theme, notice: null }
   return { theme: themes.neutral?.theme ?? NEUTRAL, notice: `vigil: theme "${want.slice(0, 40)}" not found or invalid; using neutral. /rw-vigil theme lists the themes.` }
