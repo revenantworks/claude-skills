@@ -83,11 +83,11 @@ export const safeEvent = (e: DashEvent): DashEvent | null => {
 
 export const sessionKey = (sessionId: string): string => fnv1a(`vigil:${sessionId}`)
 
-/** `/rw-vigil purge`: the remove command for the vigil records folder, or null. Only a path that ends in
- * `.claude/revenantworks/vigil` passes, and on Windows none with a character cmd re-parses (& ^ % | < > "). */
+/** `/rw-vigil purge`: the remove command for a vigil records folder, or null. Only a path that ends in
+ * `.claude/revenantworks/vigil` or the pre-rename `.claude/revenantworks/dash` passes, and on Windows none with a character cmd re-parses (& ^ % | < > "). */
 export const purgeArgv = (isWin: boolean, dir: string): string[] | null => {
   const p = dir.replace(/\\/g, '/')
-  if (!/^.+\/\.claude\/revenantworks\/vigil$/.test(p) || /(^|\/)\.\.(\/|$)/.test(p) || /[\r\n\0]/.test(p)) return null
+  if (!/^.+\/\.claude\/revenantworks\/(vigil|dash)$/.test(p) || /(^|\/)\.\.(\/|$)/.test(p) || /[\r\n\0]/.test(p)) return null
   if (isWin) return /[&^%|<>"]/.test(p) ? null : ['cmd', '/c', 'rmdir', '/s', '/q', p.replace(/\//g, '\\')]
   return ['rm', '-rf', p]
 }

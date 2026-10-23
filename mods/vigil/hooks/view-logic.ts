@@ -96,7 +96,9 @@ export type Dupe = { base: string; names: string[]; sources: SkillSource[] }
 /** Skills loaded under two names or from two sources: the same base name more than once. */
 export const findDupes = (rows: readonly SkillRow[], sources: Readonly<Record<string, string>> = {}): Dupe[] => {
   const by = new Map<string, string[]>()
-  for (const r of rows) by.set(baseName(r.name), [...(by.get(baseName(r.name)) ?? []), r.name])
+  // Only the latest listing counts: a name seen only in older records (a skill renamed by its source,
+  // such as a synced skill that gained its anthropic-skills: prefix) is not a second loaded copy.
+  for (const r of rows.filter(x => x.listed)) by.set(baseName(r.name), [...(by.get(baseName(r.name)) ?? []), r.name])
   const order = (s: SkillSource) => SOURCES.indexOf(s)
   return [...by.entries()].filter(([, names]) => new Set(names).size > 1)
     .map(([base, names]) => ({ base, names: [...new Set(names)], sources: [...new Set(names.map(n => skillSource(n, sources[n])))].sort((a, b) => order(a) - order(b)) }))
