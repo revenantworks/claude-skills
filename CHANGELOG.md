@@ -38,6 +38,8 @@ Claude Code plugin marketplace.
   only, as the Agent Skills spec requires; each member's volatile surfaces are listed in a
   `volatile.json` beside its SKILL.md. `tools/release.py` runs the release loop.
   `tools/name_leak.py` checks for listed names kept outside the repo.
+- **Skill descriptions name the short command (2026-10-23).** Every description's "or say" trigger
+  now reads `/rw-<name>` (`or say /rw-agentwright (emit, audit, refresh)`); the long names still work.
 - **shroud sees more (2026-10-23).** The gitleaks rule set (212 rules, MIT) joins shroud's own
   shapes. Opt-in personal-data masking (email, phone, card number, US SSN) and a local word list.
   `/rw-shroud rotate` drafts a keywarden rotation by placeholder; vigil shows a shield after a
