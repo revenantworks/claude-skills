@@ -834,9 +834,10 @@ async function dsLoadTheme($: EngineInterface): Promise<void> {
   } catch {
     // No settings rows on this host: the override and COLORFGBG still decide.
   }
-  const contrast = wantsContrast((await dsEnv($, 'THEME_CONTRAST')) ?? null, ccTheme)
-  const p = pickTheme(d.themes, (await dsEnv($, 'THEME')) ?? null, parseActive(await dsRead($, dsPath('theme.json'))), contrast)
   dsConsole = consoleBackground(ccTheme, (await dsEnv($, 'THEME_BACKGROUND')) ?? null, (await $.env.get('COLORFGBG')) ?? null)
+  // High contrast is the light set: on a dark console the person's own theme keeps its contrast.
+  const contrast = wantsContrast((await dsEnv($, 'THEME_CONTRAST')) ?? null, ccTheme) && dsConsole.bg === 'light'
+  const p = pickTheme(d.themes, (await dsEnv($, 'THEME')) ?? null, parseActive(await dsRead($, dsPath('theme.json'))), contrast)
   dsThemeBase = p.theme
   dsTheme = resolveVariant(p.theme, dsConsole.bg).theme
   // One notice per problem a session: a bad file falls back to neutral, never stops the dashboard.

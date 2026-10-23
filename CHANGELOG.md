@@ -16,9 +16,10 @@ Claude Code plugin marketplace.
 - **Brand on the install screens.** Every pack and featured plugin carries a `displayName`
   ("Revenantworks Foundation", "Revenantworks Pacewright"); plugin ids and skill names stay as they
   are, so no install breaks.
-- **vigil opens in neutral.** Its themes list in picker order (neutral, revenantworks, hc-dark,
-  off). `hc-dark` is the default when you ask for more contrast (`VIGIL_THEME_CONTRAST=more`, a
-  high-contrast Claude Code theme, or a high-contrast VS Code theme); `off` turns colour off.
+- **vigil opens in neutral.** Its themes list in picker order (neutral, revenantworks, hc-light,
+  off). On a light console, `hc-light` is the default when you ask for more contrast
+  (`VIGIL_THEME_CONTRAST=more`, a high-contrast Claude Code theme, or a high-contrast light VS Code
+  theme); `off` turns colour off.
 - **Five featured plugins, one per pack.** pacewright, brandscribe, trustwarden, whisperrunner and
   pixelsmith also ship as one-skill plugins, generated from the pack source.
   Install a featured plugin or its pack, not both.
