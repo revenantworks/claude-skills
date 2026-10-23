@@ -76,6 +76,10 @@ describe('skills view: duplicates', () => {
     expect(d.map(x => x.base)).toEqual(['agentwright', 'docx'])
     expect(d[0]!.sources).toEqual(['local', 'claude.ai synced'])
   })
+  test('a name seen only in older records is not a second copy', () => {
+    // A synced skill fired as `docx` before its source gave it the anthropic-skills: prefix.
+    expect(findDupes([row('docx', { listed: false, fires30: 3 }), row('anthropic-skills:docx')])).toEqual([])
+  })
   test('one line in the skills view, a dupes view, and a health item', () => {
     const text = linesText(skillsLines(feedOf(skills), NEUTRAL))
     expect(text).toMatch(/2 skills loaded twice \(local \+ claude\.ai synced\): \/rw-vigil skills dupes/)
