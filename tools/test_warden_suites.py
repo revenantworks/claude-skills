@@ -118,5 +118,72 @@ class Totals(unittest.TestCase):
         self.assertIn("m-two: Ran 0 tests", out)
 
 
+FIX_MORE = """import unittest
+
+
+class D(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls): cls.k = 1
+    def test_d1(self): self.assertEqual(self.k, 1)
+    def test_d2(self): pass
+    def test_d3(self): pass
+
+
+class E(unittest.TestCase):
+    def test_e1(self): pass
+"""
+
+
+class Shards(unittest.TestCase):
+    def test_balance_spreads_heavy_tests(self):
+        ids = [("m.A.t1", 10.0), ("m.A.t2", 10.0), ("m.A.t3", 10.0), ("m.A.t4", 10.0),
+               ("m.B.t1", 1.0), ("m.B.t2", 1.0)]
+        got = ws.balance(ids, 4)
+        self.assertEqual(len(got), 4)
+        self.assertEqual(sorted(i for s in got for i in s), sorted(i for i, _ in ids))
+        loads = [sum(w for i, w in ids if i in s) for s in got]
+        self.assertLessEqual(max(loads), 11.0)
+
+    def test_balance_never_makes_an_empty_shard(self):
+        got = ws.balance([("m.A.t1", 1.0), ("m.A.t2", 1.0)], 4)
+        self.assertEqual(len(got), 2)
+        self.assertTrue(all(got))
+
+    def test_weight_uses_the_measured_class_cost(self):
+        self.assertGreater(ws.weight("test_hooks.PushGateTests.test_x"),
+                           ws.weight("test_nothing_known.Foo.test_y"))
+
+    def test_sharded_counts_equal_the_serial_counts(self):
+        members = {"m-one": {"test_a.py": FIX_OK, "test_c.py": FIX_BAD, "test_d.py": FIX_MORE},
+                   "m-two": {"test_b.py": FIX_OK}}
+        with tempfile.TemporaryDirectory() as t:
+            sk = fixture(Path(t), members)
+            rc1, serial = run_main(sk, ["--shards", "1", "--jobs", "1"])
+            rc4, sharded = run_main(sk, ["--shards", "3", "--split-over", "0"])
+        self.assertEqual((rc1, rc4), (1, 1))
+        self.assertEqual(ci_local.counts(serial), (12, 1), serial)
+        self.assertEqual(ci_local.counts(sharded), ci_local.counts(serial), sharded)
+        self.assertIn("m-one: 9 tests, 1 failures", serial)
+        self.assertIn("m-one: 9 tests, 1 failures", sharded)
+        self.assertIn("m-one (shard 3/3)", sharded)
+        self.assertNotIn("shard", serial)
+
+    def test_an_import_error_is_not_lost_by_sharding(self):
+        members = {"m-one": {"test_a.py": FIX_OK, "test_z.py": "import no_such_module_zz\n"}}
+        with tempfile.TemporaryDirectory() as t:
+            sk = fixture(Path(t), members)
+            rc, out = run_main(sk, ["--shards", "3", "--split-over", "0"])
+        self.assertEqual(rc, 1, out)
+        self.assertIn("no_such_module_zz", out)
+
+    def test_output_keeps_member_order(self):
+        members = {"m-b": {"test_a.py": FIX_OK}, "m-a": {"test_b.py": FIX_OK}}
+        with tempfile.TemporaryDirectory() as t:
+            sk = fixture(Path(t), members)
+            rc, out = run_main(sk, ["--jobs", "4"])
+        self.assertEqual(rc, 0, out)
+        self.assertLess(out.index("── m-a"), out.index("── m-b"))
+
+
 if __name__ == "__main__":
     unittest.main()
