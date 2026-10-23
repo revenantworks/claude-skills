@@ -120,15 +120,18 @@ def walk(s):
         else:
             yield t
 ids = [t.id() for t in walk(unittest.defaultTestLoader.discover(".", "test_*.py"))]
-print("\n".join(ids))
+print("\n".join("ID:" + i for i in ids))
 sys.exit(3 if any(i.startswith("unittest.") for i in ids) else 0)
 """
 RUN_IDS = r"""
 import sys, unittest
-ids = sys.stdin.read().split()
+ids = [i for i in sys.stdin.read().split("\n") if i]
 suite = unittest.defaultTestLoader.loadTestsFromNames(ids)
 r = unittest.TextTestRunner(stream=sys.stderr, verbosity=1).run(suite)
-sys.exit(5 if not r.testsRun else (0 if r.wasSuccessful() else 1))
+if r.testsRun != len(ids):
+    print(f"ran {r.testsRun} tests of {len(ids)}", file=sys.stderr)
+    sys.exit(5 if not r.testsRun else 4)
+sys.exit(0 if r.wasSuccessful() else 1)
 """
 
 
@@ -139,6 +142,7 @@ class Job:
     cwd: Path
     cmd: list[str]
     stdin: str | None = None
+    expected: int | None = None    # test ids listed for this job, when they were listed
 
 
 def ran_count(log: str) -> int:
@@ -152,7 +156,7 @@ def tally(log: str) -> tuple[int, int]:
     bad = 0
     m = FAILED.findall(log)
     if m:
-        bad = sum(int(n) for n in re.findall(r"(?:failures|errors)=(\d+)", m[-1]))
+        bad = sum(int(n) for n in re.findall(r"\b(?<!expected )(?:failures|errors)=(\d+)", m[-1]))
     return ran_count(log), bad
 
 
@@ -195,17 +199,18 @@ def jobs_for(d: Path, shards: int, split_over: float) -> list[Job]:
     if shards <= 1:
         return [whole]
     rc, out = _run([sys.executable, "-c", LIST_IDS], d)
-    ids = [ln.strip() for ln in out.splitlines() if ln.strip()]
+    ids = [ln[3:].strip() for ln in out.splitlines() if ln.startswith("ID:")]
     if rc != 0 or not ids:
         return [whole]                     # an import error or no tests: report it unsplit
     costed = [(i, weight(i)) for i in ids]
     cost = sum(w for _, w in costed)
     if cost <= split_over:
+        whole.expected = len(ids)
         return [whole]
     n = shards if split_over <= 0 else min(shards, math.ceil(cost / split_over))
     parts = balance(costed, n)
     return [Job(member, f"{member} (shard {k}/{len(parts)})", d,
-                [sys.executable, "-c", RUN_IDS], "\n".join(p))
+                [sys.executable, "-c", RUN_IDS], "\n".join(p), len(p))
             for k, p in enumerate(parts, 1)]
 
 
@@ -222,27 +227,38 @@ def main(argv: list[str] | None = None, skills: Path = SKILLS) -> int:
         ap.error("--jobs and --shards must be at least 1")
     folders = suites(skills)
     if not folders:
-        print(f"✗ no warden scripts folder holds test_*.py under {skills}")
+        try:
+            where = skills.resolve().relative_to(ROOT).as_posix()
+        except ValueError:
+            where = skills.name
+        print(f"✗ no warden scripts folder holds test_*.py under {where}")
         return 1
     with ThreadPoolExecutor(max_workers=a.jobs) as pool:
         plans = list(pool.map(lambda d: jobs_for(d, a.shards, a.split_over), folders))
         jobs = [j for p in plans for j in p]
         results = list(pool.map(lambda j: _run(j.cmd, j.cwd, j.stdin), jobs))
-    per: dict[str, list[int]] = {}           # member -> [ran, bad, worst rc]
+    per: dict[str, list[int]] = {}           # member -> [ran, bad, worst rc, short jobs]
     for j, (rc, log) in zip(jobs, results):
         print(f"── {j.label}", flush=True)
         print(log.rstrip(), flush=True)
         ran, bad = tally(log)
         if rc != 0 and not bad:
             bad = 1                           # a crash with no FAILED line still counts
-        m = per.setdefault(j.member, [0, 0, 0])
+        short = j.expected is not None and ran != j.expected
+        if short:                             # e.g. a test that os._exit(0)s mid-run
+            print(f"✗ {j.label}: ran {ran} tests of {j.expected} listed")
+            bad = max(bad, 1)
+        m = per.setdefault(j.member, [0, 0, 0, 0])
         m[0] += ran
         m[1] += bad
         m[2] = m[2] or rc
+        m[3] += short
     status, summary = 0, []
     for d in folders:
         member = d.parent.name
-        ran, bad, rc = per[member]
+        ran, bad, rc, short = per[member]
+        if short:
+            status = 1
         if rc != 0:
             print(f"✗ {member}: unittest exited {rc}")
             status = 1

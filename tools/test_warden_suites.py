@@ -86,6 +86,10 @@ class Tally(unittest.TestCase):
     def test_failures_and_errors(self):
         self.assertEqual(ws.tally("Ran 12 tests\n\nFAILED (failures=2, errors=1)\n"), (12, 3))
 
+    def test_expected_failures_are_not_failures(self):
+        self.assertEqual(ws.tally("Ran 5 tests\n\nFAILED (failures=1, expected failures=2)\n"),
+                         (5, 1))
+
     def test_nothing(self):
         self.assertEqual(ws.tally("ImportError: boom\n"), (0, 0))
 
@@ -134,7 +138,48 @@ class E(unittest.TestCase):
 """
 
 
+FIX_EXIT = """import os
+import unittest
+
+
+class X(unittest.TestCase):
+    def test_x1(self): os._exit(0)
+    def test_x2(self): pass
+"""
+FIX_NOISY = """import unittest
+print("not.a.test.id")
+
+
+class N(unittest.TestCase):
+    def test_n1(self): pass
+"""
+
+
 class Shards(unittest.TestCase):
+    def test_a_shard_that_exits_early_fails_the_run(self):
+        members = {"m-one": {"test_a.py": FIX_OK, "test_x.py": FIX_EXIT}}
+        with tempfile.TemporaryDirectory() as t:
+            sk = fixture(Path(t), members)
+            rc, out = run_main(sk, ["--shards", "3", "--split-over", "0"])
+        self.assertEqual(rc, 1, out)
+        self.assertIn("tests of", out)
+        self.assertNotEqual(ci_local.counts(out)[1], 0, out)
+
+    def test_an_import_time_print_adds_no_ids(self):
+        members = {"m-one": {"test_a.py": FIX_OK, "test_n.py": FIX_NOISY}}
+        with tempfile.TemporaryDirectory() as t:
+            sk = fixture(Path(t), members)
+            rc, out = run_main(sk, ["--shards", "3", "--split-over", "0"])
+        self.assertEqual(rc, 0, out)
+        self.assertEqual(ci_local.counts(out), (4, 0), out)
+
+    def test_no_suite_message_names_no_absolute_path(self):
+        with tempfile.TemporaryDirectory() as t:
+            rc, out = run_main(Path(t) / "skills")
+        self.assertEqual(rc, 1)
+        self.assertNotIn(t, out)
+        self.assertIn("skills", out)
+
     def test_balance_spreads_heavy_tests(self):
         ids = [("m.A.t1", 10.0), ("m.A.t2", 10.0), ("m.A.t3", 10.0), ("m.A.t4", 10.0),
                ("m.B.t1", 1.0), ("m.B.t2", 1.0)]
