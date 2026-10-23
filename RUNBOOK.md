@@ -14,7 +14,11 @@ describe what it does by hand.
 
 **One command runs the whole local CI:** `python tools/ci_local.py` (read-only;
 `--list` names the steps, `--only`/`--skip` pick them). Exit 0 all passed, 1 a
-step failed, 3 a step was NOT-RUN (its tool is absent; never a pass).
+step failed, 3 a step was NOT-RUN (its tool is absent; never a pass). Steps run
+side by side (`--jobs N`, default min(6, cpu count); `--jobs 1` is serial) and
+print in the fixed order. `tools/warden_suites.py` runs the four warden suites in
+parallel, splits gatewarden into balanced shards, and its warden-suites line shows
+the summed test count (about 3.5 minutes in all on the rig, was about 19).
 
 **Pack-shared files** live in `packs/<pack>/shared/` with `holders.json`;
 `tools/build.py` writes each holder's copy and `--check` fails on drift (owner

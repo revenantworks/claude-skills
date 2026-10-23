@@ -5,6 +5,15 @@ Every pack, every member and every featured plugin launches at 1.0.0. Each membe
 `<pack>-vX.Y.Z`, member versions move on their own semver, and a featured plugin carries its
 member's version.
 
+## [Unreleased]
+
+- **Faster local CI.** `tools/ci_local.py` runs independent steps side by side (`--jobs N`,
+  default min(6, cpu count); `--jobs 1` keeps the serial run) with output in the fixed step
+  order. `tools/warden_suites.py` runs the warden suites in parallel and shards gatewarden by
+  measured test cost; on the rig the whole local CI went from about 19 minutes to about 3.5.
+- **True warden test count.** The warden-suites line now shows the sum over every suite (607),
+  not the last suite's count (87), and a crash or an empty suite counts as a failure.
+
 ## [1.0.0] - 2026-10-01
 
 The first public release: 28 Agent Skills in five packs, and five featured one-skill plugins, in one
