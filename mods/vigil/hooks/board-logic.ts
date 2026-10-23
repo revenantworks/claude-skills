@@ -103,7 +103,7 @@ export const dailyTokens = (events: readonly DashEvent[], now: number, days = 7)
   for (const e of events) {
     if (e.k !== 'turn') continue
     const i = days - 1 - (today - Math.floor(e.t / DAY))
-    if (i >= 0 && i < days) out[i] += e.input + e.output + e.cacheRead + e.cacheWrite
+    if (i >= 0 && i < days) out[i] = (out[i] ?? 0) + e.input + e.output + e.cacheRead + e.cacheWrite
   }
   return out
 }
