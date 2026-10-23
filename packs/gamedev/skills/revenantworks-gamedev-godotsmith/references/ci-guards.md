@@ -152,6 +152,18 @@ Never soften the bar itself. A survival floor lowered until the check passes is 
   silently: every later change "keeps" the pins. Assert the checkpoints are distinguishable
   (`assert_ne(mid, final)`, a precondition such as heads > 0 at each one), and pair every
   "over all X" invariant with a positive control that X was actually exercised.
+- **A source scan that names its files** (observation 0555). A test that reads a script's source
+  for a forbidden call, or a guard that walks a hand-kept list of files, checks those files, not
+  the feature. When the code moves (a split, a new file), the scan stays green over code it no
+  longer reads. GDScript's `get_script_constant_map()` holds only that script's own constants,
+  not inherited ones, so a lookup by constant goes blind the same way. Glob the directories,
+  assert how many files the scan read and name them, walk the base-script chain for constants,
+  and plant one violation in a moved or new file to prove the scan still fails. In one split of
+  a 7,300-line script into seven, four tests and one runtime lookup outside `tests/` went blind
+  while every run stayed green.
+- **A short-run mode a gate tool inherits** (observation 0553). A switch that makes a check
+  cheaper by checking less is refused by every tool that gives a gate verdict, not cleared by the
+  one tool that sets it. `test-tiers.md` section 7.
 
 ## 5. What "green" means
 

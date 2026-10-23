@@ -35,6 +35,7 @@ The ten laws below live in the body. Open a reference only as listed, never the 
   file: `-gconfig= -gtest=<file>`, then the summary's `Scripts` must read 1)
 - `references/ci-guards.md` — writing or auditing CI assertions, including the import step
 - `references/gate-doctrine.md` — a gate ruling, or a change whose trigger lies past the pins
+- `references/test-tiers.md` — a suite too slow per change: tiers, selection, short runs
 - `references/perf-figures.md` — taking or judging a perf figure (cold/warm, A/B, headroom)
 - `references/probes.md` — a figure only a throwaway headless probe can take
 - `references/gdscript-invariants.md` — a rule the code states but does not hold
@@ -139,8 +140,7 @@ function" — a claim like that is true the day it is written and unchecked fore
    off a brief or a doc that describes it — a copy drifts the moment the workflow grows a
    step.
 5. **Baseline before change.** Run the suite unchanged first and record the numbers, in a
-   detached worktree of the base (`gut-traps.md` section 3). If you stash instead, run
-   `git stash list` before and after and include untracked files. The baseline is the
+   detached worktree of the base (`gut-traps.md` section 3). The baseline is the
    difference between "411 pass" and "411 pass, the floor says 404, four short for a while".
 
 ## Entry — Guard

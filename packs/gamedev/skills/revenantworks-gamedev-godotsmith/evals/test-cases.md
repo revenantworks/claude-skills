@@ -14,6 +14,10 @@ single-script GUT form, the deferred re-pin and its control, the summary parser,
 `.import` churn and the migration re-read, for 48 cases.
 **G15 added 2026-10-16** (dash triage S1): the declared check script reads a dropped script by its
 count, for 49 cases.
+**Group H added 2026-10-23** (a game's test-speed fix round; observations 0533, 0551, 0552, 0553,
+0555, 0557): H1-H7 add the test tiers, symbol selection and the merged-head check, the whole-plan
+budget, the per-tree lock, the short-run refusal, duplicate rows after a stack rewire and switch
+retirement, for 56 cases.
 
 Each case names the behaviour asserted, the input, and what a pass looks like. A case fails
 if the run produces the right answer for the wrong reason, so every expectation names the
@@ -106,3 +110,15 @@ stamp). godotsmith must fail it, for the named reason.
 | G13 | 59 worktrees show the same `.import` files modified with an empty diff; cleanup proposes `git worktree remove --force` | Names the headless-import churn, normalises it at the source (`.gitattributes` or re-stat), and refuses to force over worktrees until real changes are separated (`project-hygiene.md` section 2). |
 | G14 | A change returns the village group to old sizes while the landscape still doubles; the save migration doubles every position | Re-reads the migration, requires a load test on a pre-change fixture asserting a group-relative invariant (`determinism-and-state.md` section 2). |
 | G15 | `godot_check.py --expect-scripts 43 --expect-tests 411` prints `suite run 1/1: scripts 42/43 (-1) · tests 411/411 · failures 0 -> FAIL`; the log ends `All tests passed!` and printed no marker; "it's green, ship it" | Holds the run red. The script count is the witness (L1); names the 43 / 42 gap and asks for the dropped file by name before any rerun. Does not edit `--expect-scripts` to 42 to make it pass (L4). |
+
+## H — Test tiers and gate cost (added 2026-10-23)
+
+| id | Input | Pass |
+|---|---|---|
+| H1 | "Our per-merge check takes 5 hours and CI 11; cut it to under an hour", with a per-script duration table where one file's switch rows are 80% of the serial time | Reads the table first and puts the lever where the time is. Proposes three tiers (build per unit, join on the merged head with nothing dropped, the full gate at a checkpoint or land) and says what moving a proof to T3 costs. Never relaxes the land: nothing lands without the full gate. Cites `test-tiers.md` sections 1-2. |
+| H2 | Six units each green on a check that selects tests by file name; one unit doubled a radius constant that another feature's test copied into a literal; "all six are green, merge and ship" | Refuses to call the wave green before one check on the merged head. Asks for selection by changed symbol (readers of the constant, of a written member, of a signal's quoted name) and for the test to read the constant instead of a copy. Cites `test-tiers.md` section 4. |
+| H3 | A build-tier plan whose budget covers only the script step; a hub-file edit selects 100 off-rows, 4.9 h | Moves the budget over the whole plan; keeps lint, import, guards, harnesses, base rows, edited switches' rows and edited scripts undroppable; lists every dropped job as left to T2/T3 with its estimate on the verdict line. Cites section 5. |
+| H4 | A test file gains `KN_HORIZON=30` to stop trajectory rows at day 30 for the build tier; only the build tool knows the variable; the re-pin and nightly tools copy the parent environment | Requires every gate tool to refuse the variable when set (exit before any run, named), the verdict line to name its mode, and a grep of every launcher with set / cleared / refused per tool; tests each refusal with a positive control. Requires the horizon to accept only unset, full and short values. Cites sections 3 and 7. |
+| H5 | Two copies of a read-only check tool started on one worktree to save time; the second deleted the first's job logs | Names per-tree state written by a read-only tool; puts the barrier in the tool (a lock in the git dir with pid and start time, per-run file names, a dead lock taken over inside an OS lock), not in the caller's memory. Cites section 6. |
+| H6 | After four joins re-pointed older off-rows at each stack helper, 56 of 95 rows set the same switches and read the same pin table as a stack row | Calls them duplicates of the stack rows and deletes them, naming the covering row; says the merge loses only the switch's name in a failure line; asks for a guard that fails on two rows with the same setup and table. Merges dedicated rows only after measuring, red first against the wrong table. Cites section 8. |
+| H7 | A unit retires two accepted switches; its proof (the base rows, the next stack row, a grep for the names) is green; three other switches' only rows read tables that assumed the retired switches off | Holds the retirement: lists the other switches losing their only rows and every hook or arm keyed on the retired switches; each gets a re-pinned row or its own ruling; asks for a registry check that fails on a switch with no row. Cites section 9. |

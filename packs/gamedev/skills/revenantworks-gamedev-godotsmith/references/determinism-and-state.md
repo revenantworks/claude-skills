@@ -152,6 +152,17 @@ A **pin round** re-derives the literals a change moved. A **control** is a tests
   rows a second time because another arc landed first).
 - **One platform per measurement.** Pins that are per-platform facts (section 3) take the other
   platform's values from the CI image's log once, at the join, not once per unit.
+- **A control whose rows move keeps its own copy of the base pins** (observation 0483). When a
+  join re-pins the base, a control row still measured against the old base reads its own byte
+  copy (`PINS_<CONTROL>`), or the re-pin turns it red for no reason of its own. A new switch is
+  also set in older control rows that build their setup outside the stack helper.
+- **A rewire onto a stack deletes the rows it makes duplicates** (observation 0552). A join that
+  re-points older control rows at the new stack helper and its table asks of each row what it now
+  proves that the stack row does not; a row with the same switch set, a subset of the seeds and
+  the same table goes in the same commit. `test-tiers.md` section 8 has the merge classes and the
+  guard.
+- **Retiring a control is a coverage change** (observation 0557): list the other switches whose
+  only rows go with it and every hook keyed on it before it lands. `test-tiers.md` section 9.
 
 ## 4. Fixed tick versus render tick, and per-entity work
 

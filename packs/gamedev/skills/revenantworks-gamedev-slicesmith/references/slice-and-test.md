@@ -11,6 +11,7 @@ Read on every slice and every `fix`.
 - Determinism before red
 - Properties and mutants
 - What tests cannot see
+- Splits, moves and renames
 - Fix — prove it first
 
 ## The cycle
@@ -22,8 +23,10 @@ Read on every slice and every `fix`.
    message you predicted. A test that passes first time, or fails for another reason, is fixed
    before any production code is written.
 3. **Green.** Write the least code that passes. While iterating, run the **touched scripts**
-   (the new test's file and every file whose subject the slice changed), confirmed narrowed by
-   their own script count; the **whole** suite runs once at the done gate in
+   (the new test's file, every file whose subject the slice changed, and every test script that
+   reads a constant, field, function or signal the slice changed), confirmed narrowed by their
+   own script count. Selection by file name alone misses a test that reads a changed constant or
+   behaviour from another feature (godotsmith `test-tiers.md` section 4); the **whole** suite runs once at the done gate in
    `verify-and-exit.md`, never skipped (where the repo has a check queue, as the queued final
    check, its counts checked against the stated total). A suite that takes tens of minutes makes every red/green
    loop on the full run a wait, and a narrowing flag that silently runs everything costs the
@@ -135,6 +138,32 @@ evidence, never a bar to tune.
   capture the log or a screenshot as evidence for the user; it never claims the feel itself.
 - Export-only failures — excluded resources, missing assemblies, a solution format the
   exporter ignores: rung 5.
+
+## Splits, moves and renames
+
+A pure move (one file split into several, a class renamed, code moved up an inheritance chain)
+changes no behaviour, so the suite stays green. That is the danger: any test that found its
+subject by **file name** now reads a file the code has left, and passes while checking less. In
+one split of a 7,300-line UI script into seven, four tests and one runtime lookup went blind
+(observation 0555).
+
+A split, move or rename slice adds these to its done-when:
+
+1. **Grep the whole repo before the move**, source included, not only `tests/` and `tools/`:
+   the old path and file name, the class name and its `uid://`, `preload`/`load` of the file,
+   `FileAccess` reads of its source, and reflection on it. In GDScript
+   `get_script_constant_map()` returns only the script's own constants, so a lookup of a
+   constant that moved up or down the chain comes back empty; `get_script_method_list()` does walk
+   base scripts. CI lines and tool scripts that name the path count too. List every hit in the
+   slice's notes with its count.
+2. **Repoint every hit in the same slice.** A scan over one file becomes a glob over the
+   directory that asserts how many files it read and names them.
+3. **Prove each source-scanning test can still fail**: plant one violation in a moved part, see
+   the test go red, remove the plant. The plant never reaches the commit.
+4. **Prove the move lost and doubled nothing**: list the functions, constants, signals and
+   variables across the new files against the old file by name; each engine callback
+   (`_ready`, `_process`, `_notification`) exists exactly once, and no moved method shadows a
+   base one.
 
 ## Fix — prove it first
 

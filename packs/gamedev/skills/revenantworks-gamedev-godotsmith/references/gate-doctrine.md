@@ -92,6 +92,10 @@ Project a CI step's time from the CI API's step times over several runs, never b
 when one test class dominates the step. When the projection passes 80% of the step's timeout,
 raise the timeout inside the land's own commit, not after a red run.
 
+**Tier the checks before cutting any** (`test-tiers.md`). When a per-change check runs for
+hours, measure where the serial seconds go, move whole-stack proofs to a checkpoint tier, and
+keep the full gate as the land's: a faster build check never relaxes what a land must show.
+
 ## 4. The gate sheet
 
 The deliverable of a machine gate is a sheet the person closing the judgment half can use

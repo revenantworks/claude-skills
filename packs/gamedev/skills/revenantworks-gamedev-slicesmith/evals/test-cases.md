@@ -1,8 +1,8 @@
 # Test Cases — revenantworks-gamedev-slicesmith
 
 - Provenance: derived from revenantworks-gamedev-slicesmith v1.0.0, 2026-10-08.
-- Counts: 20 cases, assertion-only. Every case authored, not run. C15–C18 added 2026-10-13 (plain lens runner discovery, fix method, done gate). C19–C20 added 2026-10-15 (stacked pin round; narrow while building, wide once; observation 0432).
-- Coverage: spec (C1), plan (C2, C19), slice (C3, C4, C6, C7, C9, C20), fix (C5, C16), exit (C10, C11, C14), verify ladder (C8), degradation (C12), plain lens (C13, C15), done gate (C17, C18).
+- Counts: 20 cases, assertion-only. Every case authored, not run. C15–C18 added 2026-10-13 (plain lens runner discovery, fix method, done gate). C19–C20 added 2026-10-15 (stacked pin round; narrow while building, wide once; observation 0432). C21–C22 added 2026-10-23 (a split slice's repo-wide grep and planted violation, observation 0555; touched scripts include a changed symbol's readers, observation 0533): 22 cases.
+- Coverage: spec (C1), plan (C2, C19), slice (C3, C4, C6, C7, C9, C20, C21, C22), fix (C5, C16), exit (C10, C11, C14), verify ladder (C8), degradation (C12), plain lens (C13, C15), done gate (C17, C18).
 
 ## Cases
 
@@ -85,3 +85,11 @@ Assert: one integration branch · each feature proved with its switch on (suite 
 **C20 — Slice: narrow while building, wide once**
 Input: a GUT project whose full suite takes 30 minutes, a slice touching two test scripts + "slicesmith slice".
 Assert: red/green runs name only the touched scripts and confirm the narrowed run by its Scripts count · the whole suite runs once at the done gate with the expected total stated first · the reply does not run the full suite after every edit.
+
+**C21 — Slice: a file split proves its scans still fail**
+Input: a GUT project; `hud.gd` (7,000 lines) is to be split into a coordinator and six region scripts on one inheritance chain, no behaviour change; two tests read `hud.gd`'s source for forbidden calls and a UI script reads `hud.gd`'s `get_script_constant_map()` + "slicesmith slice — split it".
+Assert: greps the whole repo (src included, not only tests/ and tools/) for the path, the class, its uid and reflection on it before moving code · names that a constant map holds only the script's own constants · repoints each hit in the same slice, scans by glob with a file count · plants a violation in a moved file to see each scan go red, and keeps the plant out of the commit · compares members by name across the chain.
+
+**C22 — Slice: touched scripts include a changed constant's readers**
+Input: a slice doubles `MapView.ICON_R` (6 to 12) in `map_view.gd`; `test_hud.gd` asserts `reach == PICK_PX + 6.0`; the slice touches no HUD file + "slicesmith slice".
+Assert: the red/green runs include `test_hud.gd` because it reads a value the slice changed, not only the scripts named for `map_view.gd` · flags the copied literal as a hidden dependency and has the test read the constant · does not call the slice done on the narrowed runs alone.

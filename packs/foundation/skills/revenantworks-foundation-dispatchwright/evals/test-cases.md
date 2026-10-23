@@ -1,7 +1,7 @@
 # Assertion Suite — revenantworks-foundation-dispatchwright
 
 - Provenance: target `revenantworks-foundation-dispatchwright` v1.2.0 (suite authored 2026-09-09); last re-anchored to v1.0.0, 2026-10-01. Full re-anchor history moved to evals/RESULTS.md.
-- Counts: 31 cases, assertion-only (format, coverage and fixture notes moved to evals/RESULTS.md). Cases 23–26 added 2026-10-01 (P1: meters, run records, replan gate, retriever); Cases 27–29 added 2026-10-04 (observations 0182, 0283, 0285, 0333: land gate and write order, thin pass, adversarial verifier); Cases 30–31 added 2026-10-15 (observations 0432, 0417: pin-arc land cadence, report carrier); authored, not run.
+- Counts: 35 cases (32–35 added 2026-10-23: tiered checks and the merged head, known reds, short-run switches, no stash in a shared checkout), assertion-only (format, coverage and fixture notes moved to evals/RESULTS.md). Cases 23–26 added 2026-10-01 (P1: meters, run records, replan gate, retriever); Cases 27–29 added 2026-10-04 (observations 0182, 0283, 0285, 0333: land gate and write order, thin pass, adversarial verifier); Cases 30–31 added 2026-10-15 (observations 0432, 0417: pin-arc land cadence, report carrier); authored, not run.
 - Owed: suite authored 2026-09-09 and not executed per this header; the coverage debt from the 1.2.4 re-anchor is in the moved history.
 
 ## Contents
@@ -289,3 +289,20 @@ Assert (negative): a re-pin and a land per sim unit is not accepted; the three u
 **Case 31 — A refused report file does not lose the report**
 Input: a dispatched unit's brief names `waves/<unit>.md` as its report; the unit's file write is refused by the subagent harness.
 Assert: the brief tells the unit to put the full report in its final message and not retry · the controller writes the durable file from the hand-back and records that path in the ledger row's report column.
+
+**Case 32 — A wave is green only on its merged head** (observations 0533, 0552)
+Input: six build units each report their build-tier check green; the controller is about to call the wave green and launch the next one; the join re-pointed older control rows at a new stack helper.
+Assert: one check of the merged head runs before the wave is called green · the join deletes rows whose setup and table now equal the stack row's, naming the covering row · the full gate is left to the checkpoint, not run per unit.
+Assert (negative): six green units are not taken as a green wave.
+
+**Case 33 — Known reds and a pending re-pin are in the brief** (observation 0483)
+Input: `dispatchwright dispatch` of three units on a join head where three scripts are red and a re-pin is still writing.
+Assert: the brief's base block lists the three reds as not the unit's and names the pending pin move with its sha, or the launch waits for the re-pinned head.
+
+**Case 34 — A short-run switch reaches every launcher** (observation 0553)
+Input: a brief for a unit that adds `KN_HORIZON=30` to cut long test rows at day 30 in the build tool.
+Assert: the brief lists every tool that launches the engine with an inherited environment and gives each sets / clears / refuses · every gate tool refuses the switch · a refusal test with a positive control per tool.
+
+**Case 35 — The controller never stashes in the shared checkout** (observations 0559, 0551)
+Input: four units are live and write wave files in the main checkout; the controller wants a clean tree to re-run a tool test, and a second copy of a check tool on a unit's worktree to save time.
+Assert: no `git stash` in the main checkout (a detached worktree instead) · the second tool copy runs only after its output paths are read, in another worktree or after the first finishes.

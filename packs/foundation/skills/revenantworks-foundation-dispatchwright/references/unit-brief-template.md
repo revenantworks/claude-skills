@@ -24,7 +24,8 @@ Fill the bracketed fields; do not paraphrase the contract itself.
   skills
 - Brief variants — design, prep ahead of a ruling, sim build, amendment, review (with design
   close), fix round, measurement, blind comparison, verifier, adversarial verifier, eval run,
-  research, join-check, pin-arc join, briefs written ahead
+  research, join-check, wave join, env switch, retirement, split or rename, pin-arc join, briefs
+  written ahead
 - Observations — return them, do not log them
 - On resume
 
@@ -136,7 +137,13 @@ a prompt that targets one section.]
 HEAD -- <the files this unit edits>` must be empty; if either fails, stop and report. List any
 other file this unit's correctness depends on in that diff. Never whole-tree HEAD equality
 (observation #0083). Test ancestry with `git merge-base --is-ancestor <base> HEAD`, never with
-`git cat-file -e`: after a history rewrite the old object still exists locally (observation 0338). **A read-only unit** gets the base SHA and a controller-made worktree at it,
+`git cat-file -e`: after a history rewrite the old object still exists locally (observation 0338).
+**Known reds and pin moves at this base** (observation 0483): the scripts and rows already red
+at the base, from the latest join or unit reports, each marked "not yours: do not diagnose";
+and any pin move pending on it (a re-pin in flight, landing at `<sha>`). Launch on the re-pinned
+head when one is coming; otherwise list the rows it will move as known reds. Two units once spent
+their calls proving the same three base reds were not theirs, and a third spent its build check
+on a row the pending re-pin moved. **A read-only unit** gets the base SHA and a controller-made worktree at it,
 or is told to cite "as read on <date>"; citations use `<sha>:<file>:<line>` (observation 0145).]
 
 **Account and credential:** [the account each step runs as, and whether this unit can act as it
@@ -156,7 +163,9 @@ reporting: one status read can land mid-sequence.]
 **Expected artifacts:** [what "done" looks like — a file, a commit, a specific report shape]
 
 **Expected test total (if this unit ends in a test run):** [the count before the run starts, from
-a baseline run of the unchanged suite — stash, run, restore. A short total, even green, is
+a baseline run of the unchanged suite in a detached worktree of the base, never a stash in a
+shared checkout (observation 0559). A unit that cuts tests on purpose states the floor guard's
+expected red: the floor moves at the join, so that one guard stays red until then. A short total, even green, is
 unverified; a higher one means the expectation is stale, so report the slack (observation #0057).
 In a chain of units, write the total as `base at <commit> + N`, with N derived by script from the
 build order, and re-derive version and hash preconditions at each re-chain (observation 0269).
@@ -294,6 +303,10 @@ path.]
 (observations 0167, 0160) When you must wait for a build, a test run or a helper:
 
 - Make **one blocking foreground call** with a timeout, and repeat it only when it times out.
+- **Two copies of one tool on one tree only after reading where it writes** (observation 0551). A
+  tool that only reads the tree can still write per-tree logs, job files and caches; two runs on
+  one worktree deleted each other's job logs. Where the tool takes a lock, a second run is refused;
+  where it does not, run them one after another or in separate worktrees.
 - Never poll in a loop and never sleep between checks — each poll spends tokens to learn nothing.
 - `run_in_background` is for the top-level session only. A subagent that backgrounds a job and
   goes quiet can be ended with the job still in flight.
@@ -453,7 +466,10 @@ Add the block that matches the unit's job; leave the others out.
   confirm each narrowed run by its own script count (GUT with a config file that names
   directories needs `-gconfig=` beside `-gtest=`, or the run is the whole suite at 26-45
   minutes; at least fifteen unit reports re-learned this). The full suite runs once, at the end
-  of the unit, or once at the join of a stack. The unit never edits the files that hold suite
+  of the unit, or once at the join of a stack. **Where the repo has test tiers** (godotsmith
+  `test-tiers.md`), the unit ends on the build tier (its tool and command named here), the join
+  runs the join tier on the merged head, and the full gate belongs to the checkpoint or the land,
+  never to a build unit. The brief names what the build tier leaves to the later tiers. The unit never edits the files that hold suite
   counts or status (the CI script's count literals, a status doc, a suite history): it reports
   count deltas and the controller sets them at the land. Two units that both edit those lines
   conflict at every join.
@@ -510,6 +526,28 @@ Add the block that matches the unit's job; leave the others out.
   backwards and 19 cells had drifted before a pass caught them. The join check also counts each
   brief's stated test delta against its numbered test list, every row from the first (observation
   0339), and checks every cited base by ancestry (observation 0338).
+- **Wave join** (observations 0533, 0552): after the merges, one check of the **merged head**
+  before the wave is called green; units green alone hid three merge-only reds in three waves (a
+  copied constant, a queued notice, a changed tick length), each a test reading a symbol another
+  unit changed. A join that re-points older control rows at a new stack helper deletes, in the
+  same commit, every row whose setup and pin table now equal a stack row's, naming the covering
+  row (godotsmith `test-tiers.md` section 8: 56 of 95 rows, 45% of one suite, were such copies).
+- **A brief that adds an environment switch or a short-run mode** (observation 0553) lists every
+  launcher in the tree that builds a child's environment (grep for the inherited environment near
+  the engine launch) and gives each one a line: sets it, clears it, or refuses it. Every tool
+  that gives a gate verdict refuses a switch that makes a check cheaper by checking less. A fresh
+  review found a re-pin, a nightly, a bisect and a CI walk that would have run short and printed
+  green.
+- **Retirement brief** (observation 0557): the proof list names, beside the rows that remain,
+  every other switch whose only rows the retirement drops and every hook, helper and arm keyed
+  on the retired switch (manual controls no CI runs included), each with a new row, a
+  re-measure or its own ruling (godotsmith `test-tiers.md` section 9). A retirement whose proof
+  was all green left three switches unproven.
+- **Split or rename brief** (observation 0555): the unit greps the whole repo, source included,
+  for the old path, class, uid and reflection on it before the move, repoints every hit in the
+  same unit, and plants a violation in a moved part to prove each source scan still fails
+  (slicesmith `slice-and-test.md`, Splits, moves and renames). A grep of `tests/` and `tools/`
+  alone missed a runtime lookup in `src/`.
 - **Path-moving row** (observation 0363): a row that deletes, moves or renames a path a live
   scheduled job reads (a routine prompt, a CI job, a cron script) is `blocked_by` the row that moves
   the schedule off that path. Its brief says "hold the branch: do not merge until <schedule row> is

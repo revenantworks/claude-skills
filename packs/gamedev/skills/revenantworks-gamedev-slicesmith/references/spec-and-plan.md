@@ -123,7 +123,9 @@ landed first). When every unit in the arc ships an `*_OFF` control, plan the arc
 4. **Re-pin once, at the join, as its own unit.** It measures with all controls off, writes an
    old -> new table per pin row, and attributes every moved row by switching one control at a
    time (godotsmith `determinism-and-state.md`, pin rounds). One platform measure, one land,
-   one CI run.
+   one CI run. When the join points older control rows at the new stack, it deletes any row
+   whose setup and table now equal the stack row's, in the same commit (godotsmith
+   `test-tiers.md` section 8: one project kept 56 such rows, 45% of its suite).
 5. **Put the join row in the plan**, after the last unit. Its test is the pin table itself and
    its verify line is "controls on = base pins; controls off = new pins".
 

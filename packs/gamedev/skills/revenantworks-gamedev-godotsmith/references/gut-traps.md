@@ -151,7 +151,9 @@ byte-compared fixture and give a baseline that differs for no code reason.
 
 If you stash instead: run `git stash list` before and after, and include untracked files
 explicitly (`git stash push -u`). A plain `git stash` leaves new test files in place, so the
-"baseline" runs them.
+"baseline" runs them. **Never stash in a checkout other processes are writing to** (a
+controller's main checkout while units run, observation 0559): the stash takes their uncommitted
+files too, and they vanish until someone pops it. Use the detached worktree there, always.
 
 Without that baseline, the post-change numbers look like a clean pass and any pre-existing
 drift stays invisible. With it, "411 tests pass" becomes "411 pass, the baseline was 408,
@@ -163,7 +165,7 @@ Same rule for the stash itself: **`git stash list` before trusting a clean tree.
 continued session or a worktree switch can stash state silently.
 
 **A unit carrying several tasks proves each commit alone**, before the all-together run:
-stash the rest, run the suite against that commit's code, restore. A later task's code can
+check that commit out in a detached worktree and run the suite there. A later task's code can
 mask an earlier task's defect, and the combined run is green over both. In one real wave that
 isolation caught a ramp that stepped at `dt = 0` on the same call that started it — undoing
 its own repaint, so the effect would have frozen after the first flip — and a completed fade
