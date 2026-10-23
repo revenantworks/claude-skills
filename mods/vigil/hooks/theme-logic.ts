@@ -41,32 +41,32 @@ export const NEUTRAL: Theme = {
 // The one brand theme in this repo (owner decision 2026-10-09): opt-in, never the default. The
 // dark variant is the brand's published dark-ground tokens: threshold-blue, ember-orange (warn /
 // live), glitch-magenta (error / broken), ash-grey (muted text) and the high-contrast border. The
-// light variant is the brand's base/ink rule: each accent's `ink` companion (computed to clear
-// 4.5:1 on bone-white) and the light-role neutrals (muted text #415154, border #A0ACAE). The brand
-// names no success colour, so `ok` keeps the person's theme key in both.
+// light variant is the brand's base/ink rule: each accent's `ink` companion (solved to clear
+// 4.5:1 on warm bone, definition v2.25.0) and the light-role neutrals (muted text #554B3F, border
+// #BDB6AD). `ok` is the brand's `success`, azure (definition v2.28.0): #53A0FF dark, #0060BB light.
 export const REVENANTWORKS: Theme = {
   name: 'revenantworks',
   description: 'Brand colours, cursor-block headers',
   background: 'dark',
-  colors: { accent: '#00E5FF', ok: 'success', warn: '#FF8B00', bad: '#FF0099', dim: '#8D9FA2', rule: '#6C7678' },
+  colors: { accent: '#00E5FF', ok: '#53A0FF', warn: '#FF8B00', bad: '#FF0099', dim: '#8D9FA2', rule: '#6C7678' },
   glyphs: GLYPHS.unicode,
   header: 'block',
   variants: {
-    dark: { background: 'dark', colors: { accent: '#00E5FF', ok: 'success', warn: '#FF8B00', bad: '#FF0099', dim: '#8D9FA2', rule: '#6C7678' } },
-    light: { background: 'light', colors: { accent: '#006D7B', ok: 'success', warn: '#A65700', bad: '#D0007A', dim: '#415154', rule: '#A0ACAE' } },
+    dark: { background: 'dark', colors: { accent: '#00E5FF', ok: '#53A0FF', warn: '#FF8B00', bad: '#FF0099', dim: '#8D9FA2', rule: '#6C7678' } },
+    light: { background: 'light', colors: { accent: '#006A77', ok: '#0060BB', warn: '#944E00', bad: '#BB006F', dim: '#554B3F', rule: '#BDB6AD' } },
   },
 }
 
 // The brand's high-contrast light tokens (definition v2.27.0; owner 2026-10-23: high contrast is the
 // light set, not the dark one): a warm bone ground, never pure white, the inks clearing 7:1 on it and
 // the border 4.5:1. Picked by itself only when the person asks for more contrast on a light console
-// (pickTheme); otherwise opt-in like revenantworks. The brand names no success colour, so `ok` keeps
-// the person's theme key.
+// (pickTheme); otherwise opt-in like revenantworks. `ok` is the brand's hc-light `success`,
+// #004387 (definition v2.28.0).
 export const HC_LIGHT: Theme = {
   name: 'hc-light',
   description: 'High contrast on a light ground',
   background: '#FAF6F1',
-  colors: { accent: '#044C56', ok: 'success', warn: '#6B3704', bad: '#86044D', dim: '#4C4236', rule: '#746D64' },
+  colors: { accent: '#044C56', ok: '#004387', warn: '#6B3704', bad: '#86044D', dim: '#4C4236', rule: '#746D64' },
   glyphs: GLYPHS.unicode,
   header: 'block',
 }

@@ -325,13 +325,13 @@ function panelHtml(args) {
 const HEX = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/
 const BUNDLED_HEX = {
   neutral: {},
-  revenantworks: { accent: '#00E5FF', warn: '#FF8B00', bad: '#FF0099', dim: '#8D9FA2', rule: '#6C7678' },
-  'hc-light': { accent: '#044C56', warn: '#6B3704', bad: '#86044D', dim: '#4C4236', rule: '#746D64' },
+  revenantworks: { accent: '#00E5FF', ok: '#53A0FF', warn: '#FF8B00', bad: '#FF0099', dim: '#8D9FA2', rule: '#6C7678' },
+  'hc-light': { accent: '#044C56', ok: '#004387', warn: '#6B3704', bad: '#86044D', dim: '#4C4236', rule: '#746D64' },
   off: {},
 }
 // The light variant (the brand's ink values), for a light VS Code theme; also checked against theme-logic.ts.
 const BUNDLED_HEX_LIGHT = {
-  revenantworks: { accent: '#006D7B', warn: '#A65700', bad: '#D0007A', dim: '#415154', rule: '#A0ACAE' },
+  revenantworks: { accent: '#006A77', ok: '#0060BB', warn: '#944E00', bad: '#BB006F', dim: '#554B3F', rule: '#BDB6AD' },
 }
 
 /** VS Code's ColorThemeKind (1 Light, 2 Dark, 3 HighContrast, 4 HighContrastLight) as a console ground. */

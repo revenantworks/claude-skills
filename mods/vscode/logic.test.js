@@ -270,7 +270,7 @@ test('theme: the bundled revenantworks colours match the vigil plugin\'s theme-l
 })
 
 test('theme: a light VS Code theme takes the light variant; a one-palette file keeps its colours', () => {
-  assert.equal(L.themeColors('revenantworks', null, 'light').accent, '#006D7B')
+  assert.equal(L.themeColors('revenantworks', null, 'light').accent, '#006A77')
   assert.equal(L.themeColors('revenantworks', null, 'dark').accent, '#00E5FF')
   const two = JSON.stringify({ colors: { accent: '#111111' }, variants: { light: { colors: { accent: '#222222' } } } })
   assert.equal(L.themeColors('mine', two, 'light').accent, '#222222')

@@ -124,13 +124,13 @@ describe('current run', () => {
 describe('light and dark variants', () => {
   test('revenantworks carries a dark variant (base values) and a light one (the brand inks)', () => {
     expect(REVENANTWORKS.variants?.dark?.colors).toEqual(REVENANTWORKS.colors)
-    expect(REVENANTWORKS.variants?.light?.colors).toEqual({ accent: '#006D7B', ok: 'success', warn: '#A65700', bad: '#D0007A', dim: '#415154', rule: '#A0ACAE' })
+    expect(REVENANTWORKS.variants?.light?.colors).toEqual({ accent: '#006A77', ok: '#0060BB', warn: '#944E00', bad: '#BB006F', dim: '#554B3F', rule: '#BDB6AD' })
     expect(NEUTRAL.variants).toBeUndefined()
   })
   test('the console picks the variant; a one-palette theme is itself on any console', () => {
     const l = resolveVariant(REVENANTWORKS, 'light')
     expect(l.variant).toBe('light')
-    expect(l.theme.colors.accent).toBe('#006D7B')
+    expect(l.theme.colors.accent).toBe('#006A77')
     expect(l.theme.background).toBe('light')
     expect(l.theme.header).toBe('block')
     expect(resolveVariant(REVENANTWORKS, 'dark').theme.colors.accent).toBe('#00E5FF')
@@ -203,7 +203,7 @@ describe('theme outputs', () => {
     const text = linesText(themePreview(REVENANTWORKS, NEUTRAL, con('light')))
     expect(text).toMatch(/Dark variant/)
     expect(text).toMatch(/Light variant/)
-    expect(text).toMatch(/accent\s+\S+ #006D7B\s+\d+\.\d\d:1\s+4\.5\s+pass/)
+    expect(text).toMatch(/accent\s+\S+ #006A77\s+\d+\.\d\d:1\s+4\.5\s+pass/)
     expect(text).toMatch(/This console is light: it gets the light variant\./)
     expect(text).toMatch(/\(from Claude Code theme "light"\)/)
     expect(text).toMatch(/Dark consoles\s+works/)
