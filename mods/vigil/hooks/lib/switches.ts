@@ -48,9 +48,12 @@ export const DATA_OPT_IN: ReadonlySet<string> = new Set(['D1', 'D6', 'D7', 'D8']
 /** Features whose whole job is a network read (D12 reads GitHub through the gh login). */
 export const NETWORK_OPT_IN: ReadonlySet<string> = new Set(['D12'])
 
+/** Masks that change what Claude reads beyond secrets, so each waits for the user's word: W4 personal data, W5 their own words. */
+export const MASK_OPT_IN: ReadonlySet<string> = new Set(['W4', 'W5'])
+
 export const KEEPS_RECORDS: ReadonlySet<string> = DATA_OPT_IN
 export const NETWORK: ReadonlySet<string> = NETWORK_OPT_IN
-export const OPT_IN: ReadonlySet<string> = new Set([...DATA_OPT_IN, ...NETWORK_OPT_IN])
+export const OPT_IN: ReadonlySet<string> = new Set([...DATA_OPT_IN, ...NETWORK_OPT_IN, ...MASK_OPT_IN])
 
 /** Kill switch, then the feature's own switch, then the shipped default (on, unless opt-in). */
 export const isFeatureOn = (sw: Switches, id: string): boolean => {

@@ -2,7 +2,7 @@ import { describe, expect, test } from 'claude-code/testing'
 
 import {
   CARDS_MAX, arranged, cardsOf, crossed, dailyTokens, doItOf, forecast, glanceOf, glanceText, moveTile, notNow, parseAutoModes,
-  parseBudget, parseLayout, pictureSvg, serializeAutoModes, togglePinned, undoRow, type Layout,
+  parseBudget, parseLayout, parseShroudBeat, pictureSvg, serializeAutoModes, shroudSlots, tileOf, detailOf, togglePinned, undoRow, type BoardData, type Layout,
 } from '../hooks/board-logic'
 import { DAY, emptyHealth, type Feed } from '../hooks/collector-logic'
 import { BLOCKS, NEUTRAL_HEX, glyphMeter, glyphSpark, inkOf, meterRole, ringSvg } from '../hooks/draw-logic'
@@ -19,7 +19,7 @@ describe('layout', () => {
   test('a stored layout is repaired: unknown ids drop, missing tiles join in shipped order', () => {
     const l = parseLayout({ order: ['health', 'ghost', 'usage'], pinned: ['ghost', 'inbox'], collapsed: 'no' })
     expect(l.order.slice(0, 2)).toEqual(['health', 'usage'])
-    expect(l.order).toHaveLength(7)
+    expect(l.order).toHaveLength(8)
     expect(l.pinned).toEqual(['inbox'])
     expect(l.collapsed).toEqual([])
     expect(parseLayout(null).order[0]).toBe('usage')
@@ -81,6 +81,33 @@ describe('drawings', () => {
     expect(glyphMeter(null)).toBe('▱▱▱▱?')
     expect(glyphSpark([0, 4, 8])).toBe('▁▅█')
     expect(pictureSvg({ kind: 'badge', n: 3 }, inkOf(NEUTRAL, 'dark'))).toContain('>3<')
+  })
+})
+
+describe('privacy (shroud)', () => {
+  const beat = (over: Record<string, unknown> = {}) => JSON.stringify({ plugin: 'shroud', session: 'abcd1234', at: NOW, counts: { masked: 3, stream: 1 }, byClass: { github: 2, email: 1, 'Bad Key': 9 }, timeline: [{ t: NOW - 5 * 60_000, n: 2 }, { t: NOW - 65 * 60_000, n: 1 }], rotatePending: 0, ...over })
+  test('only this session\'s beat counts; kinds are kept by name only', () => {
+    expect(parseShroudBeat(beat(), 'ffff0000')).toBeNull()
+    const b = parseShroudBeat(beat(), 'abcd1234')!
+    expect(b.byClass).toEqual({ github: 2, email: 1 })
+    expect(shroudSlots(b, NOW)).toEqual([0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 2])
+  })
+  test('the shield shows only after a mask, and turns red while a listed key waits', () => {
+    const d = (s: string | null) => ({ live: live(), now: NOW, feed: feed(), inbox: 0, shroud: parseShroudBeat(s, 'abcd1234') })
+    expect(glanceOf(d(beat({ counts: { masked: 0, stream: 0 } }))).shield).toBeNull()
+    expect(glanceOf(d(beat())).shield).toEqual({ n: 4, red: false })
+    const red = glanceOf(d(beat({ rotatePending: 1 })))
+    expect(red.shield).toEqual({ n: 4, red: true })
+    expect(red.needsYou).toBe('rotate a key')
+    expect(glanceText(red, BLOCKS)).toContain('shield 4, rotate')
+  })
+  test('the Privacy tile and its detail: kinds, the timeline, the rotate line', () => {
+    const d: BoardData = { live: live(), now: NOW, feed: feed(), daily: [], inbox: 0, budget: null, auto: parseAutoModes(null), shroud: parseShroudBeat(beat(), 'abcd1234') }
+    expect(tileOf('privacy', d).big).toBe('4 masked')
+    const lines = detailOf('privacy', d).lines
+    expect(lines[0]).toBe('Masked before Claude read them: github 2, email 1; 1 stream secret(s).')
+    expect(lines[2]).toMatch(/Rotate it drafts/)
+    expect(tileOf('privacy', { ...d, shroud: null }).sub).toBe('shroud not loaded here')
   })
 })
 

@@ -9,7 +9,7 @@ import { badgeSvg, barSvg, dotsSvg, glyphDots, glyphMeter, glyphSpark, ringSvg, 
 
 // ---------- tiles and their layout ----------
 
-export const TILES = ['usage', 'context', 'inbox', 'mode', 'spend', 'skills', 'health'] as const
+export const TILES = ['usage', 'context', 'inbox', 'mode', 'spend', 'skills', 'health', 'privacy'] as const
 export type ShippedTile = (typeof TILES)[number]
 /** A shipped tile, or one the user built (`my:<id>`, tiles-logic.ts). */
 export type TileId = ShippedTile | `my:${string}`
@@ -112,9 +112,38 @@ export const dailyTokens = (events: readonly DashEvent[], now: number, days = 7)
   return out
 }
 
+/** What shroud says about this session (health/shroud.json): counts, kinds and times only, never a value. */
+export type ShroudBeat = { masked: number; stream: number; byClass: Record<string, number>; timeline: Array<{ t: number; n: number }>; rotatePending: number }
+
+/** shroud's heartbeat, only when this session wrote it last: another session's counts are not this one's. */
+export const parseShroudBeat = (text: string | null, session: string): ShroudBeat | null => {
+  try {
+    const o = JSON.parse(text ?? '') as Record<string, unknown>
+    if (o.session !== session) return null
+    const c = (o.counts ?? {}) as Record<string, unknown>
+    const n = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) && v >= 0 ? Math.round(v) : 0)
+    const byClass: Record<string, number> = {}
+    if (o.byClass && typeof o.byClass === 'object') for (const [k, v] of Object.entries(o.byClass as Record<string, unknown>)) if (/^[a-z0-9-]{1,32}$/.test(k) && n(v)) byClass[k] = n(v)
+    const timeline = Array.isArray(o.timeline) ? (o.timeline as unknown[]).flatMap(x => (x && typeof x === 'object' && typeof (x as { t?: unknown }).t === 'number' ? [{ t: (x as { t: number }).t, n: n((x as { n?: unknown }).n) }] : [])).slice(-60) : []
+    return { masked: n(c.masked), stream: n(c.stream), byClass, timeline, rotatePending: n(o.rotatePending) }
+  } catch {
+    return null
+  }
+}
+
+/** Masks per 10-minute slot over the last two hours, oldest first: the session timeline. */
+export const shroudSlots = (b: ShroudBeat, now: number, slots = 12, slotMs = 10 * 60_000): number[] => {
+  const out = new Array<number>(slots).fill(0)
+  for (const x of b.timeline) {
+    const i = slots - 1 - Math.floor((now - x.t) / slotMs)
+    if (i >= 0 && i < slots) out[i] = (out[i] ?? 0) + x.n
+  }
+  return out
+}
+
 /** A user's tile, already read and drawn (tiles-logic.ts `userTileOf`). */
 export type MineTile = { tile: Tile; lines: string[] }
-export type BoardData = { live: Live | null; now: number; feed: Feed; daily: readonly number[]; inbox: number; budget: Budget | null; auto: AutoModes; mine?: ReadonlyMap<string, MineTile> }
+export type BoardData = { live: Live | null; now: number; feed: Feed; daily: readonly number[]; inbox: number; budget: Budget | null; auto: AutoModes; mine?: ReadonlyMap<string, MineTile>; shroud?: ShroudBeat | null }
 
 // ---------- pictures ----------
 
@@ -223,6 +252,12 @@ export const tileOf = (id: TileId, d: BoardData): Tile => {
     }
     case 'inbox':
       return { id, title: 'Inbox', picture: { kind: 'badge', n: d.inbox }, big: String(d.inbox), sub: d.inbox === 1 ? 'suggestion' : 'suggestions' }
+    case 'privacy': {
+      const s = d.shroud
+      if (!s) return { id, title: 'Privacy', picture: { kind: 'word', text: '–' }, big: '–', sub: 'shroud not loaded here' }
+      const n = s.masked + s.stream
+      return { id, title: 'Privacy', picture: { kind: 'badge', n }, big: `${n} masked`, sub: s.rotatePending ? `${s.rotatePending} key(s) to rotate` : 'this session' }
+    }
     case 'mode': {
       const b = d.budget
       return { id, title: 'Spend mode', picture: { kind: 'word', text: b ? b.mode : 'none' }, big: b ? b.mode : '–', sub: b ? `${b.parallelCeiling === null ? '' : `x${b.parallelCeiling}, `}${autoText(d.auto)}` : `no live decision; ${autoText(d.auto)}` }
@@ -259,6 +294,16 @@ export const detailOf = (id: TileId, d: BoardData): Detail => {
       }
       case 'inbox':
         return [d.inbox ? `${d.inbox} suggestion(s) wait. Do it drafts the change in chat; nothing is written until you say yes.` : 'Nothing waits.']
+      case 'privacy': {
+        const s = d.shroud
+        if (!s) return ['shroud is not loaded in this session, so nothing is masked here.', 'Install it: /plugin install shroud@revenantworks']
+        const kinds = Object.entries(s.byClass).sort((a, b) => b[1] - a[1]).map(([k, n]) => `${k} ${n}`).join(', ')
+        return [
+          s.masked + s.stream ? `Masked before Claude read them: ${kinds || 'none by kind'}${s.stream ? `; ${s.stream} stream secret(s)` : ''}.` : 'Nothing was masked this session.',
+          `Last two hours, by 10 minutes: ${shroudSlots(s, now).join(' ')}.`,
+          s.rotatePending ? `${s.rotatePending} key(s) keywarden marked for rotation appeared. Rotate it drafts the rotation.` : 'Rotate it drafts a keywarden rotation for any real key.',
+        ]
+      }
       case 'mode': {
         const b = d.budget
         return [b ? `pacewright set ${b.mode}${b.parallelCeiling === null ? '' : `, up to ${b.parallelCeiling} unit(s) at once`}.` : 'No live decision from pacewright. /rw-pacewright check writes one.', b?.basis ? `Basis: ${b.basis}` : 'Basis: none recorded.', `Auto modes: ${autoText(d.auto)}.`]
@@ -270,16 +315,18 @@ export const detailOf = (id: TileId, d: BoardData): Detail => {
 
 // ---------- the glance strip ----------
 
-export type Glance = { rings: ReadonlyArray<{ label: string; pct: number | null; tick: number | null; warnAt?: number }>; needsYou: string | null }
+export type Glance = { rings: ReadonlyArray<{ label: string; pct: number | null; tick: number | null; warnAt?: number }>; needsYou: string | null; shield?: { n: number; red: boolean } | null }
 
 /** Three rings (5-hour, week, context) and a fourth mark only when something needs the person. */
-export const glanceOf = (d: Pick<BoardData, 'live' | 'now' | 'feed' | 'inbox'>): Glance => ({
+export const glanceOf = (d: Pick<BoardData, 'live' | 'now' | 'feed' | 'inbox' | 'shroud'>): Glance => ({
   rings: [
     { label: '5h', pct: d.live?.five ?? null, tick: null },
     { label: 'wk', pct: d.live?.week ?? null, tick: weekTick(d.live, d.now) },
     { label: 'ctx', pct: d.live?.ctx ?? null, tick: null, warnAt: 80 },
   ],
-  needsYou: healthFault(d.feed) ? 'a health check fails' : d.inbox > 0 ? `${d.inbox} suggestion(s)` : null,
+  needsYou: d.shroud?.rotatePending ? 'rotate a key' : healthFault(d.feed) ? 'a health check fails' : d.inbox > 0 ? `${d.inbox} suggestion(s)` : null,
+  // The shield shows only when something was masked; it stays red while a listed key waits for rotation.
+  shield: d.shroud && (d.shroud.masked + d.shroud.stream > 0 || d.shroud.rotatePending) ? { n: d.shroud.masked + d.shroud.stream, red: d.shroud.rotatePending > 0 } : null,
 })
 
 /** A meter crossing a level upward since the last reading: the levels crossed, highest last. */
@@ -394,7 +441,10 @@ export const pictureGlyph = (p: Picture, g: Glyph, on = '●', off = '○', bad 
 
 /** The glance strip as text: `5h ▰▰▱▱  wk ▰▰▰▱  ctx ▰▱▱▱` and a mark when something needs you. */
 export const glanceText = (gl: Glance, g: Glyph, mark = '●'): string =>
-  `${gl.rings.map(r => `${r.label} ${glyphMeter(r.pct, 4, g)}`).join('  ')}${gl.needsYou ? `  ${mark} ${gl.needsYou}` : ''}`
+  `${gl.rings.map(r => `${r.label} ${glyphMeter(r.pct, 4, g)}`).join('  ')}${gl.shield ? `  ${shieldText(gl.shield)}` : ''}${gl.needsYou ? `  ${mark} ${gl.needsYou}` : ''}`
+
+/** The glance strip's shield, in words: what it says where no colour shows. */
+export const shieldText = (s: { n: number; red: boolean }): string => `shield ${s.n}${s.red ? ', rotate' : ''}`
 
 /** The board as text lines (a typed /rw-vigil board, and the terminal's fallback). */
 export const boardText = (l: Layout, d: BoardData, g: Glyph): string[] => {

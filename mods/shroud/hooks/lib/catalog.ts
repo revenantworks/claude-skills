@@ -48,6 +48,8 @@ export const CATALOG: readonly Feature[] = [
   // ---- shroud: safety that never depends on the dashboard ----
   f('W3', 'secret-redact', 'shroud', 'privacy', 'Secret masking before Claude reads, and restore', ['W3'], 'Automatic; /rw-vigil off secret-redact stops it.'),
   f('W3b', 'rotate-alert', 'shroud', 'privacy', 'Rotate tripwire', ['W3b'], 'Automatic, when keywarden lists fingerprints in rotate.txt.'),
+  f('W4', 'pii-mask', 'shroud', 'privacy', 'Personal-data masking: email, phone, card number, US SSN', [], '/rw-vigil on pii-mask; masked like a secret, a card number only when its checksum holds.'),
+  f('W5', 'word-list', 'shroud', 'privacy', 'Your own words, masked like a secret', [], '/rw-vigil on word-list; one entry a line in ~/.claude/revenantworks/shroud/words.txt (and any file SHROUD_WORDS names). Never shown, never committed.'),
   f('L2b', 'stream-mask', 'shroud', 'privacy', 'Stream-secret masking', ['L2b'], 'Automatic.'),
   f('C12', 'untrusted-marker', 'shroud', 'privacy', 'Untrusted-content marker', ['C12'], 'Automatic on web, MCP and mail results.'),
   f('C12b', 'received-marker', 'shroud', 'privacy', 'Received-message marker', ['C12b'], 'Automatic on messages from routines and other sessions.'),

@@ -38,6 +38,10 @@ Claude Code plugin marketplace.
   only, as the Agent Skills spec requires; each member's volatile surfaces are listed in a
   `volatile.json` beside its SKILL.md. `tools/release.py` runs the release loop.
   `tools/name_leak.py` checks for listed names kept outside the repo.
+- **shroud sees more (2026-10-23).** The gitleaks rule set (212 rules, MIT) joins shroud's own
+  shapes. Opt-in personal-data masking (email, phone, card number, US SSN) and a local word list.
+  `/rw-shroud rotate` drafts a keywarden rotation by placeholder; vigil shows a shield after a
+  mask, red while a listed key waits, and a Privacy tile.
 - **Build your own vigil tiles (2026-10-23).** `/rw-vigil tiles` picks a source; Claude scans it
   read-only and proposes tiles, saved to your own folder only on your yes. A tile is a JSON spec
   (one source, one picture, a rule), never code, and shows numbers and dates only.

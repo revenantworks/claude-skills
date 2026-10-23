@@ -2,12 +2,13 @@ import type { CommandRunInput, On, PromptSubmitInput } from 'claude-code'
 import { describe, expect, mock, test } from 'claude-code/testing'
 
 import {
-  contentShape, escapeMarker, findSecrets, instructionShapedLines, isForeignOrigin, isObsCall, maskBlocks, maskStream, maskStrong,
-  parseRotateList, receivedWrap, redact, restore, rotateFingerprint,
+  LEAK_WINDOW, contentShape, escapeMarker, findLeaks, findPii, findSecrets, findWords, instructionShapedLines, isForeignOrigin, isObsCall, kindOf, luhn,
+  maskBlocks, maskStream, maskStrong, parseRotateList, parseWords, receivedWrap, redact, restore, rotateFingerprint, rotatePrompt,
   type Vault,
 } from '../hooks/shroud-logic'
 import { CATALOG, featuresOf } from '../hooks/lib/catalog'
 import { defaultSwitches, isFeatureOn, serializeSwitches } from '../hooks/lib/switches'
+import { GITLEAKS_RULES } from '../hooks/gitleaks-rules'
 
 // Token-shaped test values are built at run time so no tracked file carries a live-looking shape.
 const GH = 'gh' + 'p_' + 'A1b2C3d4'.repeat(5)
@@ -79,6 +80,87 @@ describe('W3 redactor and restore', () => {
   })
 })
 
+// More shapes, built at run time like the ones above.
+const GL = 'gl' + 'pat-' + 'Zq7Rk2Lm9Xw4Tv8Ny3Pb'
+const NPM = 'np' + 'm_' + 'a8Kd2Lq9Zx4Wv7Nm3Rt6Yp1Bc5Fg0Hj8Qs2E'
+const HF = 'h' + 'f_' + 'QwErTyUiOpAsDfGhJkLzXcVbNmQwErTyUiOp'.slice(0, 34)
+
+describe('the gitleaks rule set', () => {
+  test('ported as data: over 200 rules, every one compiles, ids are the gitleaks ids', () => {
+    expect(GITLEAKS_RULES.length).toBeGreaterThan(200)
+    for (const r of GITLEAKS_RULES) expect(() => new RegExp(r.re, 'g')).not.toThrow()
+    expect(GITLEAKS_RULES.some(r => r.id === 'gitlab-pat')).toBe(true)
+  })
+  test('shapes shroud did not know before are masked, each under its rule id', () => {
+    const hits = findSecrets(`a ${GL} b ${NPM} c ${HF} d`)
+    expect(hits.map(h => h.cls)).toEqual(['gitlab-pat', 'npm-access-token', 'huggingface-access-token'])
+    const v: Vault = {}
+    const r = redact(`token ${GL}`, 'salt', v, null)
+    expect(r.text).toMatch(/\[REDACTED:GITLAB-PAT#[0-9a-f]{8}\]/)
+  })
+  test('shroud\'s own shapes keep their names; gitleaks never doubles a hit', () => {
+    const hits = findSecrets(`use ${GH} and ${AWS}`)
+    expect(hits.map(h => h.cls)).toEqual(['github', 'aws'])
+  })
+  test('case folding is expanded by hand: the (?i) keyword matches in any case, the (?-i) part stays exact', () => {
+    expect(findLeaks(`GITLAB ${GL.replace('glpat', 'GLPAT')}`).length).toBe(0)
+    expect(findLeaks(`x ${NPM.replace('npm_', 'NPM_')}`).map(h => h.cls)).toEqual(['npm-access-token'])
+  })
+  test('placeholders and low-entropy values are left alone', () => {
+    expect(findLeaks('api_key = "your-api-key-goes-here-please"')).toEqual([])
+    expect(findLeaks('password = xxxxxxxxxxxxxxxxxxxx')).toEqual([])
+  })
+  test('a long result costs keyword hits, not its length', () => {
+    const big = `${'a'.repeat(200_000)} key = ${'b9'.repeat(30_000)} ${'secret '.repeat(200)}`
+    const t = Date.now()
+    findSecrets(big)
+    expect(Date.now() - t).toBeLessThan(3000)
+    expect(LEAK_WINDOW.perRule).toBeLessThanOrEqual(40)
+  })
+  test('kinds fold rule ids for counting', () => {
+    expect(kindOf('github-pat')).toBe('github')
+    expect(kindOf('generic-api-key')).toBe('generic')
+    expect(kindOf('gitlab-pat')).toBe('other')
+    expect(kindOf('email')).toBe('email')
+  })
+})
+
+describe('W4 personal data and W5 your own words (opt-in)', () => {
+  const card = ['4111', '1111', '1111', '1111'].join(' ')
+  test('nothing personal is masked unless asked', () => {
+    expect(findSecrets(`mail a.person@mail.test or call 555-123-4567, card ${card}`).length).toBe(0)
+  })
+  test('email, phone, card (checksum held) and SSN', () => {
+    const hits = findPii(`mail a.person@mail.test or call (555) 123-4567, card ${card}, ssn ${['123', '45', '6789'].join('-')}`)
+    expect(hits.map(h => h.cls).sort()).toEqual(['card', 'email', 'phone', 'ssn'])
+    expect(luhn('4111111111111111')).toBe(true)
+    expect(findPii(['4111', '1111', '1111', '1112'].join(' '))).toEqual([])
+  })
+  test('service addresses are not a person\'s', () => {
+    expect(findPii('Co-Authored-By: x <noreply@anthropic.com>, dev@users.noreply.github.com, a@example.com')).toEqual([])
+  })
+  test('a word list masks whole words in any case, and never inside another word', () => {
+    const words = parseWords('# my list\nnorthwind\nab\nAcme Corp  # a client\n')
+    expect(words).toEqual(['northwind', 'acme corp'])
+    expect(findWords('Northwind and ACME CORP, not northwinds', words).map(h => h.value)).toEqual(['Northwind', 'ACME CORP'])
+    const v: Vault = {}
+    expect(redact('for Northwind', 's', v, null, { words }).text).toMatch(/^for \[REDACTED:WORD#[0-9a-f]{8}\]$/)
+  })
+  test('Rotate it drafts a keywarden rotation by placeholder only, and never for personal data', () => {
+    const v: Vault = {}
+    redact(`use ${GH}, mail a.person@mail.test`, 's', v, null, { pii: true })
+    const p = rotatePrompt(v, 0)!
+    expect(p).toMatch(/keywarden rotate/)
+    expect(p).toMatch(/\[REDACTED:GITHUB#[0-9a-f]{8}\] \(github/)
+    expect(p).not.toContain(GH)
+    expect(p).not.toMatch(/EMAIL/)
+    expect(p).toMatch(/Write nothing until I say yes\.$/)
+    const pii: Vault = {}
+    redact('mail a.person@mail.test', 's', pii, null, { pii: true })
+    expect(rotatePrompt(pii, 0)).toBeNull()
+  })
+})
+
 describe('L2b stream masking', () => {
   test('keyed fields, stream keys, alert URLs and query secrets', () => {
     const r = maskStream(`{"server": "rtmp://a", "key": "${KEY}"} https://streamlabs.com/alert-box/v3/ABCDEF1234567890 https://x.test/w?token=zz`)
@@ -117,8 +199,9 @@ describe('C12 and C12b markers', () => {
 
 describe('catalog', () => {
   test('shroud holds exactly the kept safety features, all on from install', () => {
-    expect(featuresOf('shroud').map(x => x.id)).toEqual(['W3', 'W3b', 'L2b', 'C12', 'C12b'])
-    for (const x of featuresOf('shroud')) expect(isFeatureOn(defaultSwitches(), x.id)).toBe(true)
+    expect(featuresOf('shroud').map(x => x.id)).toEqual(['W3', 'W3b', 'W4', 'W5', 'L2b', 'C12', 'C12b'])
+    // Personal data and the word list change what Claude reads beyond secrets, so they wait for a yes.
+    for (const x of featuresOf('shroud')) expect(isFeatureOn(defaultSwitches(), x.id)).toBe(x.id !== 'W4' && x.id !== 'W5')
     expect(CATALOG.filter(x => x.plugin === 'shroud' && (x.records || x.network))).toEqual([])
   })
 })
@@ -240,6 +323,46 @@ describe('hooks', () => {
     expect(text).toMatch(/1 rotate alert\(s\)/)
     expect(text).not.toContain(GH)
     expect(JSON.stringify(appended[0])).not.toContain(GH)
+  })
+  test('the shield: a rotate hit stays pending while keywarden lists it, and the heartbeat carries kinds, never values', async ($, on) => {
+    const files: Record<string, string> = { '/u/t/.claude/revenantworks/rotate.txt': 'e42725146b68\n' }
+    world(on, files, { SHIELD_SALT: 'fixture-salt' })
+    await append($, { type: 'user', content: [{ type: 'tool_result', tool_use_id: 't1', content: `token ${GH}` }] })
+    const text = (await $.command.run(cmd('rw-shroud'))).text
+    expect(text).toMatch(/1 key\(s\) keywarden marked for rotation appeared and are still listed/)
+    expect(text).toMatch(/Masked by kind: github 1/)
+    const beat = files['/u/t/.claude/revenantworks/health/shroud.json']!
+    expect(JSON.parse(beat)).toMatchObject({ rotatePending: 1, byClass: { github: 1 } })
+    expect(beat).not.toContain(GH)
+  })
+  test('W4 and W5 wait for the switch; on, personal data and listed words are masked in a message', async ($, on) => {
+    const words = '/u/t/.claude/revenantworks/shroud/words.txt'
+    const sw = serializeSwitches({ ...defaultSwitches(), features: { W4: true, W5: true } })
+    world(on, { [SW]: sw, [words]: 'northwind\n' })
+    let seen = ''
+    on('prompt.submit', async ($, e) => {
+      seen = e.text
+      return { text: e.text }
+    })
+    await $.prompt.submit(submit({ text: 'mail a.person@mail.test about Northwind', origin: { kind: 'composer' } }))
+    expect(seen).not.toMatch(/a\.person|Northwind/)
+    expect(seen).toMatch(/\[REDACTED:EMAIL#[0-9a-f]{8}\].*\[REDACTED:WORD#[0-9a-f]{8}\]/)
+  })
+  test('W4 off by default: personal data passes as typed', async ($, on) => {
+    world(on, {})
+    let seen = ''
+    on('prompt.submit', async ($, e) => {
+      seen = e.text
+      return { text: e.text }
+    })
+    await $.prompt.submit(submit({ text: 'mail a.person@mail.test', origin: { kind: 'composer' } }))
+    expect(seen).toBe('mail a.person@mail.test')
+  })
+  test('/rw-shroud rotate drafts the rotation in chat; with nothing masked it says so', async ($, on) => {
+    world(on, {})
+    expect((await $.command.run(cmd('rw-shroud', 'rotate'))).text).toMatch(/Nothing to rotate/)
+    await append($, { type: 'user', content: [{ type: 'tool_result', tool_use_id: 't1', content: `token ${GH}` }] })
+    expect((await $.command.run(cmd('rw-shroud', 'rotate'))).text).toMatch(/Drafted a keywarden rotation/)
   })
   test('string content is masked and reaches the transcript as a block list', async ($, on) => {
     const appended = world(on, {})

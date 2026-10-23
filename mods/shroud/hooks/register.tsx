@@ -5,9 +5,9 @@
 import type { EngineInterface, Register } from 'claude-code'
 
 import {
-  UNTRUSTED_TOOLS, contentShape, findSecrets, instructionShapedLines, isForeignOrigin, isObsCall, maskBlocks, maskStream,
-  maskStrong, parseRotateList, receivedWrap, redact, restore, resultText, rotateFingerprint, untrustedContext,
-  type Vault,
+  UNTRUSTED_TOOLS, contentShape, findSecrets, instructionShapedLines, isForeignOrigin, isObsCall, kindOf, maskBlocks, maskStream,
+  maskStrong, parseRotateList, parseWords, receivedWrap, redact, restore, resultText, rotateFingerprint, rotatePrompt, untrustedContext,
+  type FindOptions, type Vault,
 } from './shroud-logic'
 import { featuresOf } from './lib/catalog'
 import { isFeatureOn, parseSwitches, type Switches } from './lib/switches'
@@ -36,6 +36,12 @@ const pvVault: Vault = {}
 const pvReadPaths = new Map<string, string>()
 const pvObsCalls = new Set<string>()
 const pvCounts = { masked: 0, stream: 0, untrusted: 0, received: 0, rotate: 0 }
+/** Masks this session by kind (github, email, word...) and when they happened: counts and times only. */
+const pvByClass: Record<string, number> = {}
+const pvTimeline: Array<{ t: number; n: number }> = []
+/** rotate.txt fingerprints seen this session; the shield stays red while one is still listed. */
+const pvRotateHits = new Set<string>()
+let pvWords: string[] = []
 
 function pvOn(id: string): boolean {
   return isFeatureOn(pvSw, id)
@@ -75,7 +81,7 @@ async function pvHeartbeat($: EngineInterface): Promise<void> {
   try {
     // One file for every session on the machine: merge this session's beat into it (mergeHeartbeat).
     const file = pvPath(`health/${PLUGIN}.json`)
-    await $.fs.write(file, mergeHeartbeat(await pvRead($, file), { plugin: PLUGIN, version: VERSION, session: fnv1a(pvSession), at: await $.clock.now(), on, caught: pvCaught, counts: pvCounts }))
+    await $.fs.write(file, mergeHeartbeat(await pvRead($, file), { plugin: PLUGIN, version: VERSION, session: fnv1a(pvSession), at: await $.clock.now(), on, caught: pvCaught, counts: pvCounts, byClass: pvByClass, timeline: pvTimeline, rotatePending: pvRotatePending() }))
   } catch {
     // Health is observe-only.
   }
@@ -84,6 +90,27 @@ async function pvHeartbeat($: EngineInterface): Promise<void> {
 async function pvLoad($: EngineInterface): Promise<void> {
   pvSw = parseSwitches(await pvRead($, pvPath('switches.json')))
   pvRotate = parseRotateList(await pvRead($, pvPath('rotate.txt')))
+  // W5: the user's own list, plus any files SHROUD_WORDS names (`;`-separated). Read here, never shown or written.
+  if (pvOn('W5')) {
+    const extra = ((await $.env.get('SHROUD_WORDS')) ?? '').split(';').map(x => x.trim()).filter(Boolean)
+    const texts = await Promise.all([pvPath('shroud/words.txt'), ...extra].map(f => pvRead($, f)))
+    pvWords = parseWords(texts.filter(Boolean).join('\n'))
+  } else pvWords = []
+}
+
+function pvFind(): FindOptions {
+  return { pii: pvOn('W4'), words: pvWords }
+}
+
+/** Counts a mask into the session's kinds and timeline (counts only). */
+async function pvTally($: EngineInterface, n: number): Promise<void> {
+  if (n <= 0) return
+  pvTimeline.push({ t: await $.clock.now(), n })
+  if (pvTimeline.length > 60) pvTimeline.splice(0, pvTimeline.length - 60)
+}
+
+function pvRotatePending(): number {
+  return [...pvRotateHits].filter(fp => pvRotate.has(fp)).length
 }
 
 async function pvEnsure($: EngineInterface): Promise<void> {
@@ -120,6 +147,8 @@ function pvStatus(): string {
   return [
     'shroud: masks secrets before Claude reads them and marks outside content as data.',
     ...featuresOf('shroud').map(x => `  ${x.slug.padEnd(17)} ${pvOn(x.id) ? 'on ' : 'off'}  ${x.name}`),
+    ...(Object.keys(pvByClass).length ? [`Masked by kind: ${Object.entries(pvByClass).sort((a, b) => b[1] - a[1]).map(([k, n]) => `${k} ${n}`).join(', ')}.`] : []),
+    ...(pvRotatePending() ? [`${pvRotatePending()} key(s) keywarden marked for rotation appeared and are still listed. /rw-shroud rotate drafts the rotation.`] : []),
     `This session: ${pvCounts.masked} secret(s) masked, ${pvCounts.stream} stream secret(s) masked, ${pvCounts.untrusted} outside result(s) marked, ${pvCounts.received} received message(s) marked, ${pvCounts.rotate} rotate alert(s).`,
     ...(pvRotate.size > 0 && pvShieldSalt === '' ? ['rotate-alert is idle: rotate.txt has fingerprints but SHIELD_SALT is not set, so none can match keywarden\'s.'] : []),
     'Switch with /rw-vigil on|off <name>, or edit nothing: the one switch file changes only through /rw-vigil.',
@@ -136,10 +165,11 @@ export const register: Register = on => {
   on('prompt.submit', async ($, e, next) => {
     await pvEnsure($)
     if ((e.origin.kind === 'composer' || e.origin.kind === 'bridge') && pvOn('W3')) {
-      const r = redact(e.text, pvSalt, pvVault, null)
+      const r = redact(e.text, pvSalt, pvVault, null, pvFind(), pvByClass)
       if (r.count > 0) {
         pvCounts.masked += r.count
-        await pvSay($, `${r.count} secret-shaped value(s) in your message were replaced before Claude read them. Rotate any that were real.`)
+        await pvTally($, r.count)
+        await pvSay($, `${r.count} value(s) in your message were masked before Claude read them. /rw-shroud rotate drafts a rotation for any real key.`)
         return next({ ...e, text: r.text })
       }
     }
@@ -214,7 +244,10 @@ export const register: Register = on => {
       let hit = ''
       for (const h of findSecrets(JSON.stringify(blocks))) {
         const fp = await rotateFingerprint(pvShieldSalt, h.value)
-        if (pvRotate.has(fp)) hit = fp
+        if (pvRotate.has(fp)) {
+          hit = fp
+          pvRotateHits.add(fp)
+        }
       }
       if (hit) {
         pvCounts.rotate += 1
@@ -223,11 +256,12 @@ export const register: Register = on => {
     }
     let masked = 0
     if (w3) {
-      const r = maskBlocks(blocks, pvReadPaths, pvSalt, pvVault)
+      const r = maskBlocks(blocks, pvReadPaths, pvSalt, pvVault, pvFind(), pvByClass)
       blocks = r.blocks
       masked = r.count
       pvCounts.masked += r.count
-      if (r.count > 0) pvNotes.push(`${r.count} secret-shaped value(s) were masked before Claude read them.`)
+      await pvTally($, r.count)
+      if (r.count > 0) pvNotes.push(`${r.count} value(s) were masked before Claude read them. /rw-shroud rotate drafts a rotation for any real key.`)
     }
     let stream = 0
     if (l2b) {
@@ -263,8 +297,16 @@ export const register: Register = on => {
     return next({ ...e, text: receivedWrap(pvNonce, e.origin.kind, e.text) })
   }).catch(($, e, next) => next(e))
 
-  on('command.run', { command: 'rw-shroud' }, async $ => {
+  on('command.run', { command: 'rw-shroud' }, async ($, e) => {
     await pvEnsure($)
+    if ((e.args ?? '').trim().toLowerCase() === 'rotate') {
+      const text = rotatePrompt(pvVault, pvRotatePending())
+      if (!text) return { text: 'Nothing to rotate: no key was masked this session.' }
+      // A prompt submitted inside the command's own hook is refused, so it goes out on the clock.
+      $.clock.after(50, () => void $.prompt.submit({ text }).catch(() => undefined))
+      return { text: 'Drafted a keywarden rotation in chat. Nothing changes until you say yes there.' }
+    }
+    await pvHeartbeat($)
     return { text: pvStatus() }
   })
   on('command.run', { command: LEGACY }, async $ => {

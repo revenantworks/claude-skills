@@ -2,7 +2,7 @@
   "name": "shroud",
   "displayName": "Revenantworks Shroud",
   "version": "1.0.0",
-  "description": "Revenantworks shroud mod for Claude Code 2.1.287+: masks secrets and stream keys before Claude reads them (restoring a value only into the gitignored file it came from), flags a credential keywarden marked for rotation, and marks web, MCP and mail results and messages from routines or other sessions as data. Kept apart from the vigil plugin, so safety never depends on the dashboard. Never blocks your work; keeps no record; contacts no service.",
+  "description": "Revenantworks shroud mod for Claude Code 2.1.287+: masks secrets (its own shapes plus the gitleaks rule set), stream keys and, if you turn them on, personal data and your own word list before Claude reads them (restoring a value only into the gitignored file it came from), flags a credential keywarden marked for rotation, and marks web, MCP and mail results and messages from routines or other sessions as data. Kept apart from the vigil plugin, so safety never depends on the dashboard. Never blocks your work; keeps no record; contacts no service.",
   "author": {
     "name": "Revenantworks"
   },
