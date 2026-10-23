@@ -44,7 +44,7 @@ import { RW_SKILLS } from './rw-skills'
 import {
   SWITCHES, arranged, boardText, cardsOf, crossed, dailyTokens, detailOf, doItOf, evidenceDots, glanceOf, glanceText, isAutoMode, isTile, moveTile,
   notNow, openCount, parseAutoModes, parseBudget, parseLayout, pictureAlt, pictureGlyph, pictureSvg, serializeAutoModes, tileOf, toggleCollapsed,
-  togglePinned, undoRow, AUTO_MODES, type AutoModes, type BoardData, type Budget, type Layout, type MineTile, type Picture, type TileId,
+  togglePinned, undoRow, AUTO_MODES, type AutoModes, type BoardData, type Budget, type Layout, type MineTile, type Picture, type TileId, parseShroudBeat, shieldText,
 } from './board-logic'
 import { ASCII_BLOCKS, BLOCKS, inkOf } from './draw-logic'
 import {
@@ -524,6 +524,7 @@ async function dsBoardTree($: EngineInterface, table: Table, onPress: OnPress): 
         </Box>
         {dsPicture(table, d.picture, 96)}
         <Box flexDirection="column">{d.lines.map((l, i) => <Text key={`dl${i}`} wrap="wrap">{l}</Text>)}</Box>
+        {dsDetail === 'privacy' ? <Button key="rotate" label="Rotate it" variant="secondary" onPress={onPress({ kind: 'rotate' })} /> : null}
         {dsDetail === 'mode' ? (
           <Box flexDirection="column">
             {AUTO_MODES.map(m => (
@@ -733,7 +734,8 @@ async function dsBoardData($: EngineInterface): Promise<BoardData> {
   const now = await $.clock.now()
   const feed = dsFeed ?? (await dsRoll($))
   const live = dsLive && now - dsLive.at <= STALE_MS ? dsLive : liveFromMeterFile(await dsRead($, ((await $.env.get('CLAUDE_USAGE_WINDOWS')) ?? `${dsHome}/.claude/usage-windows.json`).replace(/\\/g, '/'))) ?? dsLive
-  return { live, now, feed, daily: dailyTokens(dsMem, now), inbox: openCount(dsSuggest, now), budget: dsBudget, auto: dsAuto, mine: await dsMineTiles($, now) }
+  const shroud = parseShroudBeat(await dsRead($, dsPath('health/shroud.json')), fnv1a(dsSession))
+  return { live, now, feed, daily: dailyTokens(dsMem, now), inbox: openCount(dsSuggest, now), budget: dsBudget, auto: dsAuto, mine: await dsMineTiles($, now), shroud }
 }
 
 async function dsSaveSuggest($: EngineInterface): Promise<void> {
@@ -803,6 +805,12 @@ async function dsPress($: EngineInterface, p: Press): Promise<void> {
   }
   if (p.kind === 'auto') {
     $.ui.toast(await dsSetAuto($, p.mode, p.on))
+    return
+  }
+  if (p.kind === 'rotate') {
+    // shroud owns the vault, so the draft is its own: vigil only asks for it, on the clock (the hand-off rule).
+    $.clock.after(HANDOFF_MS, () => void $.command.run({ command: 'rw-shroud', args: 'rotate' }).catch(() => undefined))
+    $.ui.toast('Asked shroud to draft a keywarden rotation in chat. Nothing changes until you say yes there.')
     return
   }
   if (p.kind === 'build') {
@@ -1763,7 +1771,7 @@ export const register: Register = on => {
     if (dsOn('D2')) {
       const d = await dsBoardData($)
       const gl = glanceOf(d)
-      if (gl.rings.some(r => r.pct !== null) || gl.needsYou) {
+      if (gl.rings.some(r => r.pct !== null) || gl.needsYou || gl.shield) {
         const table = $.ui.resolve(e) as Record<string, unknown>
         const Svg = table.Svg as ((p: { source: string; alt: string; height?: number }) => JSX.Element) | undefined
         const open = async () => { dsView = 'board'; await update($, dsPaneRev, n => (n ?? 0) + 1); await $.ui.open({ id: 'vigil', title: 'vigil' }) }
@@ -1771,6 +1779,7 @@ export const register: Register = on => {
         rows.push(
           <Box key="glance" columnGap={1} alignItems="center">
             {Svg ? <Svg source={pictureSvg(pic, inkOf(dsTheme, dsConsole.bg), 22)} alt={pictureAlt(pic)} height={22} /> : <Text wrap="truncate-end">{glanceText({ rings: gl.rings, needsYou: null }, dsGlyphs())}</Text>}
+            {gl.shield ? <Text color={gl.shield.red ? dsTheme.colors.bad : dsTheme.colors.dim}>{shieldText(gl.shield)}</Text> : null}
             {gl.needsYou ? <Text color={dsTheme.colors.accent}>{`${dsTheme.glyphs.on} ${gl.needsYou}`}</Text> : null}
             <Button key="glance-open" label="Board" plain dimColor onPress={open} />
           </Box>,

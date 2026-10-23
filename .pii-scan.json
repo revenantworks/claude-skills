@@ -6,6 +6,7 @@
     {"rule": "drive-path", "file": "packs/localops/skills/revenantworks-localops-hypervrunner/scripts/test_teardown.py"},
     {"rule": "drive-path", "file": "packs/warden/skills/revenantworks-warden-shieldwarden/scripts/test_signposts.py"},
     {"rule": "generic-api-key", "file": "mods/shroud/tests/shroud.test.ts"},
+    {"rule": "google-api-key", "file": "mods/shroud/hooks/gitleaks-rules.ts"},
 
     {"rule": "directive-in-data", "file": "packs/*/skills/*/evals/*"},
     {"rule": "directive-in-data", "file": "featured/*/skills/*/evals/*"},

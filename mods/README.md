@@ -282,6 +282,8 @@ automatic fire flags that skill, once. A slash fire is you choosing, so it is ne
 |---|---|---|---|---|---|
 | secret-redact | W3 | privacy | Secret masking before Claude reads, and restore | on | Automatic; `/rw-vigil off secret-redact` stops it |
 | rotate-alert | W3b | privacy | Rotate tripwire | on | Automatic, when keywarden lists fingerprints in `rotate.txt` and `SHIELD_SALT` is set (the salt keywarden used) |
+| pii-mask | W4 | privacy | Personal-data masking: email, phone, card number, US SSN | opt-in | `/rw-vigil on pii-mask`; a card number only when its checksum holds |
+| word-list | W5 | privacy | Your own words, masked like a secret | opt-in | `/rw-vigil on word-list`; one entry a line in `~/.claude/revenantworks/shroud/words.txt` |
 | stream-mask | L2b | privacy | Stream-secret masking | on | Automatic |
 | untrusted-marker | C12 | privacy | Untrusted-content marker | on | Automatic on web, MCP and mail results |
 | received-marker | C12b | privacy | Received-message marker | on | Automatic on messages from routines and other sessions |
@@ -290,6 +292,24 @@ A masked value becomes a placeholder such as `[REDACTED:GITHUB#d928c605]`. It is
 into the gitignored file it came from, and only by the Read that produced it; a value it cannot
 restore stays a placeholder. `/rw-shroud` shows what was masked or marked this session, as counts
 only.
+
+**Which secrets.** shroud's own shapes, plus the gitleaks rule set: 212 of its 217 rules, ported
+as data by `mods/shroud/scripts/port_gitleaks.py` (MIT; the five it skips need a file path). A
+rule runs only near one of its keywords, so a long result costs its keyword hits, not its
+length. A placeholder or a low-entropy value is never masked.
+
+**Personal data and your own words (opt-in).** `pii-mask` masks email addresses (not
+`noreply` or `example` ones), phone numbers, card numbers that pass the Luhn check and US SSNs.
+`word-list` masks each entry of `~/.claude/revenantworks/shroud/words.txt` (one a line, `#`
+comments, three characters or more) as a whole word in any case. `SHROUD_WORDS` can name more
+files, separated by `;`. The list is read on this machine, never shown and never written back.
+
+**After a mask.** `/rw-shroud rotate` drafts a keywarden rotation in chat for each masked key,
+named by its placeholder only; nothing changes until you say yes. With vigil installed, the
+glance strip shows a shield after a mask, and the shield turns red while a key keywarden marked
+for rotation is still listed in `rotate.txt`. The Privacy tile counts masks by kind and over the
+last two hours, and its Rotate it button runs the same draft. shroud writes only counts, kinds
+and times to `health/shroud.json`, never a value.
 
 ## Commands
 

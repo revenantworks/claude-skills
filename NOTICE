@@ -3,7 +3,10 @@ Copyright 2026 Revenantworks
 
 This product is licensed under the Apache License, Version 2.0 (see LICENSE).
 
-This product includes no third-party code or text. Third-party projects named in a
-skill's SOURCES.md were read as idea sources, or are driven as separate tools; none of
-their code or text is redistributed here. Their own licences (many of them MIT) are
-recorded in those SOURCES.md files, unchanged.
+This product includes one piece of third-party work: the gitleaks rule set
+(https://github.com/gitleaks/gitleaks, Copyright (c) 2019 Zachary Rice, MIT licence),
+ported as data into mods/shroud/hooks/gitleaks-rules.ts, which carries the licence in full.
+
+Beyond that, third-party projects named in a skill's SOURCES.md were read as idea sources,
+or are driven as separate tools; none of their code or text is redistributed here. Their own
+licences (many of them MIT) are recorded in those SOURCES.md files, unchanged.

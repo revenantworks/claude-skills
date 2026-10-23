@@ -34,6 +34,8 @@ export type Press =
   | { kind: 'auto'; mode: AutoMode; on: boolean }
   /** The tile builder: pick a source, or hand Claude the read-only scan of it. */
   | { kind: 'build'; op: 'pick' | 'scan'; source: BuildSource }
+  /** Rotate it on the Privacy tile: shroud drafts a keywarden rotation in chat. */
+  | { kind: 'rotate' }
 export type LineButton = { label: string; press: Press }
 
 export const VIEWS = ['board', 'detail', 'cards', 'settings', 'tiles', 'overview', 'skills', 'skills-all', 'dupes', 'meters', 'health', 'tasks', 'suggest', 'context', 'gpu', 'palette', 'godot', 'prs', 'theme'] as const
