@@ -3,6 +3,7 @@
 // Layout rules: one header per section in the theme's style, columns aligned, one separator
 // glyph, lines kept under about 72 characters. Colour is a tone the pane paints; text stays plain.
 import type { AutoMode, TileId } from './board-logic'
+import type { BuildSource } from './tiles-logic'
 import type { Feed, Health, SkillRow } from './collector-logic'
 import { statusText, type Live } from './meters-logic'
 import { ruleCheck, ruleSummary, type Rule } from './rules-logic'
@@ -31,15 +32,17 @@ export type Press =
   | { kind: 'switch'; command: string }
   /** A spend-mode toggle: may pacewright enter this mode by itself. */
   | { kind: 'auto'; mode: AutoMode; on: boolean }
+  /** The tile builder: pick a source, or hand Claude the read-only scan of it. */
+  | { kind: 'build'; op: 'pick' | 'scan'; source: BuildSource }
 export type LineButton = { label: string; press: Press }
 
-export const VIEWS = ['board', 'detail', 'cards', 'settings', 'overview', 'skills', 'skills-all', 'dupes', 'meters', 'health', 'tasks', 'suggest', 'context', 'gpu', 'palette', 'godot', 'prs', 'theme'] as const
+export const VIEWS = ['board', 'detail', 'cards', 'settings', 'tiles', 'overview', 'skills', 'skills-all', 'dupes', 'meters', 'health', 'tasks', 'suggest', 'context', 'gpu', 'palette', 'godot', 'prs', 'theme'] as const
 export type View = (typeof VIEWS)[number]
 
 /** The pane's view bar, two rows: every view a bare /rw-vigil <verb> opens. Palette takes a brand name, so it stays typed. */
 const NAV: readonly (readonly [View, string])[][] = [
   [['board', 'Board'], ['cards', 'Inbox'], ['skills', 'Skills'], ['meters', 'Meters'], ['health', 'Health'], ['tasks', 'Tasks']],
-  [['overview', 'Text'], ['suggest', 'Queue'], ['context', 'Context'], ['gpu', 'GPU'], ['godot', 'Godot'], ['prs', 'PRs'], ['theme', 'Theme'], ['settings', 'Settings']],
+  [['overview', 'Text'], ['suggest', 'Queue'], ['context', 'Context'], ['gpu', 'GPU'], ['godot', 'Godot'], ['prs', 'PRs'], ['theme', 'Theme'], ['tiles', 'Tiles'], ['settings', 'Settings']],
 ]
 /** The view a pane view belongs to on the bar: skills' all and dupes lists sit under Skills. */
 const navOf = (v: View): View => (v === 'skills-all' || v === 'dupes' ? 'skills' : v === 'detail' ? 'board' : v)
@@ -477,6 +480,7 @@ export const HELP: readonly string[] = columns([
   ['/rw-vigil', 'the board: usage, context, inbox, spend mode, skills, health'],
   ['/rw-vigil tile <name> open|up|down|pin|collapse', 'one tile; layout reset puts them back'],
   ['/rw-vigil inbox', 'suggestion cards: Do it or Not now'],
+  ['/rw-vigil tiles [build <source>]', 'your own tiles; Claude proposes some'],
   ['/rw-vigil spend auto <mode> on|off', 'may pacewright enter pace, overnight, reset-eve itself'],
   ['/rw-vigil settings', 'the three switches: meters, suggestions, records'],
   ['/rw-vigil overview', 'the old text view'],

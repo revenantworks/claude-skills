@@ -294,6 +294,26 @@ describe('drawing', () => {
     expect(t.text).not.toMatch(/pinned/)
     await ui.unmount()
   })
+  test('your own tiles: a spec in the tiles folder draws on the board; a bad one is refused with its reason; a scan is yours to start', async ($, on) => {
+    const TD = `${DIR}/tiles`
+    const files: Record<string, string> = {
+      [`${TD}/release.json`]: JSON.stringify({ schema: 1, id: 'release', title: 'Release', source: { kind: 'date', path: './ROADMAP.md' }, picture: 'countdown' }),
+      [`${TD}/keys.json`]: JSON.stringify({ schema: 1, id: 'keys', title: 'Keys', source: { kind: 'lines', path: '~/.ssh/known_hosts' }, picture: 'count' }),
+      '/r/ROADMAP.md': 'Ship on 2026-11-02.',
+    }
+    const entry = (name: string): FsEntry => ({ name, kind: 'file', size: 200, mtimeMs: NOW, isLink: false }) as FsEntry
+    const stat = (p: string): FsStat | undefined => (files[p] !== undefined ? ({ kind: 'file', size: files[p]!.length, mtimeMs: NOW, isLink: false, realPath: p } as FsStat) : p === HOME || p === '/r' ? ({ kind: 'dir', size: 0, mtimeMs: 0, isLink: false, realPath: p } as FsStat) : undefined)
+    world(on, files, ['terminal'], { list: p => (p === TD ? [entry('keys.json'), entry('release.json')] : []), stat })
+    const b = (await $.command.run(cmd({ command: 'rw-vigil', args: 'board', origin: { kind: 'composer' } }))).text
+    expect(b).toMatch(/Release: \d+d, to go/)
+    const t = (await $.command.run(cmd({ command: 'rw-vigil', args: 'tiles', origin: { kind: 'composer' } }))).text
+    expect(t).toMatch(/release: Release, a countdown from \.\/ROADMAP\.md/)
+    expect(t).toMatch(/keys\.json refused: source\.path reaches "\.ssh"/)
+    const denied = await $.command.run(cmd({ command: 'rw-vigil', args: 'tiles build repo', origin: { kind: 'task-notification' } }))
+    expect(denied.text).toMatch(/Only you/)
+    const r = await $.command.run(cmd({ command: 'rw-vigil', args: 'tiles build repo', origin: { kind: 'composer' } }))
+    expect(r.text).toMatch(/saves nothing until you say yes/)
+  })
   test('the suggestion pane: click a group to drill in, back to every group, dismiss a group', async ($, on) => {
     const s = (n: number) => sessionKey(`old-${n}`)
     const seeded: DashEvent[] = [

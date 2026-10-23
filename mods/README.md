@@ -196,7 +196,7 @@ Every feature has a readable name and an id. Both work: `/rw-vigil on collector`
 |---|---|---|---|---|---|
 | collector | D1 | feed | Counts-only event file and `feed.json` | opt-in (records) | `/rw-vigil records on`; counts, hashes and shapes, never text |
 | status-line | D2 | lens | Status-line meters: 5-hour, weekly, PACE, context, cache | on | The status line |
-| pane | D3 | lens | `/rw-vigil` pane: the board, its text views and the glance strip | on | `/rw-vigil` (the board), `/rw-vigil overview`, `/rw-vigil skills`, `/rw-vigil health`, `/rw-vigil tasks`, `/rw-vigil doctor` |
+| pane | D3 | lens | `/rw-vigil` pane: the board, your own tiles, its text views and the glance strip | on | `/rw-vigil` (the board), `/rw-vigil tiles`, `/rw-vigil overview`, `/rw-vigil skills`, `/rw-vigil health`, `/rw-vigil tasks`, `/rw-vigil doctor` |
 | read-tool | D4 | assist | `vigil_read`: Claude reads the feed on demand | on | Claude calls `vigil_read` when you ask; nothing is injected otherwise |
 | suggestions | D5 | assist | Suggestion queue (never builds anything) | on | `/rw-vigil suggest` (grouped, most asked first; `<n>` drills in); accept, dismiss or snooze a group or one shape; at most one note a session |
 | meter-writer | D6 | feed | Meter-file fallback writer for pacewright | opt-in (records) | `/rw-vigil on meter-writer` |
@@ -245,6 +245,32 @@ hides a card for 7 days, then 30. **Undo** puts the last card back as it was.
 until you switch one off. pacewright then starts that mode only on your word. Only your own press
 or `/rw-vigil spend auto <mode> on|off` typed by you changes a switch; Claude cannot.
 `/rw-vigil settings` lists the feature switches in one place.
+
+**Your own tiles.** vigil ships no project tiles. `/rw-vigil tiles` (or the Tiles button) opens
+Build a tile: pick a source (`repo`, `sessions`, `chats`, `archive`, `tasks` or `project`) and press
+Scan, or type `/rw-vigil tiles build <source>`. Claude reads that source, runs nothing that
+writes, and proposes up to four tiles in chat, each with its picture, what it reads and the JSON.
+It saves one only when you say yes, to `~/.claude/revenantworks/vigil/tiles/<id>.json`, never to
+the plugin. A tile is data, never code. It names one source, one picture and an optional rule:
+
+```json
+{"schema":1,"id":"release","title":"Release","source":{"kind":"date","path":"./ROADMAP.md"},"picture":"countdown"}
+```
+
+| Source | Reads | Pictures |
+|---|---|---|
+| `json` | one field of a JSON file (`"field":"runs.0.ok"`) | ring, count, spark, dots, countdown |
+| `lines` | non-empty lines, or lines holding `match` | ring, count |
+| `files` | files in a folder (`ext`, `olderThanDays`) | ring, count, spark of files by day |
+| `age` | days since a file changed | count, countdown |
+| `date` | the first date in a file, or a JSON `field` | countdown |
+
+`max` fills a ring; `warnAt` and `badAt` mark a value (`lowIsBad` flips them); `note` is the one
+line a click adds. A path starts with `~/` (home) or `./` (this repo). vigil refuses `..`, keys,
+tokens, secrets, `.env` files and `.git`, and checks a link again where it lands. A file over
+1 MB is not read. A tile shows numbers and dates only, so no text from the source reaches the
+board. Up to 12 tiles load; `/rw-vigil tiles` lists each file it refused and why. Delete a file to
+remove its tile.
 
 **Likely misroutes.** A different skill firing within 2 minutes of an automatic fire flags the
 first one. An edit that undoes an earlier edit, or a `git restore`, within 10 minutes of an

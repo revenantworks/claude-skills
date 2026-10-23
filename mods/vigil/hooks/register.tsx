@@ -44,9 +44,13 @@ import { RW_SKILLS } from './rw-skills'
 import {
   SWITCHES, arranged, boardText, cardsOf, crossed, dailyTokens, detailOf, doItOf, evidenceDots, glanceOf, glanceText, isAutoMode, isTile, moveTile,
   notNow, openCount, parseAutoModes, parseBudget, parseLayout, pictureAlt, pictureGlyph, pictureSvg, serializeAutoModes, tileOf, toggleCollapsed,
-  togglePinned, undoRow, AUTO_MODES, type AutoModes, type BoardData, type Budget, type Layout, type Picture, type TileId,
+  togglePinned, undoRow, AUTO_MODES, type AutoModes, type BoardData, type Budget, type Layout, type MineTile, type Picture, type TileId,
 } from './board-logic'
 import { ASCII_BLOCKS, BLOCKS, inkOf } from './draw-logic'
+import {
+  BUILD_SOURCES, READ_MAX_BYTES, TILES_MAX, buildPrompt, isBuildSource, parseSpec, realProblem, resolvePath, tileKey, userTileOf, valueOf,
+  type BuildSource, type Reading, type TileSpec,
+} from './tiles-logic'
 
 const PLUGIN = 'vigil'
 /** The command and records folder vigil was called before 2026-10-23. */
@@ -100,6 +104,11 @@ let dsDetail: TileId = 'usage'
 let dsUndo: Suggestion | null = null
 let dsAuto: AutoModes = parseAutoModes(null)
 let dsBudget: Budget | null = null
+// the tile builder (phase 5): the user's own tile specs, the files refused and why, the picked source
+let dsMine: TileSpec[] = []
+let dsMineErrors: Array<{ file: string; errors: string[] }> = []
+let dsMineDrawn: { at: number; map: Map<string, MineTile> } | null = null
+let dsBuildSrc: BuildSource = 'repo'
 /** The highest level (80, 90) each meter already toasted at; it clears when the meter drops under 80. */
 const dsAlerted: Record<'five' | 'week' | 'ctx', number> = { five: 0, week: 0, ctx: 0 }
 /** The suggestion group `/rw-vigil suggest <n>` drilled into; null shows every group. */
@@ -550,6 +559,22 @@ async function dsBoardTree($: EngineInterface, table: Table, onPress: OnPress): 
       </Box>
     )
   }
+  if (dsView === 'tiles') {
+    return (
+      <Box flexDirection="column" rowGap={1}>
+        <Text bold color={accent}>Build a tile</Text>
+        <Text wrap="wrap">Pick a source. Claude reads it, proposes tiles in chat, and saves one only when you say yes. A tile is data: it reads one file and shows numbers and dates, and no script runs.</Text>
+        <Box flexDirection="row" flexWrap="wrap" columnGap={1}>
+          {(Object.keys(BUILD_SOURCES) as BuildSource[]).map(src => (
+            <Button key={`pick:${src}`} label={src === dsBuildSrc ? `[${src}]` : src} plain dimColor onPress={onPress({ kind: 'build', op: 'pick', source: src })} />
+          ))}
+        </Box>
+        <Text dimColor wrap="wrap">{BUILD_SOURCES[dsBuildSrc]}</Text>
+        <Button key="scan" label={`Scan ${dsBuildSrc}`} variant="primary" onPress={onPress({ kind: 'build', op: 'scan', source: dsBuildSrc })} />
+        <Box flexDirection="column">{dsTilesText().map((l, i) => <Text key={`tl${i}`} wrap="wrap" dimColor={i > 0}>{l}</Text>)}</Box>
+      </Box>
+    )
+  }
   if (dsView === 'settings') {
     return (
       <Box flexDirection="column" rowGap={1}>
@@ -615,6 +640,89 @@ async function dsSetAuto($: EngineInterface, mode: (typeof AUTO_MODES)[number], 
   return on ? `${mode}: pacewright may enter it by itself again.` : `${mode}: pacewright enters it only when you say so.`
 }
 
+/** The user's own tiles folder: data only, on this machine, never in the plugin. */
+function dsTilesDir(): string {
+  return dsPath('vigil/tiles')
+}
+
+/** Re-reads every spec in the tiles folder. A refused file is listed with its reasons, never half-loaded. */
+async function dsLoadTiles($: EngineInterface): Promise<void> {
+  let entries: Awaited<ReturnType<typeof $.fs.list>> = []
+  try {
+    entries = await $.fs.list(dsTilesDir())
+  } catch {
+    entries = []
+  }
+  const files = entries.filter(e => e.kind === 'file' && e.name.endsWith('.json')).sort((a, b) => a.name.localeCompare(b.name))
+  const mine: TileSpec[] = []
+  const errors: Array<{ file: string; errors: string[] }> = []
+  for (const f of files) {
+    if (mine.length >= TILES_MAX) {
+      errors.push({ file: f.name, errors: [`over the ${TILES_MAX}-tile limit`] })
+      continue
+    }
+    if (f.size > 20_000) {
+      errors.push({ file: f.name, errors: ['larger than 20 KB'] })
+      continue
+    }
+    const r = parseSpec((await dsRead($, `${dsTilesDir()}/${f.name}`)) ?? '', f.name.slice(0, -5))
+    if ('spec' in r) mine.push(r.spec)
+    else errors.push({ file: f.name, errors: r.errors })
+  }
+  dsMine = mine
+  dsMineErrors = errors
+  dsMineDrawn = null
+  dsLayout = parseLayout(dsLayout, mine.map(t => tileKey(t.id)))
+}
+
+/** What one tile's source holds right now. Read only; a file over 1 MB is not read. */
+async function dsReadTile($: EngineInterface, spec: TileSpec): Promise<Reading> {
+  const path = resolvePath(spec.source.path, dsHome, dsRoot)
+  if (!path) return { kind: 'missing', why: 'no repo here for a ./ path' }
+  try {
+    const st = await $.fs.stat(path, { resolve: true })
+    const base = async (p: string) => (p ? (await $.fs.stat(p, { resolve: true }).catch(() => undefined))?.realPath ?? '' : '')
+    const why = realProblem(st.realPath, [await base(dsHome), await base(dsRoot)])
+    if (why) return { kind: 'missing', why }
+    if (spec.source.kind === 'files') {
+      if (st.kind !== 'dir') return { kind: 'missing', why: 'not a folder' }
+      return { kind: 'files', entries: (await $.fs.list(path)).slice(0, 2000).map(e => ({ name: e.name, kind: e.kind, mtimeMs: e.mtimeMs })) }
+    }
+    if (st.kind !== 'file') return { kind: 'missing', why: 'not a file' }
+    if (spec.source.kind === 'age') return { kind: 'text', text: '', mtimeMs: st.mtimeMs }
+    if (st.size > READ_MAX_BYTES) return { kind: 'missing', why: 'larger than 1 MB' }
+    return { kind: 'text', text: await $.fs.read(path), mtimeMs: st.mtimeMs }
+  } catch {
+    return { kind: 'missing', why: 'no such file' }
+  }
+}
+
+/** The user's tiles, read and drawn; kept 30 seconds so a redraw does not re-read every file. */
+async function dsMineTiles($: EngineInterface, now: number): Promise<Map<string, MineTile>> {
+  if (dsMineDrawn && now - dsMineDrawn.at < 30_000) return dsMineDrawn.map
+  const map = new Map<string, MineTile>()
+  for (const spec of dsMine) map.set(tileKey(spec.id), userTileOf(spec, valueOf(spec, await dsReadTile($, spec), now), now))
+  dsMineDrawn = { at: now, map }
+  return map
+}
+
+/** Your tiles as text: each loaded one, each refused file and why, and where they live. */
+function dsTilesText(): string[] {
+  const out = [dsMine.length ? `${dsMine.length} tile(s) on the board.` : 'No tiles of your own yet.']
+  for (const t of dsMine) out.push(`  ${t.id}: ${t.title}, a ${t.picture} from ${t.source.path}`)
+  for (const e of dsMineErrors) out.push(`  ${e.file} refused: ${e.errors.slice(0, 3).join('; ')}`)
+  out.push(`Folder: ${dsTilesDir()}. Delete a file to remove its tile.`)
+  return out
+}
+
+/** Build a tile: hands Claude the read-only scan brief. Claude proposes; nothing is saved until the user says yes. */
+async function dsBuild($: EngineInterface, src: BuildSource): Promise<string> {
+  dsBuildSrc = src
+  const text = buildPrompt(src, dsTilesDir())
+  $.clock.after(HANDOFF_MS, () => void $.prompt.submit({ text }).catch(() => undefined))
+  return `Asked Claude to scan ${BUILD_SOURCES[src]}. It proposes tiles in chat and saves nothing until you say yes.`
+}
+
 async function dsSaveLayout($: EngineInterface, l: Layout): Promise<void> {
   dsLayout = l
   await $.store.set('layout', l)
@@ -625,7 +733,7 @@ async function dsBoardData($: EngineInterface): Promise<BoardData> {
   const now = await $.clock.now()
   const feed = dsFeed ?? (await dsRoll($))
   const live = dsLive && now - dsLive.at <= STALE_MS ? dsLive : liveFromMeterFile(await dsRead($, ((await $.env.get('CLAUDE_USAGE_WINDOWS')) ?? `${dsHome}/.claude/usage-windows.json`).replace(/\\/g, '/'))) ?? dsLive
-  return { live, now, feed, daily: dailyTokens(dsMem, now), inbox: openCount(dsSuggest, now), budget: dsBudget, auto: dsAuto }
+  return { live, now, feed, daily: dailyTokens(dsMem, now), inbox: openCount(dsSuggest, now), budget: dsBudget, auto: dsAuto, mine: await dsMineTiles($, now) }
 }
 
 async function dsSaveSuggest($: EngineInterface): Promise<void> {
@@ -697,6 +805,11 @@ async function dsPress($: EngineInterface, p: Press): Promise<void> {
     $.ui.toast(await dsSetAuto($, p.mode, p.on))
     return
   }
+  if (p.kind === 'build') {
+    if (p.op === 'pick') dsBuildSrc = p.source
+    else $.ui.toast(await dsBuild($, p.source))
+    return
+  }
   if (p.kind === 'view') {
     // The same refresh the typed /rw-vigil <verb> does, so a press and a command show the same view.
     if (p.view === 'health') await dsRoll($, true)
@@ -704,6 +817,7 @@ async function dsPress($: EngineInterface, p: Press): Promise<void> {
     else if (p.view === 'prs') await dsRefreshPrs($)
     else if (p.view !== 'godot' && p.view !== 'theme' && p.view !== 'palette') await dsRoll($)
     if (p.view === 'board' || p.view === 'detail') await dsLoadSpend($)
+    if (p.view === 'board' || p.view === 'tiles') await dsLoadTiles($)
     if (p.view === 'suggest') dsSuggestDrill = null
     dsView = p.view
     return
@@ -737,6 +851,7 @@ async function dsLines($: EngineInterface, view: View): Promise<Line[]> {
       if (!cards.length) return text('Inbox', ['Nothing waits.'])
       return text('Inbox', [...cards.flatMap((c, i) => [`${i + 1}. ${c.title}`, `   ${c.evidence}`]), ...(waiting ? [`${waiting} more wait.`] : []), 'In the pane: Do it drafts the change in chat; Not now hides a card 7 days, then 30.'])
     }
+    case 'tiles': return text('Your tiles', dsTilesText())
     case 'settings': return text('Settings', [...SWITCHES.map(x => `${x.name}: ${dsOn(x.id) ? 'on' : 'off'}`), `Auto spend modes: ${AUTO_MODES.map(m => `${m} ${dsAuto[m] ? 'on' : 'off'}`).join(', ')}`, '/rw-vigil switches lists every feature id.'])
     case 'skills': return skillsLines(feed, th, { sources: dsSkillSources })
     case 'skills-all': return skillsLines(feed, th, { all: true, sources: dsSkillSources })
@@ -977,6 +1092,7 @@ async function dsSetup($: EngineInterface): Promise<void> {
   await dsMoveRecords($).catch(() => undefined)
   dsSuggest = parseSuggestions(await dsRead($, dsPath('vigil/suggestions.json')))
   dsLayout = parseLayout(await $.store.get('layout'))
+  await dsLoadTiles($)
   await dsLoadSpend($)
   // Hash keys only: text keys left by an older build are dropped on read and never written back.
   dsTaskHist = sanitizeTaskHistory(await $.store.get('taskHistory'))
@@ -1105,6 +1221,7 @@ async function dsCommand($: EngineInterface, e: CommandRunInput): Promise<Comman
     case 'board':
       await dsRoll($)
       await dsLoadSpend($)
+      await dsLoadTiles($)
       return show('board')
     case 'overview':
       await dsRoll($)
@@ -1117,9 +1234,18 @@ async function dsCommand($: EngineInterface, e: CommandRunInput): Promise<Comman
       await dsPress($, { kind: 'tile', op, id: name })
       return show(op === 'open' ? (name === 'inbox' ? 'cards' : 'detail') : 'board')
     }
+    case 'tiles': {
+      const [sub, src] = rest.toLowerCase().split(/\s+/)
+      await dsLoadTiles($)
+      if (!sub) return show('tiles')
+      if (sub !== 'build') return { text: 'Usage: /rw-vigil tiles [build <source>]' }
+      if (!isBuildSource(src)) return { text: `Usage: /rw-vigil tiles build ${Object.keys(BUILD_SOURCES).join('|')}` }
+      if (!isOwner) return { text: 'Only you can start a tile scan, by typing /rw-vigil tiles build yourself.' }
+      return { text: await dsBuild($, src) }
+    }
     case 'layout':
       if (rest.toLowerCase() !== 'reset') return { text: 'Usage: /rw-vigil layout reset' }
-      await dsSaveLayout($, parseLayout(null))
+      await dsSaveLayout($, parseLayout(null, dsMine.map(t => tileKey(t.id))))
       return show('board')
     case 'inbox':
     case 'cards':
@@ -1583,7 +1709,7 @@ export const register: Register = on => {
         // A pane press can change the band too: a dismiss or snooze of the noted suggestion.
         await dsBandBump($)
       }
-      if (dsView === 'board' || dsView === 'detail' || dsView === 'cards' || dsView === 'settings') {
+      if (dsView === 'board' || dsView === 'detail' || dsView === 'cards' || dsView === 'settings' || dsView === 'tiles') {
         const table = $.ui.resolve(e)
         const nav = navLines(dsView).map((l, i) => (
           <Box key={`nav${i}`} columnGap={1}>
