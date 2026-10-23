@@ -9,6 +9,7 @@ minutes comes from `plan-profiles.md`, never from this file.
 
 - The shared base
 - Precedence
+- Auto-mode switches
 - The spend target (any mode)
 - Pace
 - Turbo
@@ -69,6 +70,26 @@ above are the fix; a throttle alone does not remove them.
 Hard stops (95% weekly, the stop band, identity and green-gate rules) > overnight, work-day and
 owner-away conduct rules > reset-eve > pace > turbo > normal. A higher line always wins; a mode never lifts a
 hard stop, with the one exception named under reset-eve's final 3 hours.
+
+## Auto-mode switches
+
+Three modes can start by themselves: **pace** (by the gap), **overnight** (by the clock) and
+**reset-eve** (by the projected close). Each can be switched off (owner, 2026-10-23) in
+`~/.dispatch/spend-modes.json`:
+
+```json
+{"schema": 1, "written_at": "2026-10-23T05:00:00Z", "auto": {"pace": true, "overnight": false, "reset-eve": true}}
+```
+
+- **The user is the one writer**: by hand, or through vigil's spend-mode switch (`/rw-vigil spend
+  auto <mode> on|off`, or the button on its Spend mode tile). pacewright reads it at every check
+  and never writes it.
+- **A mode switched off is entered only on the user's word**, the way turbo is. The check that
+  would have entered it says so in one line ("overnight is switched off; staying in normal") and
+  runs the next mode down the precedence line.
+- **A missing file, an unreadable file or a mode the file leaves out means on**: the shipped
+  behaviour. The switch never lifts a hard stop or a conduct rule the user asked for by word.
+- A mode already running when it is switched off ends at the next check.
 
 ## The spend target (any mode)
 

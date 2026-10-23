@@ -1,4 +1,4 @@
-"""mods/vscode/install.py: the dash extension lands in one versioned folder per VS Code, the
+"""mods/vscode/install.py: the vigil extension lands in one versioned folder per VS Code, the
 mods status bar it replaced and older dash copies are removed, and --dry-run writes nothing."""
 import contextlib
 import importlib.util
@@ -35,14 +35,14 @@ class TestVscodeInstall(unittest.TestCase):
 
     def test_package_names_the_dash_extension_and_the_dash_plugin_version(self):
         pkg = json.loads((SRC.parent / "package.json").read_text(encoding="utf-8"))
-        plugin = json.loads((ROOT / "mods" / "dash" / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))
-        self.assertEqual(pkg["name"], "dash")
+        plugin = json.loads((ROOT / "mods" / "vigil" / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))
+        self.assertEqual(pkg["name"], "vigil")
         self.assertEqual(self.inst.PREFIX, f"{pkg['publisher']}.{pkg['name']}-")
         self.assertEqual(pkg["version"], plugin["version"])
 
     def test_installs_every_file_into_one_versioned_folder(self):
         written = self.run_install()
-        dest = self.home / ".vscode" / "extensions" / f"revenantworks.dash-{self.version}"
+        dest = self.home / ".vscode" / "extensions" / f"revenantworks.vigil-{self.version}"
         self.assertEqual(written, [dest])
         self.assertEqual(sorted(p.name for p in dest.iterdir()), sorted(self.inst.FILES))
         for name in self.inst.FILES:
@@ -51,7 +51,7 @@ class TestVscodeInstall(unittest.TestCase):
     def test_removes_the_old_status_bar_and_older_dash_copies(self):
         ext = self.home / ".vscode" / "extensions"
         legacy = ext / "revenantworks.mods-statusbar-1.0.0"
-        older = ext / "revenantworks.dash-0.9.0"
+        older = ext / "revenantworks.vigil-0.9.0"
         other = ext / "someone.else-1.0.0"
         for d in (legacy, older, other):
             d.mkdir(parents=True)
@@ -60,7 +60,7 @@ class TestVscodeInstall(unittest.TestCase):
         self.assertFalse(legacy.exists())
         self.assertFalse(older.exists())
         self.assertTrue(other.exists(), "another publisher's extension is never touched")
-        self.assertTrue((ext / f"revenantworks.dash-{self.version}" / "extension.js").is_file())
+        self.assertTrue((ext / f"revenantworks.vigil-{self.version}" / "extension.js").is_file())
 
     def test_insiders_only_when_present(self):
         self.assertEqual(len(self.run_install()), 1)
@@ -75,7 +75,7 @@ class TestVscodeInstall(unittest.TestCase):
         legacy.mkdir(parents=True)
         self.run_install(dry_run=True)
         self.assertTrue(legacy.exists())
-        self.assertFalse((self.home / ".vscode" / "extensions" / f"revenantworks.dash-{self.version}").exists())
+        self.assertFalse((self.home / ".vscode" / "extensions" / f"revenantworks.vigil-{self.version}").exists())
 
 
 if __name__ == "__main__":

@@ -111,4 +111,4 @@ units, dispatches them, and reconciles them against the repo, never against an a
 - Two optional forcing hooks are kept as repo infrastructure for a rig to install; nothing depends
   on them. The ledger guard reads the first table whose header names model, effort and surface,
   so header-block tables above the rows are allowed, and a refusal names the table it read.
-- Optional mods: `dash` (ledger cost sidecar, task pane) and `privacy`; they never block.
+- Optional mods: `vigil` (ledger cost sidecar, task pane) and `shroud`; they never block.

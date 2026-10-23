@@ -13,6 +13,13 @@ Claude Code plugin marketplace.
 - **Five packs.** foundation (9 members, standalone profile), scribe (4), warden (4), localops (7)
   and gamedev (4), each installed as one plugin. Every member follows the Agent Skills open standard
   and works alone on any surface that supports it.
+- **Brand on the install screens.** Every pack and featured plugin carries a `displayName`
+  ("Revenantworks Foundation", "Revenantworks Pacewright"); plugin ids and skill names stay as they
+  are, so no install breaks.
+- **vigil opens in neutral.** Its themes list in picker order (neutral, revenantworks, hc-light,
+  off). On a light console, `hc-light` is the default when you ask for more contrast
+  (`VIGIL_THEME_CONTRAST=more`, a high-contrast Claude Code theme, or a high-contrast light VS Code
+  theme); `off` turns colour off.
 - **Five featured plugins, one per pack.** pacewright, brandscribe, trustwarden, whisperrunner and
   pixelsmith also ship as one-skill plugins, generated from the pack source.
   Install a featured plugin or its pack, not both.
@@ -31,20 +38,30 @@ Claude Code plugin marketplace.
   only, as the Agent Skills spec requires; each member's volatile surfaces are listed in a
   `volatile.json` beside its SKILL.md. `tools/release.py` runs the release loop.
   `tools/name_leak.py` checks for listed names kept outside the repo.
+- **vigil opens on a board (2026-10-23).** Seven tiles you can collapse, pin and move, drawn as
+  pictures where the app draws them and as glyphs in the terminal; a glance strip above the
+  prompt; suggestion cards with Do it, Not now and Undo; switches for pacewright's auto spend
+  modes in `~/.dispatch/spend-modes.json`, which pacewright honours. The old first page is
+  `/rw-vigil overview`.
+- **Mods renamed (2026-10-23).** `dash` is `vigil` (`/rw-vigil`) and `privacy` is `shroud`
+  (`/rw-shroud`); the old commands answer, hidden, for one release, and vigil carries the old
+  records over.
 - **Mods (optional; on by default once installed).** `mods/` adds two Claude Code function-hook
-  plugins, separate from the packs and each with its own marketplace entry: `dash`, one dashboard
+  plugins, separate from the packs and each with its own marketplace entry: `vigil`, one dashboard
   (skill fires by slash or automatic, failures, likely misroutes, tokens and cost by skill; the
   5-hour, weekly, context and cache meters; health, including gatewarden's event counts;
-  background tasks; research, GPU-lease, Godot and PR panels; a `/dash publish` snapshot for a
-  private mobile page; and a suggestion queue that proposes, never builds), and `privacy` (secret
+  background tasks; research, GPU-lease, Godot and PR panels; a `/rw-vigil publish` snapshot for a
+  private mobile page; a suggestion queue that proposes, never builds; and `/rw-<skill>` short
+  commands for every skill, generated from the registry, with the long names hidden from the `/`
+  list), and `shroud` (secret
   and stream-key masking with restore, the rotate tripwire, untrusted-content and
   received-message markers), kept apart so safety never depends on the dashboard. A local VS Code
   extension (`mods/vscode`) keeps the dashboard in the status bar. Mods never block: blocking
   lives in hooks and permissions. Once a mod plugin is installed, its features are on by default.
-  Local records are opt-in and asked about once (`/dash records on|off`): no mod keeps a record
+  Local records are opt-in and asked about once (`/rw-vigil records on|off`): no mod keeps a record
   of your work on disk until you say yes, the dashboard's records hold counts, names, hashes and
   shapes and never prompt or command text, and records never leave the machine. PR state reads
-  GitHub only after `/dash network on`, and only when you act. `/dash off` stops every feature.
+  GitHub only after `/rw-vigil network on`, and only when you act. `/rw-vigil off` stops every feature.
   No skill needs a mod; each skill a mod feeds carries `references/mods.md`. Needs Claude Code
   2.1.287 or later. `build.py --check` keeps mod code out of every skill zip, and CI validates and
   tests every mod plugin. (The six per-pack mod plugins and the `all-mods` bundle drafted

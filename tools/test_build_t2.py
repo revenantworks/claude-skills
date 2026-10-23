@@ -503,9 +503,9 @@ def foot_root(test: unittest.TestCase, budget: int) -> Path:
     (member / "references" / "rules.md").write_bytes(("rule " * 400).encode())   # 2000 chars ≈ 500 tokens
     (member / "references" / "extra.md").write_bytes(("x " * 4000).encode())
     (root / "packs" / "tools" / ".claude-plugin").mkdir(parents=True)
-    (root / "packs" / "tools" / ".claude-plugin" / "plugin.json").write_bytes(b'{"name": "tools", "version": "1.0.0"}\n')
+    (root / "packs" / "tools" / ".claude-plugin" / "plugin.json").write_bytes(b'{"name": "tools", "displayName": "Revenantworks Tools", "version": "1.0.0"}\n')
     (root / ".claude-plugin" / "marketplace.json").write_bytes(json.dumps(
-        {"name": "acme", "plugins": [{"name": "tools", "source": "./packs/tools", "version": "1.0.0"}]}).encode())
+        {"name": "acme", "plugins": [{"name": "tools", "displayName": "Revenantworks Tools", "source": "./packs/tools", "version": "1.0.0"}]}).encode())
     return root
 
 

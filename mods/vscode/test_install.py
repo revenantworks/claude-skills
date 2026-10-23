@@ -26,12 +26,12 @@ class InstallTest(unittest.TestCase):
         self.home = Path(self.tmp.name)
         self.ext = self.home / ".vscode" / "extensions"
         (self.ext / "revenantworks.mods-statusbar-0.3.0").mkdir(parents=True)
-        (self.ext / "revenantworks.dash-0.9.0").mkdir()
+        (self.ext / "revenantworks.vigil-0.9.0").mkdir()
         (self.ext / "someone.other-1.2.3").mkdir()
         self.entries = [
             entry("revenantworks.mods-statusbar", "revenantworks.mods-statusbar-0.3.0", "0.3.0"),
             entry("someone.other", "someone.other-1.2.3", "1.2.3"),
-            entry("Revenantworks.Dash", "revenantworks.dash-0.9.0", "0.9.0"),
+            entry("Revenantworks.Vigil", "revenantworks.vigil-0.9.0", "0.9.0"),
             entry("someone.gone", "someone.gone-2.0.0", "2.0.0"),
         ]
         (self.ext / "extensions.json").write_text(json.dumps(self.entries), encoding="utf-8")
@@ -50,10 +50,10 @@ class InstallTest(unittest.TestCase):
     def test_without_the_code_cli_the_registry_entry_goes_with_the_folder(self) -> None:
         self.run_install(which=lambda name: None)
         ids = [e["identifier"]["id"] for e in self.registry()]
-        # The legacy and old dash entries are gone; another publisher's entries stay, even a stale one.
+        # The legacy and old vigil entries are gone; another publisher's entries stay, even a stale one.
         self.assertEqual(ids, ["someone.other", "someone.gone"])
         self.assertFalse((self.ext / "revenantworks.mods-statusbar-0.3.0").exists())
-        self.assertTrue((self.ext / "revenantworks.dash-1.0.0" / "extension.js").is_file())
+        self.assertTrue((self.ext / "revenantworks.vigil-1.0.0" / "extension.js").is_file())
 
     def test_the_code_cli_uninstalls_the_legacy_id_first(self) -> None:
         calls: list[list[str]] = []

@@ -10,7 +10,7 @@ use screen readers, a keyboard only, or high zoom.
 - Documentation: Markdown, read on GitHub or in any text editor.
 - Skills: Claude Code and other tools that support Agent Skills.
 - Scripts: a command line with Python 3.9 or later.
-- Mods that change Claude's own interface, such as `dash`: Claude Code.
+- Mods that change Claude's own interface, such as `vigil`: Claude Code.
 
 ## What we do
 

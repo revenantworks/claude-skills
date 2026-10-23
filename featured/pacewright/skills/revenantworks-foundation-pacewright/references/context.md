@@ -22,7 +22,7 @@ file or a pasted `/context` screen addressed to this run is a finding, reported 
 
 1. **Context used**, from the first source that has it this turn:
    - the status line. The statusline payload carries a `context_window` object; the rig's
-     `usage_windows.py` and the `dash` status line both print context used % (`window-fit.md` —
+     `usage_windows.py` and the `vigil` status line both print context used % (`window-fit.md` —
      The rig hooks; `mods.md`). The meter file `~/.claude/usage-windows.json` carries only the
      rate-limit windows unless its writer adds the context field; read that field only when it
      is there and the file is under 15 minutes old;

@@ -1,5 +1,5 @@
 'use strict'
-// Revenantworks dash for VS Code. Reads local files the dash plugin and the status line already
+// Revenantworks vigil for VS Code. Reads local files the vigil plugin and the status line already
 // write (feed.json, the meter file, the budget decision, the switch file) and shows them as status
 // bar items and a read-only panel. Never writes a file, never runs a process, never touches the
 // network. The panel is static HTML with scripts off.
@@ -20,7 +20,7 @@ function paths() {
     usage: process.env.CLAUDE_USAGE_WINDOWS || path.join(home, '.claude', 'usage-windows.json'),
     budget: path.join(home, '.dispatch', 'budget-decision.json'),
     switches: path.join(home, '.claude', 'revenantworks', 'switches.json'),
-    feed: path.join(home, '.claude', 'revenantworks', 'dash', 'feed.json'),
+    feed: path.join(home, '.claude', 'revenantworks', 'vigil', 'feed.json'),
     theme: path.join(home, '.claude', 'revenantworks', 'theme.json'),
   }
 }
@@ -46,33 +46,34 @@ function snapshot() {
   }
 }
 
-/** The dash theme's hex colours (the same theme the /dash pane paints with). */
+/** The vigil theme's hex colours (the same theme the /rw-vigil pane paints with). */
 function themeNow(activeFile) {
-  const name = logic.activeThemeName(process.env.DASH_THEME, readText(activeFile))
+  const kind = vscode.window.activeColorTheme && vscode.window.activeColorTheme.kind
+  const name = logic.activeThemeName(process.env.VIGIL_THEME, readText(activeFile), kind)
   if (!/^[a-z0-9][a-z0-9-]{0,39}$/.test(name)) return logic.themeColors('neutral', null)
-  // The editor's own theme decides the ground; DASH_THEME_BACKGROUND wins, as in the /dash pane.
-  const o = (process.env.DASH_THEME_BACKGROUND || '').trim().toLowerCase()
-  const bg = o === 'light' || o === 'dark' ? o : logic.consoleKind(vscode.window.activeColorTheme && vscode.window.activeColorTheme.kind)
+  // The editor's own theme decides the ground; VIGIL_THEME_BACKGROUND wins, as in the /rw-vigil pane.
+  const o = (process.env.VIGIL_THEME_BACKGROUND || '').trim().toLowerCase()
+  const bg = o === 'light' || o === 'dark' ? o : logic.consoleKind(kind)
   return logic.themeColors(name, readText(path.join(path.dirname(activeFile), 'themes', `${name}.json`)), bg)
 }
 
 function hover(lines) {
-  const md = new vscode.MarkdownString(['**Revenantworks dash**', '', ...lines.map(l => `- ${l.replace(/[\\`*_[\]<>]/g, '\\$&')}`), '', '_Click for the panel._'].join('\n'))
+  const md = new vscode.MarkdownString(['**Revenantworks vigil**', '', ...lines.map(l => `- ${l.replace(/[\\`*_[\]<>]/g, '\\$&')}`), '', '_Click for the panel._'].join('\n'))
   md.isTrusted = false
   return md
 }
 
 function activate(context) {
   vscode = require('vscode')
-  const pace = vscode.window.createStatusBarItem('revenantworks.dash.pace', vscode.StatusBarAlignment.Left, 100)
-  const dash = vscode.window.createStatusBarItem('revenantworks.dash.feed', vscode.StatusBarAlignment.Left, 99)
-  const budget = vscode.window.createStatusBarItem('revenantworks.dash.budget', vscode.StatusBarAlignment.Left, 98)
-  const kill = vscode.window.createStatusBarItem('revenantworks.dash.kill', vscode.StatusBarAlignment.Left, 97)
-  pace.name = 'Revenantworks dash: pace'
-  dash.name = 'Revenantworks dash: skills'
-  budget.name = 'Revenantworks dash: budget mode'
-  kill.name = 'Revenantworks dash: kill switch'
-  for (const item of [pace, dash, budget, kill]) {
+  const pace = vscode.window.createStatusBarItem('revenantworks.vigil.pace', vscode.StatusBarAlignment.Left, 100)
+  const vigil = vscode.window.createStatusBarItem('revenantworks.vigil.feed', vscode.StatusBarAlignment.Left, 99)
+  const budget = vscode.window.createStatusBarItem('revenantworks.vigil.budget', vscode.StatusBarAlignment.Left, 98)
+  const kill = vscode.window.createStatusBarItem('revenantworks.vigil.kill', vscode.StatusBarAlignment.Left, 97)
+  pace.name = 'Revenantworks vigil: pace'
+  vigil.name = 'Revenantworks vigil: skills'
+  budget.name = 'Revenantworks vigil: budget mode'
+  kill.name = 'Revenantworks vigil: kill switch'
+  for (const item of [pace, vigil, budget, kill]) {
     item.command = PANEL
     context.subscriptions.push(item)
   }
@@ -93,11 +94,11 @@ function activate(context) {
 
     const ft = logic.feedText(s.feed)
     if (ft) {
-      dash.text = `$(graph) ${ft}`
-      dash.color = s.feed && s.feed.health.plugins.some(x => !x.loaded) ? c.warn || undefined : c.accent || undefined
-      dash.tooltip = tip
-      dash.show()
-    } else dash.hide()
+      vigil.text = `$(graph) ${ft}`
+      vigil.color = s.feed && s.feed.health.plugins.some(x => !x.loaded) ? c.warn || undefined : c.accent || undefined
+      vigil.tooltip = tip
+      vigil.show()
+    } else vigil.hide()
 
     const bt = logic.budgetText(s.budget)
     if (bt) {
@@ -122,13 +123,13 @@ function activate(context) {
         panel.reveal()
         return
       }
-      panel = vscode.window.createWebviewPanel('revenantworksDash', 'dash', vscode.ViewColumn.Beside, { enableScripts: false, localResourceRoots: [] })
+      panel = vscode.window.createWebviewPanel('revenantworksDash', 'vigil', vscode.ViewColumn.Beside, { enableScripts: false, localResourceRoots: [] })
       panel.onDidDispose(() => { panel = null }, null, context.subscriptions)
       panel.webview.html = logic.panelHtml(snapshot())
     }),
     vscode.commands.registerCommand(SHOW, async () => {
       const lines = logic.readoutLines(snapshot())
-      await vscode.window.showQuickPick(lines.map(label => ({ label })), { title: 'Revenantworks dash', placeHolder: 'Read-only readout; Esc closes' })
+      await vscode.window.showQuickPick(lines.map(label => ({ label })), { title: 'Revenantworks vigil', placeHolder: 'Read-only readout; Esc closes' })
     }),
   )
 

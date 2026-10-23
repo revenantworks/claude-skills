@@ -83,5 +83,5 @@ never runs the work: it says what may launch now.
   other. skillwright or promptwright `slim` sizes one artifact's cost; rigwright places the statusline that writes the
   meter file; agentwright wraps a scheduled pace check.
 - Also ships as a featured one-skill plugin; install the pack or the featured plugin, not both.
-- Optional mods: `dash` (status-line meters, the meter-file fallback writer) and `privacy`; they
+- Optional mods: `vigil` (status-line meters, the meter-file fallback writer) and `shroud`; they
   never block.

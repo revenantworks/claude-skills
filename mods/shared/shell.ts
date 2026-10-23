@@ -1,6 +1,6 @@
 // One shell reader. It turns a command line into the simple commands that would really run,
 // after unwrapping the shapes that hide a command from a plain reading. Heredoc bodies, comments
-// and quoted text stay data; anything it cannot read for sure sets `indeterminate`. dash uses it
+// and quoted text stay data; anything it cannot read for sure sets `indeterminate`. vigil uses it
 // for command shapes (never the text), the switch-file check and the Godot panel.
 
 export type Redirect = { op: string; target: string }
@@ -309,7 +309,7 @@ const LAUNCHERS = new Set(['sudo', 'doas', 'env', 'nohup', 'time', 'command', 'b
 /** Words the shell reads before a command: `if rm …`, `do rm …`, `{ rm …; }`, `! rm …`. */
 // The closers (`done`, `fi`, `esac`) end a block and run nothing: `done > out` leaves its redirect.
 const RESERVED = new Set(['!', '{', '}', 'then', 'do', 'else', 'elif', 'if', 'while', 'until', 'coproc', 'done', 'fi', 'esac'])
-const SHELLS = new Set(['sh', 'bash', 'zsh', 'dash', 'ksh', 'fish', 'busybox'])
+const SHELLS = new Set(['sh', 'bash', 'zsh', 'vigil', 'ksh', 'fish', 'busybox'])
 const PWSH = new Set(['pwsh', 'powershell', 'powershell_ise'])
 
 /** Drop launchers and their own flags; return the remaining argv and how it was reached. */

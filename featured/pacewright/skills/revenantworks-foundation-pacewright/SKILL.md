@@ -127,12 +127,11 @@ with a portfolio share uses share × 95 × the fraction elapsed.
 | +3 < gap ≤ +10 | 1 |
 | gap > +10 | 0 |
 
-The bands are contiguous, each with one inclusive edge (observation 0236): a reading four points
-behind PACE runs 2, never falls between rows.
+The bands are contiguous, one inclusive edge each (observation 0236).
 
 Weekly 80–94%: one unit. Weekly 95%: stop.
 
-**The other modes** — full rules in `references/modes.md`:
+**The other modes** — full rules in `references/modes.md`; one switched off in `spend-modes.json` waits for the user:
 
 - **Pace** (above PACE + 3): a burn budget, %/h = 0.565 − gap ÷ hours to the weekly reset; one
   builder plus an optional small read-only unit; a running budget; a log line per check.
@@ -155,8 +154,8 @@ Weekly 80–94%: one unit. Weekly 95%: stop.
 **Every mode shares one base:** one tier table (the fan-out's, not this skill's), no rework, a
 small controller, a design lead cap, small briefs, and one scoreboard (`references/accounting.md`).
 
-**Per-meter weekly budgets.** Every meter a week's work spends gets a weekly budget here, not
-only the Claude windows: the top-model allowance, CI minutes per repo, the GitHub API limit, any
+**Per-meter weekly budgets.** Every meter a week spends gets a weekly budget, not only the
+Claude windows: the top-model allowance, CI minutes per repo, the GitHub API limit, any
 paid API (a local tool is free and says so). Each is the meter's pool × the fraction of its
 period elapsed, less the user's floor, in `meter_budgets` (§5) for a fan-out to read as data.
 Reads: `references/accounting.md`.

@@ -120,7 +120,7 @@ plain reading (the native permission matcher already sees through most of them):
 
 A shell or interpreter name counts as a program only where a program runs (observation 0377). In
 `grep -n dash x.json` or `echo node`, the command word is a plain reader or printer (`PLAIN_PROGS`:
-`grep`, `rg`, `echo`, `ls`, `cat`, `head` and kin), so `dash` is a search word and `x.json` is not
+`grep`, `rg`, `echo`, `ls`, `cat`, `head` and kin), so `vigil` is a search word and `x.json` is not
 read as a dash script. The command word is found past `NAME=value` assignments and launchers
 (`sudo`, `env`, `nohup`, `timeout 5`, `xargs`, `then`, `do`, `!` and the rest of `LAUNCHERS`). A
 flag that hands on a program (`find -exec`, `-execdir`, `-ok`, `rg --pre`, any `--…command`,
@@ -628,7 +628,7 @@ choice made for F7):** a Python started with no script, `-c` or `-m` (bare `pyth
 unless a pipe, a `<` file or a `<<<` here-string feeds it; a `<<` heredoc does not count, as for
 `python -`. `--version`, `-h`, `py --list` and `which python` pass. Since V-K8w2 (B10) the same
 choice covers `ipython`, `python -m code` (also `asyncio`, `IPython`) and `winpty python`, and other
-programs that sit on stdin: bare `node`, `node -`, `node -i`, a bare `sh`, `bash`, `zsh` or `dash`,
+programs that sit on stdin: bare `node`, `node -`, `node -i`, a bare `sh`, `bash`, `zsh` or `vigil`,
 `bash -s`, `bash -i`, and `pwsh -Command -` (or `-File -`, or a bare `pwsh`). For these a pipe, a `<`
 file, a `<<<` here-string or a `<<` heredoc counts as feeding them (`bash <<'EOF'` passes; the
 heredoc exception is theirs only, Python keeps the stricter reading above). `node x.js`, `node -e`,
@@ -673,7 +673,7 @@ time inside a script file the hook never saw is outside its reach; obsrunner's a
 
 ## Mods that stand in for these hooks
 
-None, since 2026-10-08. The two mods (`dash` and `privacy`) never block, so no mod stands in for a
+None, since 2026-10-08. The two mods (`vigil` and `shroud`) never block, so no mod stands in for a
 hook here and no shipped mod sets `RW_MOD_<ID>=1`; the stand-down check in `hooklib.py` stays inert.
 If `RW_MOD_W1`, `RW_MOD_W2` or `RW_MOD_L2` is ever set to `1` in Claude Code's own environment, that
 hook stands down entirely, hard rules included; a command's own prefix (`RW_MOD_W2=1 git push`) cannot

@@ -1,9 +1,9 @@
-# Test cases — 21 assertion cases
+# Test cases — 22 assertion cases
 
 > Provenance: authored at member version v1.0.0, 2026-09-28, when pacewright was split out of
 > dispatchwright 1.3.2. Cases 5 and 6 are dispatchwright's former Cases 17 and 18, moved with
 > `references/window-fit.md`; their arithmetic is unchanged, and Case 6's rule label was replaced
-> by the rule itself. The other ten are new. None has been run (evals/RESULTS.md). **Re-anchored to v1.0.0, 2026-10-01:** compact on purpose at a quiet point; auto-compact is the backstop (owner 2026-10-01). **Unreleased change, 2026-10-04 (version unchanged until release):** Cases 17–19 added (observations 0181, 0238, 0253, 0257, 0279, 0281); Cases 1–16 unchanged. **Unreleased change, 2026-10-13:** the `context` entry; Case 21 added, Case 1 names `context`. **Unreleased change, 2026-10-20 (owner ruling "adopt the rig gate"; review RV-SKILLS-WF F14):** Case 10 re-anchored to the rig-aware turbo (the entry question, the writer's refusals, writers 6 and all units 12, the rig gate, a stall or `TIMEOUT` that does not escalate); the 2026-10-16 no-cap assertions are gone; Cases 1–9 and 11–21 unchanged.
+> by the rule itself. The other ten are new. None has been run (evals/RESULTS.md). **Re-anchored to v1.0.0, 2026-10-01:** compact on purpose at a quiet point; auto-compact is the backstop (owner 2026-10-01). **Unreleased change, 2026-10-04 (version unchanged until release):** Cases 17–19 added (observations 0181, 0238, 0253, 0257, 0279, 0281); Cases 1–16 unchanged. **Unreleased change, 2026-10-13:** the `context` entry; Case 21 added, Case 1 names `context`. **Unreleased change, 2026-10-20 (owner ruling "adopt the rig gate"; review RV-SKILLS-WF F14):** Case 10 re-anchored to the rig-aware turbo (the entry question, the writer's refusals, writers 6 and all units 12, the rig gate, a stall or `TIMEOUT` that does not escalate); the 2026-10-16 no-cap assertions are gone; Cases 1–9 and 11–21 unchanged. **Unreleased change, 2026-10-23 (owner: auto spend modes can be switched off):** Case 22 added.
 
 ## Contents
 
@@ -256,3 +256,12 @@ quiet case with nothing landed gives neither until the next landing; no figure d
 Assert (negative):
 no figure is invented for the window; no settings file, overlay key or ledger row is written; the
 context figure is not estimated from the turn count.
+
+**Case 22 — An auto mode switched off (added 2026-10-23)**
+Input: `pacewright check` at 23:10 user time, a normal week (gap −2), and
+`~/.dispatch/spend-modes.json` holds `{"schema": 1, "auto": {"overnight": false}}`. T2: the same
+file is missing. T3: the user says "go overnight" with the switch still off.
+Assert T1: the check stays in normal and says in one line that overnight is switched off; pace and
+reset-eve still count as on (the file leaves them out). Assert T2: overnight starts by the clock.
+Assert T3: overnight starts, on the user's word. Assert (negative): pacewright never writes
+`spend-modes.json`; the switch never lifts the 95% stop.

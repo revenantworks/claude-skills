@@ -1,5 +1,5 @@
 // The one switch file both Revenantworks mods read: ~/.claude/revenantworks/switches.json.
-// Owner 2026-10-08: two plugins (dash, privacy) and one on/off file. Pure logic only.
+// Owner 2026-10-08: two plugins (vigil, shroud) and one on/off file. Pure logic only.
 
 /** Owner 2026-10-06: mods show (lens), note (assist), mask (privacy) or write a file (feed); none blocks. */
 export const MOD_TYPES = ['privacy', 'lens', 'assist', 'feed'] as const

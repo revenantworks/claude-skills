@@ -61,7 +61,7 @@ Any request to design, lay out or review the design of a screen: "design the pau
 
 ## Entry — Audit
 
-`uismith audit`, an existing page, artifact, pane or game screen: "audit the dash pane", "why does this page scroll sideways on my phone".
+`uismith audit`, an existing page, artifact, pane or game screen: "audit the vigil pane", "why does this page scroll sideways on my phone".
 
 1. **Generated page first** (law 4), only when a generator builds the page: rebuild and probe that build. When the copy is older than its generator, the reply opens with the stale line, both commits named (the user's word counts when git cannot confirm), plans a rebuild from the generator into a scratch folder, and probes that build, never the copy. Fixes target the generator (`probe.md` section 1). A hand-written page, or a copy no older than its generator, gets no stale line.
 2. **Probe** it (web surfaces), or take the user's screenshots per resolution (game UI, `surfaces.md`).

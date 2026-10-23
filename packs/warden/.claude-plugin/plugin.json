@@ -1,5 +1,6 @@
 {
   "name": "warden",
+  "displayName": "Revenantworks Warden",
   "version": "1.0.0",
   "description": "revenantworks-warden — skills that guard what Claude writes or manages, on the -warden motif. Four members: shieldwarden, trustwarden, keywarden and gatewarden. Hooks ship as files the user installs; no member installs anything itself.",
   "author": {
