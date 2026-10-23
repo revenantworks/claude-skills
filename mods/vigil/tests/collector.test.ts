@@ -16,6 +16,9 @@ describe('/rw-vigil purge', () => {
     expect(purgeArgv(true, `${D}/h`)).toBe(null)
     expect(purgeArgv(false, '/.claude/revenantworks/vigil/..')).toBe(null)
     expect(purgeArgv(false, '')).toBe(null)
+    // The pre-rename folder is purged too, or the next start copies its records back; nothing else is.
+    expect(purgeArgv(false, '/srv/h/.claude/revenantworks/dash')).toEqual(['rm', '-rf', '/srv/h/.claude/revenantworks/dash'])
+    expect(purgeArgv(false, '/srv/h/.claude/revenantworks/shroud')).toBe(null)
   })
 })
 

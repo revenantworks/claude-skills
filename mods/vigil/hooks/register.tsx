@@ -921,19 +921,28 @@ async function dsDoctor($: EngineInterface): Promise<string> {
 
 async function dsPurge($: EngineInterface): Promise<string> {
   for (const key of await $.store.keys()) await $.store.delete(key)
-  const dir = dsPath('vigil')
-  const argv = purgeArgv(dsIsWin, dir)
-  if (!argv) return `Refused to run a remove command on ${dir}: the path is not the vigil folder or holds a shell character. Delete it by hand.`
-  try {
-    const r = await $.process.run(argv, { timeoutMs: 10000 })
-    dsMem = []
-    dsBuffer = []
-    dsSuggest = []
-    dsFeed = null
-    return r.exitCode === 0 ? `Removed ${dir}. The switch file stays; /rw-vigil records off stops new counts.` : `Could not remove ${dir} (exit ${r.exitCode}). Delete it by hand.`
-  } catch {
-    return `Could not run the remove command. Delete ${dir} by hand.`
+  // The pre-rename dash/ folder goes too: left behind, the next start would copy its records back.
+  const out: string[] = []
+  for (const name of ['vigil', 'dash'] as const) {
+    const dir = dsPath(name)
+    if (name === 'dash' && !(await $.fs.exists(dir).catch(() => false))) continue
+    const argv = purgeArgv(dsIsWin, dir)
+    if (!argv) {
+      out.push(`Refused to run a remove command on ${dir}: the path is not a vigil folder or holds a shell character. Delete it by hand.`)
+      continue
+    }
+    try {
+      const r = await $.process.run(argv, { timeoutMs: 10000 })
+      out.push(r.exitCode === 0 ? `Removed ${dir}.` : `Could not remove ${dir} (exit ${r.exitCode}). Delete it by hand.`)
+    } catch {
+      out.push(`Could not run the remove command. Delete ${dir} by hand.`)
+    }
   }
+  dsMem = []
+  dsBuffer = []
+  dsSuggest = []
+  dsFeed = null
+  return [...out, 'The switch file stays; /rw-vigil records off stops new counts.'].join('\n')
 }
 
 /** Bundled themes, then the person's theme files; the active one from VIGIL_THEME or theme.json. */

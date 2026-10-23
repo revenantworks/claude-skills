@@ -406,7 +406,7 @@ end of the turn.
 ## Data the mods write
 
 Everything lives under `~/.claude/revenantworks/` unless the table says so. `/rw-vigil purge` deletes
-that folder. Event rows are pruned after 30 days. Rows marked "record" exist only after a yes.
+its `vigil/` folder and the old `dash/` one. Event rows are pruned after 30 days. Rows marked "record" exist only after a yes.
 
 | Path | Written by | Read by | Kind |
 |---|---|---|---|
