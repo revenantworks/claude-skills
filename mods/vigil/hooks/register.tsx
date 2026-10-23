@@ -41,6 +41,12 @@ import {
   type Line, type Press, type View,
 } from './view-logic'
 import { RW_SKILLS } from './rw-skills'
+import {
+  SWITCHES, arranged, boardText, cardsOf, crossed, dailyTokens, detailOf, doItOf, evidenceDots, glanceOf, glanceText, isAutoMode, isTile, moveTile,
+  notNow, openCount, parseAutoModes, parseBudget, parseLayout, pictureAlt, pictureGlyph, pictureSvg, serializeAutoModes, tileOf, toggleCollapsed,
+  togglePinned, undoRow, AUTO_MODES, type AutoModes, type BoardData, type Budget, type Layout, type Picture, type TileId,
+} from './board-logic'
+import { ASCII_BLOCKS, BLOCKS, inkOf } from './draw-logic'
 
 const PLUGIN = 'vigil'
 /** The command and records folder vigil was called before 2026-10-23. */
@@ -87,7 +93,15 @@ let dsNote: Suggestion | null = null
 let dsNotes: string[] = []
 let dsAskRecords = false
 let dsAskedAsText = false
-let dsView: View = 'overview'
+let dsView: View = 'board'
+// the board (phase 4): its layout (saved per machine in $.store), the open detail, the last Not now
+let dsLayout: Layout = parseLayout(null)
+let dsDetail: TileId = 'usage'
+let dsUndo: Suggestion | null = null
+let dsAuto: AutoModes = parseAutoModes(null)
+let dsBudget: Budget | null = null
+/** The highest level (80, 90) each meter already toasted at; it clears when the meter drops under 80. */
+const dsAlerted: Record<'five' | 'week' | 'ctx', number> = { five: 0, week: 0, ctx: 0 }
 /** The suggestion group `/rw-vigil suggest <n>` drilled into; null shows every group. */
 let dsSuggestDrill: string | null = null
 let dsMeterWrittenAt: number | null = null
@@ -131,6 +145,11 @@ let dsSkillSources: Record<string, string> = {}
 
 function dsOn(id: string): boolean {
   return isFeatureOn(dsSw, id)
+}
+
+/** The meter cells the theme's glyph set allows: blocks, or plain ASCII. */
+function dsGlyphs() {
+  return dsTheme.glyphs.full === '#' ? ASCII_BLOCKS : BLOCKS
 }
 
 /** Redraws the band: every change to what it shows (dsAskRecords, dsNote, a switch) calls this,
@@ -469,13 +488,222 @@ async function dsPanelLines($: EngineInterface): Promise<string[]> {
  * rows a button was drawn for. A press is the person's own click, like a /rw-vigil they type; accepting
  * stays a typed command, since its reply is the NEXT.md line to copy.
  */
+type Table = ReturnType<EngineInterface['ui']['resolve']>
+type OnPress = (p: Press) => () => Promise<void>
+
+/** A picture on this surface: the SVG where the surface draws one, else its glyph line. */
+function dsPicture(table: Table, p: Picture, size = 56): JSX.Element {
+  const t = table as Record<string, unknown>
+  const { Text } = table
+  const Svg = t.Svg as ((props: { source: string; alt: string; height?: number }) => JSX.Element) | undefined
+  if (Svg) return <Svg source={pictureSvg(p, inkOf(dsTheme, dsConsole.bg), size)} alt={pictureAlt(p)} />
+  return <Text color={dsTheme.colors.accent}>{pictureGlyph(p, dsGlyphs(), dsTheme.glyphs.on, dsTheme.glyphs.off, dsTheme.glyphs.bad)}</Text>
+}
+
+/** The board, one tile's detail, the inbox cards or the three switches, as the pane draws them. */
+async function dsBoardTree($: EngineInterface, table: Table, onPress: OnPress): Promise<JSX.Element> {
+  const { Box, Button, Text } = table
+  const accent = dsTheme.colors.accent
+  const now = await $.clock.now()
+  if (dsView === 'detail') {
+    const d = detailOf(dsDetail, await dsBoardData($))
+    return (
+      <Box flexDirection="column" rowGap={1}>
+        <Box columnGap={1}>
+          <Button key="back" label="< Board" plain dimColor onPress={onPress({ kind: 'view', view: 'board' })} />
+          <Text bold color={accent}>{d.title}</Text>
+        </Box>
+        {dsPicture(table, d.picture, 96)}
+        <Box flexDirection="column">{d.lines.map((l, i) => <Text key={`dl${i}`} wrap="wrap">{l}</Text>)}</Box>
+        {dsDetail === 'mode' ? (
+          <Box flexDirection="column">
+            {AUTO_MODES.map(m => (
+              <Box key={`auto-${m}`} columnGap={1}>
+                <Text>{`${m}: ${dsAuto[m] ? 'pacewright may enter it by itself' : 'only on your word'}`}</Text>
+                <Button key={`auto:${m}`} label={dsAuto[m] ? 'Switch off' : 'Switch on'} plain dimColor onPress={onPress({ kind: 'auto', mode: m, on: !dsAuto[m] })} />
+              </Box>
+            ))}
+          </Box>
+        ) : null}
+      </Box>
+    )
+  }
+  if (dsView === 'cards') {
+    const { cards, waiting } = cardsOf(dsSuggest, now)
+    return (
+      <Box flexDirection="column" rowGap={1}>
+        <Text bold color={accent}>Inbox</Text>
+        {cards.length === 0 ? <Text dimColor>Nothing waits.</Text> : null}
+        {cards.map(c => (
+          <Box key={`card-${c.id}`} flexDirection="column" borderStyle="round" borderDimColor paddingX={1}>
+            <Text wrap="wrap">{c.title}</Text>
+            {dsPicture(table, { kind: 'dots', dots: evidenceDots(c) }, 10)}
+            <Text dimColor wrap="truncate-end">{c.evidence}</Text>
+            <Box columnGap={1}>
+              <Button key={`do:${c.id}`} label="Do it" variant="primary" onPress={onPress({ kind: 'card', op: 'do', id: c.id })} />
+              <Button key={`notnow:${c.id}`} label="Not now" variant="secondary" onPress={onPress({ kind: 'card', op: 'notnow', id: c.id })} />
+            </Box>
+          </Box>
+        ))}
+        {waiting ? <Text dimColor>{`${waiting} more wait. They show as these clear.`}</Text> : null}
+        {dsUndo ? <Box columnGap={1}><Text dimColor wrap="truncate-end">{`Hidden: ${dsUndo.title}`}</Text><Button key="undo" label="Undo" plain dimColor onPress={onPress({ kind: 'card', op: 'undo', id: dsUndo.id })} /></Box> : null}
+      </Box>
+    )
+  }
+  if (dsView === 'settings') {
+    return (
+      <Box flexDirection="column" rowGap={1}>
+        <Text bold color={accent}>Settings</Text>
+        {SWITCHES.map(x => (
+          <Box key={`sw-${x.name}`} columnGap={1}>
+            <Text>{`${x.name}: ${dsOn(x.id) ? 'on' : 'off'}`}</Text>
+            <Button key={`switch:${x.name}`} label={dsOn(x.id) ? 'Turn off' : 'Turn on'} plain dimColor onPress={onPress({ kind: 'switch', command: dsOn(x.id) ? x.off : x.on })} />
+          </Box>
+        ))}
+        <Text dimColor>Panels for GPU, Godot and PRs stay on /rw-vigil switches for now.</Text>
+      </Box>
+    )
+  }
+  const d = await dsBoardData($)
+  const order = arranged(dsLayout)
+  return (
+    <Box flexDirection="row" flexWrap="wrap" gap={1}>
+      {order.map((id, i) => {
+        const t = tileOf(id, d)
+        const folded = dsLayout.collapsed.includes(id)
+        const pinned = dsLayout.pinned.includes(id)
+        return (
+          <Box key={`tile-${id}`} flexDirection="column" borderStyle="round" borderDimColor paddingX={1} minWidth={24}>
+            <Box columnGap={1}>
+              <Text bold color={accent}>{t.title}</Text>
+              <Button key={`collapse:${id}`} label={folded ? '+' : '-'} plain dimColor onPress={onPress({ kind: 'tile', op: 'collapse', id })} />
+              <Button key={`pin:${id}`} label={pinned ? 'Unpin' : 'Pin'} plain dimColor onPress={onPress({ kind: 'tile', op: 'pin', id })} />
+              {i > 0 ? <Button key={`up:${id}`} label="^" plain dimColor onPress={onPress({ kind: 'tile', op: 'up', id })} /> : null}
+              {i < order.length - 1 ? <Button key={`down:${id}`} label="v" plain dimColor onPress={onPress({ kind: 'tile', op: 'down', id })} /> : null}
+            </Box>
+            {folded ? <Text>{t.big}</Text> : (
+              <Box flexDirection="column">
+                {dsPicture(table, t.picture)}
+                <Text bold>{t.big}</Text>
+                <Text dimColor wrap="truncate-end">{t.sub}</Text>
+                <Button key={`open:${id}`} label="Open" plain dimColor onPress={onPress({ kind: 'tile', op: 'open', id })} />
+              </Box>
+            )}
+          </Box>
+        )
+      })}
+    </Box>
+  )
+}
+
+/** pacewright's live decision and the auto-mode switches it reads, both under ~/.dispatch/. */
+function dsDispatch(name: string): string {
+  return `${dsHome}/.dispatch/${name}`
+}
+
+async function dsLoadSpend($: EngineInterface): Promise<void> {
+  const now = await $.clock.now()
+  dsBudget = parseBudget(await dsRead($, dsDispatch('budget-decision.json')), now)
+  dsAuto = parseAutoModes(await dsRead($, dsDispatch('spend-modes.json')))
+}
+
+/** The one writer of spend-modes.json is the person: a press or a typed command, never a hook by itself. */
+async function dsSetAuto($: EngineInterface, mode: (typeof AUTO_MODES)[number], on: boolean): Promise<string> {
+  await dsLoadSpend($)
+  dsAuto = { ...dsAuto, [mode]: on }
+  await $.fs.write(dsDispatch('spend-modes.json'), serializeAutoModes(dsAuto, await $.clock.now()))
+  return on ? `${mode}: pacewright may enter it by itself again.` : `${mode}: pacewright enters it only when you say so.`
+}
+
+async function dsSaveLayout($: EngineInterface, l: Layout): Promise<void> {
+  dsLayout = l
+  await $.store.set('layout', l)
+}
+
+/** Everything the board reads, in one place, so the pane and a typed /rw-vigil board agree. */
+async function dsBoardData($: EngineInterface): Promise<BoardData> {
+  const now = await $.clock.now()
+  const feed = dsFeed ?? (await dsRoll($))
+  const live = dsLive && now - dsLive.at <= STALE_MS ? dsLive : liveFromMeterFile(await dsRead($, ((await $.env.get('CLAUDE_USAGE_WINDOWS')) ?? `${dsHome}/.claude/usage-windows.json`).replace(/\\/g, '/'))) ?? dsLive
+  return { live, now, feed, daily: dailyTokens(dsMem, now), inbox: openCount(dsSuggest, now), budget: dsBudget, auto: dsAuto }
+}
+
+async function dsSaveSuggest($: EngineInterface): Promise<void> {
+  if (dsRecording()) await dsWrite($, dsPath('vigil/suggestions.json'), serializeSuggestions(dsSuggest, await $.clock.now()))
+}
+
+/** Do it: hands Claude a drafted change in chat, or the built-in that already does the job. Writes nothing. */
+async function dsDoIt($: EngineInterface, id: string): Promise<void> {
+  const row = dsSuggest.find(r => r.id === id)
+  if (!row) return
+  const now = await $.clock.now()
+  dsSuggest = dsSuggest.map(r => (r.id === id ? { ...r, state: 'accepted' as const, stateAt: now } : r))
+  await dsSaveSuggest($)
+  const d = doItOf(row)
+  // A run started inside the press's own hook is refused, so it goes out on the clock (the launcher's hand-off).
+  if (d.kind === 'command') $.clock.after(HANDOFF_MS, () => void $.command.run({ command: d.command, args: '' }).catch(() => undefined))
+  else $.clock.after(HANDOFF_MS, () => void $.prompt.submit({ text: d.text }).catch(() => undefined))
+  $.ui.toast(d.kind === 'command' ? `Opening /${d.command}; it asks before it writes.` : 'Drafted in chat. Nothing is written until you say yes there.')
+}
+
 async function dsPress($: EngineInterface, p: Press): Promise<void> {
+  if (p.kind === 'tile') {
+    if (p.op === 'open') {
+      if (p.id === 'inbox') dsView = 'cards'
+      else {
+        dsDetail = p.id
+        dsView = 'detail'
+      }
+      return
+    }
+    const l = p.op === 'collapse' ? toggleCollapsed(dsLayout, p.id) : p.op === 'pin' ? togglePinned(dsLayout, p.id) : moveTile(dsLayout, p.id, p.op === 'up' ? -1 : 1)
+    await dsSaveLayout($, l)
+    return
+  }
+  if (p.kind === 'card') {
+    const now = await $.clock.now()
+    if (p.op === 'do') await dsDoIt($, p.id)
+    else if (p.op === 'notnow') {
+      const r = notNow(dsSuggest, p.id, now)
+      dsSuggest = r.rows
+      dsUndo = r.before
+      await dsSaveSuggest($)
+      if (r.before) $.ui.toast(`Hidden for ${r.days} days: ${r.before.title}. Undo is on the board.`)
+    } else if (p.op === 'undo' && dsUndo && dsUndo.id === p.id) {
+      dsSuggest = undoRow(dsSuggest, dsUndo)
+      dsUndo = null
+      await dsSaveSuggest($)
+    }
+    if (dsNote && !dsSuggest.some(x => x.id === dsNote?.id && x.state === 'shown')) dsNote = null
+    return
+  }
+  if (p.kind === 'switch') {
+    await dsLoadSwitches($)
+    // A press in the pane is the person's own: the same as typing the command.
+    const r = applySwitchCommand(dsSw, p.command, true, new Date(await $.clock.now()).toISOString())
+    if (r.changed) {
+      await dsSaveSwitches($, r.sw)
+      if (p.command.startsWith('records')) {
+        await $.store.set('recordsAnswered', true)
+        dsAskRecords = false
+        if (dsRecording()) dsBuffer = [...dsMem]
+      }
+      await dsHeartbeat($)
+    }
+    $.ui.toast(r.text.split('\n')[0]!)
+    return
+  }
+  if (p.kind === 'auto') {
+    $.ui.toast(await dsSetAuto($, p.mode, p.on))
+    return
+  }
   if (p.kind === 'view') {
     // The same refresh the typed /rw-vigil <verb> does, so a press and a command show the same view.
     if (p.view === 'health') await dsRoll($, true)
     else if (p.view === 'gpu') { if (dsOn('D10')) await dsPollGpu($) }
     else if (p.view === 'prs') await dsRefreshPrs($)
     else if (p.view !== 'godot' && p.view !== 'theme' && p.view !== 'palette') await dsRoll($)
+    if (p.view === 'board' || p.view === 'detail') await dsLoadSpend($)
     if (p.view === 'suggest') dsSuggestDrill = null
     dsView = p.view
     return
@@ -499,6 +727,17 @@ async function dsLines($: EngineInterface, view: View): Promise<Line[]> {
   const th = dsTheme
   const text = (title: string, xs: string[]): Line[] => panelLines(th, title, xs)
   switch (view) {
+    case 'board': return text('vigil', [glanceText(glanceOf(await dsBoardData($)), dsGlyphs()), '', ...boardText(dsLayout, await dsBoardData($), dsGlyphs()).map(l => l.slice(2))])
+    case 'detail': {
+      const d = detailOf(dsDetail, await dsBoardData($))
+      return text(d.title, [pictureGlyph(d.picture, dsGlyphs()), ...d.lines])
+    }
+    case 'cards': {
+      const { cards, waiting } = cardsOf(dsSuggest, now)
+      if (!cards.length) return text('Inbox', ['Nothing waits.'])
+      return text('Inbox', [...cards.flatMap((c, i) => [`${i + 1}. ${c.title}`, `   ${c.evidence}`]), ...(waiting ? [`${waiting} more wait.`] : []), 'In the pane: Do it drafts the change in chat; Not now hides a card 7 days, then 30.'])
+    }
+    case 'settings': return text('Settings', [...SWITCHES.map(x => `${x.name}: ${dsOn(x.id) ? 'on' : 'off'}`), `Auto spend modes: ${AUTO_MODES.map(m => `${m} ${dsAuto[m] ? 'on' : 'off'}`).join(', ')}`, '/rw-vigil switches lists every feature id.'])
     case 'skills': return skillsLines(feed, th, { sources: dsSkillSources })
     case 'skills-all': return skillsLines(feed, th, { all: true, sources: dsSkillSources })
     case 'dupes': return dupesLines(feed, th, dsSkillSources)
@@ -736,6 +975,8 @@ async function dsSetup($: EngineInterface): Promise<void> {
   await dsLoadTheme($)
   await dsMoveRecords($).catch(() => undefined)
   dsSuggest = parseSuggestions(await dsRead($, dsPath('vigil/suggestions.json')))
+  dsLayout = parseLayout(await $.store.get('layout'))
+  await dsLoadSpend($)
   // Hash keys only: text keys left by an older build are dropped on read and never written back.
   dsTaskHist = sanitizeTaskHistory(await $.store.get('taskHistory'))
   try {
@@ -860,9 +1101,38 @@ async function dsCommand($: EngineInterface, e: CommandRunInput): Promise<Comman
   }
   switch (verb) {
     case '':
+    case 'board':
+      await dsRoll($)
+      await dsLoadSpend($)
+      return show('board')
     case 'overview':
       await dsRoll($)
       return show('overview')
+    case 'tile': {
+      const [name, op = 'open'] = rest.toLowerCase().split(/\s+/)
+      if (!isTile(name)) return { text: `No tile "${(name ?? '').slice(0, 20)}". Tiles: ${arranged(dsLayout).join(', ')}.` }
+      if (op !== 'open' && op !== 'up' && op !== 'down' && op !== 'pin' && op !== 'collapse') return { text: 'Usage: /rw-vigil tile <name> open|up|down|pin|collapse' }
+      await dsRoll($)
+      await dsPress($, { kind: 'tile', op, id: name })
+      return show(op === 'open' ? (name === 'inbox' ? 'cards' : 'detail') : 'board')
+    }
+    case 'layout':
+      if (rest.toLowerCase() !== 'reset') return { text: 'Usage: /rw-vigil layout reset' }
+      await dsSaveLayout($, parseLayout(null))
+      return show('board')
+    case 'inbox':
+    case 'cards':
+      await dsRoll($)
+      return show('cards')
+    case 'settings':
+      await dsLoadSpend($)
+      return show('settings')
+    case 'spend': {
+      const [word, mode, want] = rest.toLowerCase().split(/\s+/)
+      if (word !== 'auto' || !isAutoMode(mode) || (want !== 'on' && want !== 'off')) return { text: `Usage: /rw-vigil spend auto ${AUTO_MODES.join('|')} on|off` }
+      if (!isOwner) return { text: 'Only you can change a spend mode, by typing /rw-vigil spend yourself.' }
+      return { text: await dsSetAuto($, mode, want === 'on') }
+    }
     case 'skills': {
       await dsRoll($)
       const sub = rest.toLowerCase()
@@ -957,7 +1227,18 @@ export const register: Register = on => {
   on('session.measure', async ($, e, next) => {
     await dsEnsure($)
     const now = await $.clock.now()
+    const prev = dsLive
     dsLive = liveFromMeasure(e.rateLimits, e.context.percent, e.cost?.usd ?? null, dsLastHit, now)
+    // One toast when a meter crosses 80% or 90%, never a repeat until it drops back under 80.
+    for (const [key, label] of [['five', '5-hour'], ['week', 'Weekly'], ['ctx', 'Context']] as const) {
+      const cur = dsLive[key]
+      if (cur !== null && cur < 80) dsAlerted[key] = 0
+      const hit = crossed(prev?.[key] ?? null, cur).filter(l => l > dsAlerted[key]).pop()
+      if (hit !== undefined && dsOn('D2') && (await dsCanDraw($))) {
+        dsAlerted[key] = hit
+        $.ui.toast(`${label} meter passed ${hit}%.`)
+      }
+    }
     if (dsOn('D2') && (await dsCanDraw($))) $.ui.status(statusText(dsLive, now))
     const ctx = e.context.percent ?? null
     if (ctx !== null) {
@@ -1295,13 +1576,23 @@ export const register: Register = on => {
       // Reading the revision subscribes this pane; a press bumps it, which redraws it at once. An
       // invalidate alone could be folded away, so a press only showed on the next click (2026-10-13).
       await read($, dsPaneRev)
-      const lines = [...navLines(dsView), ...(await dsLines($, dsView))]
       const onPress = (p: Press) => async () => {
         await dsPress($, p)
         await update($, dsPaneRev, n => (n ?? 0) + 1)
         // A pane press can change the band too: a dismiss or snooze of the noted suggestion.
         await dsBandBump($)
       }
+      if (dsView === 'board' || dsView === 'detail' || dsView === 'cards' || dsView === 'settings') {
+        const table = $.ui.resolve(e)
+        const nav = navLines(dsView).map((l, i) => (
+          <Box key={`nav${i}`} columnGap={1}>
+            <Text dimColor>{l.text}</Text>
+            {(l.buttons ?? []).map(b => <Button key={b.press.kind === 'view' ? `view:${b.press.view}` : b.label} label={b.label} plain dimColor onPress={onPress(b.press)} />)}
+          </Box>
+        ))
+        return <Box flexDirection="column" rowGap={1}><Box flexDirection="column">{nav}</Box>{await dsBoardTree($, table, onPress)}</Box>
+      }
+      const lines = [...navLines(dsView), ...(await dsLines($, dsView))]
       // The theme paints each tone; a colour is a theme key or a hex the person chose.
       return (
         <Box flexDirection="column">
@@ -1341,6 +1632,33 @@ export const register: Register = on => {
     const bump = () => dsBandBump($)
     const now = await $.clock.now()
     const rows: JSX.Element[] = []
+    // The glance strip: three rings (5-hour, week, context), a mark only when something needs you.
+    if (dsOn('D2')) {
+      const d = await dsBoardData($)
+      const gl = glanceOf(d)
+      if (gl.rings.some(r => r.pct !== null) || gl.needsYou) {
+        const table = $.ui.resolve(e) as Record<string, unknown>
+        const Svg = table.Svg as ((p: { source: string; alt: string; height?: number }) => JSX.Element) | undefined
+        const open = async () => { dsView = 'board'; await update($, dsPaneRev, n => (n ?? 0) + 1); await $.ui.open({ id: 'vigil', title: 'vigil' }) }
+        const pic: Picture = { kind: 'rings', rings: gl.rings }
+        rows.push(
+          <Box key="glance" columnGap={1} alignItems="center">
+            {Svg ? <Svg source={pictureSvg(pic, inkOf(dsTheme, dsConsole.bg), 22)} alt={pictureAlt(pic)} height={22} /> : <Text wrap="truncate-end">{glanceText({ rings: gl.rings, needsYou: null }, dsGlyphs())}</Text>}
+            {gl.needsYou ? <Text color={dsTheme.colors.accent}>{`${dsTheme.glyphs.on} ${gl.needsYou}`}</Text> : null}
+            <Button key="glance-open" label="Board" plain dimColor onPress={open} />
+          </Box>,
+        )
+      }
+    }
+    if (dsUndo) {
+      const u = dsUndo
+      rows.push(
+        <Box key="undo" columnGap={1}>
+          <Text dimColor wrap="truncate-end">{`Hidden: ${u.title}`}</Text>
+          <Button key="undo-btn" label="Undo" onPress={async () => { await dsPress($, { kind: 'card', op: 'undo', id: u.id }); await bump(); await update($, dsPaneRev, n => (n ?? 0) + 1) }} />
+        </Box>,
+      )
+    }
     if (dsAskRecords) {
       rows.push(
         <Box key="ask" columnGap={1}>

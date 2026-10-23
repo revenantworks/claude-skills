@@ -13,6 +13,7 @@ no mod blocks a launch: the live gate's hard stops live in hooks and permissions
 | meter-writer (D6) | writes the meter file only when no other writer kept it fresh | `~/.claude/usage-windows.json` (or `CLAUDE_USAGE_WINDOWS`), opt-in record | `written_at`, `five_hour`, `seven_day` with `used_percentage` |
 | collector (D1) | tokens and cost by skill, for the UBA's known-usage side | `vigil/feed.json`, opt-in record | counts and hashes, never text |
 | read-tool (D4) | Claude reads the feed when asked | `vigil_read` | the feed's counts |
+| spend-mode switch | the user's own on/off for each auto mode, written only on their press or typed command | `~/.dispatch/spend-modes.json` | `auto.pace`, `auto.overnight`, `auto.reset-eve` (absent = on) |
 
 The VS Code extension (`mods/vscode`) shows the same pace line and the budget mode in the VS Code
 status bar; it reads files only.
