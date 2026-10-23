@@ -2,7 +2,7 @@ import { describe, expect, test } from 'claude-code/testing'
 
 import { newestLedger } from '../hooks/tasks-logic'
 import {
-  BUNDLED, GLYPHS, NEUTRAL, REVENANTWORKS, columns, contrast, contrastWarnings, discoverThemes, extractTokens, headerText, parseTheme,
+  BUNDLED, GLYPHS, HC_DARK, NEUTRAL, OFF, REVENANTWORKS, orderThemes, wantsContrast, columns, contrast, contrastWarnings, discoverThemes, extractTokens, headerText, parseTheme,
   pickTheme, serializeTheme, themeFromAnswers, themeFromTokens,
   consoleBackground, grade, resolveVariant, roleChecks, themeVerdict,
 } from '../hooks/theme-logic'
@@ -12,8 +12,24 @@ describe('theme files', () => {
   test('neutral is the default and uses only the person\'s theme keys; revenantworks is opt-in', () => {
     expect(pickTheme(discoverThemes([]).themes, null, null).theme).toBe(NEUTRAL)
     expect(Object.values(NEUTRAL.colors).every(c => !c.startsWith('#'))).toBe(true)
-    expect(Object.keys(BUNDLED).sort()).toEqual(['neutral', 'revenantworks'])
+    expect(Object.keys(BUNDLED).sort()).toEqual(['hc-dark', 'neutral', 'off', 'revenantworks'])
     expect(pickTheme(discoverThemes([]).themes, null, 'revenantworks').theme).toBe(REVENANTWORKS)
+  })
+  test('more contrast picks hc-dark only when nothing else was chosen', () => {
+    const { themes } = discoverThemes([])
+    expect(pickTheme(themes, null, null, true).theme).toBe(HC_DARK)
+    expect(pickTheme(themes, null, 'revenantworks', true).theme).toBe(REVENANTWORKS)
+    expect(pickTheme(themes, 'neutral', null, true).theme).toBe(NEUTRAL)
+    expect(wantsContrast('more', null)).toBe(true)
+    expect(wantsContrast('normal', 'dark-high-contrast')).toBe(false)
+    expect(wantsContrast(null, 'dark-high-contrast')).toBe(true)
+    expect(wantsContrast(null, 'dark-daltonized')).toBe(false)
+    expect(wantsContrast(null, null)).toBe(false)
+  })
+  test('the picker order is neutral, the brand, high contrast, off, then the person\'s own', () => {
+    expect(orderThemes(['mine', 'off', 'hc-dark', 'abc', 'revenantworks', 'neutral'])).toEqual(['neutral', 'revenantworks', 'hc-dark', 'off', 'abc', 'mine'])
+    expect(Object.values(OFF.colors).every(c => c === 'text')).toBe(true)
+    expect(OFF.header).toBe('plain')
   })
   test('VIGIL_THEME wins over the saved choice; an unknown name falls back with a notice', () => {
     const { themes } = discoverThemes([])
@@ -127,6 +143,10 @@ describe('light and dark variants', () => {
       const checks = roleChecks(resolveVariant(REVENANTWORKS, bg).theme.colors, bg)
       expect(checks.filter(c => c.grade === 'fail' || c.grade === 'borderline')).toEqual([])
     }
+  })
+  test('hc-dark clears every floor on its black ground', () => {
+    const checks = roleChecks(HC_DARK.colors, 'dark')
+    expect(checks.filter(c => c.grade === 'fail' || c.grade === 'borderline')).toEqual([])
   })
   test('the console background: override, then the Claude Code theme, then COLORFGBG, else assumed dark', () => {
     expect(consoleBackground('dark', 'light', null)).toMatchObject({ bg: 'light', sure: true })

@@ -244,6 +244,9 @@ test('theme: VIGIL_THEME wins, then theme.json, then neutral', () => {
   assert.equal(L.activeThemeName('RevenantWorks', '{"active":"mine"}'), 'revenantworks')
   assert.equal(L.activeThemeName(undefined, '{"active":"mine"}'), 'mine')
   assert.equal(L.activeThemeName(undefined, null), 'neutral')
+  assert.equal(L.activeThemeName(undefined, null, 3), 'hc-dark')
+  assert.equal(L.activeThemeName(undefined, null, 4), 'hc-dark')
+  assert.equal(L.activeThemeName(undefined, '{"active":"mine"}', 3), 'mine')
 })
 
 test('theme: hex colours only; a person\'s file wins over the bundled theme', () => {
@@ -261,6 +264,9 @@ test('theme: the bundled revenantworks colours match the vigil plugin\'s theme-l
   const light = /export const REVENANTWORKS: Theme = \{[\s\S]*?light: \{[^{]*colors: \{([^}]*)\}/.exec(src)
   assert.ok(light, 'REVENANTWORKS light variant found')
   for (const [role, hex] of Object.entries(L.BUNDLED_HEX_LIGHT.revenantworks)) assert.match(light[1], new RegExp(`${role}: '${hex}'`))
+  const hc = /export const HC_DARK: Theme = \{[\s\S]*?colors: \{([^}]*)\}/.exec(src)
+  assert.ok(hc, 'HC_DARK block found')
+  for (const [role, hex] of Object.entries(L.BUNDLED_HEX['hc-dark'])) assert.match(hc[1], new RegExp(`${role}: '${hex}'`))
 })
 
 test('theme: a light VS Code theme takes the light variant; a one-palette file keeps its colours', () => {

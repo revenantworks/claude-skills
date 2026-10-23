@@ -33,7 +33,7 @@ import {
   type LedgerRow, type PrRow, type TaskHistory, type TaskRecord,
 } from './tasks-logic'
 import {
-  NEUTRAL, consoleBackground, discoverThemes, headerText, parseActive, pickTheme, resolveVariant, serializeTheme, themeFromAnswers, themeFromTokens,
+  NEUTRAL, consoleBackground, discoverThemes, headerText, parseActive, pickTheme, resolveVariant, serializeTheme, themeFromAnswers, themeFromTokens, wantsContrast,
   contrastWarnings, toneStyle, NAME as THEME_NAME, type ConsoleInfo, type Theme, type ThemeEntry,
 } from './theme-logic'
 import {
@@ -144,8 +144,9 @@ function dsRecording(): boolean {
 }
 
 /** VIGIL_THEME and VIGIL_THEME_BACKGROUND, else the DASH_ names they replaced (renamed 2026-10-23; the old names work for one release). */
-async function dsEnv($: EngineInterface, name: 'THEME' | 'THEME_BACKGROUND'): Promise<string | undefined> {
+async function dsEnv($: EngineInterface, name: 'THEME' | 'THEME_BACKGROUND' | 'THEME_CONTRAST'): Promise<string | undefined> {
   if (name === 'THEME') return (await $.env.get('VIGIL_THEME')) ?? (await $.env.get('DASH_THEME'))
+  if (name === 'THEME_CONTRAST') return $.env.get('VIGIL_THEME_CONTRAST')
   return (await $.env.get('VIGIL_THEME_BACKGROUND')) ?? (await $.env.get('DASH_THEME_BACKGROUND'))
 }
 
@@ -586,7 +587,6 @@ async function dsLoadTheme($: EngineInterface): Promise<void> {
   const d = discoverThemes(files)
   dsThemes = d.themes
   dsThemeErrors = d.errors
-  const p = pickTheme(d.themes, (await dsEnv($, 'THEME')) ?? null, parseActive(await dsRead($, dsPath('theme.json'))))
   let ccTheme: string | null = null
   try {
     // The Claude Code theme is the /config row keyed "theme" (dark, light, dark-daltonized, light-ansi, auto...).
@@ -595,6 +595,8 @@ async function dsLoadTheme($: EngineInterface): Promise<void> {
   } catch {
     // No settings rows on this host: the override and COLORFGBG still decide.
   }
+  const contrast = wantsContrast((await dsEnv($, 'THEME_CONTRAST')) ?? null, ccTheme)
+  const p = pickTheme(d.themes, (await dsEnv($, 'THEME')) ?? null, parseActive(await dsRead($, dsPath('theme.json'))), contrast)
   dsConsole = consoleBackground(ccTheme, (await dsEnv($, 'THEME_BACKGROUND')) ?? null, (await $.env.get('COLORFGBG')) ?? null)
   dsThemeBase = p.theme
   dsTheme = resolveVariant(p.theme, dsConsole.bg).theme

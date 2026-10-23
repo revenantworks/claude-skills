@@ -1,6 +1,8 @@
 // vigil themes: pure logic (no $). A theme names a colour for each role the views use, a glyph set
-// and a header style. Two themes ship in the mod: `neutral` (the default; every colour is a key of
-// the person's own Claude Code theme) and `revenantworks` (opt-in). The person's own themes live as
+// and a header style. Four themes ship in the mod, in picker order: `neutral` (the default; every
+// colour is a key of the person's own Claude Code theme, so it follows the app's light or dark),
+// `revenantworks` (opt-in, a dark and a light variant), `hc-dark` (the default when the person asks
+// for more contrast) and `off` (no colour). The person's own themes live as
 // JSON files in ~/.claude/revenantworks/themes/ and win over a bundled theme of the same name.
 // Colour shows only where a surface paints (the /rw-vigil pane); text surfaces get the glyphs and
 // headers, never escape codes.
@@ -55,7 +57,49 @@ export const REVENANTWORKS: Theme = {
   },
 }
 
-export const BUNDLED: Record<string, Theme> = { neutral: NEUTRAL, revenantworks: REVENANTWORKS }
+// The brand's high-contrast dark tokens (owner decision 2026-10-23): pure black ground, the accents
+// lifted to clear 7:1 on it, the muted text and border from the brand's hc-dark set. Picked by
+// itself only when the person asks for more contrast (pickTheme); otherwise opt-in like revenantworks.
+export const HC_DARK: Theme = {
+  name: 'hc-dark',
+  description: 'High contrast on a black ground',
+  background: '#000000',
+  colors: { accent: '#00E5FF', ok: 'success', warn: '#FF8F1F', bad: '#FF84B8', dim: '#9DAFB2', rule: '#6C7678' },
+  glyphs: GLYPHS.unicode,
+  header: 'block',
+}
+
+// Theming switched off: every role is the person's own text colour and headers are plain.
+export const OFF: Theme = {
+  name: 'off',
+  description: 'No colour, plain headers',
+  background: 'dark',
+  colors: { accent: 'text', ok: 'text', warn: 'text', bad: 'text', dim: 'text', rule: 'text' },
+  glyphs: GLYPHS.unicode,
+  header: 'plain',
+}
+
+export const BUNDLED: Record<string, Theme> = { neutral: NEUTRAL, revenantworks: REVENANTWORKS, 'hc-dark': HC_DARK, off: OFF }
+
+/** The picker order (owner, 2026-10-23): neutral, the brand, high contrast, off; the person's own after. */
+export const THEME_ORDER: readonly string[] = ['neutral', 'revenantworks', 'hc-dark', 'off']
+
+/** Names sorted for the picker: the bundled order first, then the person's themes A to Z. */
+export const orderThemes = (names: readonly string[]): string[] => {
+  const rank = (n: string) => (THEME_ORDER.includes(n) ? THEME_ORDER.indexOf(n) : THEME_ORDER.length)
+  return [...names].sort((a, b) => rank(a) - rank(b) || a.localeCompare(b))
+}
+
+/**
+ * Whether the person asked for more contrast: VIGIL_THEME_CONTRAST=more (the terminal has no
+ * prefers-contrast query to read), or a Claude Code or editor theme whose name says high contrast.
+ */
+export const wantsContrast = (override: string | null, ccTheme: string | null): boolean => {
+  const o = (override ?? '').trim().toLowerCase()
+  if (o === 'more' || o === 'high') return true
+  if (o === 'normal' || o === 'no-preference') return false
+  return /contrast|(^|-)hc(-|$)/.test((ccTheme ?? '').trim().toLowerCase())
+}
 
 const HEX = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/
 export const isColor = (v: unknown): v is string => typeof v === 'string' && (HEX.test(v) || (THEME_KEYS as readonly string[]).includes(v))
@@ -176,9 +220,12 @@ export const discoverThemes = (userFiles: ReadonlyArray<{ file: string; text: st
   return { themes, errors }
 }
 
-/** The active theme: the env name, else the saved choice, else neutral; a name not found falls back with a notice. */
-export const pickTheme = (themes: Record<string, ThemeEntry>, envName: string | null, saved: string | null): { theme: Theme; notice: string | null } => {
-  const want = (envName || saved || 'neutral').trim().toLowerCase()
+/**
+ * The active theme: the env name, else the saved choice, else hc-dark when the person asked for more
+ * contrast, else neutral; a name not found falls back with a notice.
+ */
+export const pickTheme = (themes: Record<string, ThemeEntry>, envName: string | null, saved: string | null, contrast = false): { theme: Theme; notice: string | null } => {
+  const want = (envName || saved || (contrast ? 'hc-dark' : 'neutral')).trim().toLowerCase()
   const hit = themes[want]
   if (hit) return { theme: hit.theme, notice: null }
   return { theme: themes.neutral?.theme ?? NEUTRAL, notice: `vigil: theme "${want.slice(0, 40)}" not found or invalid; using neutral. /rw-vigil theme lists the themes.` }

@@ -48,11 +48,12 @@ function snapshot() {
 
 /** The vigil theme's hex colours (the same theme the /rw-vigil pane paints with). */
 function themeNow(activeFile) {
-  const name = logic.activeThemeName(process.env.VIGIL_THEME, readText(activeFile))
+  const kind = vscode.window.activeColorTheme && vscode.window.activeColorTheme.kind
+  const name = logic.activeThemeName(process.env.VIGIL_THEME, readText(activeFile), kind)
   if (!/^[a-z0-9][a-z0-9-]{0,39}$/.test(name)) return logic.themeColors('neutral', null)
   // The editor's own theme decides the ground; VIGIL_THEME_BACKGROUND wins, as in the /rw-vigil pane.
   const o = (process.env.VIGIL_THEME_BACKGROUND || '').trim().toLowerCase()
-  const bg = o === 'light' || o === 'dark' ? o : logic.consoleKind(vscode.window.activeColorTheme && vscode.window.activeColorTheme.kind)
+  const bg = o === 'light' || o === 'dark' ? o : logic.consoleKind(kind)
   return logic.themeColors(name, readText(path.join(path.dirname(activeFile), 'themes', `${name}.json`)), bg)
 }
 
