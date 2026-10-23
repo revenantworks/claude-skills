@@ -38,6 +38,9 @@ Claude Code plugin marketplace.
   only, as the Agent Skills spec requires; each member's volatile surfaces are listed in a
   `volatile.json` beside its SKILL.md. `tools/release.py` runs the release loop.
   `tools/name_leak.py` checks for listed names kept outside the repo.
+- **Build your own vigil tiles (2026-10-23).** `/rw-vigil tiles` picks a source; Claude scans it
+  read-only and proposes tiles, saved to your own folder only on your yes. A tile is a JSON spec
+  (one source, one picture, a rule), never code, and shows numbers and dates only.
 - **vigil opens on a board (2026-10-23).** Seven tiles you can collapse, pin and move, drawn as
   pictures where the app draws them and as glyphs in the terminal; a glance strip above the
   prompt; suggestion cards with Do it, Not now and Undo; switches for pacewright's auto spend

@@ -10,20 +10,24 @@ import { badgeSvg, barSvg, dotsSvg, glyphDots, glyphMeter, glyphSpark, ringSvg, 
 // ---------- tiles and their layout ----------
 
 export const TILES = ['usage', 'context', 'inbox', 'mode', 'spend', 'skills', 'health'] as const
-export type TileId = (typeof TILES)[number]
-export const isTile = (v: unknown): v is TileId => typeof v === 'string' && (TILES as readonly string[]).includes(v)
+export type ShippedTile = (typeof TILES)[number]
+/** A shipped tile, or one the user built (`my:<id>`, tiles-logic.ts). */
+export type TileId = ShippedTile | `my:${string}`
+export const isShipped = (v: unknown): v is ShippedTile => typeof v === 'string' && (TILES as readonly string[]).includes(v)
+export const isTile = (v: unknown): v is TileId => isShipped(v) || (typeof v === 'string' && /^my:[a-z0-9][a-z0-9-]{0,31}$/.test(v))
 
 /** The board's layout: the tiles in order, which are collapsed, which are pinned to the top. */
 export type Layout = { order: TileId[]; collapsed: TileId[]; pinned: TileId[] }
 
 export const defaultLayout = (): Layout => ({ order: [...TILES], collapsed: [], pinned: [] })
 
-/** A stored layout, repaired: unknown ids drop, missing tiles join at the end in shipped order. */
-export const parseLayout = (v: unknown): Layout => {
+/** A stored layout, repaired: unknown ids drop, missing tiles join at the end in shipped order, then the user's own. */
+export const parseLayout = (v: unknown, mine: readonly TileId[] = []): Layout => {
   const o = v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : {}
-  const ids = (x: unknown): TileId[] => (Array.isArray(x) ? [...new Set(x.filter(isTile))] : [])
+  const known = (t: unknown): t is TileId => isShipped(t) || (isTile(t) && mine.includes(t))
+  const ids = (x: unknown): TileId[] => (Array.isArray(x) ? [...new Set(x.filter(known))] : [])
   const order = ids(o.order)
-  for (const t of TILES) if (!order.includes(t)) order.push(t)
+  for (const t of [...TILES, ...mine]) if (!order.includes(t)) order.push(t)
   return { order, collapsed: ids(o.collapsed), pinned: ids(o.pinned) }
 }
 
@@ -108,13 +112,15 @@ export const dailyTokens = (events: readonly DashEvent[], now: number, days = 7)
   return out
 }
 
-export type BoardData = { live: Live | null; now: number; feed: Feed; daily: readonly number[]; inbox: number; budget: Budget | null; auto: AutoModes }
+/** A user's tile, already read and drawn (tiles-logic.ts `userTileOf`). */
+export type MineTile = { tile: Tile; lines: string[] }
+export type BoardData = { live: Live | null; now: number; feed: Feed; daily: readonly number[]; inbox: number; budget: Budget | null; auto: AutoModes; mine?: ReadonlyMap<string, MineTile> }
 
 // ---------- pictures ----------
 
 export type Picture =
   | { kind: 'rings'; rings: ReadonlyArray<{ label: string; pct: number | null; tick: number | null; warnAt?: number }> }
-  | { kind: 'spark'; values: readonly number[] }
+  | { kind: 'spark'; values: readonly number[]; label?: string }
   | { kind: 'bar'; segs: readonly Segment[] }
   | { kind: 'dots'; dots: readonly Dot[] }
   | { kind: 'badge'; n: number }
@@ -196,6 +202,7 @@ const autoText = (a: AutoModes): string => AUTO_MODES.map(m => `${m} ${a[m] ? 'a
 /** One tile's face: a picture, one big figure, one short line. */
 export const tileOf = (id: TileId, d: BoardData): Tile => {
   const { live, now, feed } = d
+  if (!isShipped(id)) return d.mine?.get(id)?.tile ?? { id, title: id.slice(3), picture: { kind: 'word', text: '–' }, big: '–', sub: 'not loaded' }
   switch (id) {
     case 'usage': {
       const tick = weekTick(live, now)
@@ -227,6 +234,7 @@ export const tileOf = (id: TileId, d: BoardData): Tile => {
 export const detailOf = (id: TileId, d: BoardData): Detail => {
   const t = tileOf(id, d)
   const { live, now, feed } = d
+  if (!isShipped(id)) return { id, title: t.title, picture: t.picture, lines: (d.mine?.get(id)?.lines ?? ['This tile did not load. /rw-vigil tiles says why.']).slice(0, 3) }
   const lines = ((): string[] => {
     switch (id) {
       case 'usage': {
@@ -352,7 +360,7 @@ export const pictureSvg = (p: Picture, ink: Ink, size = 56): string => {
       const inner = one.map((svg, i) => svg.replace('<svg ', `<svg x="${i * (size + gap)}" `)).join('')
       return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${size}" viewBox="0 0 ${w} ${size}" role="img">${inner}</svg>`
     }
-    case 'spark': return sparkSvg(p.values, ink, 120, 32, 'tokens by day, 7 days')
+    case 'spark': return sparkSvg(p.values, ink, 120, 32, p.label ?? 'tokens by day, 7 days')
     case 'bar': return barSvg(p.segs, ink)
     case 'dots': return dotsSvg(p.dots, ink)
     case 'badge': return badgeSvg(p.n, ink)
@@ -364,7 +372,7 @@ export const pictureSvg = (p: Picture, ink: Ink, size = 56): string => {
 export const pictureAlt = (p: Picture): string => {
   switch (p.kind) {
     case 'rings': return p.rings.map(r => `${r.label} ${pct(r.pct)}${r.tick === null ? '' : `, pace ${Math.round(r.tick)}%`}`).join('; ')
-    case 'spark': return `tokens by day: ${p.values.map(k).join(', ')}`
+    case 'spark': return `${p.label ?? 'tokens by day'}: ${p.values.map(k).join(', ')}`
     case 'bar': return p.segs.map(x => `${x.label} ${x.n}`).join(', ')
     case 'dots': return p.dots.map(x => `${x.label} ${x.ok === null ? 'unknown' : x.ok ? 'ok' : 'failing'}`).join(', ') || 'no checks yet'
     case 'badge': return `${p.n} waiting`
