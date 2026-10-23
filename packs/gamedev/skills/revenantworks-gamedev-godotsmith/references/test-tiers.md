@@ -37,14 +37,15 @@ script, and per row for any script whose rows are long. Keep one table per CI pl
 
 ## 2. The three tiers
 
-The cause of a slow per-change check is usually a whole-stack proof running at every merge. A
+A common cause of a slow per-change check is a whole-stack proof running at every merge (in the
+worked project, 80% of the serial time). A
 proof about the whole stack belongs at a checkpoint. A build check only has to show that the
 change is sound and that its own switch is neutral.
 
-| Tier | When | What runs | Target |
+| Tier | When | What runs | Target (worked project) |
 |---|---|---|---|
 | **T1 build** | each unit or change, before it is handed back | lint, import, guards, harnesses; the scripts the change edits plus the scripts that read a symbol it changed (budgeted, section 5); the base trajectory rows **to the short horizon**; the off-row of each switch the diff adds or edits, to the short horizon | ~15 min |
-| **T2 join** | each merge of a wave, **on the merged head** | T1 over the merged diff; every script except the long trajectory file; the base rows to the full horizon; every row of each switch the wave added or edited; the re-pin proof; budget 0, nothing dropped; jobs = the rig's free cores | ~45 min |
+| **T2 join** | each merge of a wave, **on the merged head** | T1 over the merged diff; every script except the project's long trajectory file(s); the base rows to the full horizon; every row of each switch the wave added or edited; the re-pin proof; budget 0, nothing dropped; jobs = the rig's free cores | ~45 min |
 | **T3 gate** | a playtest point, a milestone, a land | the full walk on every CI platform, every row to the full horizon; CI itself | unattended, while the person plays the last preview or overnight |
 
 The loop: units build and pass T1 → the join runs T2 and cuts a preview → the person plays while
@@ -90,7 +91,7 @@ So T1 selects by symbol as well as by file:
   mutating call such as `push_back` or `set_text`), add every test script that reads it: `.name`,
   `name(`, a quoted name as the first argument of `call`, `get`, `has_method` or `connect`, and a
   signal's quoted name anywhere (an emit-count assert);
-- a symbol named by a large share of the scripts (about a fifth) is a hub: it maps nothing on its
+- a symbol named by a large share of the scripts (the worked project used a fifth) is a hub: it maps nothing on its
   own name, maps by its `Class.name` form where that is specific, and is noted as left to T2;
 - over-selection is the safe direction; a misjoin that selects too much costs time, never proof.
 

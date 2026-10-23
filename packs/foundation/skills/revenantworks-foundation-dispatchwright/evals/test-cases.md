@@ -297,10 +297,10 @@ Assert (negative): six green units are not taken as a green wave.
 
 **Case 33 — Known reds and a pending re-pin are in the brief** (observation 0483)
 Input: `dispatchwright dispatch` of three units on a join head where three scripts are red and a re-pin is still writing.
-Assert: the brief's base block lists the three reds as not the unit's and names the pending pin move with its sha, or the launch waits for the re-pinned head.
+Assert: the brief's base block lists the three reds, each marked not the unit's · the launch waits for the re-pinned head, or, when none is coming, the brief lists the rows the pin move will turn red as known reds.
 
 **Case 34 — A short-run switch reaches every launcher** (observation 0553)
-Input: a brief for a unit that adds `KN_HORIZON=30` to cut long test rows at day 30 in the build tool.
+Input: a brief for a unit that adds `SIM_HORIZON=30` to cut long test rows at day 30 in the build tool.
 Assert: the brief lists every tool that launches the engine with an inherited environment and gives each sets / clears / refuses · every gate tool refuses the switch · a refusal test with a positive control per tool.
 
 **Case 35 — The controller never stashes in the shared checkout** (observations 0559, 0551)

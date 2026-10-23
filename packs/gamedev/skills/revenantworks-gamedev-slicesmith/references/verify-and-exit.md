@@ -27,7 +27,9 @@ slice and every fix, before the word "done" or a commit.
    a stacked pin round (`spec-and-plan.md`), not after every red/green step. **Where the repo has
    a check queue, the queued final check is this run** (slicesmith S5): a dispatched unit runs
    only its targeted red-first runs, queues the suite and exits, and never runs a whole suite of
-   its own. Whoever reads the verdict (the controller, as a rule) checks its script and test
+   its own. **Where the repo has test tiers** (godotsmith `test-tiers.md`), a dispatched unit's
+   run is its build tier, the join runs the join tier on the merged head, and this whole-suite
+   run is the checkpoint or land gate. Whoever reads the verdict (the controller, as a rule) checks its script and test
    counts against the expected total stated in step 1 before the slice is called done; until
    then the row stays `checking`.
 3. **Prove the run covered the change.** The new test's name appears in this run's output or

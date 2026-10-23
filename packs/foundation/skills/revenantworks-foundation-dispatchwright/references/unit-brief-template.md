@@ -303,10 +303,6 @@ path.]
 (observations 0167, 0160) When you must wait for a build, a test run or a helper:
 
 - Make **one blocking foreground call** with a timeout, and repeat it only when it times out.
-- **Two copies of one tool on one tree only after reading where it writes** (observation 0551). A
-  tool that only reads the tree can still write per-tree logs, job files and caches; two runs on
-  one worktree deleted each other's job logs. Where the tool takes a lock, a second run is refused;
-  where it does not, run them one after another or in separate worktrees.
 - Never poll in a loop and never sleep between checks — each poll spends tokens to learn nothing.
 - `run_in_background` is for the top-level session only. A subagent that backgrounds a job and
   goes quiet can be ended with the job still in flight.
@@ -345,6 +341,10 @@ path.]
   keyed by the project's name (Godot's `user://`), caches, fixed temp names, ports — and give each
   unit its own root, or serialise the full runs. Two worktrees of one Godot project once failed a
   test by writing the same `user://` file at the same time.
+- **Two copies of one tool on one tree only after reading where it writes** (observation 0551). A
+  tool that only reads the tree can still write per-tree logs, job files and caches; two runs on
+  one worktree deleted each other's job logs. Where the tool takes a lock, a second run is refused;
+  where it does not, run them one after another or in separate worktrees.
 - **Stop every background process you started before you hand back** (observation 0439): list them
   by pid and stop them. A watcher (`tail -f`, a follow loop) written into a script file passes the
   command-text guard, and orphans ran for hours. The controller runs a reaper at each land.

@@ -1,7 +1,7 @@
 # Test Cases — revenantworks-gamedev-slicesmith
 
 - Provenance: derived from revenantworks-gamedev-slicesmith v1.0.0, 2026-10-08.
-- Counts: 20 cases, assertion-only. Every case authored, not run. C15–C18 added 2026-10-13 (plain lens runner discovery, fix method, done gate). C19–C20 added 2026-10-15 (stacked pin round; narrow while building, wide once; observation 0432). C21–C22 added 2026-10-23 (a split slice's repo-wide grep and planted violation, observation 0555; touched scripts include a changed symbol's readers, observation 0533): 22 cases.
+- Counts: 22 cases, assertion-only. Every case authored, not run. C15–C18 added 2026-10-13 (plain lens runner discovery, fix method, done gate). C19–C20 added 2026-10-15 (stacked pin round; narrow while building, wide once; observation 0432). C21–C22 added 2026-10-23 (a split slice's repo-wide grep and planted violation, observation 0555; touched scripts include a changed symbol's readers, observation 0533).
 - Coverage: spec (C1), plan (C2, C19), slice (C3, C4, C6, C7, C9, C20, C21, C22), fix (C5, C16), exit (C10, C11, C14), verify ladder (C8), degradation (C12), plain lens (C13, C15), done gate (C17, C18).
 
 ## Cases
