@@ -1243,11 +1243,15 @@ def check_push(push: dict) -> dict:
         stamp = {}
     for r in rows:
         if stamp.get("head") != r["sha"]:
+            stamp_cmd = f'python "{os.path.join(HERE, "ci_stamp.py")}" run --repo "{repo}"'
+            if not has_ci(repo):  # observation 0455: a repo with no CI gets the gate's baseline, not improvised steps
+                refuse(f"no local CI pass for {r['sha'][:12]}. This repo has no CI (no tracked workflow or "
+                       "ci-local script): stamp it with ci_stamp.py --no-ci, the gate's own baseline. Then push.",
+                       f"{stamp_cmd} --no-ci", "push_gate.no_ci")
             refuse(f"no local CI pass for {r['sha'][:12]}. Run the repo's CI steps through ci_stamp.py, one "
                    "--step each (or one command after --), with no `bash -c` wrapper: on Windows it can start "
                    "WSL instead of Git Bash. Then push.",
-                   f'python "{os.path.join(HERE, "ci_stamp.py")}" run --repo "{repo}" --step "<step 1>" '
-                   '--step "<step 2>"', "push_gate.no_ci")
+                   f'{stamp_cmd} --step "<step 1>" --step "<step 2>"', "push_gate.no_ci")
     # A stamp that left a CI check out is partial: say so loudly (observation 0354). So is one that
     # covered fewer of its workflow's run: steps than the workflow has (B6, observation 0367).
     short = []
@@ -1258,7 +1262,20 @@ def check_push(push: dict) -> dict:
     if total and covered < total:
         short.append(f"local CI covered {covered} of {total} run: steps in {stamp.get('workflow', 'the workflow')}")
     return {"rows": view, "items": items, "partial": list(stamp.get("excluded") or []) + short,
-            "ranges": rows, "checked": True}
+            "ranges": rows, "checked": True, "no_ci": bool(stamp.get("no_ci"))}
+
+
+HAS_CI = re.compile(r"(?i)^\.github/workflows/[^/]+\.ya?ml$|(?:^|/)ci[-_]local(?:\.[a-z0-9]+)?$")
+
+
+def has_ci(repo: str) -> bool:
+    """True when the repo tracks a CI workflow or a ci-local script (ci_stamp.py's HAS_CI; observation
+    0455). True when git cannot say, so the refusal keeps asking for the repo's own steps."""
+    try:
+        out = hl.run_git(repo, "ls-files")
+    except Exception:  # noqa: BLE001 - a git failure must not turn into a --no-ci suggestion
+        return True
+    return not out or any(HAS_CI.search(f) for f in out.splitlines())
 
 
 def owner_line(views: list[dict]) -> str:
@@ -1285,7 +1302,9 @@ def owner_line(views: list[dict]) -> str:
         if os.environ.get("GATEWARDEN_PUSH_NO_INTENT") != "1":
             proofs.append("intent ✓")
         partial = [s for v in views for s in v["partial"]]
-        proofs.append(f"local CI PARTIAL ({len(partial)} left to GitHub CI)" if partial else "local CI ✓")
+        no_ci = all(v.get("no_ci") for v in views if v["checked"])
+        proofs.append(f"local CI PARTIAL ({len(partial)} left to GitHub CI)" if partial
+                      else "no-CI baseline ✓" if no_ci else "local CI ✓")
     return " · ".join([f"{hl.GLYPHS['cleared']} push gate", *parts, *proofs])
 
 

@@ -2,6 +2,8 @@
 
 ## [1.0.0] — 2026-10-01
 
+2026-10-24 (observations 0546, 0455, 0454): `ci_stamp` strikes zero counts ("0 skipped", "missing none") before it reads a log line as a skipped check, so the estate's green summary line stamps full. `ci_stamp run --no-ci` gives a repo with no CI a fixed baseline (`git diff --check`, changed JSON parses, no token-shaped added line), refused where the repo has CI; the stamp records `no_ci` and push_gate's refusal names `--no-ci` for such a repo. A step's relative program path resolves against `--repo`, a bare name gets PATHEXT on Windows, and a program that cannot start fails with exit 127, not a traceback.
+
 2026-10-22 (weekly observation review, observation 0451): `hooks.md` gives the clean-worktree route for a shared checkout another session left dirty: stamp, record the intent and push from one detached worktree, never cleaning the other session's tree.
 
 2026-10-20 (review RV-SKILLS-WF F3): `launch_throttle` reads each budget-file band on its own and keeps the default for a NaN, a word or a non-positive value (stop 95, slow 80). A NaN stop had compared false against every reading, so every launch passed at 96-99%, and one unreadable band had thrown away the whole file, its zero ceiling with it. Tests: ThrottleTests 15 -> 18 (red first: 3 failing).

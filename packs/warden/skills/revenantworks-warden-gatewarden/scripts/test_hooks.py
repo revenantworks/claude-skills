@@ -2632,5 +2632,141 @@ class HookBacklogFollowTests(InstallDefaultBase):
         self.assertIn("AddHours(-12)", s)
 
 
+# ---------------------------------------------------------------- ci_stamp: zero counts, no-CI repos, launch paths
+# Observations 0546 (a zero count read as a skip), 0455 (a repo with no CI) and 0454 (a step program
+# the Windows launcher cannot find).
+
+def load_ci_stamp():
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("ci_stamp_0546", HOOKS / "ci_stamp.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+class CiStampZeroCountNoCiTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp(prefix="gw-ci-0546-")
+        self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
+        self.remote = os.path.join(self.tmp, "remote.git")
+        self.work = os.path.join(self.tmp, "work")
+        git(self.tmp, "init", "--bare", "-b", "main", self.remote)
+        git(self.tmp, "clone", self.remote, self.work)
+        git(self.work, "checkout", "-b", "main")
+        Path(self.work, "README.md").write_text("base\n")
+        git(self.work, "add", "README.md")
+        git(self.work, "commit", "-m", "base")
+        git(self.work, "push", "-u", "origin", "main")
+
+    def commit(self, name, text):
+        path = Path(self.work, name)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf-8")
+        git(self.work, "add", name)
+        git(self.work, "commit", "-m", f"add {name}")
+
+    def run_stamp(self, *args):
+        return subprocess.run([PY, str(HOOKS / "ci_stamp.py"), "run", "--repo", self.work, *args],
+                              capture_output=True, text=True, encoding="utf-8", errors="replace",
+                              creationflags=NO_WINDOW, stdin=subprocess.DEVNULL)
+
+    def stamp(self):
+        path = Path(git(self.work, "rev-parse", "--absolute-git-dir"), "gatewarden", "ci-pass.json")
+        return json.loads(path.read_text()) if path.exists() else None
+
+    # 0546
+    def test_zero_count_summary_lines_are_not_skips(self):
+        mod = load_ci_stamp()
+        self.assertEqual(mod.missing_tools(
+            "linux container: 2 of 2 run, 0 skipped, missing none: OK\n"
+            "Ran 12 tests, 0 tests skipped\nskipped: 0, not found: 0\n"), [])
+        self.assertEqual(len(mod.missing_tools("test_crlf skipped: tool not installed\n")), 1)
+        self.assertEqual(len(mod.missing_tools("0 skipped; test_x skipped (godot not found)\n")), 1)
+        self.assertEqual(len(mod.missing_tools("bash: shellcheck: command not found\n")), 1)
+
+    def test_real_estate_summary_line_stamps_full(self):
+        line = "linux container: 2 of 2 run, 0 skipped, missing none: OK"
+        p = self.run_stamp("--", PY, "-c", f"print({line!r})")
+        self.assertEqual(p.returncode, 0, p.stdout + p.stderr)
+        self.assertFalse(self.stamp()["partial"])
+
+    def test_a_real_skip_beside_a_zero_count_still_refuses(self):
+        p = self.run_stamp("--", PY, "-c", "print('0 skipped'); print('lint skipped: ruff not installed')")
+        self.assertEqual(p.returncode, 3, p.stdout + p.stderr)
+        self.assertIsNone(self.stamp())
+
+    # 0455
+    def test_no_ci_repo_stamps_with_the_baseline(self):
+        self.commit("docs/a.md", "clean line\n")
+        self.commit("data/b.json", '{"ok": true}\n')
+        p = self.run_stamp("--no-ci")
+        self.assertEqual(p.returncode, 0, p.stdout + p.stderr)
+        self.assertIn("2 changed file(s)", p.stdout)
+        data = self.stamp()
+        self.assertTrue(data["no_ci"])
+        self.assertFalse(data["partial"])
+        self.assertEqual(data["head"], git(self.work, "rev-parse", "HEAD"))
+
+    def test_no_ci_baseline_fails_on_whitespace_json_and_token_shapes(self):
+        for name, text, said in (("a.md", "trailing  \n", "diff --check"),
+                                 ("b.json", "{not json\n", "JSON that does not parse"),
+                                 ("c.txt", "key " + "ghp_" + "A" * 36 + "\n", "token-shaped")):
+            with self.subTest(name=name):
+                git(self.work, "reset", "-q", "--hard", "origin/main")
+                self.commit(name, text)
+                p = self.run_stamp("--no-ci")
+                self.assertEqual(p.returncode, 1, p.stdout + p.stderr)
+                self.assertIn(said, p.stdout)
+                self.assertNotIn("A" * 36, p.stdout + p.stderr)
+                self.assertIsNone(self.stamp())
+
+    def test_no_ci_is_refused_in_a_repo_with_ci_or_with_steps(self):
+        self.commit(".github/workflows/ci.yml", "on: push\n")
+        p = self.run_stamp("--no-ci")
+        self.assertEqual(p.returncode, 2)
+        self.assertIn("this repo has CI", p.stderr)
+        git(self.work, "reset", "-q", "--hard", "origin/main")
+        self.commit("tools/ci-local.py", "print(1)\n")
+        self.assertEqual(self.run_stamp("--no-ci").returncode, 2)
+        git(self.work, "reset", "-q", "--hard", "origin/main")
+        p = self.run_stamp("--no-ci", "--step", "git status")
+        self.assertEqual(p.returncode, 2)
+        self.assertIn("give no steps", p.stderr)
+
+    def test_push_gate_names_no_ci_only_for_a_repo_without_ci(self):
+        self.commit("docs/a.md", "x\n")
+        subprocess.run([PY, str(HOOKS / "push_gate.py"), "intend", "--repo", self.work, "--max", "1"],
+                       capture_output=True, text=True, creationflags=NO_WINDOW, stdin=subprocess.DEVNULL)
+        code, out, err = run_hook("push_gate.py", bash("git push origin main", self.work))
+        self.assertEqual(code, 2)
+        self.assertIn("--no-ci", out + err)
+        self.assertEqual(self.run_stamp("--no-ci").returncode, 0)
+        code, out, err = run_hook("push_gate.py", bash("git push origin main", self.work))
+        self.assertEqual(code, 0, err)
+        self.commit(".github/workflows/ci.yml", "on: push\n")
+        subprocess.run([PY, str(HOOKS / "push_gate.py"), "intend", "--repo", self.work, "--max", "2"],
+                       capture_output=True, text=True, creationflags=NO_WINDOW, stdin=subprocess.DEVNULL)
+        code, out, err = run_hook("push_gate.py", bash("git push origin main", self.work))
+        self.assertEqual(code, 2)
+        self.assertNotIn("--no-ci", out + err)
+        self.assertIn("--step", out + err)
+
+    # 0454
+    def test_relative_program_resolves_against_the_repo(self):
+        mod = load_ci_stamp()
+        self.commit("bin/tool.py", "print('ran from bin')\n")
+        want = os.path.abspath(os.path.join(self.work, "bin", "tool.py"))
+        self.assertEqual(os.path.normcase(mod.resolve_exe("bin/tool.py", self.work)), os.path.normcase(want))
+        self.assertEqual(mod.resolve_exe("no/such/prog", self.work), "no/such/prog")
+        self.assertEqual(mod.resolve_exe(PY, self.work), PY)
+
+    def test_program_that_cannot_start_fails_with_127_and_no_stamp(self):
+        p = self.run_stamp("--", "no-such-program-0454")
+        self.assertEqual(p.returncode, 127, p.stdout + p.stderr)
+        self.assertIn("could not start", p.stdout + p.stderr)
+        self.assertNotIn("Traceback", p.stdout + p.stderr)
+        self.assertIsNone(self.stamp())
+
+
 if __name__ == "__main__":
     unittest.main()

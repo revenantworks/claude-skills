@@ -449,6 +449,17 @@ explicit, reviewed list in that script, each with its reason (a file locked on p
 check that only means something on Linux). Pass each one to the stamp as
 `--excluded "NAME: REASON"`; the stamp records and prints them, so the gate shows what the local run
 did not cover. Never build a one-off variant at push time: a careless one skips a real failure.
+A summary line that counts zero ("0 skipped, missing none") is not a skip and needs no
+`--excluded` (observation 0546).
+
+**A repo with no CI.** A repo that tracks no `.github/workflows/*.yml` and no `ci-local` or
+`ci_local` script stamps with `ci_stamp.py run --repo . --no-ci` (observation 0455). That runs the
+gate's own baseline over the commits since the upstream: `git diff --check` (whitespace errors,
+conflict markers), every changed `.json` file parses, and no added line holds a token-shaped value.
+The stamp records `no_ci: true` and the owner's line says "no-CI baseline". `--no-ci` is refused in
+a repo with CI, and the push gate's refusal names `--no-ci` only for a repo without it. A step's
+relative program path is run from `--repo`, a bare name gets PATHEXT on Windows, and a program that
+cannot start fails the run with exit 127 (observation 0454).
 
 **Plugin hook tests on Windows.** A mod plugin's `claude plugin test` once failed on the Windows rig
 and passed in Linux CI (observation 0342). The cause: the Windows plugin-test host turns a posix stub
