@@ -5,37 +5,52 @@ extends EditorPlugin
 ## Listens on 127.0.0.1 only and answers one JSON request per line. Every request carries the
 ## per-session token this plugin writes, with the port, to res://.godot/claude_mcp/session.json
 ## (Godot's cache folder, which git ignores). The command list below is fixed: nothing here
-## deletes a node or a file, runs code sent over the socket, or saves anywhere but the open
-## scene's own file. Editor Settings > claude_mcp/read_only refuses every edit command.
+## deletes a node or a file, builds an object from text sent over the socket, or saves anywhere
+## but the open scene's own file. Editor Settings > claude_mcp/read_only refuses every command
+## that can write (edits, saves, and runs, since the editor saves before it plays).
+## A headless editor (`godot --headless --import`, CI) never opens the port.
 
 const PROTOCOL := 1
 const PORT := 6010                     # first port tried; the next 9 are fallbacks
 const SESSION_FILE := "res://.godot/claude_mcp/session.json"
 const MAX_LINE := 1 << 20              # largest request line, after the token is accepted
 const MAX_FIRST_LINE := 8192           # largest line before it (the token check)
+const AUTH_MS := 3000                  # a client must send a good token within this
+const IDLE_MS := 30000                 # an authenticated client idle this long is dropped
 const READ_ONLY_SETTING := "claude_mcp/read_only"
-const WRITE_COMMANDS := ["add_node", "set_property", "save_scene"]
+const WRITE_COMMANDS := ["add_node", "set_property", "save_scene", "run_scene"]
+const NO_RUN_ROOTS := ["res://addons/", "res://tests/", "res://test/"]   # test runners, tools
 
 var _server := TCPServer.new()
 var _peer: StreamPeerTCP               # one client at a time; others wait in the backlog
 var _buf := PackedByteArray()
 var _authed := false
+var _since_ms := 0                     # when the current client connected or last spoke
 var _token := ""                       # the lock: every request must carry it
 var _port := 0
+var _logging := false
 var _capture := _Capture.new()         # keeps the editor's recent messages
 var _last_run_started := 0.0           # when Claude last pressed Play (unix seconds)
 
 
 # Runs when the plugin is ticked on (or the editor opens with it on).
 func _enter_tree() -> void:
+	# An import or CI run loads editor plugins too. It must not take a port or replace the
+	# session file of an editor the owner has open on the same folder.
+	if DisplayServer.get_name() == "headless" and OS.get_environment("GODOT_MCP_HEADLESS") != "1":
+		return
 	var es := EditorInterface.get_editor_settings()
 	if not es.has_setting(READ_ONLY_SETTING):
 		es.set_setting(READ_ONLY_SETTING, false)
 	es.add_property_info({"name": READ_ONLY_SETTING, "type": TYPE_BOOL})
 	_token = Crypto.new().generate_random_bytes(16).hex_encode()
 	var base := PORT
-	if OS.has_environment("GODOT_MCP_PORT"):
-		base = OS.get_environment("GODOT_MCP_PORT").to_int()
+	var env := OS.get_environment("GODOT_MCP_PORT")
+	if env != "":
+		if env.is_valid_int() and env.to_int() >= 1024 and env.to_int() <= 65526:
+			base = env.to_int()
+		else:
+			push_warning("Claude MCP: GODOT_MCP_PORT '%s' is not a port in 1024-65526; using %d" % [env, PORT])
 	for p in range(base, base + 10):
 		if _server.listen(p, "127.0.0.1") == OK:   # 127.0.0.1 = this PC only
 			_port = p
@@ -43,24 +58,41 @@ func _enter_tree() -> void:
 	if _port == 0:
 		push_warning("Claude MCP: no free port in %d-%d" % [base, base + 9])
 		return
+	if not _write_session():
+		_server.stop()
+		_port = 0
+		return
 	OS.add_logger(_capture)
-	_write_session()
+	_logging = true
 	print("Claude MCP: listening on 127.0.0.1:%d%s" % [_port, " (read-only)" if _read_only() else ""])
 
 
-# Runs when the plugin is ticked off or the editor closes. Leaves nothing behind.
+# Runs when the plugin is ticked off or the editor closes. Leaves nothing behind, and removes
+# the session file only while it is still this editor's.
 func _exit_tree() -> void:
 	_drop()
 	_server.stop()
-	OS.remove_logger(_capture)
-	DirAccess.remove_absolute(ProjectSettings.globalize_path(SESSION_FILE))
+	if _logging:
+		OS.remove_logger(_capture)
+		_logging = false
+	if _port == 0:
+		return
+	var path := ProjectSettings.globalize_path(SESSION_FILE)
+	var s = JSON.parse_string(FileAccess.get_file_as_string(path))
+	if s is Dictionary and _same(str(s.get("token", "")), _token):
+		DirAccess.remove_absolute(path)
+	_port = 0
 
 
-func _write_session() -> void:
+func _write_session() -> bool:
 	var path := ProjectSettings.globalize_path(SESSION_FILE)
 	DirAccess.make_dir_recursive_absolute(path.get_base_dir())
 	var f := FileAccess.open(path, FileAccess.WRITE)
+	if f == null:
+		push_warning("Claude MCP: cannot write %s; the plugin is idle" % SESSION_FILE)
+		return false
 	f.store_string(JSON.stringify({"protocol": PROTOCOL, "port": _port, "token": _token}))
+	return true
 
 
 func _read_only() -> bool:
@@ -81,22 +113,29 @@ func _process(_delta: float) -> void:
 		return
 	if _peer == null and _server.is_connection_available():
 		_peer = _server.take_connection()
+		_since_ms = Time.get_ticks_msec()
 	if _peer == null:
 		return
 	_peer.poll()
 	if _peer.get_status() != StreamPeerTCP.STATUS_CONNECTED:
 		_drop()
 		return
+	# A client that never authenticates, or goes quiet, must not hold the only slot.
+	if Time.get_ticks_msec() - _since_ms > (IDLE_MS if _authed else AUTH_MS):
+		_drop()
+		return
 	if _peer.get_available_bytes() > 0:
 		_buf.append_array(_peer.get_data(_peer.get_available_bytes())[1])
+		_since_ms = Time.get_ticks_msec()
 	var nl := _buf.find(10)                  # 10 = the newline byte
 	while nl >= 0 and _peer:
 		var line := _buf.slice(0, nl).get_string_from_utf8()
 		_buf = _buf.slice(nl + 1)
+		var was_authed := _authed
 		var reply := _handle(line)
 		_peer.put_data((JSON.stringify(reply) + "\n").to_utf8_buffer())
-		if reply.get("error_code") == "BAD_TOKEN":
-			_drop()                          # a wrong token ends the connection
+		if reply.get("error_code") == "BAD_TOKEN" or (not was_authed and not _authed):
+			_drop()                          # no good token on the first line ends it
 			return
 		nl = _buf.find(10)
 	if _buf.size() > (MAX_LINE if _authed else MAX_FIRST_LINE):
@@ -127,7 +166,7 @@ func _handle(line: String) -> Dictionary:
 	var cmd := str(req.get("cmd", ""))
 	if cmd in WRITE_COMMANDS and _read_only():
 		return {"ok": false, "error_code": "READ_ONLY",
-			"error": "read-only: Editor Settings > claude_mcp/read_only is on"}
+			"error": "read-only: Editor Settings > claude_mcp/read_only is on (runs count as writes: the editor saves before it plays)"}
 	var result
 	match cmd:
 		"status": result = _cmd_status()
@@ -187,21 +226,37 @@ func _game_log_path() -> String:
 	return dir.path_join(p.trim_prefix("user://"))
 
 
+# Scenes under addons/ and tests/ are tools and test runners (a GUT runner played from the
+# editor runs the suite windowed, outside any test isolation), so they are never played here.
+func _runnable(path: String) -> bool:
+	for r in NO_RUN_ROOTS:
+		if path.begins_with(r):
+			return false
+	return true
+
+
 # scene: "main", "current", or a res:// .tscn path. These are the editor's Play buttons.
 func _cmd_run_scene(args: Dictionary):
 	var scene := str(args.get("scene", "main"))
 	if scene == "main":
+		if str(ProjectSettings.get_setting("application/run/main_scene", "")) == "":
+			return "the project has no main scene; pass a res:// scene path"
+		if not _runnable(str(ProjectSettings.get_setting("application/run/main_scene", ""))):
+			return "the main scene sits under addons/ or tests/; it is not played from here"
 		EditorInterface.play_main_scene()
 	elif scene == "current":
-		if EditorInterface.get_edited_scene_root() == null:
+		var root := EditorInterface.get_edited_scene_root()
+		if root == null:
 			return "no scene is open in the editor"
+		if not _runnable(root.scene_file_path):
+			return "scenes under addons/ and tests/ are not played from here"
 		EditorInterface.play_current_scene()
 	elif scene.begins_with("res://") and (scene.ends_with(".tscn") or scene.ends_with(".scn")) \
-			and not ".." in scene and not "\\" in scene \
+			and not ".." in scene and not "\\" in scene and _runnable(scene) \
 			and ResourceLoader.exists(scene):
 		EditorInterface.play_custom_scene(scene)
 	else:
-		return "scene must be main, current, or an existing res:// .tscn or .scn path"
+		return "scene must be main, current, or an existing res:// .tscn or .scn path outside addons/ and tests/"
 	_last_run_started = Time.get_unix_time_from_system()
 	return {"started": scene, "log_seq": _capture.last(), "game_log": _game_log_path()}
 
@@ -249,16 +304,61 @@ func _describe(node: Node, root: Node, depth: int, max_depth: int) -> Dictionary
 	return d
 
 
+# A node of the open scene itself: relative paths only (no "/root/...", no "..", no ":"
+# sub-names), and never a node inside an instanced sub-scene or the editor's own tree.
 func _find(path: String):
 	var root := EditorInterface.get_edited_scene_root()
 	if root == null:
 		return "no scene is open in the editor"
-	var node := root if path in ["", "."] else root.get_node_or_null(NodePath(path))
-	return node if node else "no node at '%s'" % path
+	if path in ["", "."]:
+		return root
+	if path.begins_with("/") or ":" in path or ".." in path.split("/"):
+		return "node paths are relative to the open scene's root, with no '/', '..' or ':'"
+	var node := root.get_node_or_null(NodePath(path))
+	if node == null:
+		return "no node at '%s'" % path
+	if not root.is_ancestor_of(node) or node.owner != root:
+		return "'%s' is not a node of the open scene itself" % path
+	return node
 
 
-# value: a JSON value; value_godot: Godot's text form, e.g. "Vector2(10, 20)". str_to_var never
-# builds an object, so no code can sneak in through a value.
+# The only constructors value_godot may use: Godot's plain value types. Object(), Resource(),
+# SubResource() and ExtResource() are refused BEFORE parsing, because str_to_var builds those
+# objects (and runs a script's _init) while it parses, not after.
+const VALUE_WORDS := ["true", "false", "null", "inf", "inf_neg", "nan", "bool", "int", "float",
+	"String", "StringName", "NodePath", "Vector2", "Vector2i", "Vector3", "Vector3i", "Vector4",
+	"Vector4i", "Rect2", "Rect2i", "Color", "Transform2D", "Transform3D", "Basis", "Quaternion",
+	"Plane", "AABB", "Projection", "Array", "Dictionary", "PackedByteArray", "PackedInt32Array",
+	"PackedInt64Array", "PackedFloat32Array", "PackedFloat64Array", "PackedStringArray",
+	"PackedVector2Array", "PackedVector3Array", "PackedVector4Array", "PackedColorArray"]
+var _strings := RegEx.create_from_string("\"(?:[^\"\\\\]|\\\\.)*\"")
+var _words := RegEx.create_from_string("(?<![A-Za-z0-9_.])[A-Za-z_][A-Za-z0-9_]*")
+
+
+func _safe_text(text: String) -> String:
+	var bare := _strings.sub(text, "\"\"", true)
+	for m in _words.search_all(bare):
+		if not m.get_string() in VALUE_WORDS:
+			return "value_godot may only use Godot's value types; '%s' is not one" % m.get_string()
+	return ""
+
+
+func _holds_object(v, depth := 0) -> bool:
+	if depth > 32 or typeof(v) == TYPE_OBJECT:
+		return true
+	if v is Array:
+		for x in v:
+			if _holds_object(x, depth + 1):
+				return true
+	elif v is Dictionary:
+		for k in v:
+			if _holds_object(k, depth + 1) or _holds_object(v[k], depth + 1):
+				return true
+	return false
+
+
+# value: a JSON value; value_godot: Godot's text form, e.g. "Vector2(10, 20)", checked word by
+# word before parsing so no object is ever built from text sent over the socket.
 func _coerce(node: Node, prop: String, args: Dictionary):
 	if prop in BLOCKED:
 		return "property '%s' cannot be set through Claude MCP" % prop
@@ -268,10 +368,19 @@ func _coerce(node: Node, prop: String, args: Dictionary):
 			info = p
 	if info.is_empty():
 		return "%s has no editable property '%s'" % [node.get_class(), prop]
+	if info.type == TYPE_OBJECT:
+		return "'%s' holds a resource or object; set it in the inspector" % prop
 	if not args.has("value") and not args.has("value_godot"):
 		return "give value (JSON) or value_godot (Godot text form)"
-	var v = str_to_var(str(args.value_godot)) if args.has("value_godot") else args.get("value")
-	if typeof(v) == TYPE_OBJECT:
+	var v
+	if args.has("value_godot"):
+		var why := _safe_text(str(args.value_godot))
+		if why != "":
+			return why
+		v = str_to_var(str(args.value_godot))
+	else:
+		v = args.get("value")
+	if _holds_object(v):
 		return "object values are not allowed"
 	if info.type != TYPE_NIL and typeof(v) != info.type:
 		var c = type_convert(v, info.type)
@@ -300,6 +409,9 @@ func _cmd_add_node(args: Dictionary):
 			return r
 		node.set(str(k), r[0])
 	var root := EditorInterface.get_edited_scene_root()
+	if parent != root and parent.scene_file_path != "":
+		node.free()
+		return "'%s' is an instanced scene; add nodes inside it by opening that scene" % args.get("parent")
 	var ur := get_undo_redo()
 	ur.create_action("Claude MCP: add %s" % type, UndoRedo.MERGE_DISABLE, root)
 	ur.add_do_method(parent, "add_child", node, true)

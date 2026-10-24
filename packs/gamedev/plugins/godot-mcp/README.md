@@ -21,7 +21,7 @@ Claude Code --stdio--> godot_mcp_server.py --127.0.0.1 + token--> claude_mcp plu
 | Tool | What it does | Changes the project? |
 |---|---|---|
 | `godot_status` | Godot version, project, main scene, open scene, playing or not, game log path, read-only flag | No |
-| `godot_run_scene` | Plays `main`, `current` or a `res://` scene, waits `capture_seconds` (default 3), returns the run's log and new editor errors | Runs the game |
+| `godot_run_scene` | Plays `main`, `current` or a `res://` scene outside `addons/` and `tests/`, waits `capture_seconds` (default 3), returns the run's log and new editor errors | Runs the game; the editor saves open scenes first |
 | `godot_stop_scene` | Stops the playing scene | No |
 | `godot_read_output` | The game's log and the editor's messages; `errors_only` keeps errors and warnings with the lines under them | No |
 | `godot_scene_tree` | The open scene's nodes: name, type, path, script | No |
@@ -43,19 +43,33 @@ stable code Claude can act on: `NO_PROJECT`, `NO_EDITOR`, `BAD_ARGS`, `BAD_TOKEN
 - **A token per editor session.** The plugin makes 16 random bytes at start and writes them, with
   the port, to `res://.godot/claude_mcp/session.json`. `.godot/` is Godot's cache and git ignores
   it; the file is deleted when the plugin stops. The token is compared in constant time.
-- **Guards before the token.** One client at a time (others wait). A first line over 8 KiB, or a
-  wrong token, closes the connection.
-- **Fixed commands.** The plugin answers ten command names. Classes are checked against `ClassDB`
-  (built-in Node subclasses only); values go through `str_to_var`, which never builds an object;
-  scene paths must start `res://`, end `.tscn` or `.scn`, hold no `..`, and exist.
+- **Guards before the token.** One client at a time (others wait). The first line must carry the
+  right token within 3 seconds; a line over 8 KiB, a wrong token or anything else closes the
+  connection. A client idle for 30 seconds is dropped.
+- **Headless editors stay idle.** `godot --headless --import` and CI load editor plugins too; the
+  plugin opens no port there, so it never replaces the session file of an editor you have open.
+  It removes the session file only while the file still holds its own token.
+- **No objects from text.** `value_godot` may name only Godot's value types (`Vector2`, `Color`,
+  `Transform2D`, packed arrays and the like), checked word by word before parsing, because
+  `str_to_var` would otherwise build `Object(...)` and `Resource(...)` while it parses and run a
+  tool script's `_init`. Parsed values are walked for objects at any depth, and resource-typed
+  properties are refused.
+- **The open scene only.** Node paths are relative to the scene root, with no leading `/`, no `..`
+  and no `:`; a node inside an instanced sub-scene or the editor's own tree is refused. Classes are
+  built-in Node subclasses only (`ClassDB`, no `Editor*`).
+- **Safe scenes to run.** Scene paths must start `res://`, end `.tscn` or `.scn`, hold no `..`,
+  exist, and sit outside `addons/` and `tests/` (test runners played from the editor skip test
+  isolation).
 - **Read-only, on both sides.** `--read-only` (or `GODOT_MCP_READ_ONLY=1`) hides and refuses the
-  three edit tools in the server; **Editor Settings > claude_mcp/read_only** makes the plugin
-  refuse them too. The MCP spec says clients must not trust tool annotations, so enforcement lives
-  in code.
-- **Logs are untrusted data.** Anything in a project can print to the log, so `godot_run_scene` and
-  `godot_read_output` wrap their text in a per-call nonce envelope marked as data, not
-  instructions.
-- **No stale answers.** A game log written before the last run returns no lines, with a note.
+  four tools that can write in the server, runs included, since the editor saves before it plays;
+  **Editor Settings > claude_mcp/read_only** makes the plugin refuse them too. The MCP spec says
+  clients must not trust tool annotations, so enforcement lives in code.
+- **Project text is untrusted data.** Node names, property values and log lines are text the
+  project wrote, so every result's text comes in a per-call nonce envelope marked as data, not
+  instructions, and `structuredContent` carries an `untrusted` note.
+- **No home paths.** Paths in replies name `~`, never the account's own folder.
+- **No stale or giant answers.** A game log written before the last run returns no lines, with a
+  note; only the log's last 2 MB is read, and a line over 2,000 characters is cut.
 - **Limits.** Any program running as your user can read the session file, so the token stops other
   users and stray local clients, not your own programs. Windows offers no isolation between local
   accounts beyond file permissions.
@@ -89,7 +103,8 @@ inside a pack, as with `gdscript-lsp`). Its `.mcp.json` is ready for when it is.
 
 | Setting | Where | Default |
 |---|---|---|
-| First port (then the next 9) | `GODOT_MCP_PORT` in the editor's environment | `6010` |
+| First port (then the next 9) | `GODOT_MCP_PORT` in the editor's environment, 1024-65526 | `6010` |
+| Listen in a headless editor (tests only) | `GODOT_MCP_HEADLESS=1` in the editor's environment | off |
 | Projects | `--project-dir` (repeatable), else `CLAUDE_PROJECT_DIR`, else the working directory | — |
 | Read-only server | `--read-only` or `GODOT_MCP_READ_ONLY=1` | off |
 | Read-only plugin | Editor Settings > `claude_mcp/read_only` | off |
@@ -114,6 +129,15 @@ stops the editor and removes the project and its user folders. Games it plays ru
 **Trial, 2026-10-22, Godot 4.7.2 on Windows:** 26 unit tests and 22 of 22 end-to-end checks
 passed, including the override.cfg log folder, both socket guards and no unexpected editor errors.
 The owner also drove every tool from Claude Code against a live editor on a real game project.
+
+**Security review, 2026-10-24:** an adversarial review of 1.0.0 found one high (`value_godot`
+built objects and ran tool-script code), four medium (a headless import took the port and deleted
+a live editor's session file; test-runner scenes could be played; node paths reached the editor's
+own tree; read-only mode still allowed runs, which save) and six low (one float stopped the
+server; a silent client held the slot; unwrapped project text; whole-log reads; home paths in
+replies; a bad port variable). All eleven are fixed. 30 unit tests and 41 of 41 end-to-end checks
+pass, the new checks include each review probe, and the 1.0.0 plugin fails them (the positive
+control).
 A headless editor logs `Parameter "t" is null` from the dummy renderer when it saves a scene
 thumbnail; the scene still saves, and a normal editor does not do this.
 

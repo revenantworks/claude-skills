@@ -69,6 +69,25 @@ func _ready() -> void:
 \tprint("e2e: main ready")
 \tpush_error("e2e: deliberate error")
 """
+# A @tool script whose _init prints a marker: if any value_godot ever builds it, the marker
+# shows up in the editor's output (the positive control for the object refusal).
+EVIL_GD = """@tool
+extends RefCounted
+
+func _init() -> void:
+\tprint("E2E_TOOL_INIT_RAN")
+"""
+TEST_TSCN = """[gd_scene format=3]
+
+[node name="Runner" type="Node"]
+"""
+OBJECT_STRINGS = [
+    'Object(Node,"name":"x")',
+    'Object(RefCounted,"script":Resource("res://evil_tool.gd"))',
+    '{"k": Resource("res://evil_tool.gd")}',
+    '[Object(GDScript,"source_code":"extends Node")]',
+    'Vector2(1, 2) if true else Object(Node)',
+]
 
 
 def no_window() -> dict:
@@ -148,6 +167,9 @@ def main(argv: list[str] | None = None) -> int:
     (tmp / "override.cfg").write_text(OVERRIDE, encoding="utf-8")
     (tmp / "main.tscn").write_text(MAIN_TSCN, encoding="utf-8")
     (tmp / "main.gd").write_text(MAIN_GD, encoding="utf-8")
+    (tmp / "evil_tool.gd").write_text(EVIL_GD, encoding="utf-8")
+    (tmp / "tests").mkdir()
+    (tmp / "tests" / "runner.tscn").write_text(TEST_TSCN, encoding="utf-8")
     shutil.copytree(ADDON, tmp / "addons" / "claude_mcp")
     session = tmp / ".godot" / "claude_mcp" / "session.json"
     fails = 0
@@ -157,7 +179,10 @@ def main(argv: list[str] | None = None) -> int:
         fails += 0 if ok else 1
         print(f"{'PASS' if ok else 'FAIL'} {label}" + ("" if ok else f": {detail}"), flush=True)
 
-    env = dict(os.environ, GODOT_MCP_PORT=os.environ.get("GODOT_MCP_PORT", "6110"))
+    # GODOT_MCP_HEADLESS=1: the plugin stays idle in any headless editor unless asked; this
+    # check's editor is headless on purpose, so it asks.
+    env = dict(os.environ, GODOT_MCP_PORT=os.environ.get("GODOT_MCP_PORT", "6110"),
+               GODOT_MCP_HEADLESS="1")
     ed_log = tmp.with_name(tmp.name + "-editor.log")
     ed_out = ed_log.open("wb")
     ed = subprocess.Popen([godot, "--headless", "--editor", "--path", str(tmp)], env=env,
@@ -203,6 +228,17 @@ def main(argv: list[str] | None = None) -> int:
         check("set_property refuses script", not ok, bad)
         ok, bad = c.tool("godot_set_property", path="Hero", property="visible")
         check("set_property refuses a missing value", not ok, bad)
+        for i, text in enumerate(OBJECT_STRINGS):
+            ok, bad = c.tool("godot_set_property", path="Label", property="text", value_godot=text)
+            check(f"value_godot object string {i + 1} refused before parsing", not ok, bad)
+        ok, bad = c.tool("godot_set_property", path="Label", property="theme", value_godot="null")
+        check("a resource-typed property is refused", not ok, bad)
+        for p in ("/root", "..", "Label/..", "/root/@EditorNode", "Label:text"):
+            ok, bad = c.tool("godot_set_property", path=p, property="visible", value=False)
+            check(f"node path '{p}' outside the scene is refused", not ok, bad)
+        ok, bad = c.tool("godot_add_node", parent="/root", type="Node")
+        check("add_node under /root is refused", not ok, bad)
+
         ok, sv = c.tool("godot_save_scene")
         saved = (tmp / "main.tscn").read_text(encoding="utf-8")
         check("save_scene wrote the new node", ok and 'name="Hero"' in saved
@@ -218,6 +254,8 @@ def main(argv: list[str] | None = None) -> int:
               and not any("main ready" in ln for ln in errs), out)
         ok, bad = c.tool("godot_run_scene", scene="res://../x.tscn", capture_seconds=0)
         check("run_scene refuses a path outside res://", not ok, bad)
+        ok, bad = c.tool("godot_run_scene", scene="res://tests/runner.tscn", capture_seconds=0)
+        check("run_scene refuses a scene under tests/", not ok, bad)
         ok, stop = c.tool("godot_stop_scene")
         check("stop_scene", ok, stop)
         ok, out = c.tool("godot_read_output")
@@ -231,13 +269,34 @@ def main(argv: list[str] | None = None) -> int:
               bad_token[:200])
         flood = raw(port, b"x" * 9000)
         check("an oversized first line gets no answer", flood == b"", flood[:200])
+        not_obj = raw(port, b"1\n")
+        check("a non-object first line is answered once, then dropped", b"BAD_REQUEST" in not_obj,
+              not_obj[:200])
+        t0 = time.time()
+        with socket.create_connection(("127.0.0.1", port), timeout=10) as idle:
+            gone = idle.recv(1)          # the plugin drops a silent client after 3 s
+        check("a silent client is dropped within a few seconds",
+              gone == b"" and time.time() - t0 < 8, time.time() - t0)
         ok, st = c.tool("godot_status")
-        check("the plugin still answers after both probes", ok, st)
+        check("the plugin still answers after the probes", ok, st)
+
+        before = session.read_text(encoding="utf-8")
+        imp = subprocess.run([godot, "--headless", "--path", str(tmp), "--import"],
+                             env=dict(os.environ), capture_output=True, timeout=180, **no_window())
+        check("a headless --import leaves the editor's session alone",
+              imp.returncode == 0 and session.exists()
+              and session.read_text(encoding="utf-8") == before, imp.returncode)
+        ok, st = c.tool("godot_status")
+        check("the editor still answers after the import", ok, st)
 
         ed_out.flush()
-        stray = [ln for ln in ed_log.read_text(encoding="utf-8", errors="replace").splitlines()
+        text = ed_log.read_text(encoding="utf-8", errors="replace")
+        check("no object string ran a tool script's _init", "E2E_TOOL_INIT_RAN" not in text)
+        stray = [ln for ln in text.splitlines()
                  if ("ERROR" in ln or "Parse Error" in ln) and not any(k in ln for k in KNOWN)]
         check("editor printed no unexpected errors", not stray, stray[:5])
+        check("no reply named the home folder", str(Path.home()).replace("\\", "/").lower()
+              not in json.dumps(st).replace("\\\\", "/").lower(), st)
     finally:
         if c:
             c.close()

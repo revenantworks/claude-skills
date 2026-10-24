@@ -19,3 +19,16 @@ An opt-in plugin beside the gamedev pack.
   older than the last run returns no lines; repeatable `--project-dir`.
 - Tests: `scripts/test_godot_mcp_server.py` (fake editor), `scripts/e2e_godot.py` (a real
   headless editor on a throwaway project, 22 checks).
+
+2026-10-24 (security fixes from an adversarial review, still 1.0.0 under the repo's version
+rule): `value_godot` may use only Godot's value types, checked before parsing (`str_to_var` built
+objects and ran a tool script's `_init`), parsed values are walked for objects, and
+resource-typed properties are refused; a headless editor opens no port and the session file is
+removed only by its owner; scenes under `addons/` and `tests/` are not played; node paths stay
+inside the open scene (no `/`, `..`, `:`, instanced sub-scenes or editor nodes); runs count as
+writes in read-only mode; one bad number or `params` shape no longer stops the server
+(argument types and ranges are checked, a catch-all returns -32603); a client must send its token
+within 3 s and is dropped after 30 s idle; every result is wrapped as untrusted project text;
+replies name `~` for the home folder; only the log's last 2 MB is read, lines cut at 2,000
+characters; `GODOT_MCP_PORT` must be 1024-65526. Tests: 30 unit, 41 end-to-end checks, each
+review probe included; the earlier plugin fails them.

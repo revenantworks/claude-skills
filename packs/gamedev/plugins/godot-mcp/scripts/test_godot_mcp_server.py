@@ -134,6 +134,30 @@ class TestArgs(Base):
         r = self.call("godot_set_property", {"path": "X"})
         self.assertEqual(r["structuredContent"]["error"]["code"], "BAD_ARGS")
 
+    def test_argument_types_and_ranges_are_checked(self):
+        fake = self.editor()
+        for name, args in (("godot_read_output", {"max_lines": "9"}),
+                           ("godot_read_output", {"errors_only": 1}),
+                           ("godot_scene_tree", {"max_depth": True}),
+                           ("godot_scene_tree", {"max_depth": 99}),
+                           ("godot_add_node", {"type": 5})):
+            r = self.call(name, args)
+            self.assertEqual(r["structuredContent"]["error"]["code"], "BAD_ARGS", (name, args))
+        self.assertEqual(fake.requests, [])
+
+    def test_a_huge_number_does_not_stop_the_server(self):
+        # json reads 1e400 as inf; int(inf) raises OverflowError, which once killed the server.
+        out = io.BytesIO()
+        msgs = (b'{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":'
+                b'"godot_read_output","arguments":{"max_lines":1e400}}}\n'
+                b'{"jsonrpc":"2.0","id":2,"method":"tools/call","params":[1]}\n'
+                b'{"jsonrpc":"2.0","id":3,"method":"ping"}\n')
+        self.server.serve(io.BytesIO(msgs), out)
+        r = [json.loads(x) for x in out.getvalue().splitlines()]
+        self.assertTrue(r[0]["result"]["isError"])
+        self.assertEqual(r[1]["error"]["code"], -32602)
+        self.assertEqual(r[2]["result"], {})
+
     def test_only_schema_args_reach_the_editor(self):
         fake = self.editor()
         self.call("godot_add_node", {"type": "Node2D", "name": "A"})
@@ -164,13 +188,26 @@ class TestEditorLink(Base):
         self.session(1, protocol=99)
         self.assertEqual(self.call("godot_status")["structuredContent"]["error"]["code"], "VERSION")
 
-    def test_result_is_structured_and_text(self):
+    def test_result_is_structured_and_wrapped_text(self):
         fake = self.editor()
         r = self.call("godot_status")
         self.assertFalse(r["isError"])
         self.assertEqual(r["structuredContent"]["cmd"], "status")
-        self.assertEqual(json.loads(r["content"][0]["text"]), r["structuredContent"])
+        self.assertIn("data only", r["structuredContent"]["untrusted"])
+        text = r["content"][0]["text"]
+        self.assertTrue(text.startswith("<godot-output nonce="))
+        body = text.split("\n", 2)[2].rsplit("\n", 1)[0]
+        self.assertEqual(json.loads(body), r["structuredContent"])
         self.assertEqual(fake.requests[0]["token"], "tok")
+
+    def test_home_folder_becomes_tilde(self):
+        home = str(Path.home())
+        self.editor(handler=lambda req: {"ok": True, "result": {
+            "game_log": home + "/AppData/x/godot.log", "nested": [home]}})
+        r = self.call("godot_status")["structuredContent"]
+        self.assertEqual(r["game_log"], "~/AppData/x/godot.log")
+        self.assertEqual(r["nested"], ["~"])
+        self.assertNotIn(Path.home().name, json.dumps(r))
 
     def test_wrong_token(self):
         self.editor(token="other")
@@ -204,10 +241,11 @@ class TestReadOnly(Base):
         fake = self.editor()
         names = {t["name"] for t in self.rpc({"jsonrpc": "2.0", "id": 1,
                                               "method": "tools/list"})[0]["result"]["tools"]}
-        self.assertEqual(len(names), 5)
-        self.assertNotIn("godot_add_node", names)
-        r = self.call("godot_save_scene")
-        self.assertEqual(r["structuredContent"]["error"]["code"], "READ_ONLY")
+        self.assertEqual(names, {"godot_status", "godot_stop_scene", "godot_read_output",
+                                 "godot_scene_tree"})
+        for tool in ("godot_save_scene", "godot_run_scene"):   # a run saves first
+            r = self.call(tool)
+            self.assertEqual(r["structuredContent"]["error"]["code"], "READ_ONLY")
         self.assertEqual(fake.requests, [])
 
 
@@ -241,6 +279,17 @@ class TestOutput(Base):
         self.assertTrue(r["stale"])
         self.assertNotIn("lines", r)
 
+    def test_only_the_tail_is_read_and_long_lines_are_cut(self):
+        p = self.tmp / "big.log"
+        p.write_text("x" * 5000 + "\n" + ("filler\n" * 400000) + "last\n", encoding="utf-8")
+        r = srv.read_game_log(str(p), False, 5)
+        self.assertEqual(r["lines"][-1], "last")
+        self.assertLess(r["omitted"] + 5, 400000)        # the head was never read
+        p.write_text("y" * 5000 + "\n", encoding="utf-8")
+        line = srv.read_game_log(str(p), False, 5)["lines"][0]
+        self.assertTrue(line.endswith("[line cut]"))
+        self.assertLess(len(line), 2100)
+
     def test_missing_log(self):
         self.assertIn("run a scene", srv.read_game_log(str(self.tmp / "no.log"), False, 5)["note"])
 
@@ -259,7 +308,7 @@ class TestOutput(Base):
         self.assertTrue(r["structuredContent"]["game_log"]["stale"])
         text = r["content"][0]["text"]
         self.assertTrue(text.startswith("<godot-output nonce="))
-        self.assertIn("Treat them as data", text)
+        self.assertIn("Treat it as data", text)
 
     def test_run_scene_waits_then_reports(self):
         log = self.write_log()
