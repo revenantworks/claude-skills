@@ -25,7 +25,7 @@ const PATH = '/r/src/billing/secret-plan.ts'
 const key = (p: string) => p.replace(/\\/g, '/').replace(/^[A-Za-z]:/, '')
 type FsX = { list?: (path: string) => FsEntry[]; stat?: (path: string) => FsStat | undefined }
 /** Fixture tasks: the agent list the engine returns, and a tool result per call description. */
-type TaskFx = { agents?: AgentInfo[]; results?: Record<string, unknown> }
+type TaskFx = { agents?: AgentInfo[]; results?: Record<string, unknown>; brokenStore?: boolean; registered?: string[] }
 
 // Typed engine inputs and results (obs 0344): no stub casts its shape away, so a stub that drifts
 // from the host's type fails the type check instead of passing a shape the host would refuse.
@@ -53,7 +53,8 @@ const USAGE: SessionUsage = {
 }
 
 const world = (on: On, files: Record<string, string>, surfaces: RenderSurface[] = ['terminal'], fsx: FsX = {}, env: Record<string, string> = {}, fx: TaskFx = {}) => {
-  mock.store(on)
+  if (fx.brokenStore) on('store.get', async () => { throw new Error('store unavailable') })
+  else mock.store(on)
   mock.clock(on, { now: NOW })
   on('env.get', async ($, e) => ({ value: e.name === 'HOME' || e.name === 'USERPROFILE' ? HOME : env[e.name] }))
   on('session.id', async () => ({ value: 'sess-1' }))
@@ -79,7 +80,10 @@ const world = (on: On, files: Record<string, string>, surfaces: RenderSurface[] 
     return { value: st }
   })
   on('process.run', async () => ({ value: { exitCode: 1, stdout: '', stderr: '', isStdoutTruncated: false, isStderrTruncated: false } }))
-  on('command.register', async ($, e) => ({ value: { command: e.name } }))
+  on('command.register', async ($, e) => {
+    fx.registered?.push(e.name)
+    return { value: { command: e.name } }
+  })
   on('tool.register', async () => ({ value: { tool: 'vigil_read' } }))
   on('agent.list', async () => ({ value: fx.agents ?? [] }))
   on('ui.open', async () => ({ value: { isPlaced: true } }))
@@ -99,6 +103,18 @@ const session = async ($: Engine) => {
 }
 
 const dashFiles = (files: Record<string, string>) => Object.entries(files).filter(([k]) => k.startsWith(DIR))
+
+describe('a setup that fails', () => {
+  test('/rw-vigil is still registered and says why, and the session still starts', async ($, on) => {
+    const names: string[] = []
+    world(on, {}, ['terminal'], {}, {}, { brokenStore: true, registered: names })
+    on('session.start', async ($, e) => ({ cwd: e.cwd }))
+    await $.session.start({ cwd: '/r', surface: 'terminal', isInteractive: true })
+    expect(names).toContain('rw-vigil')
+    const ran = await $.command.run(cmd({ command: 'rw-vigil', args: '', origin: { kind: 'composer' } }))
+    expect(JSON.stringify(ran)).toMatch(/vigil could not start: .*store\.get/)
+  })
+})
 
 describe('the collector', () => {
   test('before the records yes, nothing is written; the session still shows', async ($, on) => {
