@@ -1104,6 +1104,15 @@ async function dsSetup($: EngineInterface): Promise<void> {
   dsCwd = (await $.session.cwd()).replace(/\\/g, '/')
   dsRoot = ((await $.session.repo())?.root ?? '').replace(/\\/g, '/')
   dsLeaseFile = leasePath(dsIsWin, { LOCALAPPDATA: await $.env.get('LOCALAPPDATA'), XDG_STATE_HOME: await $.env.get('XDG_STATE_HOME'), HOME: dsHome })
+  // The command comes first: a later step that throws must not leave /rw-vigil unknown for the
+  // whole session (seen on the PC 2026-10-24). A failed setup is retried by the command's own hook.
+  try {
+    await $.command.register({ name: 'rw-vigil', description: 'vigil: skills, meters, health and suggestions in one view', argumentHint: 'skills · meters · health · tasks · suggest · theme · publish · switches · help' })
+    // The old name answers for one release, hidden from the typeahead (command.describe below).
+    await $.command.register({ name: LEGACY, description: 'Renamed: /rw-vigil', argumentHint: 'see /rw-vigil help' })
+  } catch {
+    // A name the host refuses is skipped; setup goes on.
+  }
   await dsLoadSwitches($)
   await dsLoadTheme($)
   await dsMoveRecords($).catch(() => undefined)
@@ -1113,13 +1122,6 @@ async function dsSetup($: EngineInterface): Promise<void> {
   await dsLoadSpend($)
   // Hash keys only: text keys left by an older build are dropped on read and never written back.
   dsTaskHist = sanitizeTaskHistory(await $.store.get('taskHistory'))
-  try {
-    await $.command.register({ name: 'rw-vigil', description: 'vigil: skills, meters, health and suggestions in one view', argumentHint: 'skills · meters · health · tasks · suggest · theme · publish · switches · help' })
-    // The old name answers for one release, hidden from the typeahead (command.describe below).
-    await $.command.register({ name: LEGACY, description: 'Renamed: /rw-vigil', argumentHint: 'see /rw-vigil help' })
-  } catch {
-    // A name the host refuses is skipped; setup goes on.
-  }
   if (dsOn('D14')) await dsRegisterShort($)
   if (dsOn('D4')) {
     try {
@@ -1219,7 +1221,11 @@ async function dsLaunch($: EngineInterface, name: string, args: string): Promise
 
 /** /rw-vigil, and /dash for one release. */
 async function dsCommand($: EngineInterface, e: CommandRunInput): Promise<CommandRunResult> {
-  await dsEnsure($)
+  try {
+    await dsEnsure($)
+  } catch (err) {
+    return { text: `vigil could not start: ${err instanceof Error ? err.message : String(err)}. Send this line to whoever maintains vigil.` }
+  }
   const isOwner = e.origin?.kind === 'composer' || e.origin?.kind === 'bridge'
   const { verb, rest } = parseDashArgs(e.args ?? '')
   const now = await $.clock.now()
@@ -1364,7 +1370,8 @@ async function dsCommand($: EngineInterface, e: CommandRunInput): Promise<Comman
 
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
-    await dsEnsure($)
+    // A setup that throws must not hold the session's own start; /rw-vigil retries it and says why.
+    await dsEnsure($).catch(() => undefined)
     return next(e)
   })
 
