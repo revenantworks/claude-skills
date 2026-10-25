@@ -52,6 +52,17 @@ jobs:
         run: |
           command -v bwrap >/dev/null 2>&1 && command -v socat >/dev/null 2>&1 \
             || { sudo apt-get update -q && sudo apt-get install -y -q --no-install-recommends bubblewrap socat; }
+      # Ubuntu 24.04's AppArmor blocks unprivileged user namespaces, so bwrap fails with
+      # "loopback: Failed RTM_NEWADDR: Operation not permitted", every Bash call dies before it
+      # runs, and the cases fail on "Bash called 0x" (the 2026-10-25 run). Lift the block on this
+      # throwaway runner, then prove a network-isolated sandbox starts before spending credits.
+      - name: Allow the shell sandbox to start
+        run: |
+          if [ -e /proc/sys/kernel/apparmor_restrict_unprivileged_userns ]; then
+            sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          fi
+          bwrap --unshare-all --die-with-parent --ro-bind / / true \
+            || { echo "::error::bwrap cannot start a sandbox on this runner: NOT-RUN"; exit 1; }
       - name: Run the eight shell cases
         run: |
           set +e -u  # every case runs and reports; the job fails at the end if any case did not pass
