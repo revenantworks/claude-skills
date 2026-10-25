@@ -102,3 +102,31 @@ jobs:
           printf '%s' "$summary"
           printf '%s' "$summary" >> "$GITHUB_STEP_SUMMARY"
           exit $status
+      # The job log says only "0/1 passed"; the per-case JSON and report.html say which check
+      # failed. This repo is public, so its artifacts are too: redact the API key from every
+      # file before upload, since GitHub masks secrets in logs but never in artifacts.
+      - name: Collect and redact the eval reports
+        if: always()
+        run: |
+          dest="$RUNNER_TEMP/shell-evals-reports"
+          mkdir -p "$dest"
+          [ -d "$RUNNER_TEMP/shell-evals" ] && cp -r "$RUNNER_TEMP/shell-evals" "$dest/json"
+          for d in packs/*/pack-evals/results; do
+            [ -d "$d" ] && mkdir -p "$dest/$d" && cp -r "$d/." "$dest/$d/"
+          done
+          python3 - "$dest" <<'PY'
+          import os, pathlib, sys
+          key = os.environ.get("ANTHROPIC_API_KEY", "")
+          for p in pathlib.Path(sys.argv[1]).rglob("*"):
+              if p.is_file() and key:
+                  b = p.read_bytes()
+                  if key.encode() in b:
+                      p.write_bytes(b.replace(key.encode(), b"[REDACTED]"))
+          PY
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: shell-evals-reports
+          path: ${{ runner.temp }}/shell-evals-reports
+          retention-days: 14
+          if-no-files-found: warn
