@@ -1,0 +1,104 @@
+name: shell-evals
+
+# The eight native eval cases that grade a Bash call (U37 section 4, U38 class c). Windows grants
+# no confinable shell, so they can never pass on the rig's own run; they need Linux with a shell
+# sandbox and `--allow-tools Bash`. The job runs on GitHub's ubuntu-latest only, never a
+# self-hosted runner: this repo is public, and a public repo's jobs must not reach the rig
+# (Actions minutes plus model credits per run).
+# Needs the ANTHROPIC_API_KEY repository secret; without it the job fails as NOT-RUN.
+# Push on main only, no pull_request trigger and no tags: the repo has no branch protection, so
+# the merged push to main runs the same cases. Path-filtered to the four members that own the
+# cases, their pack-evals copies and this file, since every run spends model credits.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "packs/localops/skills/revenantworks-localops-duckrunner/**"
+      - "packs/localops/pack-evals/duckrunner--behaviour-check-tracked-cache/**"
+      - "packs/warden/skills/revenantworks-warden-gatewarden/**"
+      - "packs/warden/skills/revenantworks-warden-keywarden/**"
+      - "packs/warden/skills/revenantworks-warden-shieldwarden/**"
+      - "packs/warden/pack-evals/gatewarden--*/**"
+      - "packs/warden/pack-evals/keywarden--*/**"
+      - "packs/warden/pack-evals/shieldwarden--*/**"
+      - ".github/workflows/shell-evals.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: shell-evals-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  shell-cases:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: { persist-credentials: false }
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with: { python-version: "3.12" }
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        # No lockfile in this repo; caching off keeps a poisoned cache out of the run.
+        with: { node-version: "22", package-manager-cache: false }
+      # The CLI the owner's rerun used (2.1.302): it has `plugin eval --scaffold`.
+      - run: npm install -g @anthropic-ai/claude-code@2.1.302
+      # The shell sandbox backend `--allow-tools Bash` needs on Linux. Without it the eval refuses
+      # the grant (the 2026-10-15 cloud run). ubuntu-latest has passwordless sudo and apt.
+      - name: Install the shell sandbox backend
+        run: |
+          command -v bwrap >/dev/null 2>&1 && command -v socat >/dev/null 2>&1 \
+            || { sudo apt-get update -q && sudo apt-get install -y -q --no-install-recommends bubblewrap socat; }
+      - name: Run the eight shell cases
+        run: |
+          set +e -u  # every case runs and reports; the job fails at the end if any case did not pass
+          if [ -z "${ANTHROPIC_API_KEY:-}" ]; then
+            echo "::error::ANTHROPIC_API_KEY secret is not set: NOT-RUN, never a pass"
+            exit 1
+          fi
+          cases="localops:duckrunner--behaviour-check-tracked-cache
+          warden:gatewarden--layout-behaviour-read-only
+          warden:gatewarden--loads-behaviour-twice
+          warden:gatewarden--map-behaviour-delete-biggest
+          warden:gatewarden--map-behaviour-treemap-local
+          warden:keywarden--behaviour-curl-preflight
+          warden:keywarden--behaviour-scope-no-token
+          warden:shieldwarden--signposts-behaviour-propose"
+          out="$RUNNER_TEMP/shell-evals"
+          mkdir -p "$out"
+          status=0
+          summary=""
+          while read -r row; do
+            pack="${row%%:*}"
+            name="${row#*:}"
+            echo "::group::$pack / $name"
+            # One --case per name: a brace glob over several names is unconfirmed in the CLI.
+            claude plugin eval "packs/$pack" --case "*${name#*--}" --scaffold --allow-tools Bash \
+              --runs 1 --ablation none --trust-plugin --no-publish -j 1 --max-cost-usd 0.6 \
+              --json "$out/$name.json"
+            rc=$?
+            echo "::endgroup::"
+            line=$(python3 - "$out/$name.json" <<'PY'
+          import json, sys
+          try:
+              agg = json.load(open(sys.argv[1], encoding="utf-8"))["aggregates"]
+          except (OSError, ValueError, KeyError) as e:
+              print(f"no result ({type(e).__name__})"); sys.exit(1)
+          total, passed = agg.get("casesTotal", 0), agg.get("casesPassed", 0)
+          print(f"{passed}/{total} passed")
+          sys.exit(0 if total and passed == total else 1)
+          PY
+            )
+            ok=$?
+            summary="$summary$pack / $name: $line, eval exit $rc"$'\n'
+            if [ "$ok" -ne 0 ] || [ "$rc" -ne 0 ]; then
+              echo "::error::$pack / $name: $line (eval exit $rc)"
+              status=1
+            fi
+          done <<< "$(printf '%s\n' "$cases" | sed 's/^[[:space:]]*//')"
+          printf '%s' "$summary"
+          printf '%s' "$summary" >> "$GITHUB_STEP_SUMMARY"
+          exit $status
