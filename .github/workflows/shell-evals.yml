@@ -2,10 +2,9 @@ name: shell-evals
 
 # The eight native eval cases that grade a Bash call (U37 section 4, U38 class c). Windows grants
 # no confinable shell, so they can never pass on the rig's own run; they need Linux with a shell
-# sandbox and `--allow-tools Bash`. runs-on follows the estate runner pattern: the self-hosted Rig
-# CI Runner when the repo's CI_RUNNER variable is set, GitHub's ubuntu-latest otherwise. The rig's
-# supervisor serves private repos only and this repo is public, so until the owner decides
-# otherwise the job runs on ubuntu-latest (Actions minutes plus model credits per run).
+# sandbox and `--allow-tools Bash`. The job runs on GitHub's ubuntu-latest only, never a
+# self-hosted runner: this repo is public, and a public repo's jobs must not reach the rig
+# (Actions minutes plus model credits per run).
 # Needs the ANTHROPIC_API_KEY repository secret; without it the job fails as NOT-RUN.
 # Push on main only, no pull_request trigger and no tags: the repo has no branch protection, so
 # the merged push to main runs the same cases. Path-filtered to the four members that own the
@@ -33,7 +32,7 @@ concurrency:
 
 jobs:
   shell-cases:
-    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -48,7 +47,7 @@ jobs:
       # The CLI the owner's rerun used (2.1.302): it has `plugin eval --scaffold`.
       - run: npm install -g @anthropic-ai/claude-code@2.1.302
       # The shell sandbox backend `--allow-tools Bash` needs on Linux. Without it the eval refuses
-      # the grant (the 2026-10-15 cloud run). Both runners have passwordless sudo and apt.
+      # the grant (the 2026-10-15 cloud run). ubuntu-latest has passwordless sudo and apt.
       - name: Install the shell sandbox backend
         run: |
           command -v bwrap >/dev/null 2>&1 && command -v socat >/dev/null 2>&1 \
