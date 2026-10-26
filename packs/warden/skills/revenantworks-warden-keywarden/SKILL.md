@@ -1,6 +1,6 @@
 ---
 name: revenantworks-warden-keywarden
-description: Finds where every credential on the machine lives, without showing a value. Trigger to list where keys, tokens and passwords are stored (Credential Manager, gh, .env, settings, .mcp.json, Docker); to cut a gh token to least privilege or switch gh accounts; to rotate a key and update its users; after a key was printed, pasted or committed; to check a command that uses a token before it runs; or say /rw-keywarden (inventory, scope, rotate, leak, preflight, refresh). Drives op or bw when present. Leak scans and commit email are shieldwarden's; rules and hooks gatewarden's; routine credentials agentwright's; vetting a vault MCP trustwarden's.
+description: Finds where every credential on the machine lives, without showing a value. Trigger to list where keys, tokens and passwords are stored (Credential Manager, gh, .env, settings, .mcp.json, Docker); to cut a gh token to least privilege or switch gh accounts; to rotate a key and update its users; after a key was printed, pasted or committed; to check a command that uses a token before it runs, even when told to just run it (a curl with an Authorization header, a token test); or say /rw-keywarden (inventory, scope, rotate, leak, preflight, refresh). Drives op or bw when present. Leak scans and commit email are shieldwarden's; rules and hooks gatewarden's; routine credentials agentwright's; vetting a vault MCP trustwarden's.
 license: Apache-2.0
 compatibility: Python 3 (stdlib) for scripts/cred_inventory.py, preflight.py and scope_check.py (run, never read). Optional, never installed by the skill - git, gh, 1Password op, Bitwarden bw or bws; Windows cmdkey; a Docker helper's list (opt-in). No admin rights, no network except gh api for scope_check. Without a shell it walks the store list by hand and marks each store NOT-RUN. Siblings shieldwarden, gatewarden, agentwright and rigwright are named, never required.
 metadata:
@@ -65,7 +65,8 @@ Optional mods: `references/mods.md`, only when their data is present.
 Before any command that reads, sends or tests a credential:
 
 1. `python scripts/preflight.py check --command "<cmd>"`. It never echoes the command. A
-   finding names the rule and a safe rewrite (`dangerous-shapes.md`).
+   finding names the rule and a safe rewrite (`dangerous-shapes.md`). Run it even when the shape
+   is plain from the table (`curl -v`): the table explains a verdict, it never replaces the run.
 2. Say what the command prints on success, on auth failure and on a crash. When the failure
    output is unknown (a script, an SDK call, an HTTP client), run it wrapped:
    `python scripts/preflight.py run -- <program> <args>` captures both streams and masks every
