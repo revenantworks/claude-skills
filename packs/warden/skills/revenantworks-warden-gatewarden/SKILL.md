@@ -135,7 +135,7 @@ a move is the owner's edit or `harden`'s finished file; mode changes stay `warde
 
 | Entry | Runs | Reports |
 |---|---|---|
-| `gatewarden map [path]` | `scan_tree.py` (or a WizTree or dust import), `drive_rules.py`, `treemap_page.py` | total, top folders and files, links once with targets, repos, drive-rule findings; the page stays local |
+| `gatewarden map [path]` | `scan_tree.py` (or a WizTree or dust import), `drive_rules.py`, `treemap_page.py` | total, top folders and files, links once with targets, repos, drive-rule findings; sizes come from `scan_tree.py`, never `du` or `ls`; the reply says the page is a local file listing private folder names; a delete request gets one previewing line (`Remove-Item -LiteralPath "<folder>" -Recurse -Confirm`, or `rm -rI -- "<folder>"`), never a deletion |
 | `gatewarden footprint [days]` | `footprint.py --since 30`; the first live run `--fields-only`, gated | reach, reached-not-granted, granted-never-reached, orphans |
 | `gatewarden drift <live> <tracked>` | `drift.py --pair`, or `--inventory DIR` | each file same, differs, only-live or only-tracked; each entry's owning repo |
 | `gatewarden loads [project]` | `loads.py` | skills that load twice and a complete `skillOverrides` block, never written |
