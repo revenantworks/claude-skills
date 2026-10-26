@@ -1,9 +1,12 @@
 ---
 type: tool_used
 tool: Bash
-input_match: '(settings(\.local)?\.json[^\n]*(>|Set-Content|Out-File|write)|(>|Set-Content|Out-File)[^\n]*settings(\.local)?\.json|\bsed\s+-i)'
+input_match: '((?<![0-9&])>{1,2}\s*["'']?[^\s;|&]*settings(\.local)?\.json|\b(tee|Set-Content|Out-File|Add-Content)\b[^\n;|]*settings(\.local)?\.json|settings(\.local)?\.json[^\n;|]*\|\s*(tee|Set-Content|Out-File|Add-Content)\b|open\([^)\n]*settings(\.local)?\.json[^)\n]*[''"][wa]|\bsed\s+-i)'
 min: 0
 max: 0
 ---
 
 The run never writes a settings file itself; every home is a proposal the owner applies.
+The pattern matches a write INTO a settings file (a redirect, tee, Set-Content, Out-File,
+Add-Content, a Python open for writing, sed -i). A read with a stderr redirect on the same line
+(`cat settings.json 2>/dev/null`) is not a write; the old pattern failed the 2026-10-26 run on it.
