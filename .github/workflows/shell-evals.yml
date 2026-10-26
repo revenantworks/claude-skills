@@ -88,7 +88,7 @@ jobs:
             echo "::group::$pack / $name"
             # One --case per name: a brace glob over several names is unconfirmed in the CLI.
             claude plugin eval "packs/$pack" --case "*${name#*--}" --scaffold --allow-tools Bash \
-              --runs 1 --ablation none --trust-plugin --no-publish -j 1 --max-cost-usd 0.6 \
+              --runs 1 --ablation none --trust-plugin --no-publish -j 1 --max-cost-usd 0.6 --keep-temp \
               --json "$out/$name.json"
             rc=$?
             echo "::endgroup::"
@@ -125,6 +125,24 @@ jobs:
           for d in packs/*/pack-evals/results; do
             [ -d "$d" ] && mkdir -p "$dest/$d" && cp -r "$d/." "$dest/$d/"
           done
+          # Each case's trace (every tool call and the last message) says WHY a grader failed;
+          # --keep-temp keeps it on the runner, and the JSON names where.
+          python3 - "$dest" <<'PY'
+          import json, pathlib, shutil, sys
+          dest = pathlib.Path(sys.argv[1])
+          (dest / "traces").mkdir(exist_ok=True)
+          for p in sorted((dest / "json").glob("*.json")):
+              try:
+                  cases = json.loads(p.read_text(encoding="utf-8"))["cases"]
+              except (OSError, ValueError, KeyError):
+                  continue
+              for c in cases:
+                  for runs in c.get("arms", {}).values():
+                      for i, r in enumerate(runs):
+                          t = pathlib.Path(r.get("tracePath") or "")
+                          if t.is_file():
+                              shutil.copy(t, dest / "traces" / f"{p.stem}.{i}.jsonl")
+          PY
           python3 - "$dest" <<'PY'
           import os, pathlib, sys
           key = os.environ.get("ANTHROPIC_API_KEY", "")
