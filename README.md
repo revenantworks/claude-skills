@@ -23,7 +23,7 @@ Claude API, or in any compatible agent.
 
 > [!TIP]
 > **Coming soon: Scrubwarden**, an offline PII scanner built on shieldwarden's scan engine. No
-> network, no AI. [More below](#coming-soon-scrubwarden).
+> network, rules only. [More below](#coming-soon-scrubwarden).
 
 [Quick start](#quick-start) · [Packs](#the-packs) · [Featured](#featured-skills) ·
 [Godot tooling](#godot-tooling) · [Mods](#mods) · [Capstones](#capstones) · [How skills route](#how-skills-route) · [Safety](#safety-posture) ·
@@ -351,7 +351,7 @@ phone numbers, card and social security numbers, IP and MAC addresses, user-fold
 secrets and the names on your own word list, and writes a redacted copy. The original is never
 changed.
 
-- **No network, no AI.** Every finding comes from a written rule. CI runs the tests in a
+- **No network, rules only.** Every finding comes from a written rule. CI runs the tests in a
   container with networking off.
 - **Never echoes what it finds.** Reports show a masked preview, never the value.
 - **Grows out of shieldwarden.** It takes the warden pack's offline scan engine and turns it
