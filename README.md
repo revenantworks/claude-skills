@@ -21,9 +21,13 @@ Claude API, or in any compatible agent.
 > what to change (it never builds anything), and `shroud`, which masks secrets before Claude
 > reads them. Installing one is the opt-in; no skill needs one.
 
+> [!TIP]
+> **Coming soon: Scrubwarden**, an offline PII scanner built on shieldwarden's scan engine. No
+> network, no AI. [More below](#coming-soon-scrubwarden).
+
 [Quick start](#quick-start) · [Packs](#the-packs) · [Featured](#featured-skills) ·
 [Godot tooling](#godot-tooling) · [Mods](#mods) · [Capstones](#capstones) · [How skills route](#how-skills-route) · [Safety](#safety-posture) ·
-[Testing](#testing-and-contributing) · [Licence](#licence)
+[Testing](#testing-and-contributing) · [Coming soon](#coming-soon-scrubwarden) · [Licence](#licence)
 
 ## Quick start
 
@@ -338,6 +342,23 @@ CONTRIBUTING.md                   # contributor setup: arm the PII hook in every
 ```
 
 </details>
+
+## Coming soon: Scrubwarden
+
+**Check a file for personal data before you hand it to any AI tool.** Scrubwarden is a
+command-line scanner for text, code, CSV, JSON, YAML, `.docx` and PDF text. It reports emails,
+phone numbers, card and social security numbers, IP and MAC addresses, user-folder paths,
+secrets and the names on your own word list, and writes a redacted copy. The original is never
+changed.
+
+- **No network, no AI.** Every finding comes from a written rule. CI runs the tests in a
+  container with networking off.
+- **Never echoes what it finds.** Reports show a masked preview, never the value.
+- **Grows out of shieldwarden.** It takes the warden pack's offline scan engine and turns it
+  into a standalone tool for documents as well as repos.
+- **Free and open source** under Apache-2.0, with a paid desktop edition planned.
+
+The repository opens with the first free release. Watch this one for the link.
 
 ## Licence
 
