@@ -14,8 +14,6 @@ import { isFeatureOn, parseSwitches, type Switches } from './lib/switches'
 import { fnv1a, isWindowsEnv, mapStrings, mergeHeartbeat, normPath } from './lib/util'
 
 const PLUGIN = 'shroud'
-/** The command shroud was called before 2026-10-23. */
-const LEGACY = 'privacy'
 const VERSION = '1.0.0'
 
 // Module state. A hot reload starts it over; switches come back from disk.
@@ -131,8 +129,6 @@ async function pvSetup($: EngineInterface): Promise<void> {
   await pvLoad($)
   try {
     await $.command.register({ name: 'rw-shroud', description: 'shroud: what was masked or marked this session (counts only)' })
-    // The old name answers for one release, hidden from the typeahead (command.describe below).
-    await $.command.register({ name: LEGACY, description: 'Renamed: /rw-shroud' })
   } catch {
     // A name the host refuses is skipped; setup goes on.
   }
@@ -309,12 +305,6 @@ export const register: Register = on => {
     await pvHeartbeat($)
     return { text: pvStatus() }
   })
-  on('command.run', { command: LEGACY }, async $ => {
-    await pvEnsure($)
-    return { text: pvStatus() }
-  })
-  on('command.describe', { command: LEGACY }, async ($, e, next) => ({ ...(await next(e)), isHidden: true }))
-
   on('turn.complete', async ($, e, next) => {
     await pvEnsure($)
     const res = await next(e)

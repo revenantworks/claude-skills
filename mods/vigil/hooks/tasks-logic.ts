@@ -391,48 +391,6 @@ export const reconcileFlags = (rows: Array<{ unit: string; status: string; remot
     .filter(r => !r.remoteSha || !originHas(r.remoteSha))
     .map(r => r.unit)
 
-// ---------- D12 (was X5): PR state ----------
-
-export type PrRow = { number: number; title: string; state: string; checks: string; review: string; mergeable: string }
-
-export const parsePrList = (json: string): PrRow[] => {
-  try {
-    const raw = JSON.parse(json) as Array<Record<string, unknown>>
-    return raw.map(r => {
-      const rollup = (r.statusCheckRollup as Array<{ conclusion?: string; state?: string }> | undefined) ?? []
-      const states = rollup.map(c => (c.conclusion ?? c.state ?? '').toUpperCase())
-      const checks = states.length === 0 ? 'no checks' : states.some(s => /FAIL|ERROR|CANCELLED|TIMED_OUT/.test(s)) ? 'red' : states.every(s => /SUCCESS|NEUTRAL|SKIPPED/.test(s)) ? 'green' : 'pending'
-      return {
-        number: Number(r.number),
-        title: String(r.title ?? ''),
-        state: String(r.state ?? ''),
-        checks,
-        review: String(r.reviewDecision ?? '') || 'no review',
-        mergeable: String(r.mergeStateStatus ?? ''),
-      }
-    })
-  } catch {
-    return []
-  }
-}
-
-/** D12 refreshes after a command that can change a PR: a push, or a gh pr action. */
-export const changesPrs = (command: string): boolean =>
-  /\bgit\b[^;&|\n]*\bpush\b/.test(command) || /\bgh\s+pr\s+(create|merge|ready|close|reopen|edit|review)\b/.test(command)
-
-export const prLine = (rows: PrRow[]): string =>
-  rows.length === 0 ? 'No open PRs of yours here.' : rows.map(r => `#${r.number} ${r.checks}, ${r.review.toLowerCase().replace(/_/g, ' ')}${r.mergeable === 'DIRTY' ? ', conflict' : ''}`).join(' · ')
-
-export const prChanges = (before: PrRow[], after: PrRow[]): string[] =>
-  after.flatMap(a => {
-    const b = before.find(x => x.number === a.number)
-    if (!b) return []
-    const out: string[] = []
-    if (b.checks !== a.checks) out.push(`#${a.number} checks ${b.checks} → ${a.checks}`)
-    if (b.review !== a.review) out.push(`#${a.number} review ${a.review.toLowerCase().replace(/_/g, ' ')}`)
-    return out
-  })
-
 // ---------- F3f: background task status ----------
 
 /** "the same task" for estimates: kind plus a hash of the command with numbers, paths and quotes

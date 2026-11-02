@@ -10,6 +10,8 @@ export const KEEP_DAYS = 30
 export const MAX_EVENTS = 20_000
 /** A different skill this soon after an automatic fire marks the first one as a likely misroute. */
 export const SWITCH_WINDOW_MS = 120_000
+/** Skills that load within this long of each other are a batch for one job, not a wrong pick: 47 of 53 real flags were. */
+export const BATCH_MS = 30_000
 /** A reverted edit this soon after an automatic fire marks that skill as a likely misroute. */
 export const REVERT_WINDOW_MS = 10 * 60_000
 /** A fresh meter row at most this often (the status line moves every response). */
@@ -170,7 +172,7 @@ export const emptyMisroute = (): MisrouteState => ({ last: null, edits: [] })
 /** A skill fired. A different skill this soon after an automatic fire flags the first one. */
 export const onSkillFire = (st: MisrouteState, skill: string, via: Via, t: number): { st: MisrouteState; misroute: string | null } => {
   const prev = st.last
-  const misroute = prev && !prev.flagged && prev.via === 'auto' && prev.skill !== skill && t - prev.t >= 0 && t - prev.t <= SWITCH_WINDOW_MS ? prev.skill : null
+  const misroute = prev && !prev.flagged && prev.via === 'auto' && prev.skill !== skill && t - prev.t >= BATCH_MS && t - prev.t <= SWITCH_WINDOW_MS ? prev.skill : null
   return { st: { ...st, last: { skill, via, t, flagged: false } }, misroute }
 }
 
@@ -283,7 +285,6 @@ export type Health = {
   plugins: Record<string, { loaded: boolean; at: number | null; version: string | null; caught: number }>
   drift: Array<{ hook: string; state: 'same' | 'differs' | 'not installed' }>
   gatewarden: GatewardenCounts
-  pinsChanged: number
 }
 
 export type Feed = {
@@ -302,7 +303,7 @@ export type Feed = {
   suggestionsNew: number
 }
 
-export const emptyHealth = (): Health => ({ plugins: {}, drift: [], gatewarden: null, pinsChanged: 0 })
+export const emptyHealth = (): Health => ({ plugins: {}, drift: [], gatewarden: null })
 
 /** PACE = 95 x the fraction of the 7-day window gone (pacewright); gap = weekly minus PACE. */
 export const paceOf = (week: number, resetMs: number, now: number): { pace: number; gap: number } => {
@@ -416,22 +417,3 @@ export const rollup = (events: readonly DashEvent[], args: { now: number; record
     suggestionsNew: args.suggestionsNew ?? 0,
   }
 }
-
-/** The mobile snapshot: the feed's counts with every name that could be a path or a host dropped. */
-export const publishSnapshot = (feed: Feed): Record<string, unknown> => ({
-  kind: 'revenantworks-vigil-snapshot',
-  version: 1,
-  takenAt: new Date(feed.generatedAt).toISOString(),
-  note: 'A rolled-up snapshot, not live. Counts only: no prompts, commands, paths or secrets.',
-  sessions7: feed.sessions7,
-  tokens7: feed.tokens7,
-  cost7: feed.cost7,
-  meters: feed.meters,
-  skills: feed.skills.slice(0, 40).map(s => ({ name: s.name, listed: s.listed, fires7: s.fires7, fires30: s.fires30, slash30: s.slash30, auto30: s.auto30, failures30: s.failures30, misroutes30: s.misroutes30, tokens7: s.tokens7, cost7: s.cost7 })),
-  health: {
-    plugins: Object.fromEntries(Object.entries(feed.health.plugins).map(([k, v]) => [k, { loaded: v.loaded, caught: v.caught }])),
-    driftCount: feed.health.drift.filter(d => d.state !== 'same').length,
-    gatewarden: feed.health.gatewarden ? { total7: feed.health.gatewarden.total7, byMode: feed.health.gatewarden.byMode, byOutcome: feed.health.gatewarden.byOutcome } : null,
-  },
-  suggestionsNew: feed.suggestionsNew,
-})

@@ -3,7 +3,7 @@ import { describe, expect, test } from 'claude-code/testing'
 import { arranged, detailOf, parseLayout, tileOf, type BoardData } from '../hooks/board-logic'
 import { DAY, emptyHealth } from '../hooks/collector-logic'
 import { parseAutoModes } from '../hooks/board-logic'
-import { buildPrompt, levelOf, parseSpec, pathProblem, realProblem, resolvePath, tileKey, userTileOf, valueOf, type TileSpec } from '../hooks/tiles-logic'
+import { buildPrompt, levelOf, parseLink, parseSpec, pathProblem, realProblem, resolvePath, tileKey, userTileOf, valueOf, type TileSpec } from '../hooks/tiles-logic'
 
 const NOW = Date.UTC(2026, 9, 23, 12)
 const spec = (over: Record<string, unknown> = {}): string => JSON.stringify({ schema: 1, id: 'ci', title: 'CI runs', source: { kind: 'json', path: './state/ci.json', field: 'runs' }, picture: 'dots', ...over })
@@ -108,5 +108,55 @@ describe('on the board', () => {
     expect(p).toMatch(/Read only/)
     expect(p).toMatch(/Write nothing until I say yes\./)
     expect(p).toContain('/u/t/.claude/revenantworks/vigil/tiles/<id>.json')
+  })
+})
+
+describe('your private folder (one mod, nothing private in it)', () => {
+  const spec = (over: Record<string, unknown>) => JSON.stringify({ schema: 1, id: 't', title: 'T', picture: 'count', source: { kind: 'lines', path: '@/a/b.txt' }, ...over })
+  test('@/ means the linked clones, and no link says so', () => {
+    expect(pathProblem('@/north/state/ledger.yml')).toBeNull()
+    expect(resolvePath('@/north/x.yml', '/h', '/r', '/clones')).toBe('/clones/north/x.yml')
+    expect(resolvePath('@/north/x.yml', '/h', '/r')).toBeNull()
+    expect(pathProblem('@/north/.env')).toMatch(/never read/)
+    expect(pathProblem('@/../x')).toMatch(/climb/)
+    expect(realProblem('/clones/north/x.yml', ['/h', '/clones'])).toBeNull()
+    expect(realProblem('/elsewhere/x.yml', ['/h', '/clones'])).toMatch(/outside/)
+  })
+  test('a size source may ask how big a guard file is, never its words, and never a key', () => {
+    const ok = parseSpec(spec({ source: { kind: 'size', path: '@/repo/.git/info/name-pattern' } }), 't')
+    expect('spec' in ok).toBe(true)
+    expect('errors' in parseSpec(spec({ source: { kind: 'lines', path: '@/repo/.git/info/name-pattern' } }), 't')).toBe(true)
+    expect('errors' in parseSpec(spec({ source: { kind: 'size', path: '@/repo/.ssh/id_rsa' } }), 't')).toBe(true)
+    expect(realProblem('/c/repo/.git/info/name-pattern', ['/c'], true)).toBeNull()
+    expect(realProblem('/c/repo/.git/info/name-pattern', ['/c'])).toMatch(/never read/)
+    if ('spec' in ok) expect(valueOf(ok.spec, { kind: 'size', size: 12 }, 0)).toEqual({ kind: 'n', n: 12 })
+  })
+  test('the same field of every row draws a spark', () => {
+    const r = parseSpec(spec({ picture: 'spark', source: { kind: 'json', path: '@/m.json', field: 'history.*.roll' } }), 't')
+    expect('spec' in r).toBe(true)
+    if ('spec' in r) expect(valueOf(r.spec, { kind: 'text', text: '{"history":[{"roll":1},{"roll":3}]}', mtimeMs: 0 }, 0)).toEqual({ kind: 'ns', ns: [1, 3] })
+  })
+  test('date with match: the next date still to come on the lines holding it, else the last', () => {
+    const r = parseSpec(spec({ picture: 'countdown', source: { kind: 'date', path: '@/l.yml', match: 'id: C' } }), 't')
+    expect('spec' in r).toBe(true)
+    if (!('spec' in r)) return
+    const text = 'updated: 2020-01-01\n- {id: C1, date: 2026-10-19}\n- {id: C2, date: 2026-12-28}\n'
+    const at = (d: string) => Date.parse(`${d}T00:00:00Z`)
+    expect(valueOf(r.spec, { kind: 'text', text, mtimeMs: 0 }, at('2026-11-02'))).toEqual({ kind: 'at', at: at('2026-12-28') })
+    expect(valueOf(r.spec, { kind: 'text', text, mtimeMs: 0 }, at('2027-02-01'))).toEqual({ kind: 'at', at: at('2026-12-28') })
+  })
+  test('lines with match skip a comment that documents the match', () => {
+    const r = parseSpec(spec({ source: { kind: 'lines', path: '@/q.yml', match: 'status: today' } }), 't')
+    if ('spec' in r) expect(valueOf(r.spec, { kind: 'text', text: '# status: today | parked\n  - id: a\n    status: today\n', mtimeMs: 0 }, 0)).toEqual({ kind: 'n', n: 1 })
+  })
+  test('a tile may carry one button that drafts in chat; a bad one is refused', () => {
+    const r = parseSpec(spec({ act: { label: 'Close it', prompt: 'Show today step and offer done or skip.' } }), 't')
+    expect('spec' in r && r.spec.act?.label).toBe('Close it')
+    expect('errors' in parseSpec(spec({ act: { label: 'x' } }), 't')).toBe(true)
+  })
+  test('the link file reads back with forward slashes, and junk reads as none', () => {
+    expect(parseLink('{"root":"\\\\srv\\\\clones\\\\","folder":"/srv/own"}')).toEqual({ root: '/srv/clones', folder: '/srv/own' })
+    expect(parseLink('{"root":"x"}')).toBeNull()
+    expect(parseLink('nope')).toBeNull()
   })
 })

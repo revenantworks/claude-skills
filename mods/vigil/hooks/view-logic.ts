@@ -6,28 +6,26 @@ import type { AutoMode, TileId } from './board-logic'
 import type { BuildSource } from './tiles-logic'
 import type { Feed, Health, SkillRow } from './collector-logic'
 import { statusText, type Live } from './meters-logic'
-import { ruleCheck, ruleSummary, type Rule } from './rules-logic'
-import { groupAction, grouped, resolveRef, type Suggestion } from './suggest-logic'
 import {
-  BACKGROUNDS, NEUTRAL, bar, columns, consoleVerdict, headerText, madeFor, orderThemes, resolveVariant, roleChecks, themeVerdict,
-  type ConsoleBg, type ConsoleInfo, type ConsoleVerdict, type Role, type RoleCheck, type Theme, type ThemeEntry, type Tone,
+  NEUTRAL, bar, columns, headerText, madeFor, orderThemes, resolveVariant, roleChecks,
+  type ConsoleBg, type ConsoleInfo, type RoleCheck, type Theme, type ThemeEntry, type Tone,
 } from './theme-logic'
 
-/** One drawn line: a tone the active theme paints, or (a theme preview) the exact colour it shows. */
-export type Line = { text: string; tone?: Tone; color?: string; press?: Press; buttons?: readonly LineButton[] }
+/** One drawn line: a tone the active theme paints, or (the theme picker) the exact colour it shows. */
+export type Line = { text: string; tone?: Tone; color?: string; buttons?: readonly LineButton[] }
 
-/**
- * What a pane press does. Text output ignores it. A suggestion act names its rows by id, so a press
- * lands on the rows it was drawn for even if the numbering moved before the redraw.
- */
+/** What a pane press does. Text output ignores it. */
 export type Press =
-  | { kind: 'drill'; group: string | null }
-  | { kind: 'act'; verb: 'dismiss' | 'snooze'; label: string; ids: readonly string[] }
   | { kind: 'view'; view: View }
   /** A tile's three controls (collapse, pin, move) and its open. */
   | { kind: 'tile'; op: 'collapse' | 'pin' | 'up' | 'down' | 'open'; id: TileId }
-  /** A suggestion card's two buttons, and Undo after Not now. */
-  | { kind: 'card'; op: 'do' | 'notnow' | 'undo'; id: string }
+  /** A suggestion card's buttons, and Undo after Not now. */
+  | { kind: 'card'; op: 'do' | 'notnow' | 'never' | 'undo'; id: string }
+  /** Your tile's own button: drafts its prompt in chat. */
+  | { kind: 'tile-act'; id: TileId }
+  /** A theme picked in the pane, or what the console is drawn on. */
+  | { kind: 'theme'; name: string }
+  | { kind: 'background'; bg: ConsoleBg | 'auto' }
   /** One of the three switches: the shared switch command it stands for. */
   | { kind: 'switch'; command: string }
   /** A spend-mode toggle: may pacewright enter this mode by itself. */
@@ -38,13 +36,12 @@ export type Press =
   | { kind: 'rotate' }
 export type LineButton = { label: string; press: Press }
 
-export const VIEWS = ['board', 'detail', 'cards', 'settings', 'tiles', 'overview', 'skills', 'skills-all', 'dupes', 'meters', 'health', 'tasks', 'suggest', 'context', 'gpu', 'palette', 'godot', 'prs', 'theme'] as const
+export const VIEWS = ['board', 'detail', 'cards', 'settings', 'tiles', 'overview', 'skills', 'skills-all', 'dupes', 'meters', 'health', 'tasks', 'context', 'theme'] as const
 export type View = (typeof VIEWS)[number]
 
-/** The pane's view bar, two rows: every view a bare /rw-vigil <verb> opens. Palette takes a brand name, so it stays typed. */
+/** The pane's view bar: the views worth a button. The rest stay typed (/rw-vigil help). */
 const NAV: readonly (readonly [View, string])[][] = [
-  [['board', 'Board'], ['cards', 'Inbox'], ['skills', 'Skills'], ['meters', 'Meters'], ['health', 'Health'], ['tasks', 'Tasks']],
-  [['overview', 'Text'], ['suggest', 'Queue'], ['context', 'Context'], ['gpu', 'GPU'], ['godot', 'Godot'], ['prs', 'PRs'], ['theme', 'Theme'], ['tiles', 'Tiles'], ['settings', 'Settings']],
+  [['board', 'Board'], ['cards', 'Inbox'], ['skills', 'Skills'], ['tasks', 'Tasks'], ['health', 'Health'], ['tiles', 'Tiles'], ['theme', 'Theme'], ['settings', 'Settings']],
 ]
 /** The view a pane view belongs to on the bar: skills' all and dupes lists sit under Skills. */
 const navOf = (v: View): View => (v === 'skills-all' || v === 'dupes' ? 'skills' : v === 'detail' ? 'board' : v)
@@ -153,7 +150,7 @@ const pluginLines = (t: Theme, h: Health): Line[] => {
 }
 
 /** The overview: meters, the week's totals, the busiest skills, health, open suggestions. */
-export const overviewLines = (args: { live: Live | null; feed: Feed; now: number; tasksLine: string | null; panels: string[]; theme?: Theme }): Line[] => {
+export const overviewLines = (args: { live: Live | null; feed: Feed; now: number; tasksLine: string | null; theme?: Theme }): Line[] => {
   const t = args.theme ?? NEUTRAL
   const { feed } = args
   const out: Line[] = [head(t, 'vigil'), { text: `  ${statusText(args.live, args.now, t.glyphs.sep)}`, tone: 'bold' }]
@@ -166,8 +163,7 @@ export const overviewLines = (args: { live: Live | null; feed: Feed; now: number
   else out.push(...skillTable(top))
   out.push(blank, head(t, 'Health'), ...pluginLines(t, feed.health), { text: `  ${healthSummary(feed.health, t)}`, tone: 'dim' })
   if (feed.suggestionsNew > 0) out.push(blank, { text: `  ${t.glyphs.warn} ${plural(feed.suggestionsNew, 'new suggestion')}: /rw-vigil suggest`, tone: 'warning' })
-  if (args.panels.length) out.push(blank, head(t, 'Panels'), ...args.panels.map(p => ({ text: `  ${p}`, tone: 'dim' as const })))
-  out.push(blank, footer(t, ['skills', 'meters', 'health', 'tasks', 'suggest', 'theme', 'help']))
+  out.push(blank, footer(t, ['skills', 'tasks', 'health', 'suggest', 'theme', 'help']))
   return out
 }
 
@@ -191,7 +187,7 @@ export const skillsLines = (feed: Feed, theme: Theme = NEUTRAL, opts: { all?: bo
   if (!opts.all && quiet) notes.push({ text: `  ${quiet} enabled, never fired${t.glyphs.sep}/rw-vigil skills all`, tone: 'dim' })
   const dupes = findDupes(feed.skills, sources)
   if (dupes.length) notes.push({ text: `  ${t.glyphs.warn} ${plural(dupes.length, 'skill')} loaded twice (${[...new Set(dupes.flatMap(d => d.sources))].join(' + ')}): /rw-vigil skills dupes`, tone: 'warning' })
-  if (shown.length) notes.push({ text: '  misr: another skill fired within 2 minutes, or its edit was reverted.', tone: 'dim' }, { text: "  tok 7d: all tokens of the turns it loaded in, not the skill's own size.", tone: 'dim' })
+  if (shown.length) notes.push({ text: '  misr: another skill fired 30 s to 2 min later, or its edit was reverted.', tone: 'dim' }, { text: "  tok 7d: all tokens of the turns it loaded in, not the skill's own size.", tone: 'dim' })
   if (notes.length) out.push(blank, ...notes)
   return out
 }
@@ -227,11 +223,11 @@ export const metersLines = (live: Live | null, feed: Feed, now: number, theme: T
   return out
 }
 
-/** Health past the mod rows the overview already shows: drift, gatewarden, pins. */
+/** Health past the mod rows the overview already shows: drift, gatewarden. */
 export const healthSummary = (h: Health, theme: Theme = NEUTRAL): string => {
   const drift = h.drift.filter(d => d.state === 'differs').length
   const gw = h.gatewarden ? `gatewarden ${plural(h.gatewarden.total7, 'event')} in 7 days` : 'no gatewarden log'
-  return [`${plural(drift, 'hook')} drifted`, gw, ...(h.pinsChanged ? [`${plural(h.pinsChanged, 'instruction file')} changed`] : [])].join(theme.glyphs.sep)
+  return [`${plural(drift, 'hook')} drifted`, gw].join(theme.glyphs.sep)
 }
 
 /**
@@ -268,96 +264,6 @@ export const healthLines = (h: Health, theme: Theme = NEUTRAL, dupes: number | r
     const rows = [['events', String(g.total7)], ['modes', list(g.byMode)], ['outcomes', list(g.byOutcome)], ...(g.topRules.length ? [['busiest', g.topRules.map(r => `${r.rule} ${r.n}`).join(', ')]] : [])]
     out.push(...columns(rows).map(text => ({ text })))
   }
-  if (h.pinsChanged) out.push(blank, { text: `  ${t.glyphs.warn} ${plural(h.pinsChanged, 'instruction file')} changed since last loaded`, tone: 'warning' })
-  return out
-}
-
-/** Words onto lines of at most `n` characters; a single overlong word gets a line to itself. */
-const wrap = (s: string, n: number): string[] => {
-  const out: string[] = []
-  let cur = ''
-  for (const w of s.split(/\s+/).filter(Boolean)) {
-    if (cur && cur.length + 1 + w.length > n) {
-      out.push(cur)
-      cur = w
-    } else cur = cur ? `${cur} ${w}` : w
-  }
-  return cur ? [...out, cur] : out
-}
-
-const stateTone = (s: Suggestion['state']): Tone => (s === 'new' ? 'warning' : s === 'shown' ? 'accent' : s === 'accepted' ? 'ok' : 'dim')
-
-/** "asked 91 · ran 36 · 4 open (3 new, 1 shown)", leaving out what is zero. */
-const evidenceText = (x: { asked: number; ran: number }, sep: string): string =>
-  [x.asked ? `asked ${k(x.asked)}` : '', x.ran ? `ran ${k(x.ran)}` : ''].filter(Boolean).join(sep)
-const statesText = (st: Partial<Record<Suggestion['state'], number>>): string =>
-  (['new', 'shown', 'snoozed', 'accepted', 'dismissed'] as const).filter(s => st[s]).map(s => `${st[s]} ${s}`).join(', ')
-
-/**
- * The suggestion queue rolled up by command type, most-asked first (`drill` null), or one group's
- * shapes (`drill` a group number or name), each with its prompts, its runs and its state.
- */
-/**
- * The suggestion queue. With `rules` (read from the settings files, read-only) each shape in a
- * drill-in also says whether an allow, deny or ask rule already covers it.
- */
-export const suggestLines = (rows: readonly Suggestion[], theme: Theme = NEUTRAL, drill: string | null = null, rules?: readonly Rule[]): Line[] => {
-  const t = theme
-  const sep = t.glyphs.sep
-  const gs = grouped(rows)
-  const target = drill ? resolveRef(rows, drill.split('.')[0]!) : null
-  const gi = target ? gs.findIndex(g => g.name === target.label) : -1
-  if (drill && gi >= 0) {
-    const g = gs[gi]!
-    const acts = (label: string, rs: readonly Suggestion[]): LineButton[] => {
-      const ids = rs.filter(r => r.state === 'new' || r.state === 'shown' || r.state === 'snoozed').map(r => r.id)
-      return ids.length ? [{ label: 'Snooze', press: { kind: 'act', verb: 'snooze', label, ids } }, { label: 'Dismiss', press: { kind: 'act', verb: 'dismiss', label, ids } }] : []
-    }
-    const out: Line[] = [
-      head(t, `Suggestions${sep}${g.name}`),
-      { text: '  < every group', tone: 'dim', press: { kind: 'drill', group: null } },
-      { text: fit(`  ${[evidenceText(g, sep), statesText(g.states)].filter(Boolean).join(sep)}`, MAX_COLS), tone: 'dim', buttons: acts(g.name, g.rows) },
-      ...wrap(groupAction(g.name), MAX_COLS - 2).map(text => ({ text: `  ${text}` })),
-      blank,
-    ]
-    g.subs.forEach((sub, i) => {
-      const states = [...new Set(sub.rows.map(r => r.state))]
-      const tone = stateTone(states.includes('new') ? 'new' : states.includes('shown') ? 'shown' : states[0]!)
-      const ev = evidenceText(sub, sep) || sub.rows[0]!.evidence
-      out.push({ text: fit(`  ${`${gi + 1}.${i + 1}`.padStart(5)} [${states.join('/')}] ${sub.label}`, MAX_COLS), tone })
-      const ids = sub.rows.map(r => r.id).join(' ')
-      out.push({ text: fit(`        ${ev}${sep}id${sub.rows.length === 1 ? '' : 's'} ${ids}`, MAX_COLS), tone: 'dim', buttons: acts(sub.label, sub.rows) })
-      // A prompt row's key names the tool, so it is the better one to check; a run row checks both shells.
-      const probe = sub.rows.find(r => r.kind === 'prompt') ?? sub.rows[0]!
-      const check = rules ? ruleCheck(probe.key, rules) : null
-      if (check) {
-        out.push({ text: fit(`        ${ruleSummary(check)}`, MAX_COLS), tone: check.verdict === 'denied' ? 'warning' : 'dim' })
-        if (check.verdict === 'allowed') out.push({ text: '        already allowed: no rule to add. Dismiss it, or gatewarden explain.', tone: 'dim' })
-      }
-    })
-    const short = g.name.replace(/^\w+: /, '')
-    out.push(blank, { text: `  /rw-vigil suggest accept|dismiss|snooze ${gi + 1} or ${short} (the group), ${short}.<n> (one shape) or an id`, tone: 'dim' },
-      { text: `  An id or a name stays put when a group closes; a number can shift.${sep}/rw-vigil suggest for every group`, tone: 'dim' })
-    return out
-  }
-  const open = gs.reduce((n, g) => n + g.open, 0)
-  const out: Line[] = [
-    head(t, 'Suggestions'),
-    { text: `  ${open} open in ${gs.length} groups, most asked first, then most run.`, tone: 'dim' },
-    { text: '  vigil only proposes: it builds nothing and allows nothing.', tone: 'dim' },
-    { text: '  asked: permission dialogs you saw, classifier reviews left out.', tone: 'dim' },
-    { text: '  ran: times Claude ran it. shown: raised once as a note, still open.', tone: 'dim' },
-    blank,
-  ]
-  if (drill) out.push({ text: `  No group "${drill}". The groups are below.`, tone: 'warning' }, blank)
-  if (gs.length === 0) out.push({ text: '  None yet. They come from what the collector counts (/rw-vigil records on).', tone: 'dim' })
-  const width = Math.min(34, Math.max(0, ...gs.map(g => g.name.length)))
-  gs.forEach((g, i) => {
-    const ev = evidenceText(g, sep)
-    out.push({ text: fit(`  ${String(i + 1).padStart(2)}. ${g.name.padEnd(width)}  ${ev ? `${ev}${sep}` : ''}${g.subs.length} shape${g.subs.length === 1 ? '' : 's'}`, MAX_COLS), tone: g.open ? (g.states.new ? 'warning' : 'accent') : 'dim', press: { kind: 'drill', group: g.name } })
-    out.push({ text: fit(`      ${statesText(g.states)}`, MAX_COLS), tone: 'dim' })
-  })
-  out.push(blank, { text: '  Click a group or /rw-vigil suggest <n> to drill in; accept|dismiss|snooze <n>', tone: 'dim' })
   return out
 }
 
@@ -384,121 +290,60 @@ const getsText = (th: Theme, con: ConsoleInfo): string => {
   if (variantsText(th) === 'follows yours') return 'your Claude Code theme colours'
   return `its one palette (made for ${madeFor(th.background)})`
 }
-const consoleLines = (th: Theme, con: ConsoleInfo): Line[] => con.sure
-  ? [{ text: `  This console is ${con.bg}: it gets ${getsText(th, con)}.` }, { text: `  (from ${con.source})`, tone: 'dim' }]
-  : [{ text: `  This console looks ${con.bg}: it gets ${getsText(th, con)}.` }, { text: '  (A guess: set VIGIL_THEME_BACKGROUND=light or dark to say.)', tone: 'dim' }]
-
-export const themeLines = (themes: Record<string, ThemeEntry>, active: string, theme: Theme, errors: readonly string[], con?: ConsoleInfo): Line[] => {
+/**
+ * The picker: each theme drawn in its own accent, with a button to use it, then the console's
+ * background. A press applies it at once; typing the name does the same.
+ */
+export const themeLines = (themes: Record<string, ThemeEntry>, active: string, theme: Theme, errors: readonly string[], con?: ConsoleInfo, folder = '~/.claude/revenantworks/themes'): Line[] => {
   const t = theme
   const here = con ?? { bg: madeFor(theme.background), sure: false, source: '' }
   const names = orderThemes(Object.keys(themes))
-  // Each theme on two lines: the mark, name and source; then its description and what it carries.
   const rows = columns(names.map(n => {
     const e = themes[n]!
-    return [`${n === active ? t.glyphs.on : t.glyphs.off} ${n}`, e.source === 'user' ? (e.overrides ? 'yours, over bundled' : 'yours') : n === 'neutral' ? 'bundled, default' : 'bundled']
+    return [`${n === active ? t.glyphs.on : t.glyphs.off} ${n}`, fit([e.theme.description, e.source === 'user' ? 'yours' : ''].filter(Boolean).join(t.glyphs.sep), MAX_COLS - 24)]
   }))
   const out: Line[] = [head(t, 'Themes')]
   names.forEach((n, i) => {
-    const e = themes[n]!
-    out.push(
-      { text: rows[i]!, tone: n === active ? 'accent' : undefined },
-      { text: `      ${fit([e.theme.description, variantsText(e.theme)].filter(Boolean).join(t.glyphs.sep), MAX_COLS - 6)}`, tone: 'dim' },
-    )
+    const line: Line = { text: rows[i]!, color: resolveVariant(themes[n]!.theme, here.bg).theme.colors.accent }
+    out.push(n === active ? line : { ...line, buttons: [{ label: 'Use', press: { kind: 'theme', name: n } }] })
   })
-  const inUse = resolveVariant(themes[active]?.theme ?? theme, here.bg)
-  out.push(blank, { text: `  In use: ${active}, ${inUse.variant ? `${inUse.variant} variant` : variantsText(inUse.theme) === 'follows yours' ? 'your theme colours' : 'one palette'} (this console ${here.sure ? 'is' : 'looks'} ${here.bg}).` })
+  const bgs = (['dark', 'light', 'auto'] as const).map(bg => ({ label: bg, press: { kind: 'background' as const, bg } }))
+  out.push(blank, { text: `  This console ${here.sure ? 'is' : 'looks'} ${here.bg}:`, buttons: bgs })
   const weak = roleChecks(theme.colors, here.bg).filter(c => c.grade === 'fail' || c.grade === 'borderline')
-  if (weak.length) out.push({ text: `  ${t.glyphs.warn} On this console:`, tone: 'warning' }, ...weakLines(weak))
+  if (weak.length) out.push({ text: `  ${t.glyphs.warn} Hard to read on this console:`, tone: 'warning' }, ...weakLines(weak))
   if (errors.length) out.push(blank, { text: `  ${t.glyphs.bad} Theme files skipped`, tone: 'error' }, ...errors.map(e => ({ text: `    ${fit(e, MAX_COLS - 4)}`, tone: 'error' as const })))
-  const help = columns([
-    ['/rw-vigil theme <name>', 'apply a theme'],
-    ['/rw-vigil theme show [name]', 'preview: contrast and a verdict; changes nothing'],
-    ['/rw-vigil theme new', 'make your own: answers, a file or a design system'],
-  ])
-  out.push(blank, ...help.map(text => ({ text, tone: 'dim' as const })))
+  out.push(blank, { text: '  /rw-vigil theme <name> applies one; theme background dark|light|auto.', tone: 'dim' }, { text: `  Your own: a JSON file in ${fit(folder, MAX_COLS - 26)}.`, tone: 'dim' })
   return out
 }
 
-const JOBS: Record<Role, string> = { accent: 'headers, active row', ok: 'loaded, passed', warn: 'drifted, a look', bad: 'failed, over a line', dim: 'notes and hints', rule: 'dividers' }
 const ratio = (c: RoleCheck): string => (c.ratio === null ? '' : `${c.ratio.toFixed(2)}:1`)
-const TONE: Record<Role, Tone> = { accent: 'accent', ok: 'ok', warn: 'warning', bad: 'error', dim: 'dim', rule: 'rule' }
 
 /** The roles under or near their floor, one aligned row each. */
 const weakLines = (weak: readonly RoleCheck[]): Line[] => columns(weak.map(c => [c.role, c.color, ratio(c), c.grade === 'fail' ? `under ${c.floor}:1` : `just over ${c.floor}:1`]), [2], '    ')
   .map((text, i) => ({ text, tone: weak[i]!.grade === 'fail' ? ('error' as const) : ('warning' as const) }))
 
-/** One palette's table: every role as a swatch, its hex, its contrast on the console, its floor and grade. */
-const paletteTable = (t: Theme, colors: Record<Role, string>, bg: ConsoleBg): Line[] => {
-  const checks = roleChecks(colors, bg)
-  const head1 = ['role', 'colour', 'ratio', 'floor', 'check', 'job']
-  const rows = checks.map(c => [c.role, `${c.ratio === null ? t.glyphs.off.repeat(2) : t.glyphs.full.repeat(2)} ${c.color}`, ratio(c), String(c.floor), c.grade, JOBS[c.role]])
-  return columns([head1, ...rows], [2, 3], '    ').map((text, i) => {
-    if (i === 0) return { text, tone: 'dim' as const }
-    const c = checks[i - 1]!
-    return HEXCOLOR.test(c.color) ? { text, color: c.color } : { text, tone: TONE[c.role] }
-  })
-}
-const HEXCOLOR = /^#[0-9a-fA-F]{3,6}$/
-
-/** `/rw-vigil theme show [name]`: a preview that changes nothing. `chrome` is the active theme, which draws the headers. */
-export const themePreview = (p: Theme, chrome: Theme, con: ConsoleInfo): Line[] => {
-  const t = chrome
-  const v = themeVerdict(p)
-  const out: Line[] = [head(t, `Theme ${p.name}`), { text: `  ${fit(p.description || 'No description.', MAX_COLS - 2)}`, tone: 'dim' }]
-  const kinds = variantsText(p)
-  out.push({ text: `  ${kinds === 'dark + light' ? 'Two variants, dark and light.' : kinds === 'follows yours' ? 'Every colour is a key of your Claude Code theme.' : kinds.endsWith('only') ? `One variant: ${kinds}.` : `One palette, made for ${madeFor(p.background)} consoles.`}` })
-  out.push(...consoleLines(p, con))
-  const sections: Array<[string, Record<Role, string>, ConsoleBg]> = p.variants
-    ? (['dark', 'light'] as const).filter(b => p.variants![b]).map(b => [`${b === 'dark' ? 'Dark' : 'Light'} variant, on a ${b} console (${BACKGROUNDS[b]})`, p.variants![b]!.colors, b])
-    : [[`Palette, on a ${madeFor(p.background)} console (${BACKGROUNDS[madeFor(p.background)]})`, p.colors, madeFor(p.background)]]
-  for (const [title, colors, bg] of sections) out.push(blank, { text: `  ${title}`, tone: 'bold' }, ...paletteTable(t, colors, bg))
-  out.push(blank, { text: `  glyphs  ${[p.glyphs.ok, p.glyphs.warn, p.glyphs.bad, p.glyphs.on, p.glyphs.off, p.glyphs.mark].join(' ')}   ${bar(p, 60)}   header: ${p.header}`, tone: 'dim' })
-  const verdictRow = (label: string, cv: ConsoleVerdict): Line[] => [
-    { text: `    ${label.padEnd(15)} ${cv.summary}`, tone: cv.works ? (cv.roles ? 'warning' : 'ok') : 'error' },
-    ...(cv.roles ? [{ text: `    ${''.padEnd(15)} ${fit(cv.roles, MAX_COLS - 20)}`, tone: cv.works ? ('warning' as const) : ('error' as const) }] : []),
-  ]
-  out.push(blank, { text: '  Verdict', tone: 'bold' }, ...verdictRow('Dark consoles', v.dark), ...verdictRow('Light consoles', v.light))
-  out.push(blank, { text: '  Recommendation', tone: 'bold' }, { text: `    ${v.recommendation}` })
-  out.push(blank, { text: `  Preview only — nothing changed. Apply with /rw-vigil theme ${p.name}.`, tone: 'dim' })
-  return out
-}
-
-/** `/rw-vigil theme <name>` after it is saved: one line, the weak roles on this console, the undo. Never the preview. */
-export const themeApplied = (p: Theme, chrome: Theme, con: ConsoleInfo, envName: string | null): Line[] => {
-  const t = chrome
+/** `/rw-vigil theme <name>` after it is saved: one line, what wins over it, the undo. */
+export const themeApplied = (p: Theme, con: ConsoleInfo, envName: string | null): Line[] => {
   const r = resolveVariant(p, con.bg)
   const what = r.variant ? `${r.variant} variant` : variantsText(p) === 'follows yours' ? 'your theme colours' : `one palette, made for ${madeFor(p.background)} consoles`
-  const out: Line[] = [{ text: `Applied: ${p.name} (${what} — your console ${con.sure ? 'is' : 'looks'} ${con.bg}).`, tone: 'ok' }]
-  const weak = roleChecks(r.theme.colors, con.bg).filter(c => c.grade === 'fail' || c.grade === 'borderline')
-  if (weak.length) out.push({ text: `  ${t.glyphs.warn} ${weak.some(c => c.grade === 'fail') ? 'Hard to read' : 'Thin'} on this console:`, tone: 'warning' }, ...weakLines(weak))
-  const other: ConsoleBg = con.bg === 'dark' ? 'light' : 'dark'
-  const ov = consoleVerdict(p, other)
-  if (!ov.works) out.push({ text: `  On ${other} consoles: ${ov.summary}. /rw-vigil theme show ${p.name}`, tone: 'dim' })
-  if (!con.sure) out.push({ text: '  Console background is a guess: set VIGIL_THEME_BACKGROUND=light or dark.', tone: 'dim' })
-  if (envName) out.push({ text: `  VIGIL_THEME=${envName} is set and wins over this choice until you unset it.`, tone: 'warning' })
-  out.push({ text: 'Undo: /rw-vigil theme neutral', tone: 'dim' })
-  return out
+  const out: Line[] = [{ text: `Applied: ${p.name} (${what}; this console ${con.sure ? 'is' : 'looks'} ${con.bg}).`, tone: 'ok' }]
+  if (envName) out.push({ text: `VIGIL_THEME=${envName} is set and wins over this choice until you unset it.`, tone: 'warning' })
+  return [...out, { text: 'Undo: /rw-vigil theme neutral', tone: 'dim' }]
 }
 
 export const HELP: readonly string[] = columns([
   ['/rw-vigil', 'the board: usage, context, inbox, spend mode, skills, health'],
   ['/rw-vigil tile <name> open|up|down|pin|collapse', 'one tile; layout reset puts them back'],
-  ['/rw-vigil inbox', 'suggestion cards: Do it or Not now'],
-  ['/rw-vigil tiles [build <source>]', 'your own tiles; Claude proposes some'],
-  ['/rw-vigil spend auto <mode> on|off', 'may pacewright enter pace, overnight, reset-eve itself'],
-  ['/rw-vigil settings', 'the three switches: meters, suggestions, records'],
-  ['/rw-vigil overview', 'the old text view'],
+  ['/rw-vigil suggest', 'what is worth doing, at most five cards'],
+  ['/rw-vigil suggest accept|dismiss|snooze <n>', 'take, drop or hide one'],
   ['/rw-vigil skills [all | dupes]', 'fired skills; all; loaded twice'],
-  ['/rw-vigil meters | health', 'one view'],
-  ['/rw-vigil tasks | context', 'background tasks; context use'],
-  ['/rw-vigil suggest', 'the suggestion queue'],
-  ['/rw-vigil suggest accept|dismiss|snooze <n>', 'act on one suggestion'],
-  ['/rw-vigil theme [<name> | show | new]', 'list, apply, preview or make'],
-  ['/rw-vigil theme import <link> [name]', 'a theme from a design system'],
-  ['/rw-vigil publish', 'a snapshot for a private page'],
-  ['/rw-vigil gpu | palette [brand] | godot | prs', 'the optional panels'],
-  ['/rw-vigil switches | on|off <name> | off', 'features; bare off = kill switch'],
-  ['/rw-vigil records on|off | network on|off', 'keep counts; allow network reads'],
+  ['/rw-vigil meters | context | tasks | health', 'one view'],
+  ['/rw-vigil theme [<name> | background <b>]', 'list or apply; dark, light, auto'],
+  ['/rw-vigil tiles [build <source>]', 'your own tiles; Claude proposes some'],
+  ['/rw-vigil link <clones> <folder> | off', 'keep your tiles and themes in a private folder'],
+  ['/rw-vigil spend auto <mode> on|off', 'may pacewright enter pace, overnight, reset-eve itself'],
+  ['/rw-vigil settings | switches | on|off <name> | off', 'features; bare off = kill switch'],
+  ['/rw-vigil records on|off', 'keep counts across sessions'],
   ['/rw-vigil doctor | purge', 'check the install; delete counts'],
   ['/rw | /rw-<skill> [what you want]', 'list or run a Revenantworks skill'],
 ], [], '')
