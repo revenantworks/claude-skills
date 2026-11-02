@@ -68,8 +68,7 @@ Claude Code plugin marketplace.
   plugins, separate from the packs and each with its own marketplace entry: `vigil`, one dashboard
   (skill fires by slash or automatic, failures, likely misroutes, tokens and cost by skill; the
   5-hour, weekly, context and cache meters; health, including gatewarden's event counts;
-  background tasks; research, GPU-lease, Godot and PR panels; a `/rw-vigil publish` snapshot for a
-  private mobile page; a suggestion queue that proposes, never builds; and `/rw-<skill>` short
+  background tasks; at most five suggestion cards that propose, never build; and `/rw-<skill>` short
   commands for every skill, generated from the registry, with the long names hidden from the `/`
   list), and `shroud` (secret
   and stream-key masking with restore, the rotate tripwire, untrusted-content and
@@ -78,8 +77,8 @@ Claude Code plugin marketplace.
   lives in hooks and permissions. Once a mod plugin is installed, its features are on by default.
   Local records are opt-in and asked about once (`/rw-vigil records on|off`): no mod keeps a record
   of your work on disk until you say yes, the dashboard's records hold counts, names, hashes and
-  shapes and never prompt or command text, and records never leave the machine. PR state reads
-  GitHub only after `/rw-vigil network on`, and only when you act. `/rw-vigil off` stops every feature.
+  shapes and never prompt or command text, and records never leave the machine. `/rw-vigil off`
+  stops every feature.
   No skill needs a mod; each skill a mod feeds carries `references/mods.md`. Needs Claude Code
   2.1.287 or later. `build.py --check` keeps mod code out of every skill zip, and CI validates and
   tests every mod plugin. (The six per-pack mod plugins and the `all-mods` bundle drafted
