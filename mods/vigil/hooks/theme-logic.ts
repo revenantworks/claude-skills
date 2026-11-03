@@ -167,11 +167,6 @@ export const parseTheme = (text: string | null, fallbackName = ''): { theme: The
   return { theme: { name, description, background: background as string, colors, glyphs, header, ...(variants ? { variants } : {}) }, error: null }
 }
 
-export const serializeTheme = (t: Theme): string => {
-  const glyphs = t.glyphs === GLYPHS.ascii || JSON.stringify(t.glyphs) === JSON.stringify(GLYPHS.ascii) ? 'ascii' : JSON.stringify(t.glyphs) === JSON.stringify(GLYPHS.unicode) ? 'unicode' : t.glyphs
-  return `${JSON.stringify({ name: t.name, description: t.description, background: t.background, colors: t.colors, glyphs, header: t.header, ...(t.variants ? { variants: t.variants } : {}) }, null, 2)}\n`
-}
-
 /** The palette a console gets: the matching variant when the theme has one, else the theme as it is. */
 export const resolveVariant = (t: Theme, bg: ConsoleBg): { theme: Theme; variant: ConsoleBg | null } => {
   const v = t.variants?.[bg]
@@ -191,7 +186,7 @@ export type ConsoleInfo = { bg: ConsoleBg; sure: boolean; source: string }
  */
 export const consoleBackground = (ccTheme: string | null, override: string | null, colorfgbg: string | null): ConsoleInfo => {
   const o = (override ?? '').trim().toLowerCase()
-  if (o === 'dark' || o === 'light') return { bg: o, sure: true, source: `VIGIL_THEME_BACKGROUND=${o}` }
+  if (o === 'dark' || o === 'light') return { bg: o, sure: true, source: `your choice (${o})` }
   const cc = (ccTheme ?? '').trim().toLowerCase()
   if (cc.startsWith('light')) return { bg: 'light', sure: true, source: `Claude Code theme "${cc.slice(0, 24)}"` }
   if (cc.startsWith('dark')) return { bg: 'dark', sure: true, source: `Claude Code theme "${cc.slice(0, 24)}"` }
@@ -200,7 +195,7 @@ export const consoleBackground = (ccTheme: string | null, override: string | nul
     const n = Number(m[1])
     return { bg: n === 7 || n === 15 ? 'light' : 'dark', sure: true, source: 'the terminal (COLORFGBG)' }
   }
-  return { bg: 'dark', sure: false, source: `a guess; set VIGIL_THEME_BACKGROUND=light|dark to say` }
+  return { bg: 'dark', sure: false, source: 'a guess; say with /rw-vigil theme background light|dark' }
 }
 
 export type ThemeEntry = { theme: Theme; source: 'bundled' | 'user'; overrides: boolean }
@@ -233,6 +228,16 @@ export const pickTheme = (themes: Record<string, ThemeEntry>, envName: string | 
   return { theme: themes.neutral?.theme ?? NEUTRAL, notice: `vigil: theme "${want.slice(0, 40)}" not found or invalid; using neutral. /rw-vigil theme lists the themes.` }
 }
 
+/** The console background saved with the choice: what the app is drawn on, when no host says. */
+export const parseBackground = (text: string | null): ConsoleBg | null => {
+  try {
+    const b = (JSON.parse(text ?? '') as { background?: unknown }).background
+    return b === 'dark' || b === 'light' ? b : null
+  } catch {
+    return null
+  }
+}
+
 export const parseActive = (text: string | null): string | null => {
   try {
     const o = JSON.parse(text ?? '') as { active?: unknown }
@@ -261,19 +266,6 @@ export const BACKGROUNDS = { dark: '#121212', light: '#FFFFFF' } as const
 /** The floor each role must clear: text roles 4.5:1, dim text 3:1, rules (decoration) 1.5:1. */
 export const FLOORS: Record<Role, number> = { accent: 4.5, ok: 4.5, warn: 4.5, bad: 4.5, dim: 3, rule: 1.5 }
 
-/** One warning per hex colour under its floor on the theme's background. Theme keys follow the terminal and are skipped. */
-export const contrastWarnings = (t: Theme): string[] => {
-  const bg = t.background === 'light' ? BACKGROUNDS.light : t.background === 'dark' ? BACKGROUNDS.dark : t.background
-  const out: string[] = []
-  for (const r of ROLES) {
-    const c = t.colors[r]
-    if (!HEX.test(c)) continue
-    const ratio = contrast(c, bg)
-    if (ratio < FLOORS[r]) out.push(`${r} ${c} is ${ratio.toFixed(2)}:1 on a ${t.background} background, under the ${FLOORS[r]}:1 floor: hard to read`)
-  }
-  return out
-}
-
 export type Grade = 'pass' | 'borderline' | 'fail' | 'follows'
 /** A ratio against its floor: under it fails; within 0.3 above it is borderline; null (a theme key) follows the terminal. */
 export const grade = (ratio: number | null, floor: number): Grade => (ratio === null ? 'follows' : ratio < floor ? 'fail' : ratio < floor + 0.3 ? 'borderline' : 'pass')
@@ -288,117 +280,6 @@ export const roleChecks = (colors: Record<Role, string>, bg: ConsoleBg | string)
     const ratio = HEX.test(color) ? contrast(color, ground) : null
     return { role, color, ratio, floor: FLOORS[role], grade: grade(ratio, FLOORS[role]) }
   })
-}
-
-export type ConsoleVerdict = { works: boolean; summary: string; roles: string; line: string; checks: RoleCheck[]; variant: ConsoleBg | null }
-const ratioText = (c: RoleCheck): string => `${c.role} ${(c.ratio ?? 0).toFixed(2)}:1`
-
-/** How the theme reads on one console type: the palette it gets there and the roles under or near a floor. */
-export const consoleVerdict = (t: Theme, bg: ConsoleBg): ConsoleVerdict => {
-  const r = resolveVariant(t, bg)
-  const checks = roleChecks(r.theme.colors, bg)
-  const fails = checks.filter(c => c.grade === 'fail')
-  const thin = checks.filter(c => c.grade === 'borderline')
-  const what = r.variant ? `${bg} variant` : checks.every(c => c.grade === 'follows') ? 'follows your theme' : madeFor(t.background) === bg ? `one palette, made for ${bg}` : `no ${bg} variant`
-  let summary: string
-  let roles = ''
-  if (fails.length) {
-    summary = `${what} — ${fails.some(c => (c.ratio ?? 0) < 2) ? 'unreadable' : 'hard to read'}`
-    roles = fails.map(ratioText).join(', ')
-  } else if (thin.length) {
-    summary = `works, thin in places (${what})`
-    roles = thin.map(ratioText).join(', ')
-  } else summary = `works (${what})`
-  return { works: fails.length === 0, summary, roles, line: roles ? `${summary}: ${roles}` : summary, checks, variant: r.variant }
-}
-
-/** A verdict per console type and the one recommendation that follows from them. */
-export const themeVerdict = (t: Theme): { dark: ConsoleVerdict; light: ConsoleVerdict; recommendation: string } => {
-  const dark = consoleVerdict(t, 'dark')
-  const light = consoleVerdict(t, 'light')
-  const keysOnly = [...dark.checks, ...light.checks].every(c => c.grade === 'follows')
-  const recommendation = keysOnly
-    ? 'It follows your Claude Code theme, so it fits any console.'
-    : dark.works && light.works
-      ? t.variants?.dark && t.variants?.light ? 'Use it on any console: vigil picks the dark or light variant for you.' : 'Use it on any console.'
-      : dark.works
-        ? 'Use it on dark consoles; on light ones use neutral or add a light variant.'
-        : light.works
-          ? 'Use it on light consoles; on dark ones use neutral or add a dark variant.'
-          : 'Use neutral instead, or fix the roles under their floor and save it again.'
-  return { dark, light, recommendation }
-}
-
-// ---------- making a theme ----------
-
-/** `/rw-vigil theme new <name> accent=#... ok=#... glyphs=ascii header=block background=light`. */
-export const themeFromAnswers = (name: string, args: readonly string[]): { theme: Theme | null; error: string | null } => {
-  const o: Record<string, unknown> = { name, colors: {} }
-  for (const a of args) {
-    const m = /^([a-z]+)=(\S+)$/i.exec(a)
-    if (!m) return { theme: null, error: `"${a.slice(0, 30)}" is not key=value` }
-    const k = m[1]!.toLowerCase()
-    const v = m[2]!
-    if ((ROLES as readonly string[]).includes(k)) (o.colors as Record<string, string>)[k] = /^[0-9a-f]{3}([0-9a-f]{3})?$/i.test(v) ? `#${v}` : v
-    else if (k === 'glyphs' || k === 'header' || k === 'background') o[k] = /^[0-9a-f]{6}$/i.test(v) ? `#${v}` : v.toLowerCase()
-    else return { theme: null, error: `unknown key "${k.slice(0, 20)}" (keys: ${[...ROLES, 'glyphs', 'header', 'background'].join(', ')})` }
-  }
-  return parseTheme(JSON.stringify(o), name)
-}
-
-// Which token names map to which role, in the order a line is tried.
-const ROLE_WORDS: Array<[Role | 'background', RegExp]> = [
-  ['bad', /\b(error|danger|bad|fail(ure|ed)?|critical|destructive|negative|broken)\b/i],
-  ['warn', /\b(warn(ing)?|caution|attention|pending|live)\b/i],
-  ['ok', /\b(success|ok|positive|good|pass(ed)?|done)\b/i],
-  ['rule', /\b(border|rule|divider|outline|stroke|separator)s?\b/i],
-  ['dim', /\b(muted|subtle|dim|secondary|caption|placeholder)\b/i],
-  ['background', /\b(background|ground|bg|canvas)\b/i],
-  ['accent', /\b(accent|primary|brand|highlight|link)\b/i],
-]
-
-/** Every (name, hex) pair in a tokens JSON file (nested, `value`/`$value` leaves) or a text file (one line, one name). */
-export const extractTokens = (text: string): Array<{ name: string; hex: string }> => {
-  const out: Array<{ name: string; hex: string }> = []
-  const first = (s: string): string | null => /#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{3})\b/.exec(s)?.[0] ?? null
-  try {
-    const walk = (v: unknown, path: string[]): void => {
-      if (typeof v === 'string') {
-        const h = first(v)
-        if (h && HEX.test(h)) out.push({ name: path.join(' '), hex: h })
-      } else if (v && typeof v === 'object') {
-        const o = v as Record<string, unknown>
-        if (typeof o.value === 'string' || typeof o.$value === 'string') walk(o.$value ?? o.value, path)
-        else for (const [k, x] of Object.entries(o)) walk(x, [...path, k])
-      }
-    }
-    walk(JSON.parse(text), [])
-    return out
-  } catch {
-    // Not JSON: a DESIGN.md, a CSS file, a YAML file or a brand definition, read line by line.
-  }
-  for (const line of text.split(/\r?\n/)) {
-    const h = first(line)
-    if (h) out.push({ name: line.replace(/#[0-9a-fA-F]{3,8}\b/g, ' ').replace(/[`|*_:=;{}"',-]+/g, ' ').trim().slice(0, 200), hex: h })
-  }
-  return out
-}
-
-/** Tokens to a theme: the first token whose name says a role takes that role; what is not found keeps neutral. */
-export const themeFromTokens = (name: string, text: string): { theme: Theme | null; error: string | null; mapping: string[]; missing: Role[] } => {
-  const tokens = extractTokens(text)
-  if (tokens.length === 0) return { theme: null, error: 'no hex colours found in the file', mapping: [], missing: [...ROLES] }
-  const picked: Partial<Record<Role | 'background', { hex: string; from: string }>> = {}
-  for (const t of tokens) {
-    const hit = ROLE_WORDS.find(([role, re]) => !picked[role] && re.test(t.name.replace(/[-_.]/g, ' ')))
-    if (hit) picked[hit[0]] = { hex: t.hex, from: t.name.slice(0, 50) }
-  }
-  const colors: Partial<Record<Role, string>> = {}
-  for (const r of ROLES) if (picked[r]) colors[r] = picked[r]!.hex
-  const bg = picked.background ? (lum(picked.background.hex) < 0.2 ? 'dark' : 'light') : 'dark'
-  const r = parseTheme(JSON.stringify({ name, description: 'Imported from a tokens file.', background: bg, colors }), name)
-  const mapping = [...ROLES, 'background' as const].filter(x => picked[x]).map(x => `${x.padEnd(10)} ${picked[x]!.hex.padEnd(8)} from "${picked[x]!.from}"`)
-  return { ...r, mapping, missing: ROLES.filter(x => !picked[x]) }
 }
 
 // ---------- drawing helpers ----------

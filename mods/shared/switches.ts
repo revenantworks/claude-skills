@@ -38,21 +38,17 @@ export const parseSwitches = (text: string | null | undefined): Switches => {
 export const serializeSwitches = (sw: Switches): string => `${JSON.stringify(sw, null, 2)}\n`
 
 /**
- * Owner 2026-10-06, kept 2026-10-08: a mod keeps no record of the person's work on disk, and contacts
- * no service, until they say yes. These features exist to keep a record, so each waits for its own
- * switch: D1 the counts-only collector, D6 the meter-file writer, D7 the ledger sidecar, D8 the pins.
+ * Owner 2026-10-06, kept 2026-10-08: a mod keeps no record of the person's work on disk until they
+ * say yes, and contacts no service. These features exist to keep a record, so each waits for its own
+ * switch: D1 the counts-only collector, D6 the meter-file writer, D7 the ledger sidecar.
  */
-export const DATA_OPT_IN: ReadonlySet<string> = new Set(['D1', 'D6', 'D7', 'D8'])
-
-/** Features whose whole job is a network read (D12 reads GitHub through the gh login). */
-export const NETWORK_OPT_IN: ReadonlySet<string> = new Set(['D12'])
+export const DATA_OPT_IN: ReadonlySet<string> = new Set(['D1', 'D6', 'D7'])
 
 /** Masks that change what Claude reads beyond secrets, so each waits for the user's word: W4 personal data, W5 their own words. */
 export const MASK_OPT_IN: ReadonlySet<string> = new Set(['W4', 'W5'])
 
 export const KEEPS_RECORDS: ReadonlySet<string> = DATA_OPT_IN
-export const NETWORK: ReadonlySet<string> = NETWORK_OPT_IN
-export const OPT_IN: ReadonlySet<string> = new Set([...DATA_OPT_IN, ...NETWORK_OPT_IN, ...MASK_OPT_IN])
+export const OPT_IN: ReadonlySet<string> = new Set([...DATA_OPT_IN, ...MASK_OPT_IN])
 
 /** Kill switch, then the feature's own switch, then the shipped default (on, unless opt-in). */
 export const isFeatureOn = (sw: Switches, id: string): boolean => {
@@ -65,7 +61,3 @@ export const isFeatureOn = (sw: Switches, id: string): boolean => {
 /** May this feature keep a record on disk? Only when its own switch says yes. */
 export const isRecordingOn = (sw: Switches, id: string): boolean =>
   KEEPS_RECORDS.has(id) && !sw.off && sw.features[id] === true
-
-/** May this feature contact a service? Only when its own switch says yes. */
-export const isNetworkOn = (sw: Switches, id: string): boolean =>
-  NETWORK.has(id) && !sw.off && sw.features[id] === true

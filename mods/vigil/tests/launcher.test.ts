@@ -127,26 +127,3 @@ describe('the short commands', () => {
     expect(d.isHidden).toBe(false)
   })
 })
-
-describe('the rename (dash to vigil, 2026-10-23)', () => {
-  test('/dash still answers, as /rw-vigil does, and is hidden from the typeahead', async ($, on) => {
-    world(on, {}, [], [])
-    on('command.describe', async ($, e) => ({ description: e.description, isHidden: e.isHidden }))
-    const old = await $.command.run(cmd({ command: 'dash', args: 'help', origin: { kind: 'composer' } }))
-    const now = await $.command.run(cmd({ command: 'rw-vigil', args: 'help', origin: { kind: 'composer' } }))
-    expect(old.text).toBe(now.text)
-    expect(now.text).toContain('/rw-vigil')
-    const d = await $.command.describe({ command: 'dash', description: 'x', isHidden: false, immediate: false, provider: { plugin: 'vigil', tier: 'plugin' } })
-    expect(d.isHidden).toBe(true)
-  })
-  test('records under dash/ carry on under vigil/; a vigil/ file of its own is never overwritten', async ($, on) => {
-    const OLD = `${HOME}/.claude/revenantworks/dash`
-    const NEW = `${HOME}/.claude/revenantworks/vigil`
-    const files: Record<string, string> = { [`${OLD}/feed.json`]: '{"old":1}', [`${OLD}/suggestions.json`]: '{"old":2}', [`${NEW}/suggestions.json`]: '{"new":2}' }
-    world(on, files, [], [])
-    await $.command.run(cmd({ command: 'rw-vigil', args: 'help', origin: { kind: 'composer' } }))
-    expect(files[`${NEW}/feed.json`]).toBe('{"old":1}')
-    expect(files[`${NEW}/suggestions.json`]).toBe('{"new":2}')
-    expect(files[`${OLD}/feed.json`]).toBe('{"old":1}')
-  })
-})

@@ -3,14 +3,10 @@ import { describe, expect, test } from 'claude-code/testing'
 
 import { CATALOG, RETIRED, byId, featuresOf } from '../hooks/lib/catalog'
 import { applySwitchCommand } from '../hooks/lib/commands'
-import { defaultSwitches, isFeatureOn, isNetworkOn, isRecordingOn, parseSwitches, serializeSwitches } from '../hooks/lib/switches'
-import { liveFromMeterFile, meterFile, pacewrightPace, shouldWriteMeterFile, statusText } from '../hooks/meters-logic'
+import { defaultSwitches, isFeatureOn, isRecordingOn, parseSwitches, serializeSwitches } from '../hooks/lib/switches'
+import { liveFromMeterFile, meterFile, pacewrightPace, shouldWriteMeterFile, statusText, versionAtLeast } from '../hooks/meters-logic'
 import {
-  RESEARCH_SKILL, bandLine, ciFacts, comfyFrom, countsAsProof, floorDrop, godotRun, gutCounts, judge, junitCounts, leaseLines,
-  leasePath, lmsFrom, ollamaFrom, paletteTokens, parseLease, parseRoster, pinChanges, resolveBrand, versionAtLeast,
-} from '../hooks/panels-logic'
-import {
-  changesPrs, estimateFor, lastLineOf, parseEstWall, parsePrList, prChanges, prLine, recordDuration, statusWord,
+  estimateFor, lastLineOf, parseEstWall, recordDuration, statusWord,
   sanitizeTaskHistory, summariseLedger, taskSignature, taskStatusLines, tasksHeadline, type TaskRecord,
 } from '../hooks/tasks-logic'
 
@@ -20,13 +16,12 @@ const NOW = Date.UTC(2026, 9, 8, 12)
 const ISO = new Date(NOW).toISOString()
 
 describe('switches (C2, one on/off file)', () => {
-  test('features run from install; records and network wait for their own yes; the kill switch beats all', () => {
+  test('features run from install; records wait for their own yes; the kill switch beats all', () => {
     const sw = parseSwitches('{not json')
     expect(isFeatureOn(sw, 'D2')).toBe(true)
     expect(isFeatureOn(sw, 'W3')).toBe(true)
     expect(isFeatureOn(sw, 'D1')).toBe(false)
     expect(isRecordingOn(sw, 'D1')).toBe(false)
-    expect(isNetworkOn(sw, 'D12')).toBe(false)
     expect(isFeatureOn({ ...sw, off: true }, 'W3')).toBe(false)
     expect(isRecordingOn({ ...sw, off: true, features: { D1: true } }, 'D1')).toBe(false)
   })
@@ -35,19 +30,17 @@ describe('switches (C2, one on/off file)', () => {
     expect(parseSwitches(serializeSwitches(sw))).toEqual(sw)
     expect(parseSwitches('{"types":{"lens":false},"reminders":{"all":false},"theme":{"choice":"mine"}}')).toEqual(defaultSwitches())
   })
-  test('on and off by name or id, the kill switch, records and network; only the person', () => {
+  test('on and off by name or id, the kill switch, and records; only the person', () => {
     let r = applySwitchCommand(defaultSwitches(), 'off secret-redact', true, ISO)
     expect(r.sw.features.W3).toBe(false)
-    r = applySwitchCommand(r.sw, 'on W3 gpu-panel', true, ISO)
-    expect(r.sw.features.W3 && r.sw.features.D10).toBe(true)
+    r = applySwitchCommand(r.sw, 'on W3 meter-writer', true, ISO)
+    expect(r.sw.features.W3 && r.sw.features.D6).toBe(true)
     r = applySwitchCommand(r.sw, 'off', true, ISO)
     expect(r.sw.off).toBe(true)
     r = applySwitchCommand(r.sw, 'on', true, ISO)
     expect(r.sw.off).toBe(false)
     r = applySwitchCommand(r.sw, 'records on', true, ISO)
     for (const x of CATALOG.filter(c => c.records)) expect(isRecordingOn(r.sw, x.id)).toBe(true)
-    r = applySwitchCommand(r.sw, 'network on', true, ISO)
-    expect(isNetworkOn(r.sw, 'D12')).toBe(true)
     expect(applySwitchCommand(defaultSwitches(), 'off', false, ISO).changed).toBe(false)
     expect(applySwitchCommand(defaultSwitches(), 'on nothing-like-this', true, ISO).changed).toBe(false)
     expect(applySwitchCommand(defaultSwitches(), 'switches', false, ISO).text).toMatch(/collector/)
@@ -64,12 +57,11 @@ describe('catalog', () => {
       expect(byId(x.id)).toBe(x)
     }
     for (const id of RETIRED) expect(byId(id)).toBe(undefined)
-    expect(CATALOG.filter(x => x.network).map(x => x.id)).toEqual(['D12'])
-    expect(CATALOG.filter(x => x.records).map(x => x.id)).toEqual(['D1', 'D6', 'D7', 'D8'])
+    expect(CATALOG.filter(x => x.records).map(x => x.id)).toEqual(['D1', 'D6', 'D7'])
   })
   test('vigil carries on every feature the user folded into it', () => {
     const absorbed = new Set(featuresOf('vigil').flatMap(x => x.absorbs))
-    for (const id of ['F1', 'F1b', 'F2', 'F3', 'F3e', 'F3f', 'F5', 'C1', 'C4', 'C5', 'C11', 'C14', 'C17', 'S4', 'L1', 'G1', 'X5']) expect(absorbed.has(id)).toBe(true)
+    for (const id of ['F1', 'F1b', 'F2', 'F3', 'F3e', 'F3f', 'F5', 'C1', 'C4', 'C5', 'C11', 'C17']) expect(absorbed.has(id)).toBe(true)
   })
 })
 
@@ -102,7 +94,7 @@ describe('meters (F1, F1b)', () => {
   })
 })
 
-describe('tasks (F3, F3f) and PRs (X5)', () => {
+describe('tasks (F3, F3f)', () => {
   test('the headline leads with what runs', () => {
     const t = (id: string, state: 'running' | 'failed'): TaskRecord => ({ id, state, kind: 'agent', label: id, group: 'main', startedAt: NOW })
     expect(tasksHeadline([t('a', 'running'), t('b', 'failed')], 'run r: 1 done')).toBe('Tasks: 1 running · 1 failed · run r: 1 done')
@@ -153,49 +145,10 @@ describe('tasks (F3, F3f) and PRs (X5)', () => {
     expect(statusWord('complete — findings folded in')).toBe('complete')
     expect(summariseLedger('r1', [{ unit: 'U1', task: 't1', model: 'm', status: 'pushed' }, { unit: 'U2', task: 't2', model: 'm', status: 'complete — a' }]).line).toBe('run r1: 1 pushed · 1 complete')
   })
-  test('PRs refresh on a push or a gh pr action, and parse checks, review and conflict', () => {
-    expect(changesPrs('git push -u origin main')).toBe(true)
-    expect(changesPrs('gh pr list')).toBe(false)
-    const rows = parsePrList(JSON.stringify([{ number: 7, title: 't', state: 'OPEN', statusCheckRollup: [{ conclusion: 'FAILURE' }], reviewDecision: 'REVIEW_REQUIRED', mergeStateStatus: 'DIRTY' }]))
-    expect(prLine(rows)).toBe('#7 red, review required, conflict')
-    expect(prChanges(rows, rows.map(r => ({ ...r, checks: 'green' })))).toEqual(['#7 checks red → green'])
-  })
 })
 
-describe('panels: research (S4), GPU (L1), Godot (G1), pins (C14), doctor (C5)', () => {
-  test('palette: named, then scoped, then ask', () => {
-    const rows = parseRoster('| slug | scope |\n|---|---|\n| acme | site-repo, docs/ |\n| beta | other-repo |\n')
-    expect(resolveBrand(rows, 'beta', 'x', '')).toEqual({ slug: 'beta', how: 'named' })
-    expect(resolveBrand(rows, null, 'site-repo', '')).toEqual({ slug: 'acme', how: 'scoped' })
-    expect(resolveBrand(rows, null, 'nowhere', '')).toEqual({ slug: null, how: 'ask' })
-    expect(paletteTokens('| `primary` | #112233 |\n| text | none |')).toEqual([{ token: 'primary', hex: '#112233' }])
-    expect(RESEARCH_SKILL.test('revenantworks-scribe-researchscribe')).toBe(true)
-  })
-  test('lease path, parse and lines', () => {
-    expect(leasePath(false, { HOME: '/h' })).toBe('/h/.local/state/localops/gpu-lease.json')
-    const lease = parseLease(JSON.stringify({ holder: 'lmstudiorunner', purpose: 'draft', expires: new Date(NOW + 3 * 60_000).toISOString(), instance_ids: ['a'] }))
-    const r = { comfy: comfyFrom('{"devices":[{"vram_free":1073741824,"vram_total":8589934592}]}', '{"queue_running":[1],"queue_pending":[]}'), lms: lmsFrom('{"data":[{"id":"m","loaded_instances":[{"id":"m:1"}]}]}'), ollama: ollamaFrom('{"models":[]}'), at: NOW - 5000 }
-    const lines = leaseLines(lease, r, NOW).join(NL)
-    expect(lines).toMatch(/lmstudiorunner · draft · 3 min left/)
-    expect(lines).toMatch(/two consumers on one card/)
-    expect(parseLease('{')).toBe('unreadable')
-  })
-  test('Godot: passed only when measured, whole and above the floor; the floor only rises', () => {
-    const WORKFLOW = ['        run: |', '          set -o pipefail', '          godot --headless -s addons/gut/gut_cmdln.gd -gdir=res://tests -gexit 2>&1 | tee gut.log', "          grep -E '^\\s*Scripts\\s+43\\s*$' gut.log", '          TESTS_FLOOR=411', ''].join(NL)
-    const LOG = ['Scripts 43', 'Tests 415', 'Passing Tests 415', 'Failing Tests 0'].map(l => `  ${l}`).join(NL)
-    const ci = ciFacts(WORKFLOW)
-    expect(ci.floor).toBe(411)
-    expect(godotRun('godot --headless -s addons/gut/gut_cmdln.gd -gselect=test_a.gd', 'sh').whole).toBe(false)
-    expect(countsAsProof('godot -s x || true')).toBe(false)
-    expect(judge(true, true, true, gutCounts(LOG), ci, 0).status).toBe('Passed')
-    expect(judge(true, true, true, gutCounts('done'), ci, 0).status).toBe('Unknown')
-    expect(judge(true, true, true, gutCounts(LOG.replace('415', '400')), ci, 0).status).toBe('Failed')
-    expect(junitCounts('<testsuite name="a" tests="3" failures="1" errors="0" skipped="0"></testsuite>')?.failing).toBe(1)
-    expect(bandLine(null, 0)).toBe('Godot proof: Not run')
-    expect(floorDrop('TESTS_FLOOR=411', 'TESTS_FLOOR=400')).toMatch(/drops from 411 to 400/)
-  })
-  test('pins and versions', () => {
-    expect(pinChanges({ a: '1' }, { a: '2', b: '3' })).toEqual({ changed: ['a'], added: ['b'] })
+describe('doctor (C5)', () => {
+  test('versions', () => {
     expect(versionAtLeast('2.1.290', '2.1.287')).toBe(true)
     expect(versionAtLeast('2.1.250', '2.1.287')).toBe(false)
   })

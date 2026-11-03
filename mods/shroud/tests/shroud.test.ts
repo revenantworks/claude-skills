@@ -397,12 +397,4 @@ describe('hooks', () => {
     expect(text).toMatch(/1 secret\(s\) masked/)
     expect(text).not.toContain(GH)
   })
-  test('/privacy, the name before 2026-10-23, still answers and is hidden from the typeahead', async ($, on) => {
-    world(on, {})
-    on('command.describe', async ($, e) => ({ description: e.description, isHidden: e.isHidden }))
-    const old = JSON.stringify(await $.command.run(cmd('privacy')))
-    expect(old).toBe(JSON.stringify(await $.command.run(cmd('rw-shroud'))))
-    const d = await $.command.describe({ command: 'privacy', description: 'x', isHidden: false, immediate: false, provider: { plugin: 'shroud', tier: 'plugin' } })
-    expect(d.isHidden).toBe(true)
-  })
 })

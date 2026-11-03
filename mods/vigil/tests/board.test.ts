@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'claude-code/testing'
 
 import {
-  CARDS_MAX, arranged, cardsOf, crossed, dailyTokens, doItOf, forecast, glanceOf, glanceText, moveTile, notNow, parseAutoModes,
+  CARDS_MAX, arranged, cardsOf, crossed, dailyTokens, doItOf, forecast, glanceOf, glanceText, healthFault, moveTile, notNow, parseAutoModes,
   parseBudget, parseLayout, parseShroudBeat, pictureSvg, serializeAutoModes, shroudSlots, tileOf, detailOf, togglePinned, undoRow, type BoardData, type Layout,
 } from '../hooks/board-logic'
 import { DAY, emptyHealth, type Feed } from '../hooks/collector-logic'
@@ -54,8 +54,18 @@ describe('meters', () => {
     const g = glanceOf({ live: live(), now: NOW, feed: feed(), inbox: 0 })
     expect(g.rings.map(r => r.label)).toEqual(['5h', 'wk', 'ctx'])
     expect(g.needsYou).toBeNull()
-    expect(glanceOf({ live: live(), now: NOW, feed: feed(), inbox: 2 }).needsYou).toMatch(/2 suggestion/)
+    // A card already raised waits in the Inbox quietly; only a new one asks for a look.
+    expect(glanceOf({ live: live(), now: NOW, feed: feed(), inbox: 2 }).needsYou).toBeNull()
+    expect(glanceOf({ live: live(), now: NOW, feed: feed({ suggestionsNew: 2 }), inbox: 2 }).needsYou).toMatch(/2 new suggestion/)
     expect(glanceText(g, BLOCKS)).toBe('5h ▰▱▱▱  wk ▰▰▱▱  ctx ▰▱▱▱')
+  })
+  test('a mod that is simply not loaded is no fault: each one runs alone (bug: a health alarm with no shroud)', () => {
+    const health = { ...emptyHealth(), plugins: { vigil: { loaded: true, at: NOW, version: '1.0.0', caught: 0 }, shroud: { loaded: false, at: null, version: null, caught: 0 } } }
+    expect(healthFault(feed({ health }))).toBeNull()
+    expect(glanceOf({ live: live(), now: NOW, feed: feed({ health }), inbox: 0 }).needsYou).toBeNull()
+    expect(tileOf('health', { live: live(), now: NOW, feed: feed({ health }), daily: [], inbox: 0, budget: null, auto: parseAutoModes(null) }).big).toBe('ok')
+    const failing = { ...health, plugins: { ...health.plugins, vigil: { ...health.plugins.vigil, caught: 2 } } }
+    expect(healthFault(feed({ health: failing }))).toMatch(/caught 2 hook/)
   })
   test('tokens by day, today last', () => {
     const turn = (t: number, n: number) => ({ t, s: 'x', k: 'turn' as const, skill: null, input: n, output: 0, cacheRead: 0, cacheWrite: 0, cost: null })
@@ -112,10 +122,10 @@ describe('privacy (shroud)', () => {
 })
 
 describe('suggestion cards', () => {
-  test('at most three cards, strongest first; the rest are counted', () => {
-    const rows = [row('a', 5), row('b', 9), row('c', 7), row('d', 6), row('e', 1, { kind: 'allow' })]
+  test('at most five cards, strongest first; the rest are counted', () => {
+    const rows = [row('a', 5), row('b', 9), row('c', 7), row('d', 6), row('e', 4), row('f', 3), row('g', 1, { kind: 'allow' })]
     const { cards, waiting } = cardsOf(rows, NOW)
-    expect(cards.map(c => c.id)).toEqual(['b', 'c', 'd'])
+    expect(cards.map(c => c.id)).toEqual(['b', 'c', 'd', 'a', 'e'])
     expect(cards).toHaveLength(CARDS_MAX)
     expect(waiting).toBe(1)
   })
