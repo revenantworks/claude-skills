@@ -4,7 +4,7 @@
 // Every picture is a spec here; draw-logic.ts turns a spec into SVG or glyphs.
 import { DAY, paceOf, type DashEvent, type Feed } from './collector-logic'
 import type { Live } from './meters-logic'
-import { listed, type Suggestion } from './suggest-logic'
+import { T, listed, type Suggestion } from './suggest-logic'
 import { badgeSvg, barSvg, dotsSvg, glyphDots, glyphMeter, glyphSpark, ringSvg, sparkSvg, type Dot, type Glyph, type Ink, type Segment } from './draw-logic'
 
 // ---------- tiles and their layout ----------
@@ -155,7 +155,7 @@ export type Picture =
   | { kind: 'badge'; n: number }
   | { kind: 'word'; text: string }
 
-export type Tile = { id: TileId; title: string; picture: Picture; big: string; sub: string }
+export type Tile = { id: TileId; title: string; picture: Picture; big: string; sub: string; tone?: 'ok' | 'warning' | 'error' }
 export type Detail = { id: TileId; title: string; picture: Picture; lines: string[] }
 
 const k = (n: number): string => (n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}M` : n >= 10_000 ? `${Math.round(n / 1000)}k` : n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(Math.round(n)))
@@ -196,9 +196,8 @@ export const forecastText = (live: Live | null, now: number): string => {
 
 const healthDots = (feed: Feed): Dot[] => {
   const h = feed.health
-  const dots: Dot[] = Object.entries(h.plugins).map(([name, p]) => ({ ok: p.loaded && p.caught === 0, label: name }))
+  const dots: Dot[] = Object.entries(h.plugins).map(([name, p]) => ({ ok: p.loaded ? p.caught === 0 : null, label: name }))
   for (const d of h.drift) dots.push({ ok: d.state === 'not installed' ? null : d.state === 'same', label: d.hook })
-  dots.push({ ok: h.pinsChanged === 0, label: 'instruction pins' })
   return dots
 }
 
@@ -206,12 +205,10 @@ const healthDots = (feed: Feed): Dot[] => {
 export const healthFault = (feed: Feed): string | null => {
   const h = feed.health
   for (const [name, p] of Object.entries(h.plugins)) {
-    if (!p.loaded) return `${name} did not load. Fix: /rw-vigil doctor names why.`
     if (p.caught > 0) return `${name} caught ${p.caught} hook error(s). Fix: /rw-vigil doctor, then restart Claude Code.`
   }
   const d = h.drift.find(x => x.state === 'differs')
   if (d) return `Hook ${d.hook} differs from the shipped copy. Fix: reinstall the mod.`
-  if (h.pinsChanged > 0) return `${h.pinsChanged} instruction file(s) changed since pinned. Fix: /rw-vigil health lists them.`
   return null
 }
 
@@ -226,6 +223,9 @@ const skillSegs = (feed: Feed): Segment[] => {
   ]
 }
 
+/** A meter's colour: calm, then warning from 80%, then error from 95%. */
+const toneOf = (n: number | null): { tone?: Tile['tone'] } => (n === null ? {} : { tone: n >= 95 ? 'error' : n >= 80 ? 'warning' : 'ok' })
+
 const autoText = (a: AutoModes): string => AUTO_MODES.map(m => `${m} ${a[m] ? 'auto' : 'by word'}`).join(', ')
 
 /** One tile's face: a picture, one big figure, one short line. */
@@ -235,10 +235,10 @@ export const tileOf = (id: TileId, d: BoardData): Tile => {
   switch (id) {
     case 'usage': {
       const tick = weekTick(live, now)
-      return { id, title: 'Usage', picture: { kind: 'rings', rings: [{ label: '5h', pct: live?.five ?? null, tick: null }, { label: 'week', pct: live?.week ?? null, tick }] }, big: pct(live?.week ?? null), sub: forecast(live, now)?.lasts === false ? `runs out ${whenText(forecast(live, now)!.runsOutAt!)}` : 'week' }
+      return { id, title: 'Usage', picture: { kind: 'rings', rings: [{ label: '5h', pct: live?.five ?? null, tick: null }, { label: 'week', pct: live?.week ?? null, tick }] }, big: pct(live?.week ?? null), ...toneOf(live?.week ?? null), sub: forecast(live, now)?.lasts === false ? `runs out ${whenText(forecast(live, now)!.runsOutAt!)}` : 'week' }
     }
     case 'context':
-      return { id, title: 'Context', picture: { kind: 'rings', rings: [{ label: 'ctx', pct: live?.ctx ?? null, tick: null, warnAt: 80 }] }, big: pct(live?.ctx ?? null), sub: feed.ctx80Days7 ? `past 80% on ${feed.ctx80Days7} day(s)` : 'of the window' }
+      return { id, title: 'Context', picture: { kind: 'rings', rings: [{ label: 'ctx', pct: live?.ctx ?? null, tick: null, warnAt: 80 }] }, big: pct(live?.ctx ?? null), ...toneOf(live?.ctx ?? null), sub: feed.ctx80Days7 ? `past 80% on ${feed.ctx80Days7} day(s)` : 'of the window' }
     case 'spend':
       return { id, title: 'Spend', picture: { kind: 'spark', values: d.daily }, big: k(feed.tokens7), sub: 'tokens, 7 days' }
     case 'skills': {
@@ -248,7 +248,7 @@ export const tileOf = (id: TileId, d: BoardData): Tile => {
     case 'health': {
       const dots = healthDots(feed)
       const bad = dots.filter(x => x.ok === false).length
-      return { id, title: 'Health', picture: { kind: 'dots', dots }, big: bad ? `${bad} failing` : 'ok', sub: `${dots.length} checks` }
+      return { id, title: 'Health', picture: { kind: 'dots', dots }, big: bad ? `${bad} failing` : 'ok', tone: bad ? 'error' : 'ok', sub: `${dots.length} checks` }
     }
     case 'inbox':
       return { id, title: 'Inbox', picture: { kind: 'badge', n: d.inbox }, big: String(d.inbox), sub: d.inbox === 1 ? 'suggestion' : 'suggestions' }
@@ -281,7 +281,7 @@ export const detailOf = (id: TileId, d: BoardData): Detail => {
         return [`${pct(live?.ctx ?? null)} of the context window is in use.`, `Past 80% on ${feed.ctx80Days7} day(s) this week.`, '/rw-vigil context lists what loads every turn.']
       case 'spend': {
         const top = [...feed.skills].sort((a, b) => b.tokens7 - a.tokens7)[0]
-        return [`${k(feed.tokens7)} tokens over ${feed.turns7} turns this week${feed.cost7 === null ? '' : `, $${feed.cost7.toFixed(2)}`}.`, top && top.tokens7 > 0 ? `Most in turns with ${top.name}: ${k(top.tokens7)}.` : 'No skill turns counted yet.', '/rw-vigil skills shows each skill\'s share.']
+        return [`${k(feed.tokens7)} tokens over ${feed.turns7} turns this week${feed.cost7 === null ? '' : `, $${feed.cost7.toFixed(2)}`}.`, top && top.tokens7 > 0 ? `Most in turns with ${top.name}: ${k(top.tokens7)}.` : 'No skill turns counted yet.', '/usage has cost by skill, plugin and MCP.']
       }
       case 'skills': {
         const segs = skillSegs(feed)
@@ -324,7 +324,7 @@ export const glanceOf = (d: Pick<BoardData, 'live' | 'now' | 'feed' | 'inbox' | 
     { label: 'wk', pct: d.live?.week ?? null, tick: weekTick(d.live, d.now) },
     { label: 'ctx', pct: d.live?.ctx ?? null, tick: null, warnAt: 80 },
   ],
-  needsYou: d.shroud?.rotatePending ? 'rotate a key' : healthFault(d.feed) ? 'a health check fails' : d.inbox > 0 ? `${d.inbox} suggestion(s)` : null,
+  needsYou: d.shroud?.rotatePending ? 'rotate a key' : healthFault(d.feed) ? 'a health check fails' : d.feed.suggestionsNew > 0 ? `${d.feed.suggestionsNew} new suggestion(s)` : null,
   // The shield shows only when something was masked; it stays red while a listed key waits for rotation.
   shield: d.shroud && (d.shroud.masked + d.shroud.stream > 0 || d.shroud.rotatePending) ? { n: d.shroud.masked + d.shroud.stream, red: d.shroud.rotatePending > 0 } : null,
 })
@@ -335,13 +335,13 @@ export const crossed = (prev: number | null, cur: number | null, levels: readonl
 
 // ---------- suggestion cards ----------
 
-export const CARDS_MAX = 3
+export const CARDS_MAX = T.maxOpen
 /** Not now hides a card this long the first time, then this long each time after. */
 export const NOT_NOW_DAYS = [7, 30] as const
 
 const isOpen = (r: Suggestion, now: number) => r.kind !== 'allow' && (r.state === 'new' || r.state === 'shown' || (r.state === 'snoozed' && (r.snoozeUntil ?? 0) <= now))
 
-/** At most three cards, the strongest evidence first; the rest wait and are counted. */
+/** At most five cards, the strongest first; the rest wait and are counted. */
 export const cardsOf = (rows: readonly Suggestion[], now: number): { cards: Suggestion[]; waiting: number } => {
   const open = listed(rows.filter(r => isOpen(r, now)).map(r => (r.state === 'snoozed' ? { ...r, state: 'shown' as const } : r)))
   return { cards: open.slice(0, CARDS_MAX), waiting: Math.max(0, open.length - CARDS_MAX) }

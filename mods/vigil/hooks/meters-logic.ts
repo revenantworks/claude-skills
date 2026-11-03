@@ -111,3 +111,15 @@ export const meterFile = (rateLimits: readonly { kind: string; percentUsed: numb
   if (!five && !seven && !spend) return null
   return { written_at: Math.floor(now / 1000), model: model ? { id: model, display_name: model } : null, context_used_percentage: ctxPercent, five_hour: five, seven_day: seven, spend_limit: spend }
 }
+
+/** Version string a >= b, numeric parts only. */
+export const versionAtLeast = (a: string, b: string): boolean => {
+  const pa = a.split(/[.-]/).map(Number)
+  const pb = b.split(/[.-]/).map(Number)
+  for (let i = 0; i < 3; i++) {
+    const x = pa[i] ?? 0
+    const y = pb[i] ?? 0
+    if (x !== y) return x > y
+  }
+  return true
+}

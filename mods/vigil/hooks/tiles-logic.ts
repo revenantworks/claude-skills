@@ -8,7 +8,7 @@ import type { Picture, Tile } from './board-logic'
 export const TILE_SCHEMA = 1
 export const TILES_MAX = 12
 export const READ_MAX_BYTES = 1_000_000
-export const SOURCE_KINDS = ['json', 'lines', 'files', 'age', 'date'] as const
+export const SOURCE_KINDS = ['json', 'lines', 'files', 'age', 'date', 'size'] as const
 export type SourceKind = (typeof SOURCE_KINDS)[number]
 export const PICTURE_KINDS = ['ring', 'count', 'spark', 'dots', 'countdown'] as const
 export type PictureKind = (typeof PICTURE_KINDS)[number]
@@ -30,7 +30,9 @@ export type Source =
   | { kind: 'lines'; path: string; match?: string }
   | { kind: 'files'; path: string; ext?: string; olderThanDays?: number }
   | { kind: 'age'; path: string }
-  | { kind: 'date'; path: string; field?: string }
+  | { kind: 'date'; path: string; field?: string; match?: string }
+  /** The file's size only, never its words: is a private list armed? */
+  | { kind: 'size'; path: string }
 
 export type TileSpec = {
   schema: 1
@@ -46,24 +48,29 @@ export type TileSpec = {
   lowIsBad?: boolean
   /** One line the detail shows: what a click on the tile tells you. */
   note?: string
+  /** A button on the detail that drafts this in chat. Nothing is written until you say yes there. */
+  act?: { label: string; prompt: string }
 }
 
 export const ID_RE = /^[a-z0-9][a-z0-9-]{0,31}$/
 export const tileKey = (id: string): `my:${string}` => `my:${id}`
 
-/** Path segments a tile may never read, whatever the user asks: keys, tokens, secrets and git internals. */
-const DENY = [/^\.ssh$/i, /^\.gnupg$/i, /^\.aws$/i, /^\.azure$/i, /^\.kube$/i, /^\.docker$/i, /^\.git$/i, /^\.env(\..*)?$/i, /credential/i, /secret/i, /token/i, /password/i, /\.pem$/i, /\.key$/i, /^id_[a-z0-9]+$/i, /pattern/i, /protected-names/i, /\.dispatch-secrets?/i]
+/** Path segments a tile may never reach, whatever the user asks: keys, tokens and secrets. */
+const DENY_ALWAYS = [/^\.ssh$/i, /^\.gnupg$/i, /^\.aws$/i, /^\.azure$/i, /^\.kube$/i, /^\.docker$/i, /^\.env(\..*)?$/i, /credential/i, /secret/i, /token/i, /password/i, /\.pem$/i, /\.key$/i, /^id_[a-z0-9]+$/i, /\.dispatch-secrets?/i]
+/** Segments whose words a tile may never read; a `size` source may still ask how big a file is. */
+const DENY_WORDS = [/^\.git$/i, /pattern/i, /protected-names/i]
+const denied = (sizeOnly: boolean) => (sizeOnly ? DENY_ALWAYS : [...DENY_ALWAYS, ...DENY_WORDS])
 
-/** A path a tile may read: under the home folder (`~/`) or the repo (`./`), with no `..` and no denied segment. */
-export const pathProblem = (path: unknown): string | null => {
+/** A path a tile may read: under the home folder (`~/`), the repo (`./`) or your linked projects (`@/`), with no `..` and no denied segment. */
+export const pathProblem = (path: unknown, sizeOnly = false): string | null => {
   if (typeof path !== 'string' || !path) return 'path is missing'
   if (path.length > 200) return 'path is longer than 200 characters'
   const p = path.replace(/\\/g, '/')
-  if (!p.startsWith('~/') && !p.startsWith('./')) return 'path must start with ~/ (home) or ./ (this repo)'
+  if (!p.startsWith('~/') && !p.startsWith('./') && !p.startsWith('@/')) return 'path must start with ~/ (home), ./ (this repo) or @/ (your linked projects)'
   const segs = p.slice(2).split('/').filter(Boolean)
   if (!segs.length) return 'path names no file'
   if (segs.some(s => s === '..' || s === '.')) return 'path may not climb with ..'
-  const bad = segs.find(s => DENY.some(r => r.test(s)))
+  const bad = segs.find(s => denied(sizeOnly).some(r => r.test(s)))
   return bad ? `path reaches "${bad}", which a tile may never read` : null
 }
 
@@ -71,20 +78,21 @@ export const pathProblem = (path: unknown): string | null => {
  * Where a path really landed (every link followed), checked again: it must sit under one of the
  * resolved bases (home, repo) and pass the same deny list, so a link cannot lead a tile to a key.
  */
-export const realProblem = (real: string | undefined, bases: readonly string[]): string | null => {
+export const realProblem = (real: string | undefined, bases: readonly string[], sizeOnly = false): string | null => {
   if (!real) return 'the path could not be resolved'
   const r = real.replace(/\\/g, '/')
   const base = bases.filter(Boolean).map(b => b.replace(/\\/g, '/').replace(/\/$/, '')).find(b => r === b || r.startsWith(`${b}/`))
-  if (base === undefined) return 'the path leads outside home and the repo'
+  if (base === undefined) return 'the path leads outside home, the repo and your linked projects'
   const segs = r.slice(base.length).split('/').filter(Boolean)
-  const bad = segs.find(x => DENY.some(d => d.test(x)))
+  const bad = segs.find(x => denied(sizeOnly).some(d => d.test(x)))
   return bad ? `the path leads to "${bad}", which a tile may never read` : null
 }
 
-/** Absolute form of a tile path, or null when vigil has no repo for a ./ path. */
-export const resolvePath = (path: string, home: string, root: string): string | null => {
+/** Absolute form of a tile path, or null when vigil has no repo for a ./ path or no link for an @/ path. */
+export const resolvePath = (path: string, home: string, root: string, projects = ''): string | null => {
   const p = path.replace(/\\/g, '/')
   if (p.startsWith('~/')) return home ? `${home}/${p.slice(2)}` : null
+  if (p.startsWith('@/')) return projects ? `${projects}/${p.slice(2)}` : null
   return root ? `${root}/${p.slice(2)}` : null
 }
 
@@ -99,6 +107,7 @@ const FEEDS: Record<SourceKind, readonly PictureKind[]> = {
   files: ['ring', 'count', 'spark'],
   age: ['count', 'countdown'],
   date: ['countdown'],
+  size: ['count'],
 }
 
 /** A spec file, checked: the spec, or every reason it is refused. Unknown keys are refused, so a typo never passes silently. */
@@ -112,7 +121,7 @@ export const parseSpec = (text: string, fileId?: string): { spec: TileSpec } | {
     return { errors: ['not valid JSON'] }
   }
   const errors: string[] = []
-  const KEYS = ['schema', 'id', 'title', 'source', 'picture', 'max', 'warnAt', 'badAt', 'lowIsBad', 'note']
+  const KEYS = ['schema', 'id', 'title', 'source', 'picture', 'max', 'warnAt', 'badAt', 'lowIsBad', 'note', 'act']
   for (const key of Object.keys(o)) if (!KEYS.includes(key)) errors.push(`unknown key "${key.slice(0, 20)}"`)
   if (o.schema !== TILE_SCHEMA) errors.push(`schema must be ${TILE_SCHEMA}`)
   const id = typeof o.id === 'string' && ID_RE.test(o.id) ? o.id : null
@@ -127,16 +136,16 @@ export const parseSpec = (text: string, fileId?: string): { spec: TileSpec } | {
   if (!s) errors.push('source is missing')
   else {
     const kind = (SOURCE_KINDS as readonly unknown[]).includes(s.kind) ? (s.kind as SourceKind) : null
-    const pp = pathProblem(s.path)
+    const pp = pathProblem(s.path, kind === 'size')
     if (!kind) errors.push(`source.kind must be one of ${SOURCE_KINDS.join(', ')}`)
     if (pp) errors.push(`source.${pp}`)
-    const allowed: Record<SourceKind, string[]> = { json: ['field'], lines: ['match'], files: ['ext', 'olderThanDays'], age: [], date: ['field'] }
+    const allowed: Record<SourceKind, string[]> = { json: ['field'], lines: ['match'], files: ['ext', 'olderThanDays'], age: [], date: ['field', 'match'], size: [] }
     if (kind) for (const key of Object.keys(s)) if (key !== 'kind' && key !== 'path' && !allowed[kind].includes(key)) errors.push(`source.${key.slice(0, 20)} does not apply to a ${kind} source`)
     if (kind && !pp) {
       const path = (s.path as string).replace(/\\/g, '/')
       const field = clean(s.field, 80)
       if (kind === 'json') {
-        if (!field || !/^[A-Za-z0-9_-]+(\.[A-Za-z0-9_-]+)*$/.test(field)) errors.push('source.field must be a dotted path such as "runs.0.ok"')
+        if (!field || !/^[A-Za-z0-9_-]+(\.(?:[A-Za-z0-9_-]+|\*))*$/.test(field)) errors.push('source.field must be a dotted path such as "runs.0.ok" or "runs.*.ms"')
         else source = { kind, path, field }
       } else if (kind === 'lines') {
         const match = clean(s.match, 40)
@@ -148,7 +157,8 @@ export const parseSpec = (text: string, fileId?: string): { spec: TileSpec } | {
         source = { kind, path, ...(ext ? { ext: ext.startsWith('.') ? ext : `.${ext}` } : {}), ...(older !== undefined && older > 0 ? { olderThanDays: older } : {}) }
       } else if (kind === 'date') {
         if (s.field !== undefined && (!field || !/^[A-Za-z0-9_-]+(\.[A-Za-z0-9_-]+)*$/.test(field))) errors.push('source.field must be a dotted path')
-        source = field ? { kind, path, field } : { kind, path }
+        const match = clean(s.match, 40)
+        source = { kind, path, ...(field ? { field } : {}), ...(match ? { match } : {}) }
       } else source = { kind, path }
     }
     if (kind && picture && !FEEDS[kind].includes(picture)) errors.push(`a ${kind} source cannot draw a ${picture}; it draws ${FEEDS[kind].join(', ')}`)
@@ -157,6 +167,9 @@ export const parseSpec = (text: string, fileId?: string): { spec: TileSpec } | {
   if (o.max !== undefined && (num(o.max) ?? 0) <= 0) errors.push('max must be above 0')
   if (o.lowIsBad !== undefined && typeof o.lowIsBad !== 'boolean') errors.push('lowIsBad must be true or false')
   if (o.note !== undefined && !clean(o.note, 120)) errors.push('note must be text')
+  const rawAct = o.act && typeof o.act === 'object' && !Array.isArray(o.act) ? (o.act as Record<string, unknown>) : null
+  const act = rawAct && clean(rawAct.label, 24) && clean(rawAct.prompt, 600) ? { label: clean(rawAct.label, 24)!, prompt: clean(rawAct.prompt, 600)! } : null
+  if (o.act !== undefined && !act) errors.push('act must have a label and a prompt')
   if (errors.length || !id || !title || !picture || !source) return { errors }
   const spec: TileSpec = { schema: 1, id, title, source, picture }
   if (num(o.max) !== undefined) spec.max = num(o.max)!
@@ -165,7 +178,27 @@ export const parseSpec = (text: string, fileId?: string): { spec: TileSpec } | {
   if (o.lowIsBad === true) spec.lowIsBad = true
   const note = clean(o.note, 120)
   if (note) spec.note = note
+  if (act) spec.act = act
   return { spec }
+}
+
+// ---------- your private folder ----------
+
+/**
+ * Where a person's private tiles and themes live, kept on this machine and never in the plugin:
+ * `root` holds the project clones (what `@/` means), `folder` holds `tiles/` and `themes/`.
+ */
+export type Link = { root: string; folder: string }
+
+export const parseLink = (text: string | null): Link | null => {
+  try {
+    const o = JSON.parse(text ?? '') as { root?: unknown; folder?: unknown }
+    if (typeof o.root !== 'string' || typeof o.folder !== 'string' || !o.root || !o.folder) return null
+    const norm = (p: string) => p.replace(/\\/g, '/').replace(/\/$/, '')
+    return { root: norm(o.root), folder: norm(o.folder) }
+  } catch {
+    return null
+  }
 }
 
 // ---------- reading a source ----------
@@ -174,6 +207,7 @@ export const parseSpec = (text: string, fileId?: string): { spec: TileSpec } | {
 export type Reading =
   | { kind: 'text'; text: string; mtimeMs: number }
   | { kind: 'files'; entries: ReadonlyArray<{ name: string; kind: string; mtimeMs: number }> }
+  | { kind: 'size'; size: number }
   | { kind: 'missing'; why: string }
 
 /** A tile's value: a number, a list of numbers, a list of flags, a moment, or nothing with a reason. */
@@ -198,7 +232,10 @@ const dateOf = (v: unknown): number | null => {
 
 const dig = (v: unknown, field: string): unknown => {
   let cur = v
-  for (const part of field.split('.')) {
+  const parts = field.split('.')
+  for (const [i, part] of parts.entries()) {
+    // `history.*.bankroll`: the same field of every row.
+    if (part === '*') return Array.isArray(cur) ? cur.map(x => dig(x, parts.slice(i + 1).join('.'))) : undefined
     if (Array.isArray(cur) && /^\d+$/.test(part)) cur = cur[Number(part)]
     else if (cur && typeof cur === 'object' && !Array.isArray(cur) && Object.hasOwn(cur, part)) cur = (cur as Record<string, unknown>)[part]
     else return undefined
@@ -220,6 +257,7 @@ const flagOf = (v: unknown): boolean | null => {
 /** The value a tile shows, from what was read. Text from the source is never kept: only counts, numbers and dates. */
 export const valueOf = (spec: TileSpec, r: Reading, now: number): Value => {
   if (r.kind === 'missing') return { kind: 'none', why: r.why }
+  if (r.kind === 'size') return { kind: 'n', n: r.size }
   const s = spec.source
   if (s.kind === 'files') {
     if (r.kind !== 'files') return { kind: 'none', why: 'not a folder' }
@@ -232,11 +270,14 @@ export const valueOf = (spec: TileSpec, r: Reading, now: number): Value => {
   if (s.kind === 'age') return spec.picture === 'countdown' ? { kind: 'at', at: r.mtimeMs } : { kind: 'n', n: Math.floor((now - r.mtimeMs) / DAY) }
   if (s.kind === 'lines') {
     const lines = r.text.split(/\r?\n/).filter(l => l.trim())
-    return { kind: 'n', n: s.match ? lines.filter(l => l.includes(s.match!)).length : lines.length }
+    // A comment that documents the match is not one (`# status: today | parked`).
+    return { kind: 'n', n: s.match ? lines.filter(l => l.includes(s.match!) && !l.trimStart().startsWith('#')).length : lines.length }
   }
   if (s.kind === 'date' && !s.field) {
-    const at = dateOf(r.text)
-    return at === null ? { kind: 'none', why: 'no date in the file' } : { kind: 'at', at }
+    // With `match`, the lines holding it are a schedule: the next date still to come, else the last one.
+    const ats = s.match ? r.text.split(/\r?\n/).filter(l => l.includes(s.match!)).flatMap(l => dateOf(l) ?? []).sort((a, b) => a - b) : [dateOf(r.text)].flatMap(x => x ?? [])
+    const at = s.match ? (ats.find(t => t >= now - DAY) ?? ats.at(-1)) : ats[0]
+    return at === undefined ? { kind: 'none', why: 'no date in the file' } : { kind: 'at', at }
   }
   let doc: unknown
   try {
@@ -297,7 +338,7 @@ export const userTileOf = (spec: TileSpec, v: Value, now: number): { tile: Tile;
     }
     case 'count': {
       const n = v.kind === 'n' ? v.n : 0
-      return done({ kind: 'badge', n: Math.round(n) }, short(n), rule(n) || (spec.source.kind === 'age' ? 'days since it changed' : 'now'), `${short(n)} now.`)
+      return done({ kind: 'badge', n: Math.round(n) }, short(n), rule(n) || (spec.source.kind === 'age' ? 'days since it changed' : spec.source.kind === 'size' ? 'bytes' : 'now'), `${short(n)} now.`)
     }
     case 'spark': {
       const ns = v.kind === 'ns' ? v.ns : []
@@ -325,8 +366,8 @@ export const buildPrompt = (src: BuildSource, folder: string): string =>
     `Propose up to four vigil tiles from ${BUILD_SOURCES[src]}. Read only: run nothing that writes, fetch nothing.`,
     'A vigil tile is data, never code: one JSON file that names one source, one picture and a rule. vigil reads the source itself and shows numbers and dates only.',
     `Schema: {"schema":1,"id":"<kebab id>","title":"<at most 24 characters>","source":{...},"picture":"ring|count|spark|dots|countdown","max":<ring fill>,"warnAt":<n>,"badAt":<n>,"lowIsBad":<bool>,"note":"<one line a click shows>"}.`,
-    'Sources: {"kind":"json","path":P,"field":"a.b.0"} (any picture) · {"kind":"lines","path":P,"match":"TODO"} (ring, count) · {"kind":"files","path":DIR,"ext":".md","olderThanDays":30} (ring, count, spark of files by day) · {"kind":"age","path":P} (count of days, countdown) · {"kind":"date","path":P,"field":"optional"} (countdown to the first date in the file).',
-    'P starts with ~/ (home) or ./ (this repo). A tile never reads keys, tokens, secrets, .env files or .git. Propose only tiles that a source above can feed from a file that already exists; say which file each one reads.',
+    'Sources: {"kind":"json","path":P,"field":"a.b.0"} (any picture) · {"kind":"lines","path":P,"match":"TODO"} (ring, count) · {"kind":"files","path":DIR,"ext":".md","olderThanDays":30} (ring, count, spark of files by day) · {"kind":"age","path":P} (count of days, countdown) · {"kind":"date","path":P,"field":"optional","match":"optional"} (countdown to the first date in the file, or with match the next date on the lines holding it) · {"kind":"size","path":P} (count of bytes; never the words).',
+    'P starts with ~/ (home), ./ (this repo) or @/ (the linked projects folder). A tile never reads keys, tokens, secrets, .env files or .git. Propose only tiles that a source above can feed from a file that already exists; say which file each one reads.',
     'For each tile show its picture, what it reads, what a click gives, and the JSON. Write nothing until I say yes.',
     `On my yes, save each one I accept to ${folder}/<id>.json, then tell me to run /rw-vigil tiles to check them.`,
   ].join('\n')

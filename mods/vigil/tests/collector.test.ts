@@ -2,7 +2,7 @@ import { describe, expect, test } from 'claude-code/testing'
 
 import {
   DAY, KEEP_DAYS, REVERT_WINDOW_MS, SWITCH_WINDOW_MS, commandShape, emptyMisroute, gatewardenCounts, isRevertCommand,
-  onEdit, onRevertCommand, onSkillFire, paceOf, parseEvents, permissionShape, publishSnapshot, pruneEvents, rollup,
+  onEdit, onRevertCommand, onSkillFire, paceOf, parseEvents, permissionShape, pruneEvents, rollup,
   purgeArgv, safeEvent, serializeEvents, sessionKey, skillKey,
   type DashEvent,
 } from '../hooks/collector-logic'
@@ -92,7 +92,10 @@ describe('misroutes', () => {
     r = onSkillFire(r.st, 'c', 'auto', NOW + 3 * SWITCH_WINDOW_MS)
     expect(r.misroute).toBe(null)
     st = onSkillFire(emptyMisroute(), 'a', 'slash', NOW).st
-    expect(onSkillFire(st, 'b', 'auto', NOW + 1000).misroute).toBe(null)
+    expect(onSkillFire(st, 'b', 'auto', NOW + 60_000).misroute).toBe(null)
+    // Loaded together for one job: not a wrong pick.
+    st = onSkillFire(emptyMisroute(), 'a', 'auto', NOW).st
+    expect(onSkillFire(st, 'b', 'auto', NOW + 200).misroute).toBe(null)
     st = onSkillFire(emptyMisroute(), 'a', 'auto', NOW).st
     expect(onSkillFire(st, 'a', 'auto', NOW + 1000).misroute).toBe(null)
   })
@@ -170,16 +173,5 @@ describe('gatewarden counts and the mobile snapshot', () => {
     expect(g?.topRules).toEqual([{ rule: 'push_gate.no_ci', n: 2 }])
     expect(JSON.stringify(g)).not.toContain('/srv/someone')
     expect(gatewardenCounts(null, NOW)).toBe(null)
-  })
-  test('the snapshot carries counts and no path, hook file name or secret', () => {
-    const f = rollup([{ t: NOW, s: S, k: 'skill', skill: 'a', via: 'auto' }], {
-      now: NOW, recording: true,
-      health: { plugins: { vigil: { loaded: true, at: NOW, version: '1.0.0', caught: 0 } }, drift: [{ hook: 'push_gate.py', state: 'differs' }], gatewarden: null, pinsChanged: 0 },
-    })
-    const snap = JSON.stringify(publishSnapshot(f))
-    expect(snap).toMatch(/"driftCount":1/)
-    expect(snap).not.toContain('push_gate.py')
-    expect(snap).not.toMatch(/\/home\/|\\Users\\|[A-Za-z]:\\/)
-    expect(snap).toMatch(/not live/)
   })
 })

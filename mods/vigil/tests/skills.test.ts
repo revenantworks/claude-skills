@@ -87,7 +87,7 @@ describe('skills view: duplicates', () => {
     expect(dv).toMatch(/agentwright\s+local, claude\.ai synced/)
     expect(dv).toMatch(/docx\s+local, claude\.ai synced/)
     fit80(dv)
-    const H: Health = { plugins: {}, drift: [], gatewarden: null, pinsChanged: 0 }
+    const H: Health = { plugins: {}, drift: [], gatewarden: null }
     // DM3: one plain sentence with the fix, inside 80 columns.
     const h = linesText(healthLines(H, NEUTRAL, findDupes(skills)))
     expect(h.replace(/\s+/g, ' ')).toMatch(/2 skills load twice \(local \+ claude\.ai synced\)\. Fix: turn off claude\.ai skill sync, or delete the synced copies\./)

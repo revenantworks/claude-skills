@@ -14,20 +14,24 @@ skill, and every skill works without them.
 permissions, never in skills or mods: your shell hooks (`heredoc_guard.py`, `push_gate.py`,
 `launch_throttle.py`, `hyperv_lock.py`) and gatewarden's hooks hold a command, a push or an edit.
 
-**The dashboard suggests; it never builds.** When the counts show a pattern (the same command
-typed again and again, a skill nobody fires, a skill that keeps firing by mistake), `vigil` adds a
-row to its suggestion queue. You accept, dismiss or snooze it. Accepting gives you a line to copy
-into `NEXT.md`; nothing is built, installed, allowed or written to a setting.
+**The dashboard suggests; it never builds.** When the counts show a pattern (a permission prompt
+that keeps interrupting you, the same job run again and again, skills nobody fires), `vigil` shows
+it as one of at most five cards. **Do it** drafts the change in chat, **Not now** hides the card,
+**Never** keeps it away. Nothing is built, installed, allowed or written to a setting.
+
+**vigil does what the built-ins do not.** `/usage` and `/skill-doctor` now report token cost and
+unused skills by skill and plugin; vigil links to them and keeps what they lack: likely misroutes,
+PACE always in view, spend modes and the short list of what to do next.
 
 [What ships](#what-ships) · [Install](#install) · [VS Code](#vs-code) · [Features](#features) ·
-[Commands](#commands) · [Themes](#themes) · [Suggestions](#suggestions) · [Records and network](#records-and-network) ·
+[Commands](#commands) · [Themes](#themes) · [Suggestions](#suggestions) · [Records](#records) ·
 [Surfaces](#surfaces) · [Data](#data-the-mods-write) · [Testing](#testing) · [Retired](#retired-2026-10-08)
 
 ## What ships
 
 | Plugin | Holds | Features | At install |
 |---|---|---|---|
-| `vigil` | Skill use, failures and likely misroutes; tokens and cost by skill; the meters; health; background tasks; optional panels; the suggestion queue; the `/rw-<skill>` short commands | 14 | On; collector, meter-writer, ledger-costs and instruction-pins opt-in (records); pr-state opt-in (network) |
+| `vigil` | Skill use, failures and likely misroutes; tokens by skill; the meters; health; background tasks; suggestion cards; the `/rw-<skill>` short commands | 8 | On; collector, meter-writer and ledger-costs opt-in (records) |
 | `shroud` | Secret and stream-key masking, the rotate tripwire, untrusted and received markers | 5 | On |
 | VS Code extension | Pace, skills fired and flagged, budget mode and the kill switch in the VS Code status bar, and a read-only panel over the vigil feed (`mods/vscode`, a local extension, not a plugin) | - | Installed by hand; reads files only |
 
@@ -95,96 +99,48 @@ or contacts a service.
 `/rw-vigil` draws its pane in a theme: a colour for each role (`accent`, `ok`, `warn`, `bad`, `dim`,
 `rule`), a glyph set (`unicode` or `ascii`) and a header style (`rule`, `plain` or `block`). Colour
 shows only where a pane draws; text answers, `vigil_read` and the status line get the glyphs and
-headers in plain text, never escape codes.
+headers in plain text.
 
-| Theme | Where | Look |
-|---|---|---|
-| `neutral` | bundled, **the default** | Every colour is a key of your own Claude Code theme, so it follows light and dark |
-| `revenantworks` | bundled, opt-in | The Revenantworks brand, cursor-block headers. Two variants: **dark** (threshold-blue, ember warn, magenta error, ash-grey) and **light** (each accent's `ink` companion and the brand's light muted text and border) |
-| `hc-light` | bundled, the default under more contrast on a light console | The brand's high-contrast light set on warm bone |
-| `off` | bundled, opt-in | No colour: every role is your own text colour, plain headers |
-| your own | `~/.claude/revenantworks/themes/<name>.json` | Anything you make; a file named like a bundled theme replaces it |
+| Theme | Look |
+|---|---|
+| `neutral` | **The default.** Every colour is a key of your own Claude Code theme, so it follows light and dark |
+| `revenantworks` | The Revenantworks brand, cursor-block headers, a dark and a light variant |
+| `hc-light` | High contrast on a warm light ground; the default when you ask for more contrast on a light console |
+| `off` | No colour: every role is your own text colour, plain headers |
 
-```
-/rw-vigil theme                    list the themes: the active one marked, what each carries
-/rw-vigil theme show [name]        preview only: every role, its contrast, a verdict per console
-/rw-vigil theme revenantworks      apply (saved in ~/.claude/revenantworks/theme.json)
-/rw-vigil theme new                make your own: the three ways below
-```
+**Switching.** Open the **Theme** view in the pane and press **Use** on a theme: each one is drawn in
+its own colour, so the list is the preview. `/rw-vigil theme <name>` does the same. Either way the pane
+and the band redraw at once, and other open sessions follow within a minute. `VIGIL_THEME=<name>` in
+your environment wins over the choice, and the reply says so.
 
-**Light and dark consoles.** A theme may carry a `dark` and a `light` variant. vigil picks the one
-that matches the console's background. You do not need to set anything: vigil reads your Claude
-Code theme first (the `theme` row of `/config`: a name starting `light` or `dark`). For `auto`, it
-reads the terminal's `COLORFGBG`; if that is not set, it uses dark and labels it a guess.
-`VIGIL_THEME_BACKGROUND=light|dark` is optional. Set it in your environment only to override the
-pick, for example when `auto` guesses wrong; when set, it wins. The VS Code status bar follows the
-editor's own theme kind. A theme with one palette works as before on
-every console; `show` says how it reads on the other one.
+**Light and dark.** vigil picks the variant from `VIGIL_THEME_BACKGROUND`, your choice, your Claude
+Code theme (a name starting `light` or `dark`), then `COLORFGBG`, else it assumes dark and says it
+looks dark. Under Claude Code's `auto` theme no host tells a mod which one it drew, so say it: the
+**dark**, **light** and **auto** buttons in the Theme view, or `/rw-vigil theme background
+dark|light|auto`. It saves beside the theme in `theme.json`.
 
-**Order and more contrast.** `/rw-vigil theme` lists the themes in picker order: `neutral` (dark or
-light, following the app), `revenantworks` (dark or light), `hc-light`, `off`, then your own A to Z.
-When you have not picked a theme and the console is light, vigil opens in `hc-light` if you ask
-for more contrast. A terminal has no `prefers-contrast` query, so set `VIGIL_THEME_CONTRAST=more`,
-or use a Claude Code theme whose name says high contrast. On a dark console your own theme keeps
-its contrast. The VS Code status bar takes `hc-light` under a high-contrast light editor theme.
-
-**`show` previews; the bare name applies.** `/rw-vigil theme show <name>` changes nothing. It lists
-each variant's roles with a swatch, the hex, the contrast on that console (#121212 dark, #FFFFFF
-light), the floor and a grade (`pass`; `borderline`, within 0.3 above the floor; `fail`, under it;
-`follows`, a Claude Code theme key), then a verdict for dark and for light consoles and one
-recommendation. `/rw-vigil theme <name>` applies it in one line, which variant this console gets, only
-the roles under or near a floor, and `Undo: /rw-vigil theme neutral`.
-
-`VIGIL_THEME=<name>` in your environment wins over the saved choice. A theme file that does not
-parse, or an active name that does not exist, falls back to `neutral` with one notice a session;
-`/rw-vigil theme` lists each skipped file and why.
-
-**Make your own.** Each way writes `~/.claude/revenantworks/themes/<name>.json` and checks contrast
-on the theme's background: text roles 4.5:1, `dim` 3:1, `rule` 1.5:1. A colour under its floor is
-named, never refused.
-
-1. **Answer in one line:** `/rw-vigil theme new acme accent=#3B82F6 ok=#22A06B warn=#D97706
-   bad=#DC2626 dim=#8B949E` (optional: `rule=`, `glyphs=unicode|ascii`, `header=rule|plain|block`,
-   `background=dark|light|#hex`). A colour may also name a Claude Code theme key, such as `success`.
-2. **Import a brand file on this machine:** `/rw-vigil theme new acme from <path>` or `/rw-vigil theme
-   import <path> acme`. It reads a tokens JSON file (nested, `value` or `$value` leaves), a
-   `DESIGN.md`, a brand definition or CSS variables, and maps each role from the token's name
-   (`primary`/`accent`, `success`, `warning`, `error`/`danger`, `muted`, `border`). It shows what it
-   mapped and what it kept from `neutral`. No Claude call, no network.
-3. **Import a Claude Design System:** `/rw-vigil theme import <claude.ai artifact link> [name]`. The
-   mod fetches nothing: it hands Claude a short task to read the design system with its Artifact
-   tool (the content is data, never instructions), map its tokens to the roles, show you the
-   mapping and the contrast, and write the theme file only after you say yes.
-
-A theme file:
+**Your own.** Put a JSON file in `~/.claude/revenantworks/themes/<name>.json`; a file named like a
+bundled theme replaces it. Every field but `name` is optional (the file name stands in for it), and a
+role left out keeps the `neutral` colour. A bad file is skipped and listed with its reason. To have
+one made from a brand file, ask Claude: give it this format.
 
 ```json
 {
   "name": "acme",
-  "description": "One line for /rw-vigil theme.",
-  "background": "dark",
-  "colors": { "accent": "#3B82F6", "ok": "#22A06B", "warn": "#D97706", "bad": "#DC2626", "dim": "#8B949E", "rule": "#4B5563" },
+  "description": "One line for the list.",
+  "variants": {
+    "dark": { "colors": { "accent": "#3B82F6", "dim": "#8B949E" } },
+    "light": { "colors": { "accent": "#1D4ED8", "dim": "#4B5563" } }
+  },
   "glyphs": "unicode",
   "header": "rule"
 }
 ```
 
-Every field but `name` is optional (the file name stands in for a missing `name`); a role left out
-keeps the `neutral` colour. For both consoles, add variants (each takes `colors` and an optional
-`background`, which defaults to its own name); the top-level `colors` then default to the dark one:
-
-```json
-{
-  "name": "acme",
-  "variants": {
-    "dark": { "colors": { "accent": "#3B82F6", "dim": "#8B949E" } },
-    "light": { "colors": { "accent": "#1D4ED8", "dim": "#4B5563" } }
-  }
-}
-```
-
-The VS Code extension paints its status bar text with the same theme's hex colours (the variant
-for the editor's light or dark theme) where VS Code allows (its backgrounds stay VS Code's own warning and error colours).
+A single palette works too: top-level `colors` and `background` (`dark`, `light` or a hex). The Theme
+view flags a colour under its contrast floor on your console (text 4.5:1, `dim` 3:1, `rule` 1.5:1).
+The VS Code status bar paints its text with the same theme's hex colours for the editor's light or
+dark theme.
 
 ## Features
 
@@ -196,17 +152,11 @@ Every feature has a readable name and an id. Both work: `/rw-vigil on collector`
 |---|---|---|---|---|---|
 | collector | D1 | feed | Counts-only event file and `feed.json` | opt-in (records) | `/rw-vigil records on`; counts, hashes and shapes, never text |
 | status-line | D2 | lens | Status-line meters: 5-hour, weekly, PACE, context, cache | on | The status line |
-| pane | D3 | lens | `/rw-vigil` pane: the board, your own tiles, its text views and the glance strip | on | `/rw-vigil` (the board), `/rw-vigil tiles`, `/rw-vigil overview`, `/rw-vigil skills`, `/rw-vigil health`, `/rw-vigil tasks`, `/rw-vigil doctor` |
+| pane | D3 | lens | `/rw-vigil` pane: the board, your own tiles, its text views and the glance strip | on | `/rw-vigil` (the board), `/rw-vigil skills`, `/rw-vigil tasks`, `/rw-vigil health`, `/rw-vigil doctor` |
 | read-tool | D4 | assist | `vigil_read`: Claude reads the feed on demand | on | Claude calls `vigil_read` when you ask; nothing is injected otherwise |
-| suggestions | D5 | assist | Suggestion queue (never builds anything) | on | `/rw-vigil suggest` (grouped, most asked first; `<n>` drills in); accept, dismiss or snooze a group or one shape; at most one note a session |
+| suggestions | D5 | assist | At most five cards (never builds anything) | on | `/rw-vigil suggest`; Do it, Not now or Never; at most one note a session |
 | meter-writer | D6 | feed | Meter-file fallback writer for pacewright | opt-in (records) | `/rw-vigil on meter-writer` |
 | ledger-costs | D7 | feed | Ledger cost sidecar for dispatchwright | opt-in (records) | `/rw-vigil on ledger-costs` |
-| instruction-pins | D8 | lens | Instruction-file pins | opt-in (records) | `/rw-vigil on instruction-pins`; changes show in `/rw-vigil health` |
-| research-panel | D9 | lens | Research spend and palette panel | on | Shows while researchscribe runs; `/rw-vigil palette [brand]` |
-| gpu-panel | D10 | lens | GPU lease and local model panel | on | `/rw-vigil gpu` (reads `127.0.0.1` only, when you ask) |
-| godot-panel | D11 | lens | Godot proof panel and import warning | on | Shows in a Godot repo; `/rw-vigil godot` |
-| pr-state | D12 | lens | Your open PRs: checks, review, conflicts | opt-in (network) | `/rw-vigil network on`; `/rw-vigil prs` |
-| publish | D13 | assist | Snapshot for a private mobile page | on | `/rw-vigil publish` writes `snapshot.json`; ask Claude to publish it as a private Artifact |
 | short-commands | D14 | assist | Short skill commands: `/rw-<skill>` and `/rw <skill>` | on | `/rw` lists them; `/rw-vigil off short-commands` brings back the long names |
 
 **What the collector counts.** Each skill fire, by slash (you typed `/name`) or automatic; each
@@ -235,10 +185,10 @@ machine. Open a tile for its detail. A glance strip above the prompt shows three
 weekly, context) and a mark only when something needs you. A meter crossing 80% or 90% shows one
 toast per level.
 
-**Suggestion cards.** `/rw-vigil inbox` shows at most three suggestions as cards, strongest first,
-each with its evidence. **Do it** hands a repeated permission prompt to `/fewer-permission-prompts`;
-anything else becomes a draft prompt in the chat that writes nothing until you say yes. **Not now**
-hides a card for 7 days, then 30. **Undo** puts the last card back as it was.
+**Suggestion cards.** `/rw-vigil suggest` shows at most five cards, strongest first, each with its
+evidence. **Do it** hands a repeated permission prompt to `/fewer-permission-prompts`; anything else
+becomes a draft prompt in the chat that writes nothing until you say yes. **Not now** hides a card
+for 7 days, then 30. **Undo** puts the last card back as it was. **Never** keeps it away for good.
 
 **Spend-mode switches.** The spend-mode tile's detail shows pacewright's auto modes (`pace`,
 `overnight`, `reset-eve`) with a switch each, saved in `~/.dispatch/spend-modes.json`. All are on
@@ -259,20 +209,28 @@ the plugin. A tile is data, never code. It names one source, one picture and an 
 
 | Source | Reads | Pictures |
 |---|---|---|
-| `json` | one field of a JSON file (`"field":"runs.0.ok"`) | ring, count, spark, dots, countdown |
+| `json` | one field of a JSON file (`"field":"runs.0.ok"`, or `"runs.*.ms"` for every row) | ring, count, spark, dots, countdown |
 | `lines` | non-empty lines, or lines holding `match` | ring, count |
 | `files` | files in a folder (`ext`, `olderThanDays`) | ring, count, spark of files by day |
 | `age` | days since a file changed | count, countdown |
-| `date` | the first date in a file, or a JSON `field` | countdown |
+| `date` | the first date in a file, a JSON `field`, or with `match` the next date on the lines holding it | countdown |
+| `size` | a file's size in bytes, never its words (is a private list armed?) | count |
 
 `max` fills a ring; `warnAt` and `badAt` mark a value (`lowIsBad` flips them); `note` is the one
-line a click adds. A path starts with `~/` (home) or `./` (this repo). vigil refuses `..`, keys,
+line a click adds; `act` (`{"label":"Close it","prompt":"..."}`) adds a button that drafts in chat.
+A path starts with `~/` (home), `./` (this repo) or `@/` (your linked projects). vigil refuses `..`, keys,
 tokens, secrets, `.env` files and `.git`, and checks a link again where it lands. A file over
 1 MB is not read. A tile shows numbers and dates only, so no text from the source reaches the
 board. Up to 12 tiles load; `/rw-vigil tiles` lists each file it refused and why. Delete a file to
 remove its tile.
 
-**Likely misroutes.** A different skill firing within 2 minutes of an automatic fire flags the
+**One mod for private projects.** Keep project tiles and a theme of your own in a private repo, with
+no second plugin and nothing private in this one. `/rw-vigil link <folder holding your clones> <your
+private folder>` saves the two paths in `~/.claude/revenantworks/link.json`. vigil then loads
+`<folder>/tiles/*.json` and `<folder>/themes/*.json` beside its own, and `@/` in a tile means that clones
+folder. `/rw-vigil link off` stops it.
+
+**Likely misroutes.** A different skill firing 30 seconds to 2 minutes after an automatic fire (skills loaded together sooner than that are a batch for one job) flags the
 first one. An edit that undoes an earlier edit, or a `git restore`, within 10 minutes of an
 automatic fire flags that skill, once. A slash fire is you choosing, so it is never flagged.
 
@@ -315,20 +273,17 @@ and times to `health/shroud.json`, never a value.
 
 | Command | Does |
 |---|---|
-| `/rw-vigil` | The overview pane (text where no pane draws) |
+| `/rw-vigil` | The board (text where no pane draws) |
 | `/rw-vigil skills` | The skills that fired or failed in 30 days, grouped by source (local, plugin, claude.ai synced, built-in); one line for the rest and one for skills loaded twice |
 | `/rw-vigil skills all` · `skills dupes` | Every skill; the skills loaded from two sources (also a Health item) |
-| `/rw-vigil meters` · `health` · `tasks` · `context` | One view of the feed |
-| `/rw-vigil suggest` | The suggestion queue by command type, most asked first; `/rw-vigil suggest <n>` drills in; `accept`, `dismiss` or `snooze <n>` (a group) or `<n.m>` (one shape) |
-| `/rw-vigil theme` | List, apply (`<name>`), preview (`show`) or make (`new`, `import`) a [theme](#themes) |
-| `/rw-vigil gpu` · `palette` · `godot` · `prs` | The optional panels |
-| `/rw-vigil publish` | Writes a counts-only snapshot for a private mobile page |
+| `/rw-vigil meters` · `health` · `tasks` · `context` · `overview` | One view of the feed |
+| `/rw-vigil suggest` | At most five cards; `accept`, `dismiss` or `snooze <n>` act on one |
+| `/rw-vigil theme` | List, apply (`<name>`) or say the console's background (`background dark\|light\|auto`): [themes](#themes) |
 | `/rw-vigil doctor` | Checks the switch file, the collector, the meter file and the feed |
 | `/rw-vigil switches` | Lists every feature, its type and its state |
 | `/rw-vigil on\|off <name>` | Turns one or more features on or off, by name or id |
 | `/rw-vigil off` · `/rw-vigil on` | Kill switch: stops every mod at once, then back to your switches |
 | `/rw-vigil records on\|off` | Lets every feature that keeps a local record keep it, or none |
-| `/rw-vigil network on\|off` | Lets pr-state read GitHub when you act, or not |
 | `/rw-vigil purge` | Deletes everything the mods wrote |
 | `/rw-vigil help` | Every command |
 | `/rw` · `/rw-<skill> [what you want]` | List the Revenantworks skills, or run one by its short name |
@@ -341,34 +296,32 @@ defaults; retired fields are dropped.
 
 ## Suggestions
 
-The queue reads the collector's counts. A row appears when one of these holds:
+The cards read the collector's counts. **At most five are open**, ranked by what costs you most: a
+prompt that interrupts you, then a heavy skill or a full context, then a description, then skills
+nobody fires, then repeated work; within a kind, by evidence. The rest wait outside the list and take
+a place when one clears, so the list never fills up, and a dismissal is never pushed out.
 
-| Evidence | Suggestion |
+| Evidence | Card |
 |---|---|
-| The same command shape 5 times, in 3 sessions, within 7 days (never a chain of read-only steps such as `sed`, `grep`, `cat`) | Make it a command or a skill |
-| The same permission dialog shown to you 3 times within 7 days (never a tool that asks by design, such as AskUserQuestion; calls auto mode's classifier settles on its own are not counted) | Allow it after a gatewarden check, or change how Claude makes the call (vigil never allows) |
-| A skill listed for 30 days with no fire | Probe it or retire it |
-| A skill fired by slash more than 70% of the time | Rewrite its description, so it fires on its own |
+| The same permission dialog shown to you 3 times in 7 days (never a tool that asks by design; calls auto mode's classifier settles on its own are not counted) | Allow it after a gatewarden check, or change how Claude makes the call (vigil never allows) |
+| A skill whose turns average 1.5x the tokens of the turns without it (at least 5 turns each side, a tenth of the week's tokens) | Slim the skill |
 | Context past 80% twice in one day | Slim what loads every turn |
-| A skill whose turns average 1.5x the tokens of the turns without it (at least 5 turns each side and a tenth of the week's tokens). A turn's tokens are the whole turn's, so a skill that loads in nearly every turn owns most tokens and proves nothing; only the lift counts | Slim the skill |
+| A skill fired by slash more than 70% of the time | Rewrite its description, so it fires on its own |
+| Skills listed for 30 days with no fire: one card for all of them | Probe them or retire them |
+| The same job 20 times in 5 sessions in 7 days | A script or a skill could make it one step |
 
-`/rw-vigil suggest` rolls the queue up by command type: a shell chain under its lead program
-(`shell: git`, `shell: python`; `cd` and read-only steps never lead), read-only chains together,
-each MCP server, Claude Code's own tools, skills and context. Groups sort by how many times you
-were asked, most first, then by runs; a group with nothing open sinks. `/rw-vigil suggest <n>` (or a
-name, `/rw-vigil suggest git`) drills into one group: each shape with its prompts and runs side by
-side, numbered `<n>.<m>`. `accept`, `dismiss` or `snooze` take a group (`3`), one shape (`3.2`) or
-a row id. In the pane, click a group to drill in and the back row to return; Snooze and Dismiss
-buttons sit on each group and shape (accepting stays a typed command, since it hands you a line
-to copy). "Asked" counts permission dialogs you saw, taken from Claude Code's PermissionRequest
-event; a session with nothing to draw a dialog on (`-p`, a routine) counts none. Claude reads the same views through `vigil_read` (`view: "suggest"`, optional `group`).
+**The same job.** A chain counts by its core: `cd`, read-only steps and block closers go, so
+`cd ; python -m unittest ; tail` and `python -m unittest ; grep -E` are one job. A chain with no step
+that names a job (`git ...`, a bare `python *.py`, `python -c`) never makes a card, however often it
+runs. These are Claude's commands, not yours, so the bar is high.
 
-A candidate seen again updates its row; it never doubles. A dismissed row stays quiet for 30 days
-and comes back only with fresh evidence. A snooze lasts 7 days. An accepted row gives you a
-`NEXT.md` line to copy and never comes back. An open row with no fresh evidence for 14 days leaves
-the queue. At most one note reaches you a session: the row with the most evidence.
+A candidate seen again updates its card; it never doubles. A dismissed card stays quiet for 30 days
+and comes back only with fresh evidence; Never keeps it away. An open card with no fresh evidence for
+3 days leaves. Every session rereads the file before it changes the list, so a card dismissed in one
+window stays dismissed in the others. At most one note reaches you a session, and never the same card
+twice. Claude reads the same list through `vigil_read` (`view: "suggest"`).
 
-## Records and network
+## Records
 
 **Records.** A record is anything a mod keeps on disk about your work. Until you say yes, the
 dashboard counts this session only and writes nothing. Each record stays on this machine, and
@@ -379,15 +332,11 @@ dashboard counts this session only and writes nothing. Each record stays on this
 | collector | Counts this session | `vigil/events.jsonl`, `vigil/feed.json`, `vigil/suggestions.json` |
 | meter-writer | Off | The meter file, only when no other writer is fresh |
 | ledger-costs | Off | `actuals.jsonl` in the run folder |
-| instruction-pins | Off | Hashes of your instruction files |
 
 The first time you are at the screen, the dashboard asks once about records: **Turn on** or
 **Keep off**. Where nothing can be drawn, it asks once as text; `/rw-vigil records on|off` answers.
 
-**Network.** One part can read from a service, and only after a yes: pr-state lists your open PRs
-in this repo through your `gh` login, at session start, after a `git push` or `gh pr` action, and on
-`/rw-vigil prs`. It gives up after 15 seconds. No mod ever sends your data anywhere. The GPU panel
-reads only `127.0.0.1`.
+No mod ever contacts a service or sends your data anywhere.
 
 ## Surfaces
 
@@ -396,7 +345,7 @@ reads only `127.0.0.1`.
 | Local terminal | Yes | Yes |
 | Desktop Code tab | Yes | Yes |
 | VS Code chat panel | Yes | Text only; the [VS Code extension](#vs-code) keeps the dashboard in view |
-| Remote Control (phone) | Yes | Text only; `/rw-vigil publish` gives a snapshot page |
+| Remote Control (phone) | Yes | Text only |
 | Headless (`-p`, SDK) | Yes | Text only |
 | Cloud sessions | Only where the plugin is loaded | Text only |
 
@@ -412,11 +361,11 @@ its `vigil/` folder and the old `dash/` one. Event rows are pruned after 30 days
 |---|---|---|---|
 | `switches.json` | `/rw-vigil` | both mods, the VS Code extension | setting |
 | `theme.json` · `themes/<name>.json` | `/rw-vigil theme` (or you) | `vigil`, the VS Code extension | setting |
+| `link.json` | `/rw-vigil link` | `vigil` | setting |
 | `health/<mod>.json` | each mod, every minute | `/rw-vigil health` (one file for every session: each live session's beat by hash) | heartbeat |
 | `vigil/events.jsonl` | collector | the feed roll-up | record |
 | `vigil/feed.json` | collector | `/rw-vigil`, `vigil_read`, the VS Code extension | record |
 | `vigil/suggestions.json` | suggestions | `/rw-vigil suggest` | record |
-| `vigil/snapshot.json` | `/rw-vigil publish` | a private Artifact page you ask for | record |
 | `~/.claude/usage-windows.json` | meter-writer, only when no other writer is fresh | pacewright | record |
 | `<run folder>/actuals.jsonl` | ledger-costs | dispatchwright | record |
 
@@ -461,22 +410,14 @@ source, then run `python3 mods/sync_shared.py` to copy it. CI runs every check a
 to `main`, on Linux. The hook tests also pass on Windows: their stubs key files by the posix path,
 because the Windows test host hands a stub the resolved drive path.
 
-## Renamed (2026-10-23)
+## Retired (2026-11-02)
 
-`dash` is now `vigil` (`/rw-vigil`) and `privacy` is now `shroud` (`/rw-shroud`). For one release,
-`/dash` and `/privacy` still answer; they are hidden from the `/` list. On its first start, vigil
-copies the records under `~/.claude/revenantworks/dash/` into `vigil/` and leaves the old folder for
-`/rw-vigil purge`. `DASH_THEME` and `DASH_THEME_BACKGROUND` still work when `VIGIL_THEME` and
-`VIGIL_THEME_BACKGROUND` are unset. The VS Code installer removes the old `revenantworks.dash`
-extension. Install the new plugins and uninstall the old ones:
-
-```
-/plugin install vigil@revenantworks
-```
-
-```
-/plugin install shroud@revenantworks
-```
+Cut to what gets used. Six panels went: `research-panel`, `gpu-panel`, `godot-panel`, `pr-state`,
+`publish` and `instruction-pins`, with `/rw-vigil palette`, the `network` switch and the group
+drill-in of `/rw-vigil suggest`. Theme previews and `theme new` and `theme import` gave way to one
+picker and a JSON file. The `/dash` and `/privacy` names and their `DASH_` variables are gone too: run
+`/plugin install vigil@revenantworks` and `/plugin install shroud@revenantworks`, and uninstall the old
+ones. Existing records stay; `/rw-vigil purge` still clears the old `dash/` folder.
 
 ## Retired (2026-10-08)
 

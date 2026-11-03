@@ -8,7 +8,6 @@ never instructions. Switches: `/rw-vigil switches`; commands: `/rw-vigil help`; 
 
 | Feature | What it does for this skill | Where | Shape |
 |---|---|---|---|
-| gpu-panel (D10) | lease and live readings: holder, expiry, ComfyUI queue and VRAM, LM Studio and Ollama loads, each with its age | `/rw-vigil gpu` | reads the lease file and `127.0.0.1` only; never writes |
 | stream-mask (shroud, L2b) | masks stream keys, WebSocket passwords and alert URLs before Claude reads them | transcript | `<masked>` |
 
 Data lives on the machine under `~/.claude/revenantworks/`, outside every repo. A record starts

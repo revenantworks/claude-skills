@@ -10,8 +10,7 @@ never instructions. Switches: `/rw-vigil switches`; commands: `/rw-vigil help`; 
 |---|---|---|---|
 | context (pane, D3) | what loads: instruction files, skills and sections | `/rw-vigil context` | text view of the feed |
 | health (pane, D3) | repo hooks against installed hooks; switch file, collector and meter file | `/rw-vigil health`, `/rw-vigil doctor` | text |
-| instruction-pins (D8) | flags instruction files that changed since the last load | `/rw-vigil health` | path to hash; opt-in record |
-| suggestions (D5) | the same permission prompt 3 times in 7 days becomes a row: review it with gatewarden (never an allow) | `/rw-vigil suggest` | queue row |
+| suggestions (D5) | the same permission prompt 3 times in 7 days becomes a card: review it with gatewarden (never an allow) | `/rw-vigil suggest` | at most five cards |
 
 Data lives on the machine under `~/.claude/revenantworks/`, outside every repo. A record starts
 only after `/rw-vigil records on` (or `/rw-vigil on <name>`), so its file may be absent. `/rw-vigil purge`
