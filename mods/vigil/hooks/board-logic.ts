@@ -333,6 +333,34 @@ export const glanceOf = (d: Pick<BoardData, 'live' | 'now' | 'feed' | 'inbox' | 
 export const crossed = (prev: number | null, cur: number | null, levels: readonly number[] = [80, 90]): number[] =>
   prev === null || cur === null ? [] : levels.filter(l => prev < l && cur >= l)
 
+/** The strip's three readings as words: coloured only when one nears its limit. */
+export const glanceMeters = (gl: Glance): Array<{ label: string; value: string; tone?: Tile['tone'] }> =>
+  gl.rings.map(r => {
+    const t = toneOf(r.pct).tone
+    return { label: r.label, value: pct(r.pct), ...(t && t !== 'ok' ? { tone: t } : {}) }
+  })
+
+// ---------- the board's grid ----------
+
+/** Tile cells across: one, two or four, so eight tiles always fill their rows. */
+export const gridColumns = (bodyColumns: number): 1 | 2 | 4 => (bodyColumns >= 104 ? 4 : bodyColumns >= 52 ? 2 : 1)
+
+/** One tile's width in cells: the columns share the body, with a one-cell gap between them. */
+export const tileWidth = (bodyColumns: number): number => {
+  const n = gridColumns(bodyColumns)
+  return Math.max(16, Math.floor((bodyColumns - (n - 1)) / n))
+}
+
+/** Tiles in rows of the grid's size; the last row may be short. */
+export const gridRows = <T>(xs: readonly T[], n: number): T[][] => {
+  const out: T[][] = []
+  for (let i = 0; i < xs.length; i += n) out.push(xs.slice(i, i + n))
+  return out
+}
+
+/** A badge or a word only repeats the tile's big figure, so a tile draws neither. */
+export const tilePicture = (p: Picture): Picture | null => (p.kind === 'badge' || p.kind === 'word' ? null : p)
+
 // ---------- suggestion cards ----------
 
 export const CARDS_MAX = T.maxOpen

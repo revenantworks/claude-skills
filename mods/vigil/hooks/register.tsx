@@ -30,13 +30,13 @@ import {
   toneStyle, type ConsoleBg, type ConsoleInfo, type Theme, type ThemeEntry,
 } from './theme-logic'
 import {
-  HELP, head, healthLines, linesText, metersLines, navLines, overviewLines, panelLines, parseDashArgs, skillsLines, themeApplied, themeLines, dupesLines, findDupes,
+  HELP, head, healthLines, linesText, metersLines, navTabs, overviewLines, panelLines, parseDashArgs, skillsLines, themeApplied, themeLines, dupesLines, findDupes,
   type Line, type Press, type View,
 } from './view-logic'
 import { RW_SKILLS } from './rw-skills'
 import {
-  SWITCHES, arranged, boardText, cardsOf, crossed, dailyTokens, detailOf, doItOf, evidenceDots, glanceOf, glanceText, isAutoMode, isTile, moveTile,
-  notNow, openCount, parseAutoModes, parseBudget, parseLayout, pictureAlt, pictureGlyph, pictureSvg, serializeAutoModes, tileOf, toggleCollapsed,
+  SWITCHES, arranged, boardText, cardsOf, crossed, dailyTokens, detailOf, doItOf, evidenceDots, glanceMeters, glanceOf, glanceText, gridColumns, gridRows, isAutoMode, isTile, moveTile,
+  notNow, openCount, parseAutoModes, parseBudget, parseLayout, pictureAlt, pictureGlyph, pictureSvg, serializeAutoModes, tileOf, tilePicture, tileWidth, toggleCollapsed,
   togglePinned, undoRow, AUTO_MODES, type AutoModes, type BoardData, type Budget, type Layout, type MineTile, type Picture, type TileId, parseShroudBeat, shieldText,
 } from './board-logic'
 import { ASCII_BLOCKS, BLOCKS, inkOf } from './draw-logic'
@@ -90,6 +90,8 @@ let dsView: View = 'board'
 // the board (phase 4): its layout (saved per machine in $.store), the open detail, the last Not now
 let dsLayout: Layout = parseLayout(null)
 let dsDetail: TileId = 'usage'
+let dsArranging = false
+let dsBandHidden = false
 let dsUndo: Suggestion | null = null
 let dsAuto: AutoModes = parseAutoModes(null)
 let dsBudget: Budget | null = null
@@ -380,7 +382,7 @@ function dsPicture(table: Table, p: Picture, size = 56): JSX.Element {
 }
 
 /** The board, one tile's detail, the inbox cards or the three switches, as the pane draws them. */
-async function dsBoardTree($: EngineInterface, table: Table, onPress: OnPress): Promise<JSX.Element> {
+async function dsBoardTree($: EngineInterface, table: Table, onPress: OnPress, columns: number): Promise<JSX.Element> {
   const { Box, Button, Text } = table
   const accent = dsTheme.colors.accent
   const now = await $.clock.now()
@@ -464,35 +466,81 @@ async function dsBoardTree($: EngineInterface, table: Table, onPress: OnPress): 
   }
   const d = await dsBoardData($)
   const order = arranged(dsLayout)
-  return (
-    <Box flexDirection="row" flexWrap="wrap" gap={1}>
-      {order.map((id, i) => {
-        const t = tileOf(id, d)
-        const folded = dsLayout.collapsed.includes(id)
-        const pinned = dsLayout.pinned.includes(id)
-        return (
-          <Box key={`tile-${id}`} flexDirection="column" borderStyle="round" borderColor={dsTheme.colors.rule} paddingX={1} minWidth={24}>
-            <Box columnGap={1}>
-              <Text bold color={accent}>{t.title}</Text>
-              <Button key={`collapse:${id}`} label={folded ? '+' : '-'} plain dimColor onPress={onPress({ kind: 'tile', op: 'collapse', id })} />
-              <Button key={`pin:${id}`} label={pinned ? 'Unpin' : 'Pin'} plain dimColor onPress={onPress({ kind: 'tile', op: 'pin', id })} />
-              {i > 0 ? <Button key={`up:${id}`} label="^" plain dimColor onPress={onPress({ kind: 'tile', op: 'up', id })} /> : null}
-              {i < order.length - 1 ? <Button key={`down:${id}`} label="v" plain dimColor onPress={onPress({ kind: 'tile', op: 'down', id })} /> : null}
-            </Box>
-            {folded ? <Text>{t.big}</Text> : (
-              <Box flexDirection="column">
-                {dsPicture(table, t.picture)}
-                <Text bold color={t.tone ? toneStyle(dsTheme, t.tone).color : undefined}>{t.big}</Text>
-                <Text color={dsTheme.colors.dim} wrap="truncate-end">{t.sub}</Text>
-                <Button key={`open:${id}`} label="Open" plain dimColor onPress={onPress({ kind: 'tile', op: 'open', id })} />
-              </Box>
-            )}
+  // Layout controls live in one list of their own, so a tile holds only its reading.
+  if (dsArranging) {
+    return (
+      <Box flexDirection="column" rowGap={1}>
+        <Box justifyContent="space-between" columnGap={1}>
+          <Text bold color={accent}>Arrange</Text>
+          <Box columnGap={2}>
+            <Button key="arrange-reset" label="Reset" plain dimColor onPress={onPress({ kind: 'arrange', op: 'reset' })} />
+            <Button key="arrange-done" label="Done" variant="primary" onPress={onPress({ kind: 'arrange', op: 'toggle' })} />
           </Box>
-        )
-      })}
+        </Box>
+        <Box flexDirection="column">
+          {order.map(id => (
+            <Box key={`row-${id}`} columnGap={2}>
+              <Box width={16}><Text wrap="truncate-end">{tileOf(id, d).title}</Text></Box>
+              <Button key={`pin:${id}`} label={dsLayout.pinned.includes(id) ? 'Unpin' : 'Pin'} plain dimColor onPress={onPress({ kind: 'tile', op: 'pin', id })} />
+              <Button key={`collapse:${id}`} label={dsLayout.collapsed.includes(id) ? 'Unfold' : 'Fold'} plain dimColor onPress={onPress({ kind: 'tile', op: 'collapse', id })} />
+              <Button key={`up:${id}`} label="Up" plain dimColor onPress={onPress({ kind: 'tile', op: 'up', id })} />
+              <Button key={`down:${id}`} label="Down" plain dimColor onPress={onPress({ kind: 'tile', op: 'down', id })} />
+            </Box>
+          ))}
+        </Box>
+      </Box>
+    )
+  }
+  const shown = order.filter(id => !dsLayout.collapsed.includes(id))
+  const folded = order.filter(id => dsLayout.collapsed.includes(id))
+  const width = tileWidth(columns)
+  return (
+    <Box flexDirection="column" rowGap={1}>
+      <Box flexDirection="column">
+        {gridRows(shown, gridColumns(columns)).map((row, r) => (
+          <Box key={`grid${r}`} columnGap={1}>
+            {row.map(id => {
+              const t = tileOf(id, d)
+              const pic = tilePicture(t.picture)
+              return (
+                <Box key={`tile-${id}`} flexDirection="column" borderStyle="round" borderColor={dsTheme.colors.rule} paddingX={1} width={width}>
+                  <Box justifyContent="space-between" columnGap={1}>
+                    <Button key={`open:${id}`} plain onPress={onPress({ kind: 'tile', op: 'open', id })}><Text bold>{t.title}</Text></Button>
+                    <Text bold color={t.tone && t.tone !== 'ok' ? toneStyle(dsTheme, t.tone).color : undefined} wrap="truncate-end">{t.big}</Text>
+                  </Box>
+                  <Text color={dsTheme.colors.dim} wrap="truncate-end">{t.sub}</Text>
+                  {pic ? dsPicture(table, pic, 40) : null}
+                </Box>
+              )
+            })}
+          </Box>
+        ))}
+      </Box>
+      {folded.length ? (
+        <Box flexWrap="wrap" columnGap={2}>
+          <Text dimColor>Folded</Text>
+          {folded.map(id => {
+            const t = tileOf(id, d)
+            return <Button key={`open:${id}`} plain dimColor onPress={onPress({ kind: 'tile', op: 'open', id })}>{t.title} <Text bold>{t.big}</Text></Button>
+          })}
+        </Box>
+      ) : null}
+      <Box justifyContent="flex-end">
+        <Button key="arrange" label="Arrange" plain dimColor onPress={onPress({ kind: 'arrange', op: 'toggle' })} />
+      </Box>
     </Box>
   )
 }
+
+/** Hide or bring back the band; the choice holds across sessions. */
+async function dsSetBandHidden($: EngineInterface, hidden: boolean): Promise<void> {
+  dsBandHidden = hidden
+  // A store that fails costs only the memory: the band still hides in this session.
+  await $.store.set('bandHidden', hidden).catch(() => undefined)
+  await dsBandBump($)
+}
+
+const BAND_HIDDEN_NOTE = 'vigil is hidden. /rw-vigil show brings the strip back; the status line stays.'
 
 /** pacewright's live decision and the auto-mode switches it reads, both under ~/.dispatch/. */
 function dsDispatch(name: string): string {
@@ -635,6 +683,11 @@ async function dsDoIt($: EngineInterface, id: string): Promise<void> {
 }
 
 async function dsPress($: EngineInterface, p: Press): Promise<void> {
+  if (p.kind === 'arrange') {
+    if (p.op === 'toggle') dsArranging = !dsArranging
+    else await dsSaveLayout($, parseLayout(null, dsMine.map(t => tileKey(t.id))))
+    return
+  }
   if (p.kind === 'tile') {
     if (p.op === 'open') {
       if (p.id === 'inbox') dsView = 'cards'
@@ -926,6 +979,7 @@ async function dsSetup($: EngineInterface): Promise<void> {
   await dsLoadTheme($)
   dsSuggest = parseSuggestions(await dsRead($, dsPath('vigil/suggestions.json')))
   dsLayout = parseLayout(await $.store.get('layout'))
+  dsBandHidden = (await $.store.get('bandHidden')) === true
   await dsLoadTiles($)
   await dsLoadSpend($)
   // Hash keys only: text keys left by an older build are dropped on read and never written back.
@@ -1056,6 +1110,13 @@ async function dsCommand($: EngineInterface, e: CommandRunInput): Promise<Comman
     case 'overview':
       await dsRoll($)
       return show('overview')
+    case 'hide':
+      await dsSetBandHidden($, true)
+      await $.ui.close({ id: 'vigil' }).catch(() => undefined)
+      return { text: BAND_HIDDEN_NOTE }
+    case 'show':
+      await dsSetBandHidden($, false)
+      return { text: 'The strip above the prompt is back. /rw-vigil hide hides it again.' }
     case 'tile': {
       const [name, op = 'open'] = rest.toLowerCase().split(/\s+/)
       if (!isTile(name)) return { text: `No tile "${(name ?? '').slice(0, 20)}". Tiles: ${arranged(dsLayout).join(', ')}.` }
@@ -1446,20 +1507,26 @@ export const register: Register = on => {
         // A pane press can change the band too: a dismiss or snooze of the noted suggestion.
         await dsBandBump($)
       }
+      const tabs = (
+        <Box key="tabs" justifyContent="space-between" columnGap={2}>
+          <Box flexWrap="wrap" columnGap={2}>
+            {navTabs(dsView).map(t => (t.active
+              ? <Button key={`view:${t.view}`} plain onPress={onPress({ kind: 'view', view: t.view })}><Text bold color={dsTheme.colors.accent}>{t.label}</Text></Button>
+              : <Button key={`view:${t.view}`} label={t.label} plain dimColor onPress={onPress({ kind: 'view', view: t.view })} />))}
+          </Box>
+          <Button key="close" label="Close" hotkey="q" role="dismiss" plain dimColor onPress={() => $.ui.close({ id: 'vigil' })} />
+        </Box>
+      )
       if (dsView === 'board' || dsView === 'detail' || dsView === 'cards' || dsView === 'settings' || dsView === 'tiles') {
         const table = $.ui.resolve(e)
-        const nav = navLines(dsView).map((l, i) => (
-          <Box key={`nav${i}`} columnGap={1}>
-            <Text dimColor>{l.text}</Text>
-            {(l.buttons ?? []).map(b => <Button key={b.press.kind === 'view' ? `view:${b.press.view}` : b.label} label={b.label} plain dimColor onPress={onPress(b.press)} />)}
-          </Box>
-        ))
-        return <Box flexDirection="column" rowGap={1}><Box flexDirection="column">{nav}</Box>{await dsBoardTree($, table, onPress)}</Box>
+        return <Box flexDirection="column" rowGap={1}>{tabs}{await dsBoardTree($, table, onPress, e.props.bodyColumns)}</Box>
       }
-      const lines = [...navLines(dsView), ...(await dsLines($, dsView))]
+      const lines = await dsLines($, dsView)
       // The theme paints each tone; a colour is a theme key or a hex the person chose.
       return (
-        <Box flexDirection="column">
+        <Box flexDirection="column" rowGap={1}>
+          {tabs}
+          <Box flexDirection="column">
           {lines.map((l, i) => {
             const s = l.color ? { color: l.color, bold: false } : toneStyle(dsTheme, l.tone)
             const text = <Text color={s.color} bold={s.bold} wrap="truncate-end">{l.text || ' '}</Text>
@@ -1476,10 +1543,11 @@ export const register: Register = on => {
             }
             return <Text key={`d${i}`} color={s.color} bold={s.bold} wrap="truncate-end">{l.text || ' '}</Text>
           })}
+          </Box>
         </Box>
       )
     }
-    if (e.component !== 'AbovePrompt' || e.props.hasSurvey) return next(e)
+    if (e.component !== 'AbovePrompt' || e.props.hasSurvey || dsBandHidden) return next(e)
     const { Box, Button, Text } = $.ui.resolve(e)
     // Reading the band's revision subscribes it; every band press bumps it, so the press shows at
     // once rather than on the next unrelated redraw (the dead Later button, 2026-10-15).
@@ -1487,22 +1555,22 @@ export const register: Register = on => {
     const bump = () => dsBandBump($)
     const now = await $.clock.now()
     const rows: JSX.Element[] = []
-    // The glance strip: three rings (5-hour, week, context), a mark only when something needs you.
+    // The glance strip: three readings, a mark only when something needs you, and its two controls.
+    let glance: JSX.Element | null = null
     if (dsOn('D2')) {
-      const d = await dsBoardData($)
-      const gl = glanceOf(d)
+      const gl = glanceOf(await dsBoardData($))
       if (gl.rings.some(r => r.pct !== null) || gl.needsYou || gl.shield) {
-        const table = $.ui.resolve(e) as Record<string, unknown>
-        const Svg = table.Svg as ((p: { source: string; alt: string; height?: number }) => JSX.Element) | undefined
-        const open = async () => { dsView = 'board'; await update($, dsPaneRev, n => (n ?? 0) + 1); await $.ui.open({ id: 'vigil', title: 'vigil' }) }
-        const pic: Picture = { kind: 'rings', rings: gl.rings }
-        rows.push(
-          <Box key="glance" columnGap={1} alignItems="center">
-            {Svg ? <Svg source={pictureSvg(pic, inkOf(dsTheme, dsConsole.bg), 22)} alt={pictureAlt(pic)} height={22} /> : <Text wrap="truncate-end">{glanceText({ rings: gl.rings, needsYou: null }, dsGlyphs())}</Text>}
+        glance = (
+          <Box columnGap={2}>
+            {glanceMeters(gl).map(m => (
+              <Box key={`m-${m.label}`} columnGap={1}>
+                <Text dimColor>{m.label}</Text>
+                <Text bold color={m.tone ? toneStyle(dsTheme, m.tone).color : undefined}>{m.value}</Text>
+              </Box>
+            ))}
             {gl.shield ? <Text color={gl.shield.red ? dsTheme.colors.bad : dsTheme.colors.dim}>{shieldText(gl.shield)}</Text> : null}
-            {gl.needsYou ? <Text color={dsTheme.colors.accent}>{`${dsTheme.glyphs.on} ${gl.needsYou}`}</Text> : null}
-            <Button key="glance-open" label="Board" plain dimColor onPress={open} />
-          </Box>,
+            {gl.needsYou ? <Text color={dsTheme.colors.accent} wrap="truncate-end">{`${dsTheme.glyphs.on} ${gl.needsYou}`}</Text> : null}
+          </Box>
         )
       }
     }
@@ -1550,10 +1618,22 @@ export const register: Register = on => {
     }
     if (dsOn('D3')) {
       const running = visibleTasks(dsTasks, now)
-      if (running.length > 0) rows.push(<Text key="tasks" dimColor wrap="truncate-end">{`${tasksHeadline(dsTasks, dsLedgerLine())} · /rw-vigil tasks`}</Text>)
+      if (running.length > 0) rows.push(<Text key="tasks" dimColor wrap="truncate-end">{`${tasksHeadline(dsTasks, null)} · /rw-vigil tasks`}</Text>)
     }
-    if (rows.length === 0) return next(e)
-    return <Box flexDirection="column">{rows}{await next(e)}</Box>
+    if (rows.length === 0 && !glance) return next(e)
+    const open = async () => { dsView = 'board'; await update($, dsPaneRev, n => (n ?? 0) + 1); await $.ui.open({ id: 'vigil', title: 'vigil' }) }
+    const hide = async () => { await dsSetBandHidden($, true); $.ui.toast(BAND_HIDDEN_NOTE) }
+    // One head row carries the controls, so every row the band can show has a way out.
+    const headRow = (
+      <Box key="band-head" justifyContent="space-between" columnGap={2}>
+        {glance ?? <Text bold color={dsTheme.colors.accent}>vigil</Text>}
+        <Box columnGap={2}>
+          <Button key="glance-open" label="Board" plain dimColor onPress={open} />
+          <Button key="band-hide" label="Hide" role="dismiss" plain dimColor onPress={hide} />
+        </Box>
+      </Box>
+    )
+    return <Box flexDirection="column">{headRow}{rows}{await next(e)}</Box>
   })
 }
 

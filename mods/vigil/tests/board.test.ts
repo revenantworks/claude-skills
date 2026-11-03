@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'claude-code/testing'
 
 import {
-  CARDS_MAX, arranged, cardsOf, crossed, dailyTokens, doItOf, forecast, glanceOf, glanceText, healthFault, moveTile, notNow, parseAutoModes,
+  CARDS_MAX, arranged, cardsOf, crossed, dailyTokens, doItOf, forecast, glanceMeters, glanceOf, glanceText, gridColumns, gridRows, healthFault, tilePicture, tileWidth, moveTile, notNow, parseAutoModes,
   parseBudget, parseLayout, parseShroudBeat, pictureSvg, serializeAutoModes, shroudSlots, tileOf, detailOf, togglePinned, undoRow, type BoardData, type Layout,
 } from '../hooks/board-logic'
 import { DAY, emptyHealth, type Feed } from '../hooks/collector-logic'
@@ -49,6 +49,22 @@ describe('meters', () => {
     expect(crossed(85, 88)).toEqual([])
     expect(crossed(95, 70)).toEqual([])
     expect(crossed(null, 95)).toEqual([])
+  })
+  test('the grid: one, two or four tiles across, and each tile fits its share of the body', () => {
+    expect([40, 60, 104].map(gridColumns)).toEqual([1, 2, 4])
+    expect(tileWidth(101)).toBe(50)
+    expect(2 * tileWidth(101) + 1).toBeLessThanOrEqual(101)
+    expect(4 * tileWidth(120) + 3).toBeLessThanOrEqual(120)
+    expect(gridRows([1, 2, 3], 2)).toEqual([[1, 2], [3]])
+  })
+  test('a tile draws no picture that repeats its big figure', () => {
+    expect(tilePicture({ kind: 'badge', n: 2 })).toBeNull()
+    expect(tilePicture({ kind: 'word', text: 'pace' })).toBeNull()
+    expect(tilePicture({ kind: 'spark', values: [1] })).not.toBeNull()
+  })
+  test('the strip colours a reading only when it nears its limit', () => {
+    const m = glanceMeters({ rings: [{ label: '5h', pct: 10, tick: null }, { label: 'wk', pct: 85, tick: null }, { label: 'ctx', pct: null, tick: null }], needsYou: null })
+    expect(m).toEqual([{ label: '5h', value: '10%' }, { label: 'wk', value: '85%', tone: 'warning' }, { label: 'ctx', value: '–' }])
   })
   test('the glance strip: three rings, and a mark only when something needs you', () => {
     const g = glanceOf({ live: live(), now: NOW, feed: feed(), inbox: 0 })

@@ -44,6 +44,9 @@ export type LedgerSummary = { runId: string; rows: LedgerRow[]; line: string }
 export const TASKS_KEEP_FINISHED_MS = 90_000
 export const TASKS_BAND_MAX = 4
 
+/** Free-text status words a ledger headline names before it counts the rest as other. */
+const LEDGER_EXTRA_MAX = 3
+
 export const LEDGER_STATUSES = [
   'dispatched', 'committed', 'landed locally', 'pushed', 'verified',
   'done', 'unverified', 'stalled', 'failed', 'resumed',
@@ -258,8 +261,13 @@ export function statusWord(status: string): string {
 export function summariseLedger(runId: string, rows: LedgerRow[]): LedgerSummary {
   const counts: Record<string, number> = {}
   for (const r of rows) { const w = statusWord(r.status); counts[w] = (counts[w] ?? 0) + 1 }
-  const order = [...LEDGER_STATUSES, ...Object.keys(counts).filter(k => !(LEDGER_STATUSES as readonly string[]).includes(k))]
-  const parts = order.filter(s => counts[s]).map(s => `${counts[s]} ${s}`)
+  // A status cell is free text, so a hand-kept ledger gives hundreds of one-off words (shas, notes):
+  // a headline names the known states and the few plain words that repeat, and counts the rest.
+  const extra = Object.keys(counts).filter(k => !(LEDGER_STATUSES as readonly string[]).includes(k))
+  const named = extra.filter(k => k !== 'unknown' && /^[a-z][a-z -]{0,15}$/i.test(k)).sort((a, b) => counts[b]! - counts[a]!).slice(0, LEDGER_EXTRA_MAX)
+  const rest = extra.filter(k => !named.includes(k)).reduce((n, k) => n + counts[k]!, 0)
+  const parts = [...LEDGER_STATUSES, ...named].filter(s => counts[s]).map(s => `${counts[s]} ${s}`)
+  if (rest) parts.push(`${rest} other`)
   const remote = rows.filter(isDoneWithRemote).length
   if (remote) parts.push(`${remote} done with remote_sha`)
   return { runId, rows, line: `run ${runId}: ${parts.length ? parts.join(' · ') : 'no rows'}` }
