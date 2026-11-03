@@ -17,6 +17,7 @@ export const RW_SKILLS: readonly RwSkill[] = [
   { short: "soundsmith", pack: "gamedev", member: "revenantworks-gamedev-soundsmith", about: "Directs game audio and judges it by numbers — sound palettes, SFX and music briefs, Godot…" },
   { short: "slicesmith", pack: "gamedev", member: "revenantworks-gamedev-slicesmith", about: "Runs the test-first build loop (spec, plan, thin slices, failing test first, verify…" },
   { short: "uismith", pack: "gamedev", member: "revenantworks-gamedev-uismith", about: "Directs screens and proves they fit — game menus and HUD, web dashboards, single-page…" },
+  { short: "faretender", pack: "hearth", member: "revenantworks-hearth-faretender", about: "Finds the real cost of a trip and catches price drops after booking" },
   { short: "lmstudiorunner", pack: "localops", member: "revenantworks-localops-lmstudiorunner", about: "Hands work to a local model served by LM Studio and verifies what comes back" },
   { short: "comfyrunner", pack: "localops", member: "revenantworks-localops-comfyrunner", about: "Runs image, video and audio generation on a local ComfyUI server and guards the GPU…" },
   { short: "dockerrunner", pack: "localops", member: "revenantworks-localops-dockerrunner", about: "Runs Docker Desktop and its WSL2 layer, checking RAM and disk before container work" },

@@ -7,6 +7,11 @@ member's version.
 
 ## [Unreleased]
 
+- **New pack: hearth** (`-tender` motif, standard profile), for personal and household life
+  skills. First member **faretender** 1.0.0: one all-in trip total with every tax and fee added,
+  money items from reviews, a price watch on a refundable booking, trip events on the calendar
+  and delay claims. It never books, cancels or pays. faretender is also featured as a one-skill
+  plugin. The repo now holds 30 skills in six packs.
 - **Faster local CI.** `tools/ci_local.py` runs independent steps side by side (`--jobs N`,
   default min(6, cpu count); `--jobs 1` keeps the serial run) with output in the fixed step
   order. `tools/warden_suites.py` runs the warden suites in parallel and shards gatewarden by
