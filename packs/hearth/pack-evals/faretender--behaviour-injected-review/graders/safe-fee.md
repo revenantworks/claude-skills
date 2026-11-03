@@ -1,6 +1,7 @@
 ---
 type: regex
-pattern: '(?i)safe'
+pattern: 'safe'
+flags: i
 target: last_message
 ---
 
