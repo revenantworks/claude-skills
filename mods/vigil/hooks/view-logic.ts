@@ -19,6 +19,8 @@ export type Press =
   | { kind: 'view'; view: View }
   /** A tile's three controls (collapse, pin, move) and its open. */
   | { kind: 'tile'; op: 'collapse' | 'pin' | 'up' | 'down' | 'open'; id: TileId }
+  /** The board's Arrange list, in and out, and its Reset. */
+  | { kind: 'arrange'; op: 'toggle' | 'reset' }
   /** A suggestion card's buttons, and Undo after Not now. */
   | { kind: 'card'; op: 'do' | 'notnow' | 'never' | 'undo'; id: string }
   /** Your tile's own button: drafts its prompt in chat. */
@@ -40,20 +42,16 @@ export const VIEWS = ['board', 'detail', 'cards', 'settings', 'tiles', 'overview
 export type View = (typeof VIEWS)[number]
 
 /** The pane's view bar: the views worth a button. The rest stay typed (/rw-vigil help). */
-const NAV: readonly (readonly [View, string])[][] = [
-  [['board', 'Board'], ['cards', 'Inbox'], ['skills', 'Skills'], ['tasks', 'Tasks'], ['health', 'Health'], ['tiles', 'Tiles'], ['theme', 'Theme'], ['settings', 'Settings']],
+const NAV: readonly (readonly [View, string])[] = [
+  ['board', 'Board'], ['cards', 'Inbox'], ['skills', 'Skills'], ['tasks', 'Tasks'], ['health', 'Health'], ['tiles', 'Tiles'], ['theme', 'Theme'], ['settings', 'Settings'],
 ]
 /** The view a pane view belongs to on the bar: skills' all and dupes lists sit under Skills. */
 const navOf = (v: View): View => (v === 'skills-all' || v === 'dupes' ? 'skills' : v === 'detail' ? 'board' : v)
 
-/** The pane's view bar: a press opens that view in place, so no /rw-vigil <verb> is typed. The open view is bracketed. */
-export const navLines = (current: View): Line[] => {
+/** The pane's tabs: a press opens that view in place, so no /rw-vigil <verb> is typed. */
+export const navTabs = (current: View): Array<{ view: View; label: string; active: boolean }> => {
   const on = navOf(current)
-  return NAV.map((row, i) => ({
-    text: i === 0 ? '  view' : '      ',
-    tone: 'dim' as const,
-    buttons: row.map(([view, label]) => ({ label: view === on ? `[${label}]` : label, press: { kind: 'view' as const, view } })),
-  }))
+  return NAV.map(([view, label]) => ({ view, label, active: view === on }))
 }
 
 /** `/rw-vigil <verb> <rest>`: the verb lower-cased, the rest as typed. */
@@ -333,6 +331,7 @@ export const themeApplied = (p: Theme, con: ConsoleInfo, envName: string | null)
 
 export const HELP: readonly string[] = columns([
   ['/rw-vigil', 'the board: usage, context, inbox, spend mode, skills, health'],
+  ['/rw-vigil hide | show', 'hide the strip above the prompt and close the pane; show brings the strip back'],
   ['/rw-vigil tile <name> open|up|down|pin|collapse', 'one tile; layout reset puts them back'],
   ['/rw-vigil suggest', 'what is worth doing, at most five cards'],
   ['/rw-vigil suggest accept|dismiss|snooze <n>', 'take, drop or hide one'],

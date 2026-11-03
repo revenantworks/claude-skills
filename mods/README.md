@@ -177,13 +177,18 @@ The hand-off shows the long command once in the transcript. Mod commands run in 
 a message relayed from the app is refused them.
 
 **The board.** `/rw-vigil` opens on a board of seven tiles: usage, context, inbox, spend mode,
-spend, skills and health. Each tile has one picture and up to three lines. On desktop, VS Code and
-mobile the picture is a drawing; in the terminal it is glyphs (`▰▱`, `▁▅█`). Every tile can be
-collapsed, pinned to the top or moved; `/rw-vigil tile <name> collapse|pin|up|down|open` does the
-same by command, `/rw-vigil layout reset` restores the shipped order. The layout is kept per
-machine. Open a tile for its detail. A glance strip above the prompt shows three rings (5-hour,
-weekly, context) and a mark only when something needs you. A meter crossing 80% or 90% shows one
-toast per level.
+spend, skills and health. Tiles sit in an even grid (one, two or four across, by the pane's width).
+Each holds its name, one figure, one short line and, where it adds something, a picture: a drawing
+on desktop, VS Code and mobile, glyphs (`▰▱`, `▁▅█`) in the terminal. Press a tile's name for its
+detail. **Arrange** under the grid lists every tile with Pin, Fold, Up and Down; a folded tile moves
+to one line under the grid. `/rw-vigil tile <name> collapse|pin|up|down|open` does the same by
+command, `/rw-vigil layout reset` restores the shipped order. The layout is kept per machine.
+
+A glance strip above the prompt shows the 5-hour, weekly and context readings, coloured only near a
+limit, with a mark only when something needs you. **Hide** on the strip, or `/rw-vigil hide`, removes
+everything vigil draws above the prompt and stays that way across sessions, until `/rw-vigil show`;
+the typed command also closes the pane. The status line and `/rw-vigil` still work. A meter crossing
+80% or 90% shows one toast per level.
 
 **Suggestion cards.** `/rw-vigil suggest` shows at most five cards, strongest first, each with its
 evidence. **Do it** hands a repeated permission prompt to `/fewer-permission-prompts`; anything else

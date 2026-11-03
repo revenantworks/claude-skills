@@ -25,7 +25,7 @@ const PATH = '/r/src/billing/secret-plan.ts'
 const key = (p: string) => p.replace(/\\/g, '/').replace(/^[A-Za-z]:/, '')
 type FsX = { list?: (path: string) => FsEntry[]; stat?: (path: string) => FsStat | undefined }
 /** Fixture tasks: the agent list the engine returns, and a tool result per call description. */
-type TaskFx = { agents?: AgentInfo[]; results?: Record<string, unknown>; brokenStore?: boolean; registered?: string[] }
+type TaskFx = { store?: Record<string, unknown>; agents?: AgentInfo[]; results?: Record<string, unknown>; brokenStore?: boolean; registered?: string[] }
 
 // Typed engine inputs and results (obs 0344): no stub casts its shape away, so a stub that drifts
 // from the host's type fails the type check instead of passing a shape the host would refuse.
@@ -54,7 +54,7 @@ const USAGE: SessionUsage = {
 
 const world = (on: On, files: Record<string, string>, surfaces: RenderSurface[] = ['terminal'], fsx: FsX = {}, env: Record<string, string> = {}, fx: TaskFx = {}) => {
   if (fx.brokenStore) on('store.get', async () => { throw new Error('store unavailable') })
-  else mock.store(on)
+  else mock.store(on, fx.store)
   mock.clock(on, { now: NOW })
   on('env.get', async ($, e) => ({ value: e.name === 'HOME' || e.name === 'USERPROFILE' ? HOME : env[e.name] }))
   on('session.id', async () => ({ value: 'sess-1' }))
@@ -329,9 +329,11 @@ describe('drawing', () => {
     world(on, {})
     await $.command.run(cmd({ command: 'rw-vigil', args: '', origin: { kind: 'composer' } }))
     const ui = await $.ui.mount({ plugin: 'vigil', surface: 'terminal', component: 'Pane', requestId: 'vigil', props: { title: 'vigil', isFocused: true, bodyColumns: 100, placement: 'dock', scroll: SCROLL, view: {} } })
+    await ui.press({ key: 'arrange' })
     await ui.press({ key: 'down:usage' })
     await ui.press({ key: 'pin:health' })
     await ui.press({ key: 'collapse:spend' })
+    await ui.press({ key: 'arrange-done' })
     const b = (await $.command.run(cmd({ command: 'rw-vigil', args: 'board', origin: { kind: 'composer' } }))).text
     const titles = b.split('\n').map(l => /^\s*([A-Z][a-z]+(?: mode)?)(?: \(pinned\))?: /.exec(l)?.[1]).filter(Boolean)
     expect(titles.slice(0, 3)).toEqual(['Health', 'Context', 'Usage'])
@@ -375,6 +377,48 @@ describe('drawing', () => {
     const ui = await $.ui.mount({ plugin: 'vigil', surface: 'terminal', component: 'AbovePrompt', props: { hasSurvey: false, isWorking: false, maxRows: 6, bodyColumns: 100, scroll: SCROLL, view: {} } })
     await ui.press({ key: 'ask-on' })
     expect(parseSwitches(files[SW]).features.D1).toBe(true)
+    await ui.unmount()
+  })
+  for (const surface of ['terminal', 'desktop'] as const) {
+    test(`the band hides by its button and by command, and stays hidden across sessions (${surface})`, async ($, on) => {
+      world(on, {})
+      on('ui.render', async () => ({ type: 'Box', props: {} }))
+      await $.command.run(cmd({ command: 'rw-vigil', args: 'help', origin: { kind: 'composer' } }))
+      const props = { hasSurvey: false, isWorking: false, maxRows: 6, bodyColumns: 100, scroll: SCROLL, view: {} }
+      const ui = await $.ui.mount({ plugin: 'vigil', surface, component: 'AbovePrompt', props })
+      await ui.press({ key: 'band-hide' })
+      expect(await ui.find({ type: 'Button', key: 'band-hide' })).toBeUndefined()
+      const shown = await $.command.run(cmd({ command: 'rw-vigil', args: 'show', origin: { kind: 'composer' } }))
+      expect(shown.text).toMatch(/is back/)
+      await ui.redraw()
+      expect(await ui.find({ type: 'Button', key: 'band-hide' })).toBeDefined()
+      const hidden = await $.command.run(cmd({ command: 'rw-vigil', args: 'hide', origin: { kind: 'composer' } }))
+      expect(hidden.text).toMatch(/\/rw-vigil show/)
+      await ui.redraw()
+      expect(await ui.find({ type: 'Button', key: 'band-hide' })).toBeUndefined()
+      await ui.unmount()
+    })
+  }
+  test('a band hidden in an earlier session stays hidden until /rw-vigil show', async ($, on) => {
+    world(on, {}, ['terminal'], {}, {}, { store: { bandHidden: true } })
+    on('ui.render', async () => ({ type: 'Box', props: {} }))
+    await $.command.run(cmd({ command: 'rw-vigil', args: 'help', origin: { kind: 'composer' } }))
+    const props = { hasSurvey: false, isWorking: false, maxRows: 6, bodyColumns: 100, scroll: SCROLL, view: {} }
+    const ui = await $.ui.mount({ plugin: 'vigil', surface: 'terminal', component: 'AbovePrompt', props })
+    expect(await ui.find({ type: 'Button', key: 'band-hide' })).toBeUndefined()
+    await $.command.run(cmd({ command: 'rw-vigil', args: 'show', origin: { kind: 'composer' } }))
+    await ui.redraw()
+    expect(await ui.find({ type: 'Button', key: 'band-hide' })).toBeDefined()
+    await ui.unmount()
+  })
+  test('the board is a uniform grid: no layout controls until Arrange, and a Close on the bar', async ($, on) => {
+    world(on, {})
+    await $.command.run(cmd({ command: 'rw-vigil', args: '', origin: { kind: 'composer' } }))
+    const ui = await $.ui.mount({ plugin: 'vigil', surface: 'terminal', component: 'Pane', requestId: 'vigil', props: { title: 'vigil', isFocused: true, bodyColumns: 100, placement: 'dock', scroll: SCROLL, view: {} } })
+    expect(await ui.find({ type: 'Button', key: 'pin:usage' })).toBeUndefined()
+    expect(await ui.find({ type: 'Button', key: 'close' })).toBeDefined()
+    await ui.press({ key: 'arrange' })
+    expect(await ui.find({ type: 'Button', key: 'pin:usage' })).toBeDefined()
     await ui.unmount()
   })
   test('the band: Ask me later hides the ask', async ($, on) => {
