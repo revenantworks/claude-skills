@@ -533,6 +533,7 @@ class Unparseable(Exception):
         self.hard = hard
         self.script = script  # the script file the line runs when the overflow is inside one (B2)
         self.depth = depth
+        self.scripts: list[str] = []  # the script files being read when the text stopped parsing (0597)
 
 
 MAX_DEPTH = 4
@@ -1235,7 +1236,12 @@ def expand(command: str, cwd: str = "", depth: int = 0, out: Expanded | None = N
     command = data_view(command, ps)
     if OPAQUE.search(command):
         out.opaque.append("a command built or invoked at run time")
-    for inner in substitutions(command):
+    try:
+        inners = substitutions(command)
+    except Unparseable as exc:
+        exc.scripts = list(out.running)
+        raise
+    for inner in inners:
         _run_substitution(command, inner, ps, out)
         expand(inner, cwd, depth + 1, out, ps)
     ops = split_ops(command, escapes=not ps)

@@ -398,13 +398,14 @@ def command_index(toks: list[str]) -> int | None:
     return None
 
 
-def shape_checks(toks: list[str], carries_push: bool = True) -> None:
+def shape_checks(toks: list[str], carries_push: bool = True, names: str = "") -> None:
     """Hard shapes on a text that names push (V-K8w F3, F4). A program built at run time counts only in
     the pipeline that itself names push (V-K8w2 FP-D): `$PYTHON x.py && git push` runs the push plainly."""
     k = command_index(toks)
     if carries_push and k is not None and hl.word(toks[k]) == "\x00":
         raise PushBlock(f"push gate: a program name built at run time (`{toks[k][:40]}`) on a line that "
-                        "names push cannot be checked. Blocked; write the program name out.")
+                        "names push cannot be checked. Blocked; write the program name out."
+                        + (f" The word push is in: `{names[:80]}`." if names else ""))
     progs = [hl.prog(t) for t in toks]
     for i, p in enumerate(progs):
         later = progs[i + 1:]
@@ -529,7 +530,8 @@ def find_pushes(command: str, cwd: str, resolve: bool = True, head_moves: bool =
         flat = re.sub(r"`[^`]*`|\$\([^()]*\)", "$__SUB", seg)
         toks = hl.tokens(hl.IFS.sub(" ", flat))
         if named and resolve:
-            shape_checks(toks, line_of[idx] in pushing or not plain)
+            shape_checks(toks, line_of[idx] in pushing or not plain,
+                         hl.despliced(ops[naming[0]][0]).strip() if naming else "")
         glob_git(toks, seg)
         for i, tok in enumerate(toks):
             p = hl.prog(tok)
@@ -736,6 +738,14 @@ def names_push(text: str) -> bool:
     return bool(PUSH_HINT.search(hl.despliced(text or ""))) or any(PUSH_HINT.search(t) for t in hl.FILES_READ)
 
 
+def script_names_push(path: str) -> bool:
+    """Whether a script's code names push, comments aside. A file that cannot be read counts: it may."""
+    text = hl.read_small(path)
+    if text is None:
+        return True
+    return bool(PUSH_HINT.search(hl.despliced(hl.strip_comments(text, bool(re.search(r"(?i)\.ps[md]?1$", path))))))
+
+
 def all_pushes(cmd: str, cwd: str, head_moves: bool = True) -> list[dict]:
     """Every push the command runs, after unwrapping; blocks what cannot be read."""
     cmd = without_message_heredocs(hl.join_lines(cmd))
@@ -749,6 +759,13 @@ def all_pushes(cmd: str, cwd: str, head_moves: bool = True) -> list[dict]:
         if exc.hard or PUSH_HINT.search(hl.despliced(cmd)):
             raise PushBlock(f"push gate: {exc} cannot be checked for a push. Blocked; run the "
                             "command in plain text.")
+        # 0597: reading stopped inside a script, so the rest of it went unread. Its own text decides,
+        # not the wrapper line, which only names the file.
+        for script in exc.scripts:
+            if script_names_push(script):
+                raise PushBlock(f"push gate: the script `{os.path.basename(script)}` holds {exc}, so the gate "
+                                "cannot read all of it, and its code names push. Blocked; fix the script's "
+                                "quoting, or run the push as a plain `git push` line.")
         return []
     if ex.unread:  # a shell script on disk the gate could not read may hold a force push (K7-4-03)
         raise PushBlock(f"push gate: {ex.unread[0]} cannot be checked for a push. Blocked; run the "

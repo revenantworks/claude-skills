@@ -2,6 +2,8 @@
 
 ## [1.0.0] — 2026-10-01
 
+2026-11-02 (observation 0597): `push_gate` refuses a script it cannot read to the end when the script's code names push, instead of reporting no pushes. The run-time-program refusal also quotes the segment that names push.
+
 2026-10-24 (observations 0546, 0455, 0454): `ci_stamp` strikes zero counts ("0 skipped", "missing none") before it reads a log line as a skipped check, so the estate's green summary line stamps full. `ci_stamp run --no-ci` gives a repo with no CI a fixed baseline (`git diff --check`, changed JSON parses, no token-shaped added line), refused where the repo has CI; the stamp records `no_ci` and push_gate's refusal names `--no-ci` for such a repo. A step's relative program path resolves against `--repo`, a bare name gets PATHEXT on Windows, and a program that cannot start fails with exit 127, not a traceback.
 
 2026-10-22 (weekly observation review, observation 0451): `hooks.md` gives the clean-worktree route for a shared checkout another session left dirty: stamp, record the intent and push from one detached worktree, never cleaning the other session's tree.

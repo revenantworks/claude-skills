@@ -562,5 +562,49 @@ class FP_D(FlatPushBase):
         self.expect(2, [f"$PYTHON x.py && {G} {U} $OPT origin main"], reason=BUILT_PROGRAM)
 
 
+class UnreadScript(unittest.TestCase):
+    """The gate stopped reading a script at an unclosed substitution and reported no pushes, so a later
+    force push passed unread. The wrapper line names only the file, so the script's own code decides
+    (observation 0597). The substitution fixture is built by concatenation for the same reason as G, U."""
+
+    OPEN = "$" + "("
+
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp(prefix="gw-unread-")
+        self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
+        state = os.path.join(self.tmp, "state")
+        os.makedirs(state)
+        self.env = {"GATEWARDEN_STATE": state}
+
+    def verdict(self, body, tool, name="t.ps1"):
+        path = Path(self.tmp, name)
+        path.write_text(body, encoding="utf-8")
+        return run_hook("push_gate.py", bash(str(path), self.tmp, tool), env=self.env)
+
+    def test_refuses_a_push_after_an_unclosed_substitution(self):
+        for tool in ("Bash", "PowerShell"):
+            with self.subTest(tool=tool):
+                got, _, err = self.verdict(f'Write-Host "a {self.OPEN} b"\n{G} {U} origin main\n', tool)
+                self.assertEqual(got, 2, err)
+                self.assertIn("t.ps1", err)
+
+    def test_an_unclosed_substitution_naming_no_push_passes(self):
+        for tool in ("Bash", "PowerShell"):
+            with self.subTest(tool=tool):
+                got, _, err = self.verdict(f'Write-Host "a {self.OPEN} b"\nGet-Date\n', tool)
+                self.assertEqual(got, 0, err)
+
+    def test_a_comment_naming_push_does_not_count(self):
+        for tool in ("Bash", "PowerShell"):
+            with self.subTest(tool=tool):
+                got, _, err = self.verdict(f'# the daily task sends the {U}\nWrite-Host "a {self.OPEN} b"\n', tool)
+                self.assertEqual(got, 0, err)
+
+    def test_a_refusal_names_the_segment_that_names_push(self):
+        got, _, err = self.verdict(f'param([switch]$Force)\nreturn "{U}: not sent"\n', "PowerShell")
+        self.assertEqual(got, 2, err)
+        self.assertIn("not sent", err)
+
+
 if __name__ == "__main__":
     unittest.main()
