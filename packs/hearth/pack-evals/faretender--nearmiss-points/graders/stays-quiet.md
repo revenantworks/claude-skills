@@ -1,0 +1,9 @@
+---
+type: tool_used
+tool: Skill
+input_match: revenantworks-hearth-faretender
+min: 0
+max: 0
+arm: both
+---
+faretender must stay quiet: points valuation is out of scope.

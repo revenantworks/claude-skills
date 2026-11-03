@@ -231,7 +231,7 @@ class LivePackEvals(unittest.TestCase):
         in PACK_EVAL_DIR/, no name twice, and the count equals the member case count."""
         text = build.registry_text()
         packs = [p for p in build.registry_packs(text) if (build.PACKS / p).is_dir()]
-        self.assertEqual(len(packs), 5)
+        self.assertEqual(len(packs), 6)
         for pack in packs:
             pdir = build.PACKS / pack
             roster = [m for m, _, _ in build.pack_members(text, pack)]

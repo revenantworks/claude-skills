@@ -1,7 +1,7 @@
 # CLAUDE.md — claude-skills
 
 The canonical home of every Revenantworks Agent Skill (repository
-`revenantworks/claude-skills`). Five packs, 29 members, live under `packs/`:
+`revenantworks/claude-skills`). Six packs, 30 members, live under `packs/`:
 
 - **foundation** — nine `-wright` members, standalone profile.
 - **scribe** — four `-scribe` members (researchscribe, brandscribe, commscribe,
@@ -13,6 +13,8 @@ The canonical home of every Revenantworks Agent Skill (repository
 - **gamedev** — five `-smith` members (pixelsmith, godotsmith, soundsmith, slicesmith, uismith),
   standard profile; stdlib scripts allowed when declared; Playwright is uismith's one optional
   package.
+- **hearth** — one `-tender` member (faretender), standard profile; read tools only on
+  outside services, never books or pays.
 
 Every pack carries a `README.md` with its pack rule; the foundation pack's routing guide
 lives in its README ("Which skill does what"), since an installed plugin never loads a pack

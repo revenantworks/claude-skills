@@ -1,6 +1,6 @@
 # Pack — warden *(standard profile)*
 
-> Advisory only — consulted on boundary doubt; initial routing stays at the name + description level. **Last stamped: 2026-10-13** (four-member roster + canonical repo; generated from the registry in skillwright's `pack-registry.md`).
+> Advisory only — consulted on boundary doubt; initial routing stays at the name + description level. **Last stamped: 2026-11-03** (four-member roster + canonical repo; generated from the registry in skillwright's `pack-registry.md`).
 
 | Member | Job | Route there when |
 |---|---|---|
@@ -49,6 +49,7 @@
 | gatewarden | obsrunner (localops) | Left (gatewarden) owns: golive_block.py, the second lock that blocks go-live, virtual-camera, output and stream-key requests and service.json reads for every Claude tool call (Bash, PowerShell, Read, Write/Edit of scripts, any MCP server). Right (obsrunner) owns: its own allow-list, which refuses the same requests inside its script. Router keys on: guard the session or drive OBS. Cold-listing: none — table only |
 | trustwarden | obsrunner (localops) | Left (trustwarden) owns: vetting an OBS plugin, an OBS MCP server or the obsws-python package before the user installs it. Right (obsrunner) owns: driving OBS once installed. Router keys on: trust or operate. Cold-listing: none — table only |
 | gatewarden | grillwright (foundation) | Left (grillwright) owns: interviewing a request before something is built. Right (gatewarden) owns: scoring what a running agent may already do — grants and blast radius. Router keys on: the object, not the shared verb "grill". Cold-listing: one description (grillwright names gatewarden, 2026-10-08) |
+| trustwarden | faretender (hearth) | Left (faretender) owns: using a travel connector already installed, read tools only. Right (trustwarden) owns: whether to install a connector, plugin or third-party toolkit, and on what terms. Router keys on: use or vet. Added 2026-11-03. Cold-listing: one description (faretender names trustwarden) |
 
 **Pack conformance checks** (adopted 2026-10-01, scored on every member audit): **C-1 drift-audit verb** · **C-2 neutral default**.
 

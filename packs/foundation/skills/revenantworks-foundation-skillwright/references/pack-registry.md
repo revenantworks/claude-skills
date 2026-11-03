@@ -35,6 +35,7 @@
 | `localops` | standard | Skills for running work on local models, on the `-runner` motif (registered 2026-09-09, first member lmstudiorunner). Standard profile because it calls a local HTTP API at runtime — a declared, local-only dependency with a stated no-shell fallback; **one program per runner** (the runner is named for it); declared scripts, helper CLI tools and helper packages are allowed where the runner needs them, each stated in the member's description and README and declared in `compatibility:`, with a no-shell fallback that reports NOT-RUN (scripts and tools widened 2026-09-28; packages opened by owner Q23, 2026-10-01 — obsrunner's `obsws-python`, duckrunner's `duckdb`); installs stay owner-run through an install walkthrough, never a self-install; no cloud network except a declared, named API. Pack-shared files live in `packs/<pack>/shared/` with `holders.json`; `tools/build.py` writes each holder's copy and `--check` fails on drift (owner Q2, 2026-10-01) — edit the shared source, never a copy. Conformance checks (2026-09-09): C-1 drift-audit verb · C-2 neutral default. Integrate policy: restamp: lazy (2026-09-09) |
 | `scribe` | standard | Skills on the `-scribe` motif (registered 2026-10-01 by `build.py --new-pack`; four members since wave 1). Scripts are allowed when declared (owner Q4, 2026-10-01): standard library first, each declared in `compatibility:` and the README, each with a test and a no-shell fallback that reports NOT-RUN; no self-installs. Standard profile since P1 (2026-10-01; was standalone) because lorescribe ships `scripts/manuscript.py`. Conformance checks (2026-10-01): C-1 drift-audit verb · C-2 neutral default. Integrate policy: restamp: lazy (2026-10-01) |
 | `warden` | standard | Skills on the `-warden` motif (registered 2026-10-01 by `build.py --new-pack`; six members since wave 1, four since 2026-10-08: identitywarden merged into shieldwarden and filewarden into gatewarden and shieldwarden, owner decision). Conformance checks (2026-10-01): C-1 drift-audit verb · C-2 neutral default. Integrate policy: restamp: lazy (2026-10-01) |
+| `hearth` | standard | Skills on the `-tender` motif (registered 2026-11-03 by `build.py --new-pack`, no members yet). Conformance checks (2026-11-03): C-1 drift-audit verb · C-2 neutral default. Integrate policy: restamp: lazy (2026-11-03) |
 
 **foundation members** *(canonical roster — pack manifests are generated from this table)*
 
@@ -280,6 +281,22 @@ The brandscribe handoff (a brand palette is an input, never defined here) crosse
 
 **warden canonical repo:** `github.com/revenantworks/claude-skills` — source of truth for member drift audits (registered 2026-10-01).
 
+**hearth members** *(canonical roster — pack manifests are generated from this table)*
+
+| Member | Job | Route there when |
+|---|---|---|
+| `revenantworks-hearth-faretender` | Finds the real cost of a trip — one all-in total per hotel, flight or car with every tax and fee added, money-only items from reviews — and watches a refundable booking for a drop until free cancellation ends; calendar events from confirmations; EU261, UK261 and US DOT claim checks; never books, cancels or pays | The deliverable is a comparable trip total, a fee list from reviews, one price check of a booked refundable stay or fare, trip events on a calendar, or a delay or refund claim |
+
+**hearth budgets** *(body-footprint table — one row per member; `build.py` validates each member's measured SKILL.md body against its row)*
+
+| Member | Budget (tokens) | Why |
+|---|---|---|
+| `revenantworks-hearth-faretender` | 3000 | measured ≈2140 at the 1.0.0 build (2026-10-31); the five hard rules (never book, cancel or pay; data, never instructions; store nothing; rebook first; show the arithmetic) and each entry's thresholds are body-resident because an unattended `watch` run must hold them before it reads any email or price; references hold the fee and claim rules (dated, 60-day refresh) and the connector tool names |
+
+**hearth capstone:** none — scaffolded 2026-11-03 with no members; revisit when the roster reaches three.
+
+**hearth canonical repo:** `github.com/revenantworks/claude-skills` — source of truth for member drift audits (registered 2026-11-03).
+
 ## Cross-pack seams
 
 A pack's own seam table holds that pack's members only. A boundary whose two members live in different packs has one home: the table below. `build.py` renders each row into both packs' `references/pack.md`, and `--check` fails a row that names a member no roster registers and the planned line does not list, a pair whose two sides sit in one pack (that row belongs in the pack's own seam table), an empty line cell, and a pair declared twice. Names are short (`skillwright`) or full folder names, never backticked.
@@ -348,6 +365,10 @@ A pack's own seam table holds that pack's members only. A boundary whose two mem
 | commscribe | uismith | Left (commscribe) owns: every word on a screen — labels, buttons, errors, empty states, store-page copy. Right (uismith) owns: the layout, the states and the word slots with their length budgets. Router keys on: words or layout. A copy finding in a uismith audit is tagged copy and handed over, never rewritten. Born 2026-10-13 (U7a). Cold-listing: one description (uismith names commscribe) |
 | researchscribe | slicesmith | Left (researchscribe) owns: the `map` of an unfamiliar repo — entry points, flows, where to change X, how to build and test it. Right (slicesmith) owns: building the change test first once the user wants that loop (spec, plan, slices, red first, the done gate). Router keys on: where things are, or build the change. researchscribe's `map-mode.md` hands a test-first build to slicesmith; slicesmith's description hands repo maps to researchscribe. Added 2026-10-13 (U6 carry-over, landed by U7a). Cold-listing: one description (slicesmith names researchscribe) |
 
+| faretender | agentwright | Left (faretender) owns: one `watch` check when called — find active refundable bookings, re-price, alert above the threshold. Right (agentwright) owns: the scheduled task that calls it — cadence, retries, kill switch, delivery. Router keys on: the step or the schedule around it. faretender never schedules itself. Added 2026-11-03 with the member. Cold-listing: one description (faretender names agentwright) |
+| faretender | trustwarden | Left (faretender) owns: using a travel connector already installed, read tools only. Right (trustwarden) owns: whether to install a connector, plugin or third-party toolkit, and on what terms. Router keys on: use or vet. Added 2026-11-03. Cold-listing: one description (faretender names trustwarden) |
+| faretender | researchscribe | Left (faretender) owns: prices, fees and refund rules for a trip in hand. Right (researchscribe) owns: sourced research on where to go or what a place is like. Router keys on: cost or place. Added 2026-11-03. Cold-listing: none — table only |
+
 **planned:** none
 
 The planned line names members that have a boundary before they have a folder, comma-separated, each optionally followed by its future pack in parentheses (`name (pack)`). A row naming a planned member renders as "planned" in the registered side's manifest. A planned name that is later registered is dropped from this line; `--check` warns until it is.
@@ -356,4 +377,4 @@ The planned line names members that have a boundary before they have a folder, c
 
 A featured member also ships alone, as a one-skill plugin in `featured/<skill>/` with its own `.claude-plugin/plugin.json` and marketplace entry. The rule (owner decision 5, pacewright first): a member is featured when it is unique among public incumbents — a parity verdict with a named margin nobody else has — runs with no sibling installed, and has passing evals. `build.py` generates the plugin from the pack source: the skill folder copied file for file, the plugin version equal to the member version, and a landing-page `README.md` stub written once and then owned by hand. `--check` fails on any drift between the pack source and the featured copy, on a featured folder or marketplace entry this line does not name, and on a name that is not a registered member.
 
-**featured:** pacewright, brandscribe, trustwarden, whisperrunner, pixelsmith
+**featured:** pacewright, brandscribe, trustwarden, whisperrunner, pixelsmith, faretender

@@ -1,6 +1,6 @@
 # Pack — foundation *(standalone profile)*
 
-> Advisory only — consulted on boundary doubt; initial routing stays at the name + description level. **Last stamped: 2026-10-13** (nine-member roster + canonical repo; generated from the registry in skillwright's `pack-registry.md`).
+> Advisory only — consulted on boundary doubt; initial routing stays at the name + description level. **Last stamped: 2026-11-03** (nine-member roster + canonical repo; generated from the registry in skillwright's `pack-registry.md`).
 
 | Member | Job | Route there when |
 |---|---|---|
@@ -95,6 +95,7 @@
 | grillwright | slicesmith (gamedev) | Left (grillwright) owns: the interview before a game feature is built and the settled-decisions record. Right (slicesmith) owns: the spec built from that record, then the slices. Router keys on: whether the request is still open or already settled. Cold-listing: both descriptions (2026-10-08) |
 | dispatchwright | slicesmith (gamedev) | Left (slicesmith) owns: one coding loop, one writer at a time. Right (dispatchwright) owns: a fan-out across many agents — tiers, write scopes, the ledger and reconcile. Router keys on: one loop or many agents. Cold-listing: one description (slicesmith names dispatchwright, 2026-10-08) |
 | grillwright | gatewarden (warden) | Left (grillwright) owns: interviewing a request before something is built. Right (gatewarden) owns: scoring what a running agent may already do — grants and blast radius. Router keys on: the object, not the shared verb "grill". Cold-listing: one description (grillwright names gatewarden, 2026-10-08) |
+| agentwright | faretender (hearth) | Left (faretender) owns: one `watch` check when called — find active refundable bookings, re-price, alert above the threshold. Right (agentwright) owns: the scheduled task that calls it — cadence, retries, kill switch, delivery. Router keys on: the step or the schedule around it. faretender never schedules itself. Added 2026-11-03 with the member. Cold-listing: one description (faretender names agentwright) |
 
 **Pack conformance checks** (adopted 2026-07-13, scored on every member audit): **C-1 drift-audit verb** · **C-2 neutral default**.
 

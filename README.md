@@ -1,10 +1,10 @@
 # claude-skills
 
-**29 Agent Skills for Claude in five packs, plus optional mods. Each skill does one job, shows its
+**30 Agent Skills for Claude in six packs, plus optional mods. Each skill does one job, shows its
 evidence, and works alone.**
 
-![skills: 29](https://img.shields.io/badge/skills-29-blue)
-![packs: 5](https://img.shields.io/badge/packs-5-blue)
+![skills: 30](https://img.shields.io/badge/skills-30-blue)
+![packs: 6](https://img.shields.io/badge/packs-6-blue)
 ![version: 1.0.0](https://img.shields.io/badge/version-1.0.0-informational)
 ![mods: optional](https://img.shields.io/badge/mods-optional-lightgrey)
 ![licence: Apache-2.0](https://img.shields.io/badge/licence-Apache--2.0-green)
@@ -77,6 +77,7 @@ Claude API, or in any compatible agent.
 | `warden` | `trustwarden` (warden) |
 | `localops` | `whisperrunner` (localops) |
 | `gamedev` | `pixelsmith` (gamedev) |
+| `hearth` | `faretender` (hearth) |
 
 **3. Then just ask.** A skill loads when your request matches its description. For example:
 
@@ -103,16 +104,17 @@ Claude API, or in any compatible agent.
 
 ## The packs
 
-Five packs, one plugin each. Install the pack that matches your work and every skill in it is ready:
+Six packs, one plugin each. Install the pack that matches your work and every skill in it is ready:
 each one loads only when a request needs it.
 
 | Pack | Skills | What it covers | Featured | Install |
 |---|---|---|---|---|
 | [**foundation**](packs/foundation/) | 9 | Building and running the work around Claude: skills and their evals, prompts, interviews, agents, config, fan-out, handoffs, pacing, platform change | pacewright | `/plugin install foundation@revenantworks` |
 | [**scribe**](packs/scribe/) | 4 | Words and knowledge: research verdicts, brands and design systems, messages and docs, story canon | brandscribe | `/plugin install scribe@revenantworks` |
-| [**warden**](packs/warden/) | 6 | Guarding what Claude writes or manages: leaks, identity, third-party code, disk and reach, credentials, permissions | trustwarden | `/plugin install warden@revenantworks` |
+| [**warden**](packs/warden/) | 4 | Guarding what Claude writes or manages: leaks, identity, third-party code, disk and reach, credentials, permissions | trustwarden | `/plugin install warden@revenantworks` |
 | [**localops**](packs/localops/) | 7 | Local programs, one per runner: LM Studio, ComfyUI, Docker, DuckDB, whisper.cpp, Hyper-V, OBS | whisperrunner | `/plugin install localops@revenantworks` |
 | [**gamedev**](packs/gamedev/) | 5 | Game development: pixel art across zoom bands, Godot build proof, game audio by the numbers, test-first game code, screen direction with a fit probe | pixelsmith | `/plugin install gamedev@revenantworks` |
+| [**hearth**](packs/hearth/) | 1 | Personal and household life: the real cost of a trip, price drops after booking, delay claims | faretender | `/plugin install hearth@revenantworks` |
 
 A note on scripts: some skills ship small Python helper scripts that use only Python's built-in
 standard library. Python 3 runs them with nothing to `pip install`, and each skill still works
@@ -188,6 +190,15 @@ exception: uismith's probe uses Playwright for Python if you install it, loads t
 | [slicesmith](packs/gamedev/skills/revenantworks-gamedev-slicesmith/) | Writes game code test-first in thin slices a player can reach, with a Godot verify ladder and an honest commit per slice | *"Implement autosave, one slice at a time"* |
 | [uismith](packs/gamedev/skills/revenantworks-gamedev-uismith/) | Directs game menus, HUD, dashboards and panes, and measures their fit at every width and theme | *"This page scrolls sideways on my phone in dark mode"* |
 
+### hearth · life at home and away
+
+Read tools only on outside services; never books, cancels or pays, and stores no amounts or dates
+between runs. Capstone: none yet. Featured: **faretender**.
+
+| Skill | What it does | Try it with |
+|---|---|---|
+| [faretender](packs/hearth/skills/revenantworks-hearth-faretender/) | The real cost of a trip with every tax and fee added, money items from reviews, a price watch on a refundable booking, trip events on the calendar, and delay claims | *"Compare these two hotels with every fee in"* |
+
 ## Featured skills
 
 One skill from each pack also ships as its own plugin, for when you want just that job. Each one does
@@ -201,6 +212,7 @@ evals. Install it **or** its pack, never both.
 | [trustwarden](featured/trustwarden/) | warden | Vets a skill, plugin, MCP server or Action before install; lists every file no scanner read, and ends with a verdict and install terms | `/plugin install trustwarden@revenantworks` |
 | [whisperrunner](featured/whisperrunner/) | localops | Local transcripts with proof the GPU did the work; a silent CPU fallback or a looping transcript fails | `/plugin install whisperrunner@revenantworks` |
 | [pixelsmith](featured/pixelsmith/) | gamedev | Pixel-art rules and a look test for every zoom level of one game camera, with contrast as a number | `/plugin install pixelsmith@revenantworks` |
+| [faretender](featured/faretender/) | hearth | One all-in trip total with every tax and fee a booking site left out, plus money items mined from reviews; never books or pays | `/plugin install faretender@revenantworks` |
 
 Each skill's page in `featured/` has the full story, more prompts to try, and what it needs.
 
