@@ -1,7 +1,7 @@
 # Test Cases — revenantworks-gamedev-slicesmith
 
 - Provenance: derived from revenantworks-gamedev-slicesmith v1.0.0, 2026-10-08.
-- Counts: 22 cases, assertion-only. Every case authored, not run. C15–C18 added 2026-10-13 (plain lens runner discovery, fix method, done gate). C19–C20 added 2026-10-15 (stacked pin round; narrow while building, wide once; observation 0432). C21–C22 added 2026-10-23 (a split slice's repo-wide grep and planted violation, observation 0555; touched scripts include a changed symbol's readers, observation 0533).
+- Counts: 26 cases, assertion-only. Every case authored, not run. C15–C18 added 2026-10-13 (plain lens runner discovery, fix method, done gate). C19–C20 added 2026-10-15 (stacked pin round; narrow while building, wide once; observation 0432). C21–C22 added 2026-10-23 (a split slice's repo-wide grep and planted violation, observation 0555; touched scripts include a changed symbol's readers, observation 0533). C23–C26 added 2026-11-03 (deviation classes, debug file, wiring and stub check, user-setup list).
 - Coverage: spec (C1), plan (C2, C19), slice (C3, C4, C6, C7, C9, C20, C21, C22), fix (C5, C16), exit (C10, C11, C14), verify ladder (C8), degradation (C12), plain lens (C13, C15), done gate (C17, C18).
 
 ## Cases
@@ -93,3 +93,33 @@ Assert: greps the whole repo (src included, not only tests/ and tools/) for the 
 **C22 — Slice: touched scripts include a changed constant's readers**
 Input: a slice doubles `MapView.ICON_R` (6 to 12) in `map_view.gd`; `test_hud.gd` asserts `reach == PICK_PX + 6.0`; the slice touches no HUD file + "slicesmith slice".
 Assert: the red/green runs include `test_hud.gd` because it reads a value the slice changed, not only the scripts named for `map_view.gd` · flags the copied literal as a hidden dependency and has the test read the constant · does not call the slice done on the narrowed runs alone.
+
+## C23 — A deviation that changes the save format stops the slice
+
+**Input:** Mid-slice on "autosave every 5 minutes", the agent finds the save file needs a new field.
+**Assert:**
+- The reply classes it as architecture and asks before building
+- No save-format change is written before the user answers
+- The run log gains a ruling line naming the class
+
+## C24 — A fix keeps a debug file that survives a cleared context
+
+**Input:** `slicesmith fix`: "enemies stop spawning after wave 3". Resumed after `/clear` with one hypothesis already refuted.
+**Assert:**
+- A debug file is named with an Eliminated list
+- The resumed run reads the debug file first and does not re-run the refuted probe
+
+## C25 — The done gate fails a stub nobody calls
+
+**Input:** A slice adds `func apply_knockback(): pass  # TODO`, called only from its own test, and the suite is green.
+**Assert:**
+- The done gate reports the symbol as not substantive and not wired
+- The slice is not called done
+
+## C26 — Exit lists the steps only a person can do
+
+**Input:** `slicesmith exit` on a milestone that adds Steam achievements.
+**Assert:**
+- The exit report has a user-setup list naming the Steamworks dashboard step
+- No user-setup item is marked done by the agent
+

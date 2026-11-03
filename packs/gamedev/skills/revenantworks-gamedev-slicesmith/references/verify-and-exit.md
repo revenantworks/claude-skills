@@ -5,6 +5,7 @@ Read before a commit and on `exit`.
 ## Contents
 
 - The done gate — before a slice is called done
+- Wiring and stub check
 - Evidence for a claim
 - The commit
 - The run log
@@ -43,6 +44,21 @@ slice and every fix, before the word "done" or a commit.
    own check uses, never a loose search that can match a sub-total such as a passing or skipped
    line. When two runs or two platforms disagree by exactly the skipped or pending number,
    suspect the reader before the platform.
+
+## Wiring and stub check
+
+Part of the done gate, before the suite run. A green suite cannot see code that exists but does
+nothing, or code nothing reaches. For each new or changed symbol the slice names in its plan row:
+
+1. **Exists.** The file and the symbol are there (`git grep -n "<symbol>"`).
+2. **Substantive.** No placeholder body: `TODO`, `FIXME`, `pass`, `NotImplemented`, `push_error("not
+   implemented")`, an empty function, a hard-coded return of fixture data. Grep the slice's diff for
+   these: `git diff --cached -U0 | grep -nE "TODO|FIXME|NotImplemented|^\+\s*pass$"`.
+3. **Wired.** Reached from a path the player or user takes: a scene, an autoload, an input map
+   entry, a route, a CLI command, a menu. Name the caller with its file and line. A symbol whose
+   only caller is its own test is not wired (S3).
+
+A stub or an unwired symbol fails the gate. Report it in the same table as the counts.
 
 ## Evidence for a claim
 
@@ -102,6 +118,10 @@ never edited away. An overstated claim is withdrawn in writing.
 6. **Enforcement layer.** Name which layer catches the riskiest change: compiler, analyzer, CI,
    a grep gate, a runtime assert, or only human review — and say so when it is only review.
 7. **State the weaker true thing.** What is reachable, what is verified, what is not built.
+8. **User-setup list.** Every step only a person can do: an API key or account, a store or
+   dashboard setting, a signing certificate, an OS permission, a paid service. Each line gives the
+   exact command or the place to do it, and what breaks until it is done. Write it in the exit
+   report and the run log; never mark one done for the user.
 
 The gate ruling itself — PASS, FAIL, PARKED, UNMEASURED — is godotsmith's `gate`. slicesmith
 brings the evidence; it never self-certifies.

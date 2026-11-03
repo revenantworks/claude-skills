@@ -12,6 +12,7 @@ Read on every slice and every `fix`.
 - Properties and mutants
 - What tests cannot see
 - Splits, moves and renames
+- Deviations — fix without asking, or stop and ask
 - Fix — prove it first
 
 ## The cycle
@@ -165,9 +166,31 @@ A split, move or rename slice adds these to its done-when:
    (`_ready`, `_process`, `_notification`) exists exactly once, and no moved method shadows a
    base one.
 
+## Deviations — fix without asking, or stop and ask
+
+A slice rarely goes exactly as planned. Sort each deviation before acting, and log it in the run
+log as a ruling with its class.
+
+| Class | Examples | Action |
+|---|---|---|
+| **Bug** in code this slice wrote | an off-by-one, a wrong sign, a null the test caught | Fix it in the slice. No question. |
+| **Missing critical piece** the slice cannot work without | the input check, the error path, the wiring to a scene or route | Add it in the slice and say so in the commit body. |
+| **Blocker** inside the write scope | a missing import, a stale generated file, a typo in a config the slice owns | Fix it and log it. |
+| **Architecture** | a new system or autoload, a save-format or protocol change, a public API change, a new dependency, a file outside the write scope | **Stop and ask.** Write the choice and its cost; build nothing until the user answers. |
+
+When unsure which class applies, treat it as architecture. A fix outside the slice's subject that
+is none of these goes on noticed, not touching.
+
 ## Fix — prove it first
 
 The same method in either lens, in any repo. A fix built on a guess is not a fix.
+
+**The debug file.** Before the first probe, open `debug/<bug-slug>.md` beside the run log (or the
+repo's own place for notes): symptom, reproduction, the failing test, the hypothesis list, and an
+append-only **Eliminated** list of each refuted hypothesis with its probe, result and date. Update
+it **before** each probe and after each result, so the hunt survives a cleared or compacted
+context. A resumed fix reads this file first and never re-runs an eliminated probe. It is a note,
+not a commit: it stays out of the fix commit unless the repo keeps such notes.
 
 1. **Reproduce.** Find the smallest steps that show the bug and run them. Record what was
    expected and what happened. If it will not reproduce, stop and report what was tried; never
