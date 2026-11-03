@@ -1,6 +1,6 @@
 ---
 type: regex
-pattern: 'local (html )?(file|page)'
+pattern: 'local (html )?(file|page)|single file|offline'
 flags: i
 ---
 
