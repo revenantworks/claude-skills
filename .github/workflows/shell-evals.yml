@@ -2,7 +2,7 @@ name: shell-evals
 
 # The eight native eval cases that grade a Bash call (U37 section 4, U38 class c). Windows grants
 # no confinable shell, so they can never pass on the rig's own run; they need Linux with a shell
-# sandbox and `--allow-tools Bash`. The job runs on GitHub's ubuntu-latest only, never a
+# sandbox and `--allow-tools Bash`. The job runs on GitHub's hosted Ubuntu only, never a
 # self-hosted runner: this repo is public, and a public repo's jobs must not reach the rig
 # (Actions minutes plus model credits per run).
 # Needs the ANTHROPIC_API_KEY repository secret; without it the job fails as NOT-RUN.
@@ -32,7 +32,9 @@ concurrency:
 
 jobs:
   shell-cases:
-    runs-on: ubuntu-latest
+    # Pinned: ubuntu-latest moved to 26.04, where the CLI's shell sandbox cannot start (every Bash
+    # call dies in apply-seccomp, 2026-11-02). Move this only with a green run on the new image.
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -98,6 +100,17 @@ jobs:
               agg = json.load(open(sys.argv[1], encoding="utf-8"))["aggregates"]
           except (OSError, ValueError, KeyError) as e:
               print(f"no result ({type(e).__name__})"); sys.exit(1)
+          # A bare bwrap can start while the CLI's own sandbox cannot: then every Bash call dies
+          # and the skill takes the blame. Name the broken sandbox instead of a failed skill.
+          for c in json.load(open(sys.argv[1], encoding="utf-8")).get("cases", []):
+              for runs in c.get("arms", {}).values():
+                  for r in runs:
+                      try:
+                          trace = open(r.get("tracePath") or "", encoding="utf-8", errors="replace").read()
+                      except OSError:
+                          continue
+                      if "apply-seccomp:" in trace or "Failed RTM_NEWADDR" in trace:
+                          print("NOT-RUN: the shell sandbox failed on this runner"); sys.exit(2)
           total, passed = agg.get("casesTotal", 0), agg.get("casesPassed", 0)
           print(f"{passed}/{total} passed")
           sys.exit(0 if total and passed == total else 1)
@@ -109,6 +122,8 @@ jobs:
               echo "::error::$pack / $name: $line (eval exit $rc)"
               status=1
             fi
+            # The sandbox is broken for every case: stop here and spend no more credits.
+            [ "$ok" -eq 2 ] && break
           done <<< "$(printf '%s\n' "$cases" | sed 's/^[[:space:]]*//')"
           printf '%s' "$summary"
           printf '%s' "$summary" >> "$GITHUB_STEP_SUMMARY"

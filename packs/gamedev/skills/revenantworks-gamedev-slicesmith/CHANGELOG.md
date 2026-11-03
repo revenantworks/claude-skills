@@ -5,6 +5,8 @@ version follows Semantic Versioning.
 
 ## [1.0.0] — 2026-10-08
 
+2026-11-03 (lessons from a review of the GSD planning skills; ideas only, no text taken): `slice-and-test.md` gains "Deviations", a four-class table (bug, missing critical piece and blocker are fixed in the slice and logged; architecture stops and asks), and a debug file for `fix` with an append-only Eliminated list updated before each probe, so a hunt survives a cleared context. `verify-and-exit.md` gains a wiring and stub check in the done gate (exists, substantive, wired from a real caller) and a user-setup list at exit. Cases C23-C26 added. SKILL.md unchanged (≈2198).
+
 2026-10-23 (a game's test-speed fix round, observations 0533, 0552, 0555): `slice-and-test.md` gains "Splits, moves and renames" (grep the whole repo, source included, for the old path, class, uid and reflection on it; repoint every hit in the slice; plant a violation to prove each source scan still fails; list members by name so nothing is lost or doubled), and step 3's touched scripts include the scripts that read a changed symbol. `verify-and-exit.md` step 2: where the repo has test tiers, a unit's run is its build tier and the whole suite is the checkpoint or land gate. `spec-and-plan.md`'s stacked pin round deletes rows a stack rewire makes duplicates. Cases C21 and C22 added. SKILL.md unchanged (≈2198).
 
 2026-10-21 (seam with obsrunner's new `playtest` mode): `slice-and-test.md`, Fix step 1, takes an evidence row from a recorded playtest as the starting reproduction (load its save, step to its tick, confirm the symptom before the failing test). No body change.

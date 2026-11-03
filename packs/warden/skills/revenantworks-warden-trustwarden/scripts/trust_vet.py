@@ -88,7 +88,7 @@ NETWORK = re.compile(r"\b(curl|wget|Invoke-WebRequest|Invoke-RestMethod|iwr|irm|
                      r"socat|scp|ftp|bitsadmin|certutil)\b|https?://|\bfetch\(|requests\.(get|post)|"
                      r"urllib\.request|http\.client|\bWebClient\b", re.I)
 PIPE_SHELL = re.compile(r"(curl|wget|iwr|Invoke-WebRequest|irm|Invoke-RestMethod)[^\n|]*\|\s*"
-                        r"(sh|bash|zsh|iex|Invoke-Expression|python3?|node|pwsh|powershell)\b", re.I)
+                        r"(sh|bash|zsh|iex|Invoke-Expression|python3?(?!\s+-m\s+json\.tool\b)|node|pwsh|powershell)\b", re.I)
 BYPASS = re.compile(r"--dangerously-skip-permissions|--dangerously-run-mcp-servers|"
                     r"\"defaultMode\"\s*:\s*\"bypassPermissions\"|no domain blocklist", re.I)
 ENV_SECRET = re.compile(r"(os\.environ|os\.getenv|process\.env|\$env:|getenv\()[^\n]{0,40}"
