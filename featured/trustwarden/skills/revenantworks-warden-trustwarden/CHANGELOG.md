@@ -2,6 +2,8 @@
 
 ## [1.0.0] — 2026-10-01
 
+2026-11-03 (false positive found vetting two travel skills): `fetch-pipe-shell` no longer fires on a download piped to `python3 -m json.tool`, which prints the response and runs none of it; a download piped to `python3` alone still fails. Two tests added.
+
 First public release. Vets third-party skills, plugins, MCP servers and GitHub Actions before they
 are installed, and ends with a verdict and the terms to install under, never a bare score.
 
