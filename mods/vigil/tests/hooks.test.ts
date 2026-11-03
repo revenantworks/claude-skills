@@ -297,7 +297,7 @@ describe('drawing', () => {
     expect(r.text).toMatch(/Inbox: /)
     for (const surface of ['terminal', 'desktop'] as const) {
       const ui = await $.ui.mount({ plugin: 'vigil', surface, component: 'Pane', requestId: 'vigil', props: { title: 'vigil', isFocused: true, bodyColumns: 80, placement: 'dock', scroll: SCROLL, view: {} } })
-      for (const t of ['Usage', 'Context', 'Inbox', 'Spend mode', 'Spend', 'Skills', 'Health']) expect(await ui.find({ type: 'Text', text: t })).toBeDefined()
+      for (const t of ['usage', 'context', 'inbox', 'mode', 'spend', 'skills', 'health']) expect(await ui.find({ type: 'Button', key: `open:${t}` })).toBeDefined()
       if (surface === 'desktop') expect(await ui.find({ type: 'Svg' })).toBeDefined()
       else expect(await ui.find({ type: 'Svg' })).toBeUndefined()
       await ui.unmount()
@@ -342,7 +342,7 @@ describe('drawing', () => {
     await ui.press({ key: 'open:usage' })
     expect(await ui.find({ type: 'Text', text: /At this pace|No forecast yet/ })).toBeDefined()
     await ui.press({ key: 'back' })
-    expect(await ui.find({ type: 'Text', text: 'Spend mode' })).toBeDefined()
+    expect(await ui.find({ type: 'Button', key: 'open:mode' })).toBeDefined()
     const t = await $.command.run(cmd({ command: 'rw-vigil', args: 'layout reset', origin: { kind: 'composer' } }))
     expect(t.text).toMatch(/Usage: /)
     expect(t.text).not.toMatch(/pinned/)

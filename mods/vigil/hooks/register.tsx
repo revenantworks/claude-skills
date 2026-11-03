@@ -505,7 +505,7 @@ async function dsBoardTree($: EngineInterface, table: Table, onPress: OnPress, c
               return (
                 <Box key={`tile-${id}`} flexDirection="column" borderStyle="round" borderColor={dsTheme.colors.rule} paddingX={1} width={width}>
                   <Box justifyContent="space-between" columnGap={1}>
-                    <Button key={`open:${id}`} plain onPress={onPress({ kind: 'tile', op: 'open', id })}><Text bold>{t.title}</Text></Button>
+                    <Button key={`open:${id}`} label={t.title} plain onPress={onPress({ kind: 'tile', op: 'open', id })} />
                     <Text bold color={t.tone && t.tone !== 'ok' ? toneStyle(dsTheme, t.tone).color : undefined} wrap="truncate-end">{t.big}</Text>
                   </Box>
                   <Text color={dsTheme.colors.dim} wrap="truncate-end">{t.sub}</Text>
@@ -521,7 +521,7 @@ async function dsBoardTree($: EngineInterface, table: Table, onPress: OnPress, c
           <Text dimColor>Folded</Text>
           {folded.map(id => {
             const t = tileOf(id, d)
-            return <Button key={`open:${id}`} plain dimColor onPress={onPress({ kind: 'tile', op: 'open', id })}>{t.title} <Text bold>{t.big}</Text></Button>
+            return <Button key={`open:${id}`} label={`${t.title} ${t.big}`} plain dimColor onPress={onPress({ kind: 'tile', op: 'open', id })} />
           })}
         </Box>
       ) : null}
@@ -1510,9 +1510,9 @@ export const register: Register = on => {
       const tabs = (
         <Box key="tabs" justifyContent="space-between" columnGap={2}>
           <Box flexWrap="wrap" columnGap={2}>
-            {navTabs(dsView).map(t => (t.active
-              ? <Button key={`view:${t.view}`} plain onPress={onPress({ kind: 'view', view: t.view })}><Text bold color={dsTheme.colors.accent}>{t.label}</Text></Button>
-              : <Button key={`view:${t.view}`} label={t.label} plain dimColor onPress={onPress({ kind: 'view', view: t.view })} />))}
+            {navTabs(dsView).map(t => (
+              <Button key={`view:${t.view}`} label={t.label} plain dimColor={!t.active} onPress={onPress({ kind: 'view', view: t.view })} />
+            ))}
           </Box>
           <Button key="close" label="Close" hotkey="q" role="dismiss" plain dimColor onPress={() => $.ui.close({ id: 'vigil' })} />
         </Box>
