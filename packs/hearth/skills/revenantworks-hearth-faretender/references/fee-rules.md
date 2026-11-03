@@ -1,6 +1,6 @@
 # Fee rules — what a listed price leaves out
 
-Last verified: 2026-10-31
+Last verified: 2026-11-03
 
 Calendar surface, 60-day cadence, re-verified by `faretender refresh`. Rates and rules change; never quote a city tax rate from this file or from memory. Read the rate from the offer or the city's official page, and cite it.
 
@@ -16,8 +16,8 @@ Calendar surface, 60-day cadence, re-verified by `faretender refresh`. Rates and
 ## United States
 
 - The FTC Rule on Unfair or Deceptive Fees took effect on 2025-05-12. It covers short-term lodging (hotels, motels, short-term rentals) and live-event tickets.
-- A covered business must show the total price, including mandatory fees such as resort or destination fees.
-- It may leave out government taxes and fees on the transaction, and optional charges.
+- A covered business must show a total price with every charge it knows and can calculate upfront, including mandatory fees such as resort or destination fees.
+- It may leave out only government charges (taxes), shipping and optional add-ons. Taxes left out must still be disclosed, with amount and purpose, before payment.
 - So for a US hotel, **add the room tax and any local occupancy tax** to the shown price. Parking is in the total only when it cannot be avoided; otherwise add it when the user has a car.
 
 ## Elsewhere
@@ -43,7 +43,8 @@ Record here, with a date, any pattern seen in a connector's output, for example 
 
 | Claim | Source | Checked |
 |---|---|---|
-| FTC fee rule scope, effective date, tax exclusion | [Fenwick FAQ on the FTC fee rule](https://acquia.fenwick.com/insights/publications/the-ftc-rule-on-unfair-or-deceptive-fees-faqs-and-guidance) | 2026-10-31 |
+| FTC fee rule scope, total price, three exclusions, effective date | [FTC, Rule on Unfair or Deceptive Fees FAQ](https://www.ftc.gov/business-guidance/resources/rule-unfair-or-deceptive-fees-frequently-asked-questions) | 2026-11-03 |
+| Same, secondary | [Fenwick FAQ on the FTC fee rule](https://acquia.fenwick.com/insights/publications/the-ftc-rule-on-unfair-or-deceptive-fees-faqs-and-guidance) | 2026-10-31 |
 | Effective 2025-05-12 for live events and short-term rentals | [TechCrunch](https://techcrunch.com/2025/05/05/ftc-bans-hidden-fees-for-live-events-and-short-term-rentals-effective-may-12/) | 2026-10-31 |
 
-Refresh should add the primary FTC page and replace secondary sources where possible.
+The FTC row is primary since 2026-11-03.

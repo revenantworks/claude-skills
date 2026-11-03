@@ -4,6 +4,8 @@ All notable changes to this skill are recorded here. Format: Keep a Changelog. V
 
 ## [1.0.0] — 2026-10-31
 
+2026-11-03 (refresh): `claim-rules.md` now cites the UK text of Article 7 (GBP 220, 350, 520), the UK CAA (GBP 260 for a 3 to 4 hour long-haul delay, refund after 5 hours, 8-week escalation) and the US DOT page (more significant-change triggers, 5-year vouchers); `fee-rules.md` cites the FTC's own FAQ (only taxes, shipping and optional add-ons may be left out). Both stamps move to 2026-11-03.
+
 First member of the `hearth` pack.
 
 ### Added
