@@ -73,10 +73,16 @@ Claude API, or in any compatible agent.
 > - **Hide synced twins in Claude Code.** A skill uploaded to claude.ai also appears in Claude Code as
 >   `anthropic-skills:<name>`. Turn it off with `"skillOverrides": {"anthropic-skills:<name>": "off"}`
 >   in `~/.claude/settings.json`, so only your installed copy loads. A plugin synced from claude.ai
->   needs no entry: your installed plugin of the same name wins.
+>   needs no entry: in a terminal session, your installed plugin of the same name wins.
 >
-> To check all of this on your machine, ask for `gatewarden loads` (warden pack). It reports double
-> loads, wrong-surface skills and the listing against its budget, and never changes a setting.
+> **Check for double loads:** with the warden pack installed, run the gatewarden skill in Claude Code:
+>
+> ```
+> /warden:revenantworks-warden-gatewarden loads
+> ```
+>
+> It lists every skill that loads twice with the fix for each, wrong-surface skills, and the listing
+> against its budget. It never changes a setting.
 
 | Packs (Option A) | Featured skills (Option B), and the pack that already holds them |
 |---|---|
