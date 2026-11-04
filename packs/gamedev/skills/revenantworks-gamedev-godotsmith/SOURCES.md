@@ -96,8 +96,10 @@ they are not already standard advice.
 `--check-only` ("Only parse for errors and quit (use with --script)") is from `godot --help` on Godot
 4.7.2. Run on that build, 2026-11-03: exit 1 and `SCRIPT ERROR: Parse Error` for a broken script, a
 helper shadowing a virtual and a script preloading a broken one; exit 0 with no `_init` or `_ready`
-run for a valid `SceneTree` or `Node` script; a script outside the project parsed by its absolute
-path. `LiveParse` in `scripts/test_godot_check.py` repeats it where Godot is on the path.
+run for a valid `SceneTree` or `Node` script; static initialisers (`static var x = f()`,
+`_static_init`) do run, exit 0; a control under `.godot/` parsed by `res://`. The import also writes
+a `.gd.uid` beside each script. `LiveParse` in `scripts/test_godot_check.py` repeats the parse facts
+where Godot is on the path.
 
 ## Injection check
 

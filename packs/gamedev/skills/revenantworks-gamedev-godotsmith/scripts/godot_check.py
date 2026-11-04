@@ -17,11 +17,13 @@ times and prints each run's numbers.
 
 --parse-all answers one other question: does every .gd file under --project parse, not only the
 folders CI lints? It finds the files itself (hidden folders aside), imports each project that
-holds one, and has Godot parse each file with --check-only, which loads the script and runs none
-of it. A positive control comes first: a broken script made in a temp folder must be rejected and a
-valid one accepted, or the run is NOT-RUN, since a check that cannot see a parse error proves
-nothing. A file that cannot be parsed, a folder that cannot be read, a file in no project and an
-exclusion that matches no file all fail the run, and so does finding nothing to parse.
+holds one, and has Godot parse each file with --check-only. That runs no _init or _ready, but
+static initialisers do run, and the import writes beside the scripts: use it on a clean checkout of
+code you would run anyway. A positive control comes first: a broken script made under .godot/ and
+parsed by res:// like the rest must be rejected and a valid one accepted, or the run is NOT-RUN,
+since a check that cannot see a parse error proves nothing. A file that cannot be parsed, a folder
+that cannot be read, a linked folder holding scripts, a file in no project and an exclusion that
+matches no file all fail the run, and so does finding nothing to parse.
 
 Exit: 0 every number matched and no marker fired; 1 a mismatch, a marker, a failure or a
 nonzero step; 2 a usage error; 3 NOT-RUN (no Godot binary, or a control that did not behave).
@@ -38,6 +40,7 @@ import os
 import re
 import shlex
 import shutil
+import signal
 import subprocess
 import sys
 import tempfile
@@ -47,6 +50,7 @@ from typing import Callable
 
 NOT_RUN = 3
 PARSE_TIMEOUT = 120  # seconds per file; a parse takes well under one
+KILL_WAIT = 5  # seconds to collect the output after killing a timed-out tree
 CONTROL_BROKEN = "extends RefCounted\nfunc broken(:\n\tpass\n"
 CONTROL_VALID = "extends RefCounted\n"
 GUT_RUNNER = "addons/gut/gut_cmdln.gd"
@@ -130,27 +134,51 @@ def parse_cmd(godot: str, project: str, script: str) -> list[str]:
 
 def run_process(cmd: list[str], cwd: str | None = None, timeout: int | None = None) -> tuple[int, str]:
     """The only live call: run with no window, output captured."""
-    kw = {"creationflags": subprocess.CREATE_NO_WINDOW} if os.name == "nt" else {}
+    kw = {"creationflags": subprocess.CREATE_NO_WINDOW} if os.name == "nt" else {"start_new_session": True}
+    p = subprocess.Popen(cmd, cwd=cwd, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+                         stderr=subprocess.STDOUT, **kw)
     try:
-        p = subprocess.run(cmd, cwd=cwd, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
-                           stderr=subprocess.STDOUT, timeout=timeout, **kw)
+        out, _ = p.communicate(timeout=timeout)
     except subprocess.TimeoutExpired:
+        _kill_tree(p)
+        try:
+            p.communicate(timeout=KILL_WAIT)
+        except subprocess.TimeoutExpired:  # something outside the tree still holds the pipe
+            pass
         return 124, f"timed out after {timeout} s\n"
-    return p.returncode, p.stdout.decode("utf-8", "replace")
+    return p.returncode, out.decode("utf-8", "replace")
 
 
-def find_scripts(root: str) -> tuple[list[Path], list[str], list[str]]:
-    """(every .gd under root, folders that could not be read, linked folders not followed)."""
+def _kill_tree(p: subprocess.Popen) -> None:
+    """Kill the process and its children: a shim's child holds the pipe after the shim dies."""
+    try:
+        if os.name == "nt":
+            subprocess.run(["taskkill", "/F", "/T", "/PID", str(p.pid)], stdin=subprocess.DEVNULL,
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                           creationflags=subprocess.CREATE_NO_WINDOW)
+        else:
+            os.killpg(p.pid, signal.SIGKILL)
+    except OSError:
+        p.kill()
+
+
+def find_scripts(root: str) -> tuple[list[Path], list[str], dict[str, int]]:
+    """(every .gd under root, folders that could not be read, {linked folder not followed: .gd inside})."""
     files: list[Path] = []
     unread: list[str] = []
-    linked: list[str] = []
-    for here, dirs, names in os.walk(root, onerror=lambda e: unread.append(str(e.filename))):
+    linked: dict[str, int] = {}
+
+    def note_unread(err: OSError) -> None:
+        unread.append(str(err.filename))
+
+    for here, dirs, names in os.walk(root, onerror=note_unread):
         keep = []
         for d in sorted(dirs):
             if d.startswith("."):  # .git, .godot and tool folders hold no project script
                 continue
             if os.path.islink(os.path.join(here, d)):
-                linked.append(os.path.join(here, d))
+                link = os.path.join(here, d)
+                linked[link] = sum(n.endswith(".gd") for _, _, ns in os.walk(link, onerror=note_unread) for n in ns)
                 continue
             keep.append(d)
         dirs[:] = keep
@@ -181,20 +209,36 @@ def parse_verdict(rc: int, out: str) -> list[str]:
 
 
 def control_problem(run: Callable, godot: str, project: Path) -> str | None:
-    """None when Godot rejects a broken script and accepts a valid one in this project."""
-    def parse(body: str, name: str, folder: str) -> tuple[int, str]:
-        path = Path(folder) / name
-        path.write_text(body, encoding="utf-8")
-        return run(parse_cmd(godot, str(project), path.as_posix()), cwd=None, timeout=PARSE_TIMEOUT)
+    """None when Godot rejects a broken script and accepts a valid one in this project.
 
-    with tempfile.TemporaryDirectory(prefix="godot-check-control-") as folder:
-        rc, out = parse(CONTROL_BROKEN, "control_broken.gd", folder)
-        if rc == 0 or not find_markers(out):
-            return f"a deliberately broken script was not rejected (exit {rc}, no error marker)"
-        rc, out = parse(CONTROL_VALID, "control_valid.gd", folder)
-        why = parse_verdict(rc, out)
-        if why:
-            return f"a valid script was rejected: {why[0]}"
+    The controls live under .godot/ and go by res://, the route every real file takes, and are removed.
+    """
+    cache = project / ".godot"
+    made_cache = not cache.exists()
+
+    def parse(body: str, name: str, folder: Path) -> tuple[int, str]:
+        (folder / name).write_text(body, encoding="utf-8")
+        res = f"res://.godot/{folder.name}/{name}"
+        return run(parse_cmd(godot, str(project), res), cwd=None, timeout=PARSE_TIMEOUT)
+
+    try:
+        cache.mkdir(exist_ok=True)
+        with tempfile.TemporaryDirectory(prefix="godot-check-control-", dir=cache) as tmp:
+            rc, out = parse(CONTROL_BROKEN, "control_broken.gd", Path(tmp))
+            if rc == 0 or not find_markers(out):
+                return f"a deliberately broken script was not rejected (exit {rc}, no error marker)"
+            rc, out = parse(CONTROL_VALID, "control_valid.gd", Path(tmp))
+            why = parse_verdict(rc, out)
+            if why:
+                return f"a valid script was rejected: {why[0]}"
+    except OSError as err:
+        return f"the control files could not be written under .godot/: {err}"
+    finally:
+        if made_cache:
+            try:
+                cache.rmdir()
+            except OSError:  # the import or Godot put something there: it stays
+                pass
     return None
 
 
@@ -203,7 +247,16 @@ def parse_all(a: argparse.Namespace, run: Callable, rec: dict) -> tuple[str, int
     root = Path(a.project)
     files, unread, linked = find_scripts(a.project)
     excludes = parse_excludes(a.exclude)
-    excluded, stale, targets, homeless = [], dict(excludes), [], []
+    excluded, stale, targets, homeless, unparsed_links, empty_links = [], dict(excludes), [], [], [], []
+    for link, count in linked.items():
+        rel = Path(os.path.relpath(link, root)).as_posix()
+        if rel in excludes:
+            excluded.append(rel)
+            stale.pop(rel)
+        elif count:
+            unparsed_links.append((rel, count))
+        else:
+            empty_links.append(rel)
     for f in files:
         rel = f.relative_to(root).as_posix()
         if rel in excludes:
@@ -251,16 +304,20 @@ def parse_all(a: argparse.Namespace, run: Callable, rec: dict) -> tuple[str, int
         print(f"  FAIL --exclude {path}: matches no file")
     for path in unread:
         print(f"  FAIL {path}: folder could not be read")
-    for path in linked:
-        print(f"  note {path}: linked folder not followed")
+    for rel, count in unparsed_links:
+        print(f"  FAIL {rel}: linked folder holding {count} .gd file(s), not parsed; "
+              "point --project at its target too, or --exclude it with a reason")
+    for rel in empty_links:
+        print(f"  note {rel}: linked folder with no .gd file, not followed")
     rec["parse"] = {"found": len(files), "parsed": len(results) - len(failed),
                     "failed": [{"path": rel, "errors": why[:3]} for rel, why in failed],
                     "excluded": {rel: excludes[rel] for rel in excluded}, "no_project": homeless,
-                    "stale_excludes": list(stale), "unread": unread, "linked": linked,
+                    "stale_excludes": list(stale), "unread": unread,
+                    "linked_unparsed": {rel: count for rel, count in unparsed_links},
                     "import_failed": import_failed}
     if not results and not failed:
         print("parse: nothing was parsed, so nothing is proved")
-    ok = results and not (failed or homeless or stale or unread or import_failed)
+    ok = results and not (failed or homeless or stale or unread or import_failed or unparsed_links)
     return ("PASS", 0) if ok else ("FAIL", 1)
 
 

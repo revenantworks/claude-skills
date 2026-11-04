@@ -9,6 +9,7 @@ import os
 import shutil
 import sys
 import tempfile
+import time
 import unittest
 import unittest.mock
 from contextlib import redirect_stderr, redirect_stdout
@@ -316,15 +317,43 @@ class ParseAll(unittest.TestCase):
         self.assertEqual(rc, gc.NOT_RUN)
         self.assertIn("valid script was rejected", out)
 
-    def test_the_control_files_land_outside_the_repo(self):
+    def test_the_controls_take_the_res_route_under_godot_and_leave_nothing(self):
         self.tree("project.godot", "a.gd")
         run = FakeParse()
         self.go(run)
         controls = [c[-1] for c in run.calls if "control_" in c[-1]]
         self.assertEqual(len(controls), 2)
         for c in controls:
-            self.assertNotIn(self.root.resolve(), Path(c).resolve().parents)
+            self.assertTrue(c.startswith("res://.godot/"), c)
         self.assertEqual(sorted(p.name for p in self.root.iterdir()), ["a.gd", "project.godot"])
+
+    def test_a_control_cache_folder_that_was_there_stays(self):
+        self.tree("project.godot", "a.gd", ".godot/keep.txt")
+        self.go(FakeParse())
+        self.assertEqual([p.name for p in (self.root / ".godot").iterdir()], ["keep.txt"])
+
+    def test_a_linked_folder_holding_scripts_fails_by_name(self):
+        self.tree("project.godot", "a.gd", "shared/x.gd", "shared/y.gd")
+        with unittest.mock.patch.object(gc.os.path, "islink", lambda p: Path(p).name == "shared"):
+            run = FakeParse()
+            rc, out = self.go(run)
+        self.assertEqual(rc, 1, out)
+        self.assertIn("FAIL shared: linked folder holding 2 .gd file(s)", out)
+        self.assertEqual(run.parsed(), ["res://a.gd"])
+
+    def test_a_linked_folder_with_no_script_is_only_a_note(self):
+        self.tree("project.godot", "a.gd", "assets/x.txt")
+        with unittest.mock.patch.object(gc.os.path, "islink", lambda p: Path(p).name == "assets"):
+            rc, out = self.go(FakeParse())
+        self.assertEqual(rc, 0, out)
+        self.assertIn("note assets: linked folder with no .gd file", out)
+
+    def test_a_linked_folder_can_be_excluded_with_its_reason(self):
+        self.tree("project.godot", "a.gd", "shared/x.gd")
+        with unittest.mock.patch.object(gc.os.path, "islink", lambda p: Path(p).name == "shared"):
+            rc, out = self.go(FakeParse(), "--exclude", "shared=parsed in its own repo")
+        self.assertEqual(rc, 0, out)
+        self.assertIn("excluded shared: parsed in its own repo", out)
 
     def test_nothing_to_parse_fails(self):
         self.tree("project.godot")
@@ -447,6 +476,27 @@ class RunProcess(unittest.TestCase):
         self.assertEqual(rc, 124)
         self.assertIn("timed out", out)
 
+    def _hung_grandchild_returns_at_the_timeout(self, cmd):
+        start = time.monotonic()
+        rc, out = gc.run_process(cmd, timeout=2)
+        self.assertLess(time.monotonic() - start, 10)
+        self.assertEqual(rc, 124)
+
+    def test_a_hung_grandchild_holding_the_pipe_does_not_hang_the_check(self):
+        inner = "import time; time.sleep(15)"
+        code = f"import subprocess, sys; subprocess.run([sys.executable, '-c', {inner!r}])"
+        self._hung_grandchild_returns_at_the_timeout([sys.executable, "-c", code])
+
+    @unittest.skipUnless(os.name == "nt", "the .cmd shim shape exists only on Windows")
+    def test_a_hung_godot_under_a_cmd_shim_does_not_hang_the_check(self):
+        self._hung_grandchild_returns_at_the_timeout(
+            ["cmd", "/c", sys.executable, "-c", "import time; time.sleep(15)"])
+
+    def test_output_and_exit_code_still_come_back(self):
+        rc, out = gc.run_process([sys.executable, "-c", "import sys; print('hello'); sys.exit(3)"], timeout=30)
+        self.assertEqual(rc, 3)
+        self.assertIn("hello", out)
+
 
 @unittest.skipIf(shutil.which("godot") is None, "no Godot on PATH; the real parse cannot run")
 class LiveParse(unittest.TestCase):
@@ -493,6 +543,27 @@ class LiveParse(unittest.TestCase):
                           "--exclude", "tools/shadow.gd=input for a test")
         self.assertEqual(rc, 0, out)
         self.assertIn("5 found · 3 parsed · 0 failed · 2 excluded", out)
+        self.assertEqual(list((self.root / ".godot").glob("godot-check-control-*")), [])
+
+    def test_static_initialisers_run_under_check_only_as_the_reference_warns(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            (root / "project.godot").write_text("config_version=5\n", encoding="utf-8")
+            (root / "statics.gd").write_text(
+                "extends RefCounted\n"
+                "static var x = _boom()\n"
+                "static func _boom() -> int:\n"
+                "\tFileAccess.open(\"res://var_ran.txt\", FileAccess.WRITE).store_string(\"x\")\n"
+                "\treturn 1\n"
+                "static func _static_init() -> void:\n"
+                "\tFileAccess.open(\"res://init_ran.txt\", FileAccess.WRITE).store_string(\"x\")\n",
+                encoding="utf-8")
+            out = io.StringIO()
+            with redirect_stdout(out):
+                rc = gc.main(["--project", d, "--parse-all"])
+            self.assertEqual(rc, 0, out.getvalue())
+            self.assertTrue((root / "var_ran.txt").is_file())
+            self.assertTrue((root / "init_ran.txt").is_file())
 
 
 if __name__ == "__main__":

@@ -227,36 +227,46 @@ outside both can stay broken with every check green. Parse every `.gd` file the 
 python scripts/godot_check.py --project <repo root> --parse-all [--exclude "<path>=<reason>"]...
 ```
 
-- **What it runs.** The headless import of each project that holds a script, then
-  `godot --headless --path <project> --check-only -s res://<file>`, per file. `--check-only` loads
-  the script and runs none of it: no `_init`, no `_ready`. Godot's own parser sees what a lint cannot,
-  such as a private helper whose name matches a virtual of the engine class it extends (a signature
-  mismatch, and the whole script fails to load). A failure is a nonzero exit or an error marker.
+- **What it runs.** The headless import of each project that holds a script, nested projects
+  included, then `godot --headless --path <project> --check-only -s res://<file>`, per file. Godot's
+  own parser sees what a lint cannot, such as a private helper whose name matches a virtual of the
+  engine class it extends (a signature mismatch, and the whole script fails to load). A failure is a
+  nonzero exit or an error marker.
+- **It runs some of the code.** `--check-only` runs no `_init` and no `_ready`, but static
+  initialisers do run: a `static var x = _boom()` and a `static func _static_init()` both ran and
+  exited 0 (Godot 4.7.2). So this is not a sandbox. Do not point it at code you would not run: in CI,
+  a pull request's code from outside runs with whatever the job can reach, so give that job no
+  secrets, or run the step only on a branch you trust.
+- **It writes.** The import writes `.godot/`, a `.gd.uid` beside each script that lacks one, and
+  `.import` files beside assets, in every project it finds. Run it on a clean checkout, so that what
+  it wrote cannot mix with your own changes.
 - **The positive control.** Before any file, Godot must reject a broken script and accept a valid
-  one, both made in a temp folder. Otherwise the run is NOT-RUN (exit 3): a check that cannot see a
-  parse error proves nothing. No control file lands in the repo. The import writes only `.godot/`.
-- **What fails the run, beyond a file that does not parse.** A folder it cannot read, a file with no
-  `project.godot` at or above it, an exclusion that matches no file, a failed import, and finding
-  nothing to parse. None of these reads as clean. An error marker in the import alone does not fail
+  one. Otherwise the run is NOT-RUN (exit 3): a check that cannot see a parse error proves nothing.
+  Both go in a temp folder under `.godot/` and by `res://`, the route the real files take, and are
+  removed after.
+- **What fails the run, beyond a file that does not parse.** A folder it cannot read, a linked folder
+  holding `.gd` files, a file with no `project.godot` at or above it, an exclusion that matches no
+  file, a failed import, and finding nothing to parse. None of these reads as clean. An error marker in the import alone does not fail
   it: the per-file list says which script, and the Check entry judges the rest of the import.
 - **What it reads.** Everything under `--project` but hidden folders (`.git`, `.godot`, tool
-  folders), so `addons/` and a `.gdignore` folder are parsed too. A linked folder is printed, not
-  followed. A file meant to be broken, such as a parser test's input, needs `--exclude` with its
-  reason, which the report prints.
+  folders), so `addons/` and a `.gdignore` folder are parsed too. A linked folder is not followed:
+  with scripts inside it fails the run, without them it is printed. A file or linked folder meant to
+  be left out, such as a parser test's input, needs `--exclude` with its reason, which the report
+  prints.
 - **Cost.** About 0.25 s a file on the build machine: 301 files took 78 s serial, 25 s at `--jobs 4`
   (the default ceiling) and 16 s at `--jobs 8` (Godot 4.7.2, 2026-11-03). Run it on a schedule or on
   merge if that is more than the push can bear; do not narrow the folders.
 
-Where the repo does not carry the script, the same shape in a workflow step:
+Where the repo does not carry the script, the same shape in a workflow step, under the same warning
+about static initialisers and a pull request's code:
 
 ```yaml
       - name: Every script parses
         run: |
           godot --headless --import > /dev/null 2>&1 || true
           # The positive control: if this parses clean, the step proves nothing.
-          control="$(mktemp -d)/control.gd"
-          printf 'extends RefCounted\nfunc x(:\n\tpass\n' > "$control"
-          if godot --headless --check-only -s "$control" > /dev/null 2>&1; then
+          printf 'extends RefCounted\nfunc x(:\n\tpass\n' > .godot/parse_control.gd
+          if godot --headless --check-only -s res://.godot/parse_control.gd > /dev/null 2>&1; then
             echo "::error::a broken control script parsed clean"; exit 1
           fi
           fail=0
