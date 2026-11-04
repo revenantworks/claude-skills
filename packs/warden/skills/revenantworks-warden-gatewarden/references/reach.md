@@ -24,7 +24,7 @@ reach modes joined gatewarden (2026-10-08); the steps are unchanged.
 | `scripts/drive_rules.py SCAN [--rules RULES]` | A scan against the owner's drive layout rules (`drive-rules.md`), plus built-in checks (a repo nested in a repo, a dead link): rule name and offending path per finding. |
 | `scripts/treemap_page.py SCAN --out map.html` | One self-contained HTML page (no network, no CDN). |
 | `scripts/drift.py --pair LIVE TRACKED` | Live against tracked, by hash; `--inventory DIR` names the owning repo of each installed entry. |
-| `scripts/loads.py [--project DIR] [--retired NAME] [--json OUT]` | Skills loaded twice, against `skillOverrides` (`loads.md`). Never writes settings. |
+| `scripts/loads.py [--project DIR] [--retired NAME] [--json OUT]` | Skills loaded twice or on the wrong surface, against `skillOverrides`, plus the listing cost (`loads.md`). Never writes settings. |
 
 `scripts/warden_fs.py` holds the shared redaction and link helpers (a pack-shared copy; the
 source is `packs/warden/shared/`). Exit codes: 0 clean, 1 findings (or a partial scan), 2 input
@@ -88,9 +88,10 @@ rule should live is rigwright's.
 ## Loads — skills that load twice
 
 One name loaded from two sources pays its listing twice and can run a stale body. Run `loads.py`;
-report its table, the not-checked list and its complete `skillOverrides` block (kinds, fixes:
+report its listing cost, table, not-checked list and complete `skillOverrides` block (kinds, fixes:
 `loads.md`). Never write settings (placement is rigwright's); never propose switching a skill off on
-claude.ai (that removes it from Cowork).
+claude.ai as the fix for a double load (that removes it from Cowork). A kind 7 row is a question
+about use, for the owner to answer.
 
 ## Status
 

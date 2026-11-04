@@ -383,6 +383,96 @@ class LoadsTests(Base):
         settings = json.loads((home / "settings.json").read_text(encoding="utf-8"))
         self.assertNotIn("anthropic-skills:twin-open", settings["skillOverrides"])   # never writes
 
+    def surface_home(self, name, install_body, synced_body):
+        """An installed plugin and its claude.ai-synced copy, plus an old-generation folder."""
+        home = self.tmp / "surface"
+        inst = home / "plugins" / "cache" / "mk" / "pack" / "1.0.0"
+        (inst / "skills" / name).mkdir(parents=True)
+        (inst / "skills" / name / "SKILL.md").write_text(
+            f"---\nname: {name}\ndescription: {'d' * 400}\n---\n{install_body}\n", encoding="utf-8")
+        (home / "plugins" / "installed_plugins.json").write_text(json.dumps({"version": 2, "plugins": {
+            "pack@mk": [{"scope": "user", "installPath": str(inst), "version": "1.0.0"}]}}), encoding="utf-8")
+        acct = home / "plugins" / "synced" / "acct"
+        for folder, body in (("pack~g2", synced_body), ("pack", "old generation")):
+            (acct / folder / "skills" / name).mkdir(parents=True)
+            (acct / folder / "skills" / name / "SKILL.md").write_text(
+                f"---\nname: {name}\ndescription: {'d' * 400}\n---\n{body}\n", encoding="utf-8")
+        (acct / "manifest.json").write_text(json.dumps(
+            {"plugins": [{"name": "pack", "generation": 2}]}), encoding="utf-8")
+        (home / "settings.json").write_text("{}", encoding="utf-8")
+        return home
+
+    def loads_json(self, home):
+        code, out, _ = run(loads.main, ["--home", str(home), "--project", str(self.tmp), "--json", "-"])
+        return code, json.loads(out)
+
+    def test_installed_and_synced_plugin_is_not_a_double_load(self):
+        code, d = self.loads_json(self.surface_home("wright", "new", "old"))
+        row = d["rows"][0]
+        self.assertEqual(row["kinds"], [5, 6])
+        self.assertEqual(row["status"], "stale")
+        self.assertEqual(len(row["sources"]), 2)                         # the old generation is not read
+        self.assertFalse([f for f in row["fix"] if "claude plugin uninstall" in f])
+        self.assertTrue([n for n in d["not_checked"] if "old synced plugin folder" in n])
+        self.assertEqual(code, 1)
+
+    def test_installed_and_synced_plugin_same_body_is_handled(self):
+        code, d = self.loads_json(self.surface_home("wright", "same", "same"))
+        self.assertEqual(d["rows"][0]["kinds"], [6])
+        self.assertEqual(d["rows"][0]["status"], "handled")
+        self.assertEqual(code, 0)
+
+    def test_two_plugin_names_stay_a_double_load(self):
+        home = self.surface_home("wright", "same", "same")
+        inst = home / "plugins" / "cache" / "mk" / "featured" / "1.0.0"
+        (inst / "skills" / "wright").mkdir(parents=True)
+        (inst / "skills" / "wright" / "SKILL.md").write_text("---\nname: wright\n---\nsame\n", encoding="utf-8")
+        reg = home / "plugins" / "installed_plugins.json"
+        data = json.loads(reg.read_text(encoding="utf-8"))
+        data["plugins"]["featured@mk"] = [{"scope": "user", "installPath": str(inst), "version": "1.0.0"}]
+        reg.write_text(json.dumps(data), encoding="utf-8")
+        code, d = self.loads_json(home)
+        self.assertIn(3, d["rows"][0]["kinds"])
+        self.assertEqual(d["rows"][0]["status"], "finding")
+        self.assertIn("claude plugin uninstall featured@mk", d["rows"][0]["fix"][0])
+        self.assertEqual(code, 1)
+
+    def test_machine_skill_on_claude_ai_is_a_review_row(self):
+        code, d = self.loads_json(self.surface_home("rw-warden-keeper", "same", "same"))
+        row = d["rows"][0]
+        self.assertEqual(row["kinds"], [6, 7])
+        self.assertEqual(row["status"], "review")
+        self.assertTrue([f for f in row["fix"] if "Cowork" in f and "NOT-RUN" in f])
+        self.assertEqual(code, 0)                                        # a choice, never a failure
+
+    def test_machine_skill_only_local_is_not_flagged(self):
+        home = self.tmp / "local"
+        (home / "skills" / "rw-localops-runner").mkdir(parents=True)
+        (home / "skills" / "rw-localops-runner" / "SKILL.md").write_text(
+            "---\nname: rw-localops-runner\n---\nx\n", encoding="utf-8")
+        code, d = self.loads_json(home)
+        self.assertEqual(d["rows"], [])
+        self.assertEqual(code, 0)
+
+    def test_listing_cost_counts_one_label_once_and_skips_what_is_off(self):
+        _, d = self.loads_json(self.surface_home("wright", "new", "old"))
+        self.assertEqual(d["listing"]["copies"], 1)                      # one label, one listing entry
+        self.assertEqual(d["listing"]["tokens_est"], 100)                # 400 description chars / 4
+        home = self.tmp / "offhome"
+        for name in ("kept", "hidden"):
+            folder = home / "skills" / "synced" / "acct" / name
+            folder.mkdir(parents=True)
+            (folder / "SKILL.md").write_text(
+                f"---\nname: {name}\ndescription: >\n  {'d' * 80}\n  {'d' * 79}\n---\nx\n", encoding="utf-8")
+        (home / "skills" / "synced" / "acct" / "manifest.json").write_text(json.dumps(
+            {"skills": [{"name": "kept", "creatorType": "user"}, {"name": "hidden", "creatorType": "user"}]}),
+            encoding="utf-8")
+        (home / "settings.json").write_text(json.dumps(
+            {"skillOverrides": {"anthropic-skills:hidden": "off"}}), encoding="utf-8")
+        _, d = self.loads_json(home)
+        self.assertEqual(d["listing"]["copies"], 1)
+        self.assertEqual(d["listing"]["tokens_est"], 40)                 # folded lines join with one space
+
     def test_table_and_missing_sources(self):
         home = self.tmp / "bare"
         home.mkdir()

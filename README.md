@@ -69,6 +69,9 @@ Claude API, or in any compatible agent.
 > - **Hide synced twins in Claude Code.** A skill uploaded to claude.ai also appears in Claude Code as
 >   `anthropic-skills:<name>`. Turn it off with `"skillOverrides": {"anthropic-skills:<name>": "off"}`
 >   in `~/.claude/settings.json`, so only your installed copy loads.
+>
+> To check all of this on your machine, ask for `gatewarden loads` (warden pack). It reports double
+> loads, wrong-surface skills and the listing cost, and never changes a setting.
 
 | Packs (Option A) | Featured skills (Option B), and the pack that already holds them |
 |---|---|

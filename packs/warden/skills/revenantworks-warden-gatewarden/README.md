@@ -67,7 +67,7 @@ revenantworks-warden-gatewarden/
 │   ├── least-privilege.md         # reached against granted: the four readings
 │   ├── drive-rules.md             # schema for the owner's drive layout rules, starter rules
 │   ├── proposal-format.md         # one owner-run command per change
-│   ├── loads.md                   # skills that load twice: sources, kinds, fixes
+│   ├── loads.md                   # skills that load twice or sit on the wrong surface, listing cost
 │   ├── treemap.md                 # the page, WizTree and dust
 │   ├── scanner-install.md         # optional disk scanners, owner-run
 │   └── pack.md                    # warden roster and seams (generated)

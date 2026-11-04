@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""gatewarden loads: skills that reach a Claude Code session from more than one source.
+"""gatewarden loads: skills that load twice, sit on the wrong surface, and what the listing costs.
 
 Run, never read into context. Stdlib only. Read-only: it never edits a settings file.
 
@@ -18,7 +18,9 @@ Sources (each optional; a missing one is listed under `not_checked`):
 Kinds: 1 claude.ai sync twin (synced plus another copy) · 2 synced, no local copy
 (a user-created synced skill nothing else carries) · 3 plugin plus local, or two plugins ·
 4 user plus project scope, or two folders with one SKILL.md name · 5 stale twin (bodies
-differ by hash). A twin already set to "off" in skillOverrides reads `handled`.
+differ by hash) · 6 one plugin both installed and synced (one listing entry, not a double
+load) · 7 a machine-driving skill on claude.ai (a review row, the owner's choice). A twin
+already set to "off" in skillOverrides reads `handled`.
 
 Output: names, redacted paths and SKILL.md hashes only; no file content is printed. The
 fix is a proposal: a complete skillOverrides block or one command. Applying a settings
@@ -40,6 +42,7 @@ from warden_fs import header, norm, redact, write_json  # noqa: E402
 SYNC_NS = "anthropic-skills"
 BUILTIN_SOURCES = {"anthropic", "anthropic-example"}
 SKIP_DIRS = {"synced", ".trash"}
+MACHINE_PACKS = ("warden", "localops")   # drive the user's own machine: mostly NOT-RUN on claude.ai
 
 
 def body_hash(skill_md: Path) -> str | None:
@@ -69,6 +72,32 @@ def fm_name(skill_md: Path) -> str | None:
     return None
 
 
+def fm_description_chars(skill_md: Path) -> int:
+    """Characters in the SKILL.md `description:` field, folded lines joined by one space."""
+    try:
+        with skill_md.open("r", encoding="utf-8", errors="replace") as f:
+            if f.readline().strip() != "---":
+                return 0
+            parts: list[str] = []
+            inside = False
+            for _ in range(80):
+                line = f.readline()
+                if not line or line.strip() == "---":
+                    break
+                if line.startswith("description:"):
+                    inside = True
+                    parts.append(line.split(":", 1)[1].strip().strip("'\""))
+                elif inside and line[:1] in " \t":
+                    parts.append(line.strip())
+                elif inside:
+                    break
+    except OSError:
+        return 0
+    if parts and parts[0] in (">", "|", ">-", "|-"):
+        parts = parts[1:]
+    return len(" ".join(parts))
+
+
 def real(p: Path) -> str:
     try:
         r = norm(os.path.realpath(p))
@@ -95,7 +124,7 @@ def folder_skills(folder: Path, kind: str, ns: str | None = None, extra: dict | 
         name = fm_name(md) or e.name
         label = f"{ns}:{name}" if ns else name
         row = {"name": name, "type": kind, "label": label, "path": redact(str(e)),
-               "real": real(e), "hash": body_hash(md), "loads": True}
+               "real": real(e), "hash": body_hash(md), "chars": fm_description_chars(md), "loads": True}
         if extra:
             row.update(extra)
         out.append(row)
@@ -142,7 +171,20 @@ def synced_sources(home: Path, settings: dict, notes: list) -> list[dict]:
             builtin = s.get("source") in BUILTIN_SOURCES or s.get("creatorType") not in (None, "user")
             out.append({"name": name, "type": "synced", "label": f"{SYNC_NS}:{name}",
                         "path": redact(str(folder)), "real": real(folder),
-                        "hash": body_hash(folder / "SKILL.md"), "loads": on, "builtin": builtin})
+                        "hash": body_hash(folder / "SKILL.md"), "chars": fm_description_chars(folder / "SKILL.md"),
+                        "loads": on, "builtin": builtin})
+    return out
+
+
+def synced_plugin_folders(acct: Path) -> set[str] | None:
+    """The folders the synced manifest calls current (<name>~g<generation>), or None with no manifest."""
+    data = read_json(acct / "manifest.json")
+    if not isinstance(data, dict) or not isinstance(data.get("plugins"), list):
+        return None
+    out = set()
+    for p in data["plugins"]:
+        if isinstance(p, dict) and p.get("name"):
+            out.add(f"{p['name']}~g{p['generation']}" if p.get("generation") else str(p["name"]))
     return out
 
 
@@ -178,8 +220,12 @@ def plugin_sources(home: Path, settings: dict, notes: list) -> list[dict]:
     for acct in sorted(root.iterdir()) if root.is_dir() else []:
         if not acct.is_dir() or acct.name.startswith("."):
             continue
+        current = synced_plugin_folders(acct)
         for plug in sorted(acct.iterdir()):
             if not plug.is_dir() or plug.name.startswith(".") or not (plug / "skills").is_dir():
+                continue
+            if current is not None and plug.name not in current:
+                notes.append(f"old synced plugin folder, not read ({plug.name})")
                 continue
             meta = read_json(plug / ".claude-plugin" / "plugin.json") or {}
             ns = meta.get("name") if isinstance(meta, dict) and meta.get("name") else plug.name.split("~")[0]
@@ -219,13 +265,22 @@ def classify(name: str, srcs: list[dict], off: dict, retired: set[str]) -> dict:
         kinds.append(1)
     if syn and not local and not plug and not any(s.get("builtin") for s in syn):
         kinds.append(2)
-    if plug and (local or len(plug) >= 2):
+    # One plugin both installed and synced keeps one label: the session lists it once.
+    same_plugin = (len(plug) >= 2 and len({s["label"] for s in plug}) == 1
+                   and {s["type"] for s in plug} == {"plugin", "synced-plugin"})
+    if plug and (local or (len(plug) >= 2 and not same_plugin)):
         kinds.append(3)
     if len(local) >= 2:
         kinds.append(4)
     hashes = {s["hash"] for s in live if s["hash"]}
     if len(live) >= 2 and len(hashes) > 1:
         kinds.append(5)
+    if same_plugin:
+        kinds.append(6)
+    machine = (any(f"-{p}-" in name for p in MACHINE_PACKS)
+               and any(s["type"] in ("synced", "synced-plugin") for s in srcs))
+    if machine:
+        kinds.append(7)
     key = f"{SYNC_NS}:{name}"
     handled_by = off.get(key, [])
     twin_off = bool(handled_by)
@@ -235,8 +290,10 @@ def classify(name: str, srcs: list[dict], off: dict, retired: set[str]) -> dict:
         fixes.append(f'skillOverrides "{key}": "off" in user settings (block below)')
         add_off = True
     if 3 in kinds:
-        ids = sorted({s.get("plugin") for s in plug if s.get("plugin")})
-        fixes.append("uninstall one copy: " + " | ".join(f"claude plugin uninstall {i}" for i in ids)
+        ids = sorted({s["plugin"] for s in plug if s.get("plugin") and s["type"] == "plugin"})
+        synced_ids = sorted({s["plugin"] for s in plug if s.get("plugin") and s["type"] == "synced-plugin"})
+        ways = [f"claude plugin uninstall {i}" for i in ids] + [f"remove {i} on claude.ai" for i in synced_ids]
+        fixes.append("uninstall one copy: " + " | ".join(ways)
                      + (" (or drop the local copy; owner's choice)" if local else ""))
     if 4 in kinds:
         fixes.append("personal scope wins over project: keep one copy (owner's call; "
@@ -257,13 +314,21 @@ def classify(name: str, srcs: list[dict], off: dict, retired: set[str]) -> dict:
             fixes.append("synced, no local copy: keep it if it is a claude.ai-only skill; "
                          "pass --retired NAME if it is retired")
     if 5 in kinds:
-        if any(s["type"] == "synced" for s in srcs):
+        if same_plugin:
+            fixes.append("the synced plugin differs from this install: update it on claude.ai (Cowork runs "
+                         "that copy); never uninstall here, that removes the working install")
+        elif any(s["type"] == "synced" for s in srcs):
             fixes.append("re-upload the current skill zip on claude.ai by hand (Customize > Skills); "
                          "never switch it off there, that removes it from Cowork too")
         else:
             fixes.append("copies differ: drift.py --pair LIVE TRACKED names the files")
         if status == "handled":
             status = "stale"
+    if machine:
+        fixes.append("drives this machine: on claude.ai mostly NOT-RUN while still costing its description; "
+                     "switch it off there only if no chat or Cowork task uses it (that removes it from both)")
+        if status == "handled":
+            status = "review"
     if not kinds:
         status = "single"
     return {"skill": name, "kinds": kinds, "status": status,
@@ -272,6 +337,21 @@ def classify(name: str, srcs: list[dict], off: dict, retired: set[str]) -> dict:
             "bodies": "n/a" if len([s for s in srcs if s["hash"]]) < 2
             else ("same" if len({s["hash"] for s in srcs if s["hash"]}) == 1 else "differ"),
             "handled": twin_off, "handled_by": handled_by, "fix": fixes, "_add_off": add_off}
+
+
+def listing_cost(srcs: list[dict], off: dict) -> dict:
+    """What the live skill descriptions cost each conversation, estimated at 4 characters a token."""
+    seen: set[str] = set()
+    by: dict[str, dict] = {}
+    for s in srcs:
+        if not s["loads"] or s["label"] in off or s["label"] in seen:
+            continue
+        seen.add(s["label"])
+        row = by.setdefault(s["type"], {"copies": 0, "tokens_est": 0})
+        row["copies"] += 1
+        row["tokens_est"] += s.get("chars", 0) // 4
+    return {"copies": sum(r["copies"] for r in by.values()),
+            "tokens_est": sum(r["tokens_est"] for r in by.values()), "by_source": by}
 
 
 def table(rows: list[dict]) -> str:
@@ -326,7 +406,8 @@ def main(argv=None) -> int:
         block = {"skillOverrides": dict(sorted(merged.items()))}
     counts = {k: sum(1 for r in rows if r["status"] == k) for k in ORDER}
     out = header("loads")
-    out.update({"counts": counts, "skills_seen": len(by), "rows": rows, "not_checked": notes,
+    listing = listing_cost(uniq, off)
+    out.update({"counts": counts, "skills_seen": len(by), "listing": listing, "rows": rows, "not_checked": notes,
                 "settings_block": block,
                 "settings_note": ("gatewarden never writes settings: the owner puts this complete "
                                   "skillOverrides block in user settings (~/.claude/settings.json); "
@@ -336,6 +417,8 @@ def main(argv=None) -> int:
         write_json(out, a.out)
     else:
         print(f"skills seen: {len(by)}; " + ", ".join(f"{k}: {v}" for k, v in counts.items()))
+        print(f"listing cost: {listing['copies']} skills, about {listing['tokens_est']} tokens of "
+              "descriptions in every conversation (estimate, 4 characters a token)")
         if rows:
             print(table(rows))
         if notes:
