@@ -1,13 +1,18 @@
-"""Tests for godot_check.py. No test starts Godot: every run goes through a fake runner.
+"""Tests for godot_check.py. Every run goes through a fake runner, except LiveParse, which parses
+real scripts with the real binary and skips where there is no Godot on PATH.
 
     python -m unittest discover -s scripts -p "test_*.py"
 """
 import io
 import json
 import os
+import shutil
 import sys
+import tempfile
 import unittest
-from contextlib import redirect_stdout
+import unittest.mock
+from contextlib import redirect_stderr, redirect_stdout
+from pathlib import Path
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -57,7 +62,7 @@ class FakeRun:
         self.answers = answers
         self.calls = []
 
-    def __call__(self, cmd, cwd=None):
+    def __call__(self, cmd, cwd=None, timeout=None):
         self.calls.append(cmd)
         key = "import" if "--import" in cmd else "lint" if "gdtoolkit.linter" in cmd else \
             "before" if cmd[:1] == ["make"] else "suite"
@@ -182,6 +187,13 @@ class Main(unittest.TestCase):
         self.assertEqual(rc, gc.NOT_RUN)
         self.assertIn("NOT-RUN", out)
 
+    def test_godot_starts_by_the_resolved_path(self):
+        run = FakeRun({"suite": (0, GREEN)})
+        out = io.StringIO()
+        with redirect_stdout(out):
+            gc.main(self.BASE, run=run, have_lint=lambda: False, which=lambda name: f"/shims/{name}.cmd")
+        self.assertEqual({c[0] for c in run.calls}, {"/shims/godot.cmd"})
+
     def test_repeat_prints_each_run(self):
         run = FakeRun({"suite": (0, GREEN)})
         rc, out = self.run_main(self.BASE + ["--repeat", "3"], run)
@@ -202,6 +214,285 @@ class Main(unittest.TestCase):
         rec = json.loads(out.strip().splitlines()[-1])
         self.assertEqual(rec["verdict"], "PASS")
         self.assertEqual(rec["runs"][0]["scripts"], 43)
+
+
+PARSE_ERROR = "SCRIPT ERROR: Parse Error: Expected parameter name.\n   at: GDScript::reload (x.gd:2)\n"
+
+
+class FakeParse:
+    """Answers a parse by the script's name; the two controls behave unless told otherwise."""
+
+    def __init__(self, answers=None, broken_control=(1, PARSE_ERROR), valid_control=(0, "")):
+        self.answers = answers or {}
+        self.broken_control, self.valid_control = broken_control, valid_control
+        self.calls = []
+
+    def __call__(self, cmd, cwd=None, timeout=None):
+        self.calls.append(cmd)
+        if "--import" in cmd:
+            return self.answers.get("import", (0, ""))
+        script = cmd[-1]
+        if script.endswith("control_broken.gd"):
+            return self.broken_control
+        if script.endswith("control_valid.gd"):
+            return self.valid_control
+        return self.answers.get(script, (0, ""))
+
+    def parsed(self):
+        return sorted(c[-1] for c in self.calls if "--check-only" in c and "control_" not in c[-1])
+
+
+class ParseAll(unittest.TestCase):
+    def setUp(self):
+        d = tempfile.TemporaryDirectory()
+        self.addCleanup(d.cleanup)
+        self.root = Path(d.name)
+
+    def tree(self, *paths):
+        for rel in paths:
+            f = self.root / rel
+            f.parent.mkdir(parents=True, exist_ok=True)
+            f.write_text("config_version=5\n" if rel.endswith("project.godot") else "extends RefCounted\n",
+                         encoding="utf-8")
+
+    def go(self, run, *argv, godot=True):
+        out = io.StringIO()
+        with redirect_stdout(out):
+            rc = gc.main(["--project", str(self.root), "--parse-all", *argv], run=run,
+                         have_lint=lambda: False, which=lambda name: name if godot else None)
+        return rc, out.getvalue()
+
+    def test_every_folder_is_parsed_not_only_the_linted_ones(self):
+        self.tree("project.godot", "src/a.gd", "tests/t.gd", "tools/helper.gd", "addons/x/p.gd", "a.gd")
+        run = FakeParse()
+        rc, out = self.go(run)
+        self.assertEqual(rc, 0, out)
+        self.assertEqual(run.parsed(), ["res://a.gd", "res://addons/x/p.gd", "res://src/a.gd",
+                                        "res://tests/t.gd", "res://tools/helper.gd"])
+        self.assertIn("5 found · 5 parsed · 0 failed · 0 excluded", out)
+        self.assertIn("PASS", out)
+
+    def test_parse_uses_check_only_headless(self):
+        self.tree("project.godot", "a.gd")
+        run = FakeParse()
+        self.go(run)
+        self.assertEqual(run.calls[-1], ["godot", "--headless", "--path", str(self.root.resolve()),
+                                         "--check-only", "-s", "res://a.gd"])
+
+    def test_a_broken_helper_outside_the_linted_folders_fails_by_name(self):
+        self.tree("project.godot", "src/a.gd", "tools/check_hud.gd")
+        rc, out = self.go(FakeParse({"res://tools/check_hud.gd": (1, PARSE_ERROR)}))
+        self.assertEqual(rc, 1)
+        self.assertIn("FAIL tools/check_hud.gd: SCRIPT ERROR: Parse Error", out)
+        self.assertIn("2 found · 1 parsed · 1 failed", out)
+
+    def test_a_marker_at_exit_zero_fails(self):
+        self.tree("project.godot", "a.gd")
+        rc, _ = self.go(FakeParse({"res://a.gd": (0, PARSE_ERROR)}))
+        self.assertEqual(rc, 1)
+
+    def test_a_crash_with_no_marker_fails(self):
+        self.tree("project.godot", "a.gd")
+        rc, out = self.go(FakeParse({"res://a.gd": (-11, "")}))
+        self.assertEqual(rc, 1)
+        self.assertIn("exit -11", out)
+
+    def test_a_control_that_parses_clean_is_not_run_and_no_file_is_parsed(self):
+        self.tree("project.godot", "a.gd")
+        run = FakeParse(broken_control=(0, ""))
+        rc, out = self.go(run)
+        self.assertEqual(rc, gc.NOT_RUN)
+        self.assertIn("control: NOT-RUN", out)
+        self.assertNotIn("PASS", out)
+        self.assertEqual(run.parsed(), [])
+
+    def test_a_control_rejected_with_no_marker_is_not_run(self):
+        self.tree("project.godot", "a.gd")
+        self.assertEqual(self.go(FakeParse(broken_control=(1, "")))[0], gc.NOT_RUN)
+
+    def test_a_valid_control_rejected_is_not_run(self):
+        self.tree("project.godot", "a.gd")
+        rc, out = self.go(FakeParse(valid_control=(1, PARSE_ERROR)))
+        self.assertEqual(rc, gc.NOT_RUN)
+        self.assertIn("valid script was rejected", out)
+
+    def test_the_control_files_land_outside_the_repo(self):
+        self.tree("project.godot", "a.gd")
+        run = FakeParse()
+        self.go(run)
+        controls = [c[-1] for c in run.calls if "control_" in c[-1]]
+        self.assertEqual(len(controls), 2)
+        for c in controls:
+            self.assertNotIn(self.root.resolve(), Path(c).resolve().parents)
+        self.assertEqual(sorted(p.name for p in self.root.iterdir()), ["a.gd", "project.godot"])
+
+    def test_nothing_to_parse_fails(self):
+        self.tree("project.godot")
+        rc, out = self.go(FakeParse())
+        self.assertEqual(rc, 1)
+        self.assertIn("nothing was parsed", out)
+
+    def test_a_missing_folder_fails_never_clean(self):
+        out = io.StringIO()
+        with redirect_stdout(out):
+            rc = gc.main(["--project", str(self.root / "gone"), "--parse-all"], run=FakeParse(),
+                         have_lint=lambda: False, which=lambda name: name)
+        self.assertEqual(rc, 1)
+        self.assertIn("folder could not be read", out.getvalue())
+
+    def test_an_unreadable_folder_is_named_and_fails(self):
+        self.tree("project.godot", "a.gd")
+        real = os.walk
+
+        def walk(root, **kw):
+            if "topdown" not in kw:  # the temp folder's own clean-up walks too
+                kw["onerror"](OSError(13, "denied", "locked/dir"))
+            return real(root, **kw)
+
+        with unittest.mock.patch.object(gc.os, "walk", walk):
+            rc, out = self.go(FakeParse())
+        self.assertEqual(rc, 1)
+        self.assertIn("FAIL locked/dir: folder could not be read", out)
+
+    def test_exclusion_is_printed_with_its_reason_and_not_parsed(self):
+        self.tree("project.godot", "a.gd", "fixtures/broken_on_purpose.gd")
+        run = FakeParse({"res://fixtures/broken_on_purpose.gd": (1, PARSE_ERROR)})
+        rc, out = self.go(run, "--exclude", "fixtures/broken_on_purpose.gd=a parser test's input")
+        self.assertEqual(rc, 0, out)
+        self.assertIn("excluded fixtures/broken_on_purpose.gd: a parser test's input", out)
+        self.assertEqual(run.parsed(), ["res://a.gd"])
+
+    def test_an_exclusion_that_matches_nothing_fails(self):
+        self.tree("project.godot", "a.gd")
+        rc, out = self.go(FakeParse(), "--exclude", "old/gone.gd=retired")
+        self.assertEqual(rc, 1)
+        self.assertIn("--exclude old/gone.gd: matches no file", out)
+
+    def test_excluding_every_file_proves_nothing(self):
+        self.tree("project.godot", "a.gd")
+        self.assertEqual(self.go(FakeParse(), "--exclude", "a.gd=why")[0], 1)
+
+    def test_a_file_in_no_project_fails(self):
+        self.tree("game/project.godot", "game/a.gd", "scripts/orphan.gd")
+        rc, out = self.go(FakeParse())
+        if (self.root.parent / "project.godot").exists():
+            self.skipTest("a project.godot sits above the temp folder")
+        self.assertEqual(rc, 1)
+        self.assertIn("FAIL scripts/orphan.gd: in no project", out)
+
+    def test_a_nested_project_is_imported_and_parsed_as_itself(self):
+        self.tree("project.godot", "a.gd", "demo/project.godot", "demo/b.gd")
+        run = FakeParse()
+        rc, _ = self.go(run)
+        self.assertEqual(rc, 0)
+        self.assertEqual(run.parsed(), ["res://a.gd", "res://b.gd"])
+        self.assertEqual(sum("--import" in c for c in run.calls), 2)
+
+    def test_hidden_folders_are_skipped(self):
+        self.tree("project.godot", "a.gd", ".godot/cache.gd", ".git/x.gd")
+        run = FakeParse()
+        self.go(run)
+        self.assertEqual(run.parsed(), ["res://a.gd"])
+
+    def test_a_failed_import_fails_but_every_file_is_still_named(self):
+        self.tree("project.godot", "a.gd")
+        run = FakeParse({"import": (1, "")})
+        rc, _ = self.go(run)
+        self.assertEqual(rc, 1)
+        self.assertEqual(run.parsed(), ["res://a.gd"])
+
+    def test_import_markers_do_not_stop_the_per_file_list(self):
+        self.tree("project.godot", "a.gd", "b.gd")
+        rc, out = self.go(FakeParse({"import": (0, PARSE_ERROR), "res://a.gd": (1, PARSE_ERROR)}))
+        self.assertEqual(rc, 1)
+        self.assertIn("FAIL a.gd", out)
+        self.assertIn("1 parsed", out)
+
+    def test_godot_absent_is_not_run(self):
+        self.tree("project.godot", "a.gd")
+        rc, out = self.go(FakeParse(), godot=False)
+        self.assertEqual(rc, gc.NOT_RUN)
+
+    def test_before_runs_first_and_a_failure_stops(self):
+        self.tree("project.godot", "a.gd")
+        run = FakeParse({"import": (0, "")})
+        calls = []
+
+        def spy(cmd, cwd=None, timeout=None):
+            calls.append(cmd[0])
+            return (1, "") if cmd[0] == "make" else run(cmd, cwd, timeout)
+
+        rc, _ = self.go(spy, "--before", "make gen")
+        self.assertEqual((rc, calls), (1, ["make"]))
+
+    def test_json_record(self):
+        self.tree("project.godot", "a.gd", "b.gd")
+        rc, out = self.go(FakeParse({"res://b.gd": (1, PARSE_ERROR)}), "--json")
+        rec = json.loads(out.strip().splitlines()[-1])
+        self.assertEqual((rec["verdict"], rec["parse"]["found"], rec["parse"]["parsed"]), ("FAIL", 2, 1))
+        self.assertEqual(rec["parse"]["failed"][0]["path"], "b.gd")
+
+    def test_usage(self):
+        for argv in (["--parse-all", "--gut", "x"], ["--parse-all", "--expect-tests", "1"],
+                     ["--parse-all", "--lint", "src"], ["--parse-all", "--import-only"],
+                     ["--parse-all", "--script", "x"], ["--parse-all", "--exclude", "nowhy"],
+                     ["--parse-all", "--jobs", "0"], ["--exclude", "a=b", "--import-only"]):
+            with self.subTest(argv=argv), self.assertRaises(SystemExit), redirect_stderr(io.StringIO()):
+                gc.parse_args(["--project", "game", *argv])
+
+
+class RunProcess(unittest.TestCase):
+    def test_timeout_is_a_failure_not_a_hang(self):
+        rc, out = gc.run_process([sys.executable, "-c", "import time; time.sleep(30)"], timeout=1)
+        self.assertEqual(rc, 124)
+        self.assertIn("timed out", out)
+
+
+@unittest.skipIf(shutil.which("godot") is None, "no Godot on PATH; the real parse cannot run")
+class LiveParse(unittest.TestCase):
+    """The real binary on a small project: the positive control, class_name lookups, no script run."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.dir = tempfile.TemporaryDirectory()
+        cls.root = Path(cls.dir.name)
+        for rel, body in {
+            "project.godot": "config_version=5\n[application]\nconfig/name=\"t\"\n",
+            "base.gd": "class_name LiveBase\nextends RefCounted\nfunc a() -> int:\n\treturn 1\n",
+            "src/child.gd": "extends LiveBase\nfunc b() -> int:\n\treturn a()\n",
+            "tools/runs.gd": "extends SceneTree\nfunc _init():\n\tprint(\"SCRIPT ERROR: ran\")\n\tquit(3)\n",
+            "tools/broken.gd": "extends RefCounted\nfunc x(:\n\tpass\n",
+            "tools/shadow.gd": "@tool\nextends EditorPlugin\nfunc _run_scene() -> void:\n\tpass\n",
+        }.items():
+            f = cls.root / rel
+            f.parent.mkdir(parents=True, exist_ok=True)
+            f.write_text(body, encoding="utf-8")
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.dir.cleanup()
+
+    def go(self, *argv):
+        out = io.StringIO()
+        with redirect_stdout(out):
+            rc = gc.main(["--project", str(self.root), "--parse-all", *argv])
+        return rc, out.getvalue()
+
+    def test_broken_and_shadowing_scripts_fail_and_the_rest_pass(self):
+        rc, out = self.go()
+        self.assertEqual(rc, 1, out)
+        self.assertIn("control: a broken script was rejected", out)
+        self.assertIn("5 found · 3 parsed · 2 failed", out)
+        self.assertIn("FAIL tools/broken.gd", out)
+        self.assertIn("FAIL tools/shadow.gd: SCRIPT ERROR: Parse Error: The function signature", out)
+        self.assertNotIn("FAIL tools/runs.gd", out)  # the parse did not run its _init
+        self.assertNotIn("FAIL src/child.gd", out)   # class_name resolved after the import
+
+    def test_excluding_the_broken_ones_passes(self):
+        rc, out = self.go("--exclude", "tools/broken.gd=input for a test",
+                          "--exclude", "tools/shadow.gd=input for a test")
+        self.assertEqual(rc, 0, out)
+        self.assertIn("5 found · 3 parsed · 0 failed · 2 excluded", out)
 
 
 if __name__ == "__main__":

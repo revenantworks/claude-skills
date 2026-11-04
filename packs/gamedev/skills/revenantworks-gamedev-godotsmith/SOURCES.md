@@ -91,6 +91,14 @@ they are not already standard advice.
 
 - [Agent Skills best practices](https://docs.claude.com/en/docs/agents-and-tools/agent-skills) — the description field as the routing surface, the body-size guidance, progressive disclosure into references, and the rule that untrusted content is treated as data rather than instructions. Read 2026-09-12.
 
+## Parsing every script (ci-guards.md section 6)
+
+`--check-only` ("Only parse for errors and quit (use with --script)") is from `godot --help` on Godot
+4.7.2. Run on that build, 2026-11-03: exit 1 and `SCRIPT ERROR: Parse Error` for a broken script, a
+helper shadowing a virtual and a script preloading a broken one; exit 0 with no `_init` or `_ready`
+run for a valid `SceneTree` or `Node` script; a script outside the project parsed by its absolute
+path. `LiveParse` in `scripts/test_godot_check.py` repeats it where Godot is on the path.
+
 ## Injection check
 
 Every fetched skill file was scanned for text addressing the reading agent rather than

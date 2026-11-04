@@ -2,7 +2,7 @@
 name: revenantworks-gamedev-godotsmith
 description: Proves a Godot 4.x build is actually green and holds its project conventions. Trigger when a GUT or GDScript result needs believing (a suite green while a script failed to parse, a one-file run that ran the whole suite, drifted CI guard counts, a coverage claim, a gate figure, a failing check someone wants softened); to review scenes, signals, awaits, threads, determinism, saves, imports or .uid files, or the upgrade rule (not the migration); to prove a simulation or balance rule; for import settings and the pixel-art render precondition; or say /rw-godotsmith (check, guard, gate, review, intake). API reference is the Godot docs'; art reads pixelsmith's; audio direction soundsmith's.
 license: Apache-2.0
-compatibility: Ships one declared stdlib script, scripts/godot_check.py (import, lint, GUT in order; three numbers; run, not read). Where a shell exists it runs that script, the project's own commands, or an adopted runner (godot-skill run_tests.py, godot-mcp) whose JSON is still a summary line. With no shell every check reads committed logs and config and says NOT-RUN. Godot 4.x with GUT is the worked case. No packages, no network.
+compatibility: Ships one declared stdlib script, scripts/godot_check.py (import, lint, GUT in order; three numbers; --parse-all parses every .gd; run, not read). Where a shell exists it runs that script, the project's own commands, or an adopted runner (godot-skill run_tests.py, godot-mcp) whose JSON is still a summary line. With no shell every check reads committed logs and config and says NOT-RUN. Godot 4.x with GUT is the worked case. No packages, no network.
 metadata:
   version: "1.0.0"
   profile: standard
@@ -47,7 +47,7 @@ The ten laws below live in the body. Open a reference only as listed, never the 
   and asset intake (section 8): import settings and the render precondition
 - `references/design-and-balance.md` — a simulation or balance rule's claims, arms and fallbacks
 - `references/pack.md` — boundary doubt about a sibling's territory
-- `scripts/godot_check.py` — run, not read: Check steps 1 and 3 in one command
+- `scripts/godot_check.py` — run, not read: Check steps 1, 3; `--parse-all` (`ci-guards.md`)
 
 Optional mods: `references/mods.md`, only when their data is present.
 
@@ -126,7 +126,7 @@ function" — a claim like that is true the day it is written and unchecked fore
    **every source change**. Headless tooling cannot see an unimported file and reports a
    false "not found", and the import is the only tool that reports a parse or type-inference
    error: lint passes it and the suite drops the script silently. `project-hygiene.md` §1.
-   `scripts/godot_check.py` runs steps 1 and 3 in this order.
+   `scripts/godot_check.py` runs steps 1 and 3.
 2. **Population.** List every path that executes the code: the test tree, every CI job's own
    script, any tooling harness. A coverage claim with no stated population is not a claim.
 3. **Instrument.** Run the suite; record script count, test count and failure count **as

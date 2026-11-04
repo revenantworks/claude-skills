@@ -10,6 +10,7 @@ shapes are runner-agnostic, the commands are not.
 3. The honest-red pattern
 4. Guard smells
 5. What "green" means
+6. Every script parses
 
 ---
 
@@ -164,6 +165,8 @@ Never soften the bar itself. A survival floor lowered until the check passes is 
 - **A short-run mode a gate tool inherits** (observation 0553). A switch that makes a check
   cheaper by checking less is refused by every tool that gives a gate verdict, not cleared by the
   one tool that sets it. `test-tiers.md` section 7.
+- **A lint or parse step with a folder list.** A helper script outside the list can stay broken
+  across many commits, each unit calling the error older than its own change. Section 6.
 
 ## 5. What "green" means
 
@@ -212,3 +215,56 @@ The consequences:
   `is_process_running` raises for a pid that is not the caller's child. A change touching any of
   them runs its tests on every platform the CI file runs (the local Linux container where one
   exists) before it lands; a Windows-only green is a one-platform verdict.
+
+---
+
+## 6. Every script parses
+
+A lint step covers the folders it names, and a suite drops a script it cannot parse, so a helper
+outside both can stay broken with every check green. Parse every `.gd` file the repo holds:
+
+```
+python scripts/godot_check.py --project <repo root> --parse-all [--exclude "<path>=<reason>"]...
+```
+
+- **What it runs.** The headless import of each project that holds a script, then
+  `godot --headless --path <project> --check-only -s res://<file>`, per file. `--check-only` loads
+  the script and runs none of it: no `_init`, no `_ready`. Godot's own parser sees what a lint cannot,
+  such as a private helper whose name matches a virtual of the engine class it extends (a signature
+  mismatch, and the whole script fails to load). A failure is a nonzero exit or an error marker.
+- **The positive control.** Before any file, Godot must reject a broken script and accept a valid
+  one, both made in a temp folder. Otherwise the run is NOT-RUN (exit 3): a check that cannot see a
+  parse error proves nothing. No control file lands in the repo. The import writes only `.godot/`.
+- **What fails the run, beyond a file that does not parse.** A folder it cannot read, a file with no
+  `project.godot` at or above it, an exclusion that matches no file, a failed import, and finding
+  nothing to parse. None of these reads as clean. An error marker in the import alone does not fail
+  it: the per-file list says which script, and the Check entry judges the rest of the import.
+- **What it reads.** Everything under `--project` but hidden folders (`.git`, `.godot`, tool
+  folders), so `addons/` and a `.gdignore` folder are parsed too. A linked folder is printed, not
+  followed. A file meant to be broken, such as a parser test's input, needs `--exclude` with its
+  reason, which the report prints.
+- **Cost.** About 0.25 s a file on the build machine: 301 files took 78 s serial, 25 s at `--jobs 4`
+  (the default ceiling) and 16 s at `--jobs 8` (Godot 4.7.2, 2026-11-03). Run it on a schedule or on
+  merge if that is more than the push can bear; do not narrow the folders.
+
+Where the repo does not carry the script, the same shape in a workflow step:
+
+```yaml
+      - name: Every script parses
+        run: |
+          godot --headless --import > /dev/null 2>&1 || true
+          # The positive control: if this parses clean, the step proves nothing.
+          control="$(mktemp -d)/control.gd"
+          printf 'extends RefCounted\nfunc x(:\n\tpass\n' > "$control"
+          if godot --headless --check-only -s "$control" > /dev/null 2>&1; then
+            echo "::error::a broken control script parsed clean"; exit 1
+          fi
+          fail=0
+          while IFS= read -r f; do
+            if ! godot --headless --check-only -s "res://${f#./}" > parse.log 2>&1 ||
+               grep -qE 'SCRIPT ERROR|Parse Error|Failed to load' parse.log; then
+              echo "::error file=$f::does not parse"; cat parse.log; fail=1
+            fi
+          done < <(find . -name '*.gd' -not -path './.*')
+          exit "$fail"
+```

@@ -4,6 +4,8 @@
     python scripts/godot_check.py --project <dir> [--import-only] [--before "<cmd>"]
         [--lint <paths>...] [--gut "<gut args>" | --script <res path>]
         --expect-scripts N --expect-tests M [--repeat K] [--json] [--godot <exe>]
+    python scripts/godot_check.py --project <repo root> --parse-all
+        [--exclude "<path>=<reason>"]... [--before "<cmd>"] [--jobs N] [--json] [--godot <exe>]
 
 Order is the Check entry's: an optional --before command, the headless import (Check step 1),
 then gdtoolkit's linter when it is installed (else the lint step prints NOT-RUN, never a pass),
@@ -13,8 +15,17 @@ fails the run even under "All tests passed". The suite prints scripts, tests and
 three numbers against the expected totals with the slack (L1, L3). --repeat K runs the suite K
 times and prints each run's numbers.
 
+--parse-all answers one other question: does every .gd file under --project parse, not only the
+folders CI lints? It finds the files itself (hidden folders aside), imports each project that
+holds one, and has Godot parse each file with --check-only, which loads the script and runs none
+of it. A positive control comes first: a broken script made in a temp folder must be rejected and a
+valid one accepted, or the run is NOT-RUN, since a check that cannot see a parse error proves
+nothing. A file that cannot be parsed, a folder that cannot be read, a file in no project and an
+exclusion that matches no file all fail the run, and so does finding nothing to parse.
+
 Exit: 0 every number matched and no marker fired; 1 a mismatch, a marker, a failure or a
-nonzero step; 2 a usage error; 3 NOT-RUN (no Godot binary found). Stdlib only; run, not read.
+nonzero step; 2 a usage error; 3 NOT-RUN (no Godot binary, or a control that did not behave).
+Stdlib only; run, not read.
 Godot starts headless with no window. The repo's own CI runner stays the verdict where it has
 one; this script is the shell-side Check, and it may be called by that runner.
 """
@@ -29,9 +40,15 @@ import shlex
 import shutil
 import subprocess
 import sys
+import tempfile
+from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 from typing import Callable
 
 NOT_RUN = 3
+PARSE_TIMEOUT = 120  # seconds per file; a parse takes well under one
+CONTROL_BROKEN = "extends RefCounted\nfunc broken(:\n\tpass\n"
+CONTROL_VALID = "extends RefCounted\n"
 GUT_RUNNER = "addons/gut/gut_cmdln.gd"
 MARKER = re.compile(r"SCRIPT ERROR|Parse Error|Failed to load", re.I)
 LINE = {
@@ -107,12 +124,144 @@ def lint_cmd(paths: list[str]) -> list[str]:
     return [sys.executable, "-m", "gdtoolkit.linter"] + paths
 
 
-def run_process(cmd: list[str], cwd: str | None = None) -> tuple[int, str]:
+def parse_cmd(godot: str, project: str, script: str) -> list[str]:
+    return [godot, "--headless", "--path", project, "--check-only", "-s", script]
+
+
+def run_process(cmd: list[str], cwd: str | None = None, timeout: int | None = None) -> tuple[int, str]:
     """The only live call: run with no window, output captured."""
     kw = {"creationflags": subprocess.CREATE_NO_WINDOW} if os.name == "nt" else {}
-    p = subprocess.run(cmd, cwd=cwd, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
-                       stderr=subprocess.STDOUT, **kw)
+    try:
+        p = subprocess.run(cmd, cwd=cwd, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+                           stderr=subprocess.STDOUT, timeout=timeout, **kw)
+    except subprocess.TimeoutExpired:
+        return 124, f"timed out after {timeout} s\n"
     return p.returncode, p.stdout.decode("utf-8", "replace")
+
+
+def find_scripts(root: str) -> tuple[list[Path], list[str], list[str]]:
+    """(every .gd under root, folders that could not be read, linked folders not followed)."""
+    files: list[Path] = []
+    unread: list[str] = []
+    linked: list[str] = []
+    for here, dirs, names in os.walk(root, onerror=lambda e: unread.append(str(e.filename))):
+        keep = []
+        for d in sorted(dirs):
+            if d.startswith("."):  # .git, .godot and tool folders hold no project script
+                continue
+            if os.path.islink(os.path.join(here, d)):
+                linked.append(os.path.join(here, d))
+                continue
+            keep.append(d)
+        dirs[:] = keep
+        files += [Path(here) / n for n in sorted(names) if n.endswith(".gd")]
+    return files, unread, linked
+
+
+def owning_project(script: Path) -> Path | None:
+    """The nearest folder at or above the script holding project.godot."""
+    return next((d for d in script.parents if (d / "project.godot").is_file()), None)
+
+
+def parse_excludes(items: list[str]) -> dict[str, str]:
+    """{posix path relative to --project: reason}. A reason is required, so an exclusion explains itself."""
+    out = {}
+    for item in items:
+        path, _, reason = item.partition("=")
+        if not path.strip() or not reason.strip():
+            raise ValueError(f"--exclude {item!r} needs the form <path>=<reason>")
+        out[Path(path.strip()).as_posix()] = reason.strip()
+    return out
+
+
+def parse_verdict(rc: int, out: str) -> list[str]:
+    """Why a parse did not pass; empty when it did."""
+    marks = find_markers(out)
+    return marks or ([f"exit {rc}"] if rc != 0 else [])
+
+
+def control_problem(run: Callable, godot: str, project: Path) -> str | None:
+    """None when Godot rejects a broken script and accepts a valid one in this project."""
+    def parse(body: str, name: str, folder: str) -> tuple[int, str]:
+        path = Path(folder) / name
+        path.write_text(body, encoding="utf-8")
+        return run(parse_cmd(godot, str(project), path.as_posix()), cwd=None, timeout=PARSE_TIMEOUT)
+
+    with tempfile.TemporaryDirectory(prefix="godot-check-control-") as folder:
+        rc, out = parse(CONTROL_BROKEN, "control_broken.gd", folder)
+        if rc == 0 or not find_markers(out):
+            return f"a deliberately broken script was not rejected (exit {rc}, no error marker)"
+        rc, out = parse(CONTROL_VALID, "control_valid.gd", folder)
+        why = parse_verdict(rc, out)
+        if why:
+            return f"a valid script was rejected: {why[0]}"
+    return None
+
+
+def parse_all(a: argparse.Namespace, run: Callable, rec: dict) -> tuple[str, int]:
+    """Parse every .gd under --project. Returns (verdict, exit code); prints as it goes."""
+    root = Path(a.project)
+    files, unread, linked = find_scripts(a.project)
+    excludes = parse_excludes(a.exclude)
+    excluded, stale, targets, homeless = [], dict(excludes), [], []
+    for f in files:
+        rel = f.relative_to(root).as_posix()
+        if rel in excludes:
+            excluded.append(rel)
+            stale.pop(rel)
+            continue
+        project = owning_project(f.resolve())
+        if project is None:
+            homeless.append(rel)
+        else:
+            targets.append((rel, project, f.resolve().relative_to(project).as_posix()))
+    projects = sorted({t[1] for t in targets}, key=str)
+    import_failed = []
+    for project in projects:
+        rc, out = run(import_cmd(a.godot, str(project)), cwd=None)
+        marks = find_markers(out)
+        print(f"import {project.name}: exit {rc}" + (f", {len(marks)} marker(s), per file below" if marks else ""))
+        if rc != 0:
+            import_failed.append(project.name)
+    if projects:
+        problem = control_problem(run, a.godot, projects[0])
+        if problem:
+            print(f"control: NOT-RUN ({problem}); this check cannot see a parse error here")
+            rec["parse"] = {"control": problem}
+            return "NOT-RUN", NOT_RUN
+        print("control: a broken script was rejected and a valid one accepted")
+
+    def one(target: tuple) -> tuple[str, list[str]]:
+        rel, project, res = target
+        rc, out = run(parse_cmd(a.godot, str(project), "res://" + res), cwd=None, timeout=PARSE_TIMEOUT)
+        return rel, parse_verdict(rc, out)
+
+    with ThreadPoolExecutor(max_workers=a.jobs) as pool:
+        results = list(pool.map(one, targets))
+    failed = [(rel, why) for rel, why in results if why]
+    print(f"parse: {len(files)} found · {len(results) - len(failed)} parsed · {len(failed)} failed · "
+          f"{len(excluded)} excluded")
+    for rel, why in failed:
+        print(f"  FAIL {rel}: {why[0]}")
+    for rel in excluded:
+        print(f"  excluded {rel}: {excludes[rel]}")
+    for rel in homeless:
+        print(f"  FAIL {rel}: in no project (no project.godot at or above it), so not parsed")
+    for path in stale:
+        print(f"  FAIL --exclude {path}: matches no file")
+    for path in unread:
+        print(f"  FAIL {path}: folder could not be read")
+    for path in linked:
+        print(f"  note {path}: linked folder not followed")
+    rec["parse"] = {"found": len(files), "parsed": len(results) - len(failed),
+                    "failed": [{"path": rel, "errors": why[:3]} for rel, why in failed],
+                    "excluded": {rel: excludes[rel] for rel in excluded}, "no_project": homeless,
+                    "stale_excludes": list(stale), "unread": unread, "linked": linked,
+                    "import_failed": import_failed}
+    if not results and not failed:
+        print("parse: nothing was parsed, so nothing is proved")
+    ok = results and not (failed or homeless or stale or unread or import_failed)
+    return ("PASS", 0) if ok else ("FAIL", 1)
 
 
 def gdtoolkit_present() -> bool:
@@ -133,7 +282,28 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     ap.add_argument("--expect-tests", type=int)
     ap.add_argument("--repeat", type=int, default=1)
     ap.add_argument("--json", action="store_true", help="also print one JSON record last")
+    ap.add_argument("--parse-all", action="store_true",
+                    help="parse every .gd under --project (pass the repo root); needs no totals")
+    ap.add_argument("--exclude", action="append", default=[], metavar="PATH=REASON",
+                    help="with --parse-all: leave one file out, path relative to --project, reason printed")
+    ap.add_argument("--jobs", type=int, default=min(4, os.cpu_count() or 1),
+                    help="with --parse-all: files parsed side by side (default min(4, cpu count))")
     a = ap.parse_args(argv)
+    if a.parse_all:
+        mixed = [flag for flag, on in (("--import-only", a.import_only), ("--lint", a.lint), ("--gut", a.gut),
+                                       ("--script", a.script), ("--expect-scripts", a.expect_scripts is not None),
+                                       ("--expect-tests", a.expect_tests is not None)) if on]
+        if mixed:
+            ap.error(f"--parse-all runs alone; drop {', '.join(mixed)}")
+        if a.jobs < 1:
+            ap.error("--jobs must be 1 or more")
+        try:
+            parse_excludes(a.exclude)
+        except ValueError as err:
+            ap.error(str(err))
+        return a
+    if a.exclude:
+        ap.error("--exclude needs --parse-all")
     if not a.import_only and (a.expect_scripts is None or a.expect_tests is None):
         ap.error("--expect-scripts and --expect-tests are required (state the totals before the run)")
     if a.repeat < 1:
@@ -169,6 +339,9 @@ def main(argv: list[str] | None = None, run: Callable = run_process,
     if not godot:
         print(f"godot: NOT-RUN ({a.godot} not found on PATH); nothing was measured")
         return finish("NOT-RUN", NOT_RUN)
+    a.godot = godot  # the resolved path: Windows cannot start a .cmd shim from its bare name
+    if a.parse_all:
+        return finish(*parse_all(a, run, rec))
     if not step("import", import_cmd(a.godot, a.project)):
         return finish("FAIL", 1)
     if a.import_only:
