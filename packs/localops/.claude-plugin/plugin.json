@@ -1,7 +1,7 @@
 {
   "name": "localops",
   "displayName": "Revenantworks Localops",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "revenantworks-localops — skills for running work on this machine, on the -runner motif, one program per runner. Seven members: lmstudiorunner, comfyrunner, dockerrunner, duckrunner, whisperrunner, hypervrunner and obsrunner. A runner may drive a declared helper tool or package, named in its description and README and installed by the user.",
   "author": {
     "name": "Revenantworks"

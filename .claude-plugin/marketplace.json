@@ -11,7 +11,7 @@
       "displayName": "Revenantworks Foundation",
       "source": "./packs/foundation",
       "description": "Nine standalone wrights: skillwright (skills & packs, their eval suites, slims and trigger diagnosis), promptwright (prompts & model tiers), grillwright (the interview before any build), agentwright (agent systems), rigwright (standing Claude config), dispatchwright (fan-out dispatch), handoffwright (committed session handoffs), pacewright (usage pacing), scoutwright (Claude platform change watch). Each routes on its own description and works alone.",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "license": "Apache-2.0",
       "category": "productivity",
       "keywords": [
@@ -49,7 +49,7 @@
       "displayName": "Revenantworks Localops",
       "source": "./packs/localops",
       "description": "Skills for running work on this machine, one program per runner. Seven members: lmstudiorunner (local LM Studio models, verified), comfyrunner (ComfyUI renders behind GPU guards), dockerrunner (Docker Desktop and WSL), duckrunner (DuckDB over a repo's data files), whisperrunner (local transcripts with whisper.cpp), hypervrunner (Hyper-V VMs and Windows Sandbox), obsrunner (OBS Studio, read-only by default, and FFmpeg post-processing). Each routes on its own description and works alone.",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "license": "Apache-2.0",
       "category": "productivity",
       "keywords": [
@@ -74,7 +74,7 @@
       "displayName": "Revenantworks Scribe",
       "source": "./packs/scribe",
       "description": "Skills on the -scribe motif for words and knowledge. Four members: researchscribe (graded research verdicts, playbooks and reports), brandscribe (brand definitions, design systems and voice files), commscribe (messages and docs shaped to their channel, with a fact check), lorescribe (a fiction project's story bible and canon checks). Each routes on its own description and works alone.",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "license": "Apache-2.0",
       "category": "productivity",
       "keywords": [
@@ -93,7 +93,7 @@
       "displayName": "Revenantworks Warden",
       "source": "./packs/warden",
       "description": "Skills that guard what Claude writes or manages. Four members: shieldwarden (leak and injection scans, naming and identity policy, names that advertise secrets, gated history rewrites that never push), trustwarden (pre-install vets of third-party code), keywarden (credential lifecycle, fingerprints only), gatewarden (runtime permission policy, owner-installed hooks, a settings map, and disk space and Claude's reach from evidence). Each routes on its own description and works alone.",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "license": "Apache-2.0",
       "category": "productivity",
       "keywords": [

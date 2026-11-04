@@ -5,6 +5,78 @@ Every pack, every member and every featured plugin launches at 1.0.0. Each membe
 `<pack>-vX.Y.Z`, member versions move on their own semver, and a featured plugin carries its
 member's version.
 
+## [warden-v1.1.0] - 2026-11-04
+
+### Improved
+
+- **gatewarden**: Clamp the budget file's stop band in launch_throttle.
+- **gatewarden**: Keep the 95 stop when a budget band is NaN.
+- **gatewarden**: Document the clean-worktree push route.
+- **gatewarden**: Draw the treemap page in the Neutral palette.
+- **packs**: Name the /rw- command in every skill description.
+- **gatewarden**: Read zero counts as passes and stamp repos with no CI.
+- **gatewarden**: Fire on delete-the-biggest requests and hand over -Confirm.
+- **keywarden**: Run the pre-flight even when the shape is obvious.
+- **shieldwarden**: Name who can open each signpost hit in the script's words.
+- **gatewarden**: Put the map must-says in the entry table.
+- **warden**: Widen two more shell eval graders that failed correct runs.
+- **gatewarden**: Refuse a script the gate cannot read that names push.
+- **warden**: Widen the treemap eval's local-file grader.
+- **gatewarden**: Flag wrong-surface skills and listing cost in loads.
+- **gatewarden**: Check loads against the listing budget and live copies.
+- **gatewarden**: Rewrite dead denies in harden, name the colon-star shape.
+
+### Fixed
+
+- **warden**: Stop three shell eval graders failing correct runs.
+- **trustwarden**: Stop flagging curl piped to json.tool.
+
+## [scribe-v1.0.1] - 2026-11-04
+
+### Improved
+
+- **brandscribe**: Scan for injected lines as its own ui step.
+- **brandscribe**: Ordinary control labels are not injected lines.
+- **packs**: Name the /rw- command in every skill description.
+
+## [localops-v1.0.1] - 2026-11-04
+
+### New
+
+- **obsrunner**: Add a playtest mode for recorded play sessions.
+
+### Improved
+
+- **whisperrunner**: Default run to the configured VAD model.
+- **packs**: Name the /rw- command in every skill description.
+
+## [foundation-v1.1.0] - 2026-11-04
+
+### New
+
+- **vigil**: Add the board, suggestion cards and spend-mode switches.
+
+### Improved
+
+- **pacewright**: Make the budget writer refuse a no-cap turbo file.
+- **dispatchwright**: Gate turbo launches on the rig, cap writers at six.
+- **pacewright**: Replace turbo's no-cap rule with the rig-aware turbo.
+- **dispatchwright**: Write the rig-gate, stuck and brief-file rules.
+- **dispatchwright**: Fit the rig gate in its budget and count what runs.
+- **dispatchwright**: Keep the ledger guard inside its hook timeout.
+- **pacewright**: Clear a kept ceiling when the writer enters turbo.
+- **dispatchwright**: Isolate the hook controls and drop the no-cap line.
+- **pacewright**: State the rig-aware turbo in the profile, eval and gate.
+- **dispatchwright**: Slim the body to its row and fix the stuck rule.
+- **dispatchwright**: Bind any unit id shape to its own ledger row.
+- **dispatchwright**: Count the leaf engines in the rig gate.
+- **dispatchwright**: Bind launches by ledger row id and refuse dup ids.
+- **dispatchwright**: Say one land is one suite slot in the brief template.
+- **dispatchwright**: Count stuck checks per row and add four brief rules.
+- Gamedev, dispatchwright: fold in a game's test-speed lessons.
+- Gamedev, dispatchwright: apply the fresh review of the test-speed fold.
+- **packs**: Name the /rw- command in every skill description.
+
 ## [gamedev-v1.1.0] - 2026-11-04
 
 ### New
