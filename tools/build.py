@@ -86,6 +86,9 @@ PACKS = ROOT / "packs"
 DIST = ROOT / "dist"
 REGISTRY = PACKS / "foundation" / "skills" / "revenantworks-foundation-skillwright" / "references" / "pack-registry.md"
 MARKETPLACE = ROOT / ".claude-plugin" / "marketplace.json"
+# claude.ai refuses a plugin whose description is longer than this ("Plugin description must be at most
+# 500 characters", read on an upload 2026-11-04).
+PLUGIN_DESC_MAX = 500
 # SPDX id written when a plugin or marketplace entry names no licence (owner 2026-10-02: Apache-2.0).
 DEFAULT_LICENSE = "Apache-2.0"
 FEATURED = ROOT / "featured"  # one-skill plugins generated from the registry's **featured:** line
@@ -2135,6 +2138,11 @@ def check_marketplace(packs: dict[str, str]) -> None:
                     if pj_ver != cat_ver:
                         fail(f"'{pack}': plugin.json version {pj_ver!r} != marketplace entry {cat_ver!r} "
                              f"(use --bump-pack to write both in one stroke)")
+                    for where, text in (("plugin.json", pj_data.get("description", "")),
+                                        ("marketplace.json", entries[pack].get("description", ""))):
+                        if len(text) > PLUGIN_DESC_MAX:
+                            fail(f"'{pack}': {where} description {len(text)} chars > {PLUGIN_DESC_MAX} "
+                                 f"(claude.ai refuses the plugin)")
     for name, entry in entries.items():
         if str(entry.get("source", "")).startswith(("./featured/", "./mods/")):
             continue  # a featured one-skill plugin (sync_featured) or a mod-only plugin (check_mods)
