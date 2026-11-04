@@ -80,8 +80,9 @@ For each width and theme, after the page settles (load, network quiet for a URL,
 | Clipped text | a box with text anywhere inside it (its own or a child's, such as a cell's `<span>`) whose content is wider or taller than the box while its overflow is hidden or clipped | text is cut by 1 px sideways or 2 px vertically (a 1 px line-height overhang is not); an ellipsis or a `line-clamp` is reported separately as truncated, a note rather than a finding |
 | Page errors | every uncaught exception, from before the page loads to the end of the row | any one, however well the page fits |
 | Console errors | every `console.error`, and what the browser logs at that level (a failed request, a blocked script) | any one; warnings and logs are not |
-| Empty sections | each rendered `main`, `section`, `article`, open `details`, `role=main`, `role=region` or `role=tabpanel`, plus each `--section SELECTOR` | it holds no visible text and no visible image, `svg`, `canvas`, video, audio, frame or form control, and has no background image of its own |
+| Empty sections | each rendered `main`, `section`, `article`, open `details`, `role=main`, `role=region` or `role=tabpanel`, plus each `--section SELECTOR` | it, and everything inside it, draws nothing: no visible text; no visible image, `svg`, `canvas`, video, audio, frame or form control; no background colour or image; no visible border; no `::before` or `::after` content |
 | Named sections | each `--section SELECTOR` | it matches nothing rendered or in a fold, or is not a valid selector |
+| Console errors' source | the URL the browser gives with each console error | appended to the error text, so a failed request says which one |
 | Screenshot | full-page PNG | always written, named `<width>-<theme>.png`, and `<width>-<theme>-open.png` for the folds-open state |
 
 Each finding row names the element by a short selector, the pixels past the edge, and the
@@ -91,11 +92,20 @@ screenshot that shows it. A section's selector carries its first heading.
 the page fits and every width passes while most of it is empty. That is why page errors and empty
 sections are findings beside the fit checks. A heading, a `legend`, a `caption`, a table head and a
 fold's own `summary` are labels, not content: a section holding only those counts as empty. Visually
-hidden text (section 4's shapes) does not count either. Only the outermost empty section is named. A
-section with height 0 and hidden overflow is empty whatever it holds.
+hidden text (section 4's shapes) does not count either. Only the outermost empty section is named. The
+walk follows what the browser draws: through `display: contents`, open shadow roots and slots. A
+section with height 0 and hidden overflow is empty whatever it holds, unless it is a collapsed panel:
+an `aria-expanded="false"` control's `aria-controls` names it or an ancestor with no box. A section
+that is `hidden`, `inert` or `aria-hidden`, or sits inside one, is not checked. Text in a box of no
+height or width is not reported as clipped, since nothing of it shows.
 
 The default list finds semantic sections only. A page built from plain `div`s gets nothing from it,
-and the report says when no section was found: name that page's regions with `--section`.
+and the report says when no section was found, with the verdict `PASS (empty sections not checked)`:
+name that page's regions with `--section`.
+
+**Settling.** Before each state is measured, and after each round of opening folds, the probe waits
+for fonts, two frames, then 300 ms with no change to the page's content (at most 2 s), so a section a
+script fills straight after load or after a fold opens is measured filled.
 
 **Two states, when the page has folds.** A fit check measures only the state it renders, and a
 layout pass that folds wide content away reads as a fix. So a page with any closed `details` is
@@ -145,8 +155,13 @@ folds; `folds_open` also counts toward the row's `status`.
 - **Errors are seen until the row ends.** One thrown later (a timer, a late response on a local file,
   where the probe does not wait for the network) is not seen.
 - **An empty section can be on purpose.** A results panel waiting for a search reads as empty; hide
-  it until it fills (`hidden`), or name it in the report as intended, never as clean. A section drawn
-  only by CSS generated content reads as empty too.
+  it until it fills (`hidden`), or name it in the report as intended, never as clean.
+- **A drawn box can be empty.** Anything the CSS draws counts as content, so a card with a background
+  or border and nothing but a heading does not read as empty, and neither does a skeleton placeholder.
+  That shape is caught only if the script logged or threw an error. Look at the screenshot.
+- **Unseen content.** A closed shadow root reads as empty, and a section inside any shadow root is not
+  in the default list. A section filled after the wait above reads as empty: name it in the report as
+  intended, or make it fill sooner.
 - **A canvas is opaque.** A game exported to the web draws into a canvas; element checks say
   nothing about it. Game UI is checked from screenshots per resolution (`surfaces.md`).
 - **No sign-in, no forms.** A page behind a login is probed only at a URL the user has already made

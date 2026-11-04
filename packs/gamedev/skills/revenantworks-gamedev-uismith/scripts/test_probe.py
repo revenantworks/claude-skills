@@ -277,7 +277,7 @@ class FakeBrowserRun(unittest.TestCase):
                     if kind == "page":
                         self.handlers["pageerror"](SimpleNamespace(message=text))
                     else:
-                        self.handlers["console"](SimpleNamespace(type=kind, text=text))
+                        self.handlers["console"](SimpleNamespace(type=kind, text=text, location={}))
 
             def goto(self, url, **kw):
                 calls["gotos"] += 1
@@ -485,6 +485,11 @@ class FakeBrowserRun(unittest.TestCase):
         code, text = self._run(["--widths", "375"], api)
         self.assertEqual(code, 0)
         self.assertIn("not ruled out", text)
+        self.assertIn("Verdict: PASS (empty sections not checked).", text)
+
+    def test_a_page_with_sections_says_a_plain_pass(self):
+        api, _ = self._api("", lambda w, s: measure(width=w))
+        self.assertIn("Verdict: PASS. ", self._run(["--widths", "375"], api)[1])
 
     def test_no_folds_measures_once(self):
         api, calls = self._api("", lambda w, s: measure(width=w))
@@ -677,7 +682,8 @@ class RealBrowser(unittest.TestCase):
 
     def test_console_error_fails_console_log_does_not(self):
         code, row = self._probe(CLEAN + "<script>console.error('bad thing')</script>")
-        self.assertEqual((code, row["result"]["console_errors"]), (1, ["bad thing"]))
+        self.assertEqual((code, len(row["result"]["console_errors"])), (1, 1))
+        self.assertTrue(row["result"]["console_errors"][0].startswith("bad thing"))
         self.assertEqual(self._probe(CLEAN + "<script>console.log('ok');console.warn('w')</script>")[0], 0)
 
     def test_sections_a_crash_leaves_blank_are_named(self):
@@ -711,11 +717,65 @@ class RealBrowser(unittest.TestCase):
             "aria-hidden": "<section aria-hidden=true style='height:4px'></section><p>x</p>",
             "absolute child": "<section style='position:relative'><p style='position:absolute'>x</p></section>",
             "only a closed fold": "<section><details><summary>More</summary>Body</details></section>",
+            "display contents": "<section><div style='display:contents'>Text here</div></section>",
+            "contents root": "<p>x</p><section style='display:contents'><span style='display:contents'>Text</span></section>",
+            "CSS bar": "<section><div style='height:8px;background:#07c'></div></section>",
+            "painted root": "<section style='height:8px;background:#07c'></section>",
+            "bordered box": "<section><div style='height:8px;border:1px solid #333'></div></section>",
+            "bordered root": "<section style='height:8px;border:1px solid #333'></section>",
+            "pseudo icon": "<style>.i::before{content:'*'}</style><section><span class=i></span></section>",
+            "pseudo root": "<style>.i::before{content:'*'}</style><section class=i></section>",
+            "shadow DOM": "<section><x-a></x-a></section><script>customElements.define('x-a',class extends "
+                          "HTMLElement{constructor(){super();this.attachShadow({mode:'open'}).innerHTML="
+                          "'<p>Inside</p>'}})</script>",
+            "slotted": "<section><x-b>Given</x-b></section><script>customElements.define('x-b',class extends "
+                       "HTMLElement{constructor(){super();this.attachShadow({mode:'open'}).innerHTML="
+                       "'<div><slot></slot></div>'}})</script>",
+            "slot fallback": "<section><x-c></x-c></section><script>customElements.define('x-c',class extends "
+                             "HTMLElement{constructor(){super();this.attachShadow({mode:'open'}).innerHTML="
+                             "'<slot>Fallback</slot>'}})</script>",
+            "filled just after load": "<section id=s></section><script>setTimeout(()=>{s.textContent='Late'},"
+                                      "200)</script>",
+            "fold filled after opening": "<p>x</p><details id=f><summary>S</summary><div id=b></div></details>"
+                                         "<script>f.addEventListener('toggle',()=>{setTimeout(()=>{"
+                                         "b.textContent='Late'},300)})</script>",
+            "collapsed accordion": "<button aria-expanded=false aria-controls=p>Open</button>"
+                                   "<section id=p style='max-height:0;overflow:hidden'><p>Body</p></section>",
+            "empty collapsed accordion": "<button aria-expanded=false aria-controls=p>Open</button>"
+                                         "<section id=p style='max-height:0;overflow:hidden'></section>",
+            "hidden by CSS override": "<p>x</p><section hidden style='display:block;height:4px'></section>",
+            "inert": "<p>x</p><section inert style='height:4px'></section>",
         }
         for name, body in cases.items():
             with self.subTest(name):
-                _, row = self._probe("<!doctype html><title>t</title>" + body)
+                code, row = self._probe("<!doctype html><title>t</title>" + body)
                 self.assertEqual(row["result"]["empty_sections"], [])
+                opened = row.get("folds_open")
+                self.assertEqual(opened["result"]["empty_sections"] if opened else [], [])
+                self.assertEqual(code, 0, row)
+
+    def test_a_filled_look_is_not_faked_by_transparent_css(self):
+        cases = {
+            "transparent background": "<section id=a style='height:8px;background:transparent'></section>",
+            "transparent border": "<section id=a style='height:8px;border:1px solid transparent'></section>",
+            "empty pseudo": "<style>#a::before{content:''}</style><section id=a></section>",
+            "nothing slotted": "<section id=a><x-d></x-d></section><script>customElements.define('x-d',class "
+                               "extends HTMLElement{constructor(){super();this.attachShadow({mode:'open'})"
+                               ".innerHTML='<slot></slot>'}})</script>",
+        }
+        for name, body in cases.items():
+            with self.subTest(name):
+                _, row = self._probe("<!doctype html><title>t</title><p>x</p>" + body)
+                self.assertEqual(row["result"]["empty_sections"], ["section#a"])
+
+    def test_a_console_error_names_the_url_that_failed(self):
+        _, row = self._probe(CLEAN + "<img alt=x src='no-such-file.png'>")
+        self.assertIn("no-such-file.png", row["result"]["console_errors"][0])
+
+    def test_a_panel_nobody_says_is_collapsed_stays_empty(self):
+        _, row = self._probe("<!doctype html><title>t</title><button aria-expanded=true aria-controls=p>x</button>"
+                             "<section id=p style='max-height:0;overflow:hidden'><p>Body</p></section>")
+        self.assertEqual(row["result"]["empty_sections"], ["section#p"])
 
     def test_crushed_section_with_text_is_empty(self):
         _, row = self._probe("<!doctype html><title>t</title><p>x</p>"

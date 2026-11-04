@@ -89,9 +89,21 @@ JS_LOOK = """() => {
   return parts.join('|');
 }"""
 
+# Fonts, two frames, then DOM quiet: a section a script fills just after load or after a fold opens
+# is measured filled. 300 ms without a content change ends the wait, 2 s caps a page that never stops.
 JS_SETTLE = """() => new Promise(resolve => {
-  const done = () => requestAnimationFrame(() => requestAnimationFrame(() => resolve(true)));
-  if (document.fonts && document.fonts.ready) document.fonts.ready.then(done); else done();
+  const QUIET_MS = 300, CAP_MS = 2000;
+  const quiet = () => {
+    let timer = null, cap = null, observer = null;
+    const finish = () => { observer.disconnect(); clearTimeout(timer); clearTimeout(cap); resolve(true); };
+    observer = new MutationObserver(() => { clearTimeout(timer); timer = setTimeout(finish, QUIET_MS); });
+    observer.observe(document.documentElement, {childList: true, subtree: true, characterData: true,
+      attributes: true, attributeFilter: ['hidden', 'open']});
+    timer = setTimeout(finish, QUIET_MS);
+    cap = setTimeout(finish, CAP_MS);
+  };
+  const frames = () => requestAnimationFrame(() => requestAnimationFrame(quiet));
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(frames); else frames();
 })"""
 
 # Raw numbers only; the judgement is judge() in Python, so it is testable without a browser.
@@ -141,7 +153,8 @@ JS_MEASURE = """(maxElements) => {
     // Text anywhere inside the box counts: a clipping cell's text usually sits in a child span.
     const hasText = !!(el.textContent && el.textContent.trim());
     const edge = !parked && (r.right > out.clientWidth || r.left < 0);
-    const cut = hasText && (clips(cs.overflowX) || clips(cs.overflowY)) &&
+    // A box of no height or width shows nothing at all, so no text in it reads as cut.
+    const cut = hasText && r.width > 0 && r.height > 0 && (clips(cs.overflowX) || clips(cs.overflowY)) &&
       (el.scrollWidth > el.clientWidth || el.scrollHeight > el.clientHeight);
     if (!edge && !cut) continue;
     if (out.elements.length >= maxElements) continue;
@@ -158,8 +171,10 @@ JS_MEASURE = """(maxElements) => {
 }"""
 
 # Which section-like elements are visibly empty. A heading, a table head or a fold's own summary is
-# a label, not content: a script that crashed leaves exactly those behind. Raw names only; judge()
-# decides. A named selector that matches nothing rendered is reported as missing.
+# a label, not content: a script that crashed leaves exactly those behind. Anything the CSS draws (a
+# background, a border, generated content) counts, and the walk follows the flat tree, through open
+# shadow roots and slots. Raw names only; judge() decides. A named selector that matches nothing
+# rendered is reported as missing.
 JS_SECTIONS = """(named) => {
   const DEFAULT = 'main,section,article,[role="main"],[role="region"],[role="tabpanel"],details';
   const MEDIA = /^(IMG|SVG|CANVAS|VIDEO|AUDIO|IFRAME|OBJECT|EMBED|INPUT|SELECT|TEXTAREA|BUTTON|METER|PROGRESS)$/;
@@ -183,15 +198,50 @@ JS_SECTIONS = """(named) => {
     /inset\\(\\s*50%/.test(cs.clipPath || '');
   const folded = el => !!(el.parentElement && el.parentElement.closest('details:not([open])'));
   const rendered = el => el.checkVisibility({visibilityProperty: true}) && !folded(el) &&
-    !el.closest('[aria-hidden="true"],[inert]');
+    !el.closest('[aria-hidden="true"],[inert],[hidden]');
+  // A collapsed accordion panel: no box, and a control in the page says it is collapsed.
+  const collapsed = el => {
+    for (let n = el; n; n = n.parentElement) {
+      if (n.id && !area(n.getBoundingClientRect()) &&
+          document.querySelector('[aria-expanded="false"][aria-controls~="' + CSS.escape(n.id) + '"]')) return true;
+    }
+    return false;
+  };
+  const clear = c => !c || c === 'transparent' || /^rgba\\(.*,\\s*0\\)$/.test(c);
+  const bordered = cs => ['Top', 'Right', 'Bottom', 'Left'].some(side => {
+    const style = cs['border' + side + 'Style'];
+    return parseFloat(cs['border' + side + 'Width']) > 0 && style !== 'none' && style !== 'hidden' &&
+      !clear(cs['border' + side + 'Color']);
+  });
+  const generated = el => ['::before', '::after'].some(which => {
+    const ps = getComputedStyle(el, which);
+    return ps.display !== 'none' && !['', 'none', 'normal', '""', "''"].includes(ps.content);
+  });
+  const drawn = (el, cs, box) => generated(el) ||
+    (area(box) && (cs.backgroundImage !== 'none' || !clear(cs.backgroundColor) || bordered(cs)));
+  // display: contents has no box of its own, and neither does a slot: the nearest ancestor's counts.
+  const boxOf = el => {
+    let n = el;
+    while (n && getComputedStyle(n).display === 'contents') n = n.parentElement || n.getRootNode().host;
+    return n || el;
+  };
+  const kids = el => {
+    if (el.shadowRoot) return el.shadowRoot.childNodes;
+    if (tag(el) === 'SLOT') {
+      const given = el.assignedNodes({flatten: true});
+      if (given.length) return given;
+    }
+    return el.childNodes;
+  };
   const holds = (el, root) => {
-    for (const node of el.childNodes) {
+    for (const node of kids(el)) {
       if (node.nodeType === 3) {
         if (!node.textContent.trim()) continue;
         const range = document.createRange();
         range.selectNodeContents(node);
         const r = range.getBoundingClientRect();
-        if (area(r) && !clippedAway(getComputedStyle(el), el.getBoundingClientRect())) return true;
+        const box = boxOf(el);
+        if (area(r) && !clippedAway(getComputedStyle(box), box.getBoundingClientRect())) return true;
         continue;
       }
       if (node.nodeType !== 1) continue;
@@ -200,7 +250,7 @@ JS_SECTIONS = """(named) => {
       if (cs.display === 'none' || cs.visibility === 'hidden' || cs.visibility === 'collapse') continue;
       if (LABEL.test(name) || (name === 'SUMMARY' && el === root)) continue;
       const r = node.getBoundingClientRect();
-      if (area(r) && (MEDIA.test(name) || cs.backgroundImage !== 'none')) return true;
+      if ((area(r) && MEDIA.test(name)) || drawn(node, cs, r)) return true;
       if (name === 'DETAILS' && !node.open) {
         const s = node.querySelector(':scope > summary');
         if (s && holds(s, root)) return true;
@@ -221,14 +271,13 @@ JS_SECTIONS = """(named) => {
   const ordered = [...roots].sort((a, b) => a.compareDocumentPosition(b) & 4 ? -1 : 1);
   const emptied = [];
   for (const el of ordered) {
-    if (!rendered(el) || el.matches('details:not([open])')) continue;
+    if (!rendered(el) || el.matches('details:not([open])') || collapsed(el)) continue;
     out.checked++;
     if (emptied.some(p => p.contains(el))) continue;  // the outermost empty section is the finding
     const cs = getComputedStyle(el);
     const box = el.getBoundingClientRect();
     const crushed = cs.display !== 'contents' && !area(box) && (clips(cs.overflowX) || clips(cs.overflowY));
-    const painted = area(box) && cs.backgroundImage !== 'none';
-    if (crushed || !(painted || holds(el, el))) { emptied.push(el); out.empty.push(sel(el)); }
+    if (crushed || !(drawn(el, cs, box) || holds(el, el))) { emptied.push(el); out.empty.push(sel(el)); }
   }
   return out;
 }"""
@@ -445,6 +494,8 @@ def format_report(target: str, note: str, out_dir: Path, rows: list[dict]) -> st
         lines += ["Sections: none found to check, so an empty region was not ruled out. "
                   "Name the page's own with --section.", ""]
     verdict = {EXIT_PASS: "PASS", EXIT_FINDING: "FINDINGS or NOT-RUN rows"}[exit_code(rows)]
+    if exit_code(rows) == EXIT_PASS and not any(r["result"]["sections_checked"] for r in ran):
+        verdict = "PASS (empty sections not checked)"
     lines.append(f"Verdict: {verdict}. Interaction states (open menus, inactive tabs, errors after submit) "
                  "are not probed.")
     return "\n".join(lines)
@@ -485,7 +536,8 @@ def _watch_errors(page) -> dict:
 
     def on_console(msg):
         if msg.type == "error" and len(seen["console"]) < MAX_ERRORS:
-            seen["console"].append(_one_line(msg.text))
+            url = (getattr(msg, "location", None) or {}).get("url")  # says which request failed
+            seen["console"].append(_one_line(msg.text) + (f" ({_one_line(url)})" if url else ""))
 
     def on_page_error(err):
         if len(seen["page"]) < MAX_ERRORS:
