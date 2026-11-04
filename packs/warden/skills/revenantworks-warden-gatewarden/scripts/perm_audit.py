@@ -96,6 +96,11 @@ def audit(files: list[dict], platform: str, ask_rule: bool) -> tuple[list, list,
                     out.append(finding(f, "dead-tool-rule", "medium", ptr, r,
                                        f"path rules for {tool} are accepted but never consulted; "
                                        f"write it as {DEAD_TOOLS[tool]}({spec})"))
+                if tool == "Bash" and spec and spec.find(":*") not in (-1, len(spec) - 2):
+                    out.append(finding(f, "colon-star-literal", "low", ptr, r,
+                                       "`:*` is a prefix only at the very end; here the colon is literal and Claude "
+                                       "Code warns at startup. Keep it if you meant a literal colon: moving `:*` to "
+                                       "the end changes what it matches"))
                 field = pc.PRIMARY_FIELD.get(tool)
                 if field and spec and spec.startswith(field + ":"):
                     out.append(finding(f, "param-primary-ignored", "high", ptr, r,
@@ -219,6 +224,16 @@ def harden(args, platform) -> int:
                 deny.append(twin)
                 have.add((spec or "").lower())
                 notes.append(f"added {twin}")
+    for r in list(deny):                     # a dead deny stops nothing; a dead allow stays, a rewrite would widen it
+        tool, spec = pc.parse_rule(r)
+        if tool in DEAD_TOOLS and spec:
+            twin = f"{DEAD_TOOLS[tool]}({spec})"
+            deny.remove(r)
+            if twin not in deny:
+                deny.append(twin)
+                notes.append(f"dead rule {r} -> {twin}")
+            else:
+                notes.append(f"dead rule {r} removed; {twin} already there")
     if perms.get("ask") and pc.is_tracked(path) and not args.no_ask_rule:
         for r in perms.pop("ask"):
             if r not in deny:

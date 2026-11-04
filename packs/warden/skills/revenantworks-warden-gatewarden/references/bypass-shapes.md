@@ -16,7 +16,8 @@ Rule table · Explain shapes · What harden changes · What audit does not claim
 | `ps-mirror-missing` | high | Windows, a `Bash(…)` deny with no `PowerShell(…)` twin | harden adds the twin (Windows default) |
 | `abs-path-escape` | medium | any command-prefix Bash deny | name the escapes; pair with a PreToolUse hook (the push gate is one) |
 | `read-deny-shell-gap` | medium | a `Read` deny with no sandbox | accept and say so, or add a hook; sandbox is not native on Windows |
-| `dead-tool-rule` | medium | a path rule on Write, NotebookEdit, Glob or MultiEdit | rewrite as `Edit(…)` or `Read(…)` |
+| `dead-tool-rule` | medium | a path rule on Write, NotebookEdit, Glob or MultiEdit | rewrite as `Edit(…)` or `Read(…)`; `harden` does this for a deny, and leaves an allow, where the rewrite would widen a grant. Check for a twin first: with one the dead rule loses nothing, without one the path is open |
+| `colon-star-literal` | low | a Bash rule with `:*` before its end, such as `Bash(*$*_KEY:**)` | Claude Code warns at startup that the colon is literal. Right if a literal colon was meant, so leave it: moving `:*` to the end makes it a prefix and changes what matches |
 | `param-primary-ignored` | high | `Tool(param:value)` on the tool's primary field | write the plain form, e.g. `Bash(rm *)` |
 | `allow-under-deny` | low | an allow a deny already covers | delete the allow, or narrow the deny |
 | `blanket-allow` | high | bare `Bash`/`PowerShell` or `(*)` in allow | replace with named commands |

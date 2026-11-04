@@ -125,6 +125,28 @@ class AuditTests(Base):
         _, out, _ = self.audit(p)
         self.assertIn("dead-tool-rule", self.rule_ids(out))
 
+    def test_colon_star_mid_bash_rule_is_named_and_left_alone(self):
+        for rule in ("Bash(*$*_KEY:**)", "Bash(git:* push)"):
+            p = self.settings({"permissions": {"deny": [rule]}})
+            _, out, _ = self.audit(p)
+            self.assertIn("colon-star-literal", self.rule_ids(out))
+        for rule in ("Bash(git push:*)", "Bash(git push *)", "PowerShell(*env:*_TOKEN*)"):
+            p = self.settings({"permissions": {"deny": [rule]}})
+            _, out, _ = self.audit(p)
+            self.assertNotIn("colon-star-literal", self.rule_ids(out))
+
+    def test_harden_rewrites_a_dead_deny_and_keeps_an_existing_twin_once(self):
+        p = self.settings({"permissions": {
+            "deny": ["Write(./a/**)", "Write(./b/**)", "Edit(./b/**)", "Glob(./c/**)", "Write"],
+            "allow": ["Write(./keep/**)"]}})
+        code, out, _ = run("perm_audit.py", "harden", "--platform", "other", "--settings", str(p))
+        self.assertEqual(code, 0)
+        data = json.loads(p.with_name("settings.hardened.json").read_text())
+        deny = data["permissions"]["deny"]
+        self.assertEqual(sorted(deny), sorted(["Edit(./a/**)", "Edit(./b/**)", "Read(./c/**)", "Write"]))
+        self.assertEqual(data["permissions"]["allow"], ["Write(./keep/**)"])   # never widen a grant
+        self.assertIn("dead rule", out)
+
     def test_bare_tool_name_rule_is_not_dead(self):
         p = self.settings({"permissions": {"deny": ["Write"]}})
         _, out, _ = self.audit(p)
