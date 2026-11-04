@@ -387,14 +387,14 @@ class LoadsTests(Base):
         """An installed plugin and its claude.ai-synced copy, plus an old-generation folder."""
         home = self.tmp / "surface"
         inst = home / "plugins" / "cache" / "mk" / "pack" / "1.0.0"
-        (inst / "skills" / name).mkdir(parents=True)
+        (inst / "skills" / name).mkdir(parents=True, exist_ok=True)
         (inst / "skills" / name / "SKILL.md").write_text(
             f"---\nname: {name}\ndescription: {'d' * 400}\n---\n{install_body}\n", encoding="utf-8")
         (home / "plugins" / "installed_plugins.json").write_text(json.dumps({"version": 2, "plugins": {
             "pack@mk": [{"scope": "user", "installPath": str(inst), "version": "1.0.0"}]}}), encoding="utf-8")
         acct = home / "plugins" / "synced" / "acct"
         for folder, body in (("pack~g2", synced_body), ("pack", "old generation")):
-            (acct / folder / "skills" / name).mkdir(parents=True)
+            (acct / folder / "skills" / name).mkdir(parents=True, exist_ok=True)
             (acct / folder / "skills" / name / "SKILL.md").write_text(
                 f"---\nname: {name}\ndescription: {'d' * 400}\n---\n{body}\n", encoding="utf-8")
         (acct / "manifest.json").write_text(json.dumps(
@@ -457,7 +457,7 @@ class LoadsTests(Base):
     def test_listing_cost_counts_one_label_once_and_skips_what_is_off(self):
         _, d = self.loads_json(self.surface_home("wright", "new", "old"))
         self.assertEqual(d["listing"]["copies"], 1)                      # one label, one listing entry
-        self.assertEqual(d["listing"]["tokens_est"], 100)                # 400 description chars / 4
+        self.assertEqual(d["listing"]["tokens_est"], 135)                # (400 description + 6 name) / 3
         home = self.tmp / "offhome"
         for name in ("kept", "hidden"):
             folder = home / "skills" / "synced" / "acct" / name
@@ -471,7 +471,67 @@ class LoadsTests(Base):
             {"skillOverrides": {"anthropic-skills:hidden": "off"}}), encoding="utf-8")
         _, d = self.loads_json(home)
         self.assertEqual(d["listing"]["copies"], 1)
-        self.assertEqual(d["listing"]["tokens_est"], 40)                 # folded lines join with one space
+        self.assertEqual(d["listing"]["tokens_est"], 54)                 # 160 folded chars + 4 name, / 3
+
+    def in_place_home(self, checkout_body, cache_body, synced_body):
+        """A local-path marketplace: the checkout loads in place and installPath holds an old cache."""
+        home = self.surface_home("wright", cache_body, synced_body)
+        market = self.tmp / "market"
+        (market / ".claude-plugin").mkdir(parents=True, exist_ok=True)
+        (market / ".claude-plugin" / "marketplace.json").write_text(json.dumps(
+            {"plugins": [{"name": "pack", "source": "./packs/pack"}]}), encoding="utf-8")
+        skill = market / "packs" / "pack" / "skills" / "wright"
+        skill.mkdir(parents=True, exist_ok=True)
+        (skill / "SKILL.md").write_text(
+            f"---\nname: wright\ndescription: {'d' * 400}\n---\n{checkout_body}\n", encoding="utf-8")
+        (home / "plugins" / "known_marketplaces.json").write_text(json.dumps({"mk": {
+            "source": {"source": "directory", "path": str(market)}, "installLocation": str(market)}}),
+            encoding="utf-8")
+        return home
+
+    def test_local_path_marketplace_compares_the_checkout_not_the_old_cache(self):
+        code, d = self.loads_json(self.in_place_home("new", "old cache", "new"))
+        self.assertEqual(d["rows"][0]["kinds"], [6])
+        self.assertEqual(d["rows"][0]["status"], "handled")
+        self.assertEqual(code, 0)
+        code, d = self.loads_json(self.in_place_home("new", "new", "behind"))
+        self.assertEqual(d["rows"][0]["status"], "stale")
+
+    def test_synced_plugin_set_false_does_not_load(self):
+        home = self.surface_home("wright", "new", "old")
+        (home / "settings.json").write_text(json.dumps({"enabledPlugins": {"pack@synced": False}}), encoding="utf-8")
+        code, d = self.loads_json(home)
+        self.assertEqual(d["rows"], [])                                  # one live copy left
+        self.assertEqual(code, 0)
+
+    def listing_home(self, name, frontmatter, settings):
+        home = self.tmp / f"listing-{name}"
+        (home / "skills" / name).mkdir(parents=True)
+        (home / "skills" / name / "SKILL.md").write_text(
+            f"---\nname: {name}\n{frontmatter}---\nx\n", encoding="utf-8")
+        (home / "settings.json").write_text(json.dumps(settings), encoding="utf-8")
+        return home
+
+    def test_listing_counts_when_to_use_and_flags_the_per_skill_cap(self):
+        fm = f"description: {'d' * 1000}\nwhen_to_use: {'w' * 600}\n"
+        _, d = self.loads_json(self.listing_home("capped", fm, {}))
+        self.assertEqual(d["listing"]["over_cap"], ["capped"])           # 1,600 combined, past 1,536
+        self.assertEqual(d["listing"]["tokens_est"], (1536 + 6) // 3)    # the listing shows at most the cap
+
+    def test_listing_respects_name_only_and_manual_only_skills(self):
+        fm = f"description: {'d' * 300}\n"
+        _, d = self.loads_json(self.listing_home("quiet", fm, {"skillOverrides": {"quiet": "name-only"}}))
+        self.assertEqual(d["listing"]["tokens_est"], 5 // 3)
+        _, d = self.loads_json(self.listing_home("manual", fm + "disable-model-invocation: true\n", {}))
+        self.assertEqual(d["listing"]["copies"], 0)                      # not in context at all
+
+    def test_listing_compares_against_the_budget(self):
+        fm = f"description: {'d' * 900}\n"
+        home = self.listing_home("big", fm, {"skillListingBudgetFraction": 0.001})
+        _, d = self.loads_json(home)
+        self.assertEqual(d["listing"]["budget_fraction"], 0.001)
+        self.assertEqual(d["listing"]["budget_tokens"], {"200k": 200, "1m": 1000})
+        self.assertEqual(d["listing"]["over_budget"], ["200k"])
 
     def test_table_and_missing_sources(self):
         home = self.tmp / "bare"

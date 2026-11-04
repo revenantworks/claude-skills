@@ -54,24 +54,29 @@ Claude API, or in any compatible agent.
 ```
 
 > [!IMPORTANT]
-> **Load each skill once, and only where you use it.** Every enabled skill puts its description
-> (about 300 tokens) in front of Claude in every conversation, and a skill loaded twice can answer
-> from an older copy.
+> **Load each skill once, and only where you use it.** Every enabled skill lists its name and
+> description in front of Claude on every turn (about 300 tokens each for these skills). That listing
+> gets 1% of the context window. Past that, your least-used skills lose their descriptions and rarely
+> trigger by themselves. A skill loaded twice can also answer from an older copy.
 > - **Never install a featured skill and its own pack.** trustwarden is already inside the warden
 >   pack; installing both loads it twice under one name.
 > - **Claude Code: install the packs you work with.** Builds, scans, local programs and repo work run
 >   here, where scripts have a shell and your files.
-> - **claude.ai and Cowork: only the skills you use in chat** (the foundation pack is a good start).
->   warden and localops drive your own machine, so there they mostly report NOT-RUN while still
+> - **claude.ai and Cowork: only the skills you use there** (the foundation pack is a good start).
+>   warden and localops drive your own machine, so in chat they mostly report NOT-RUN while still
 >   costing their description.
-> - **Switch off what you are not using** (claude.ai: Customize → Skills). A switched-off skill costs
->   nothing.
+> - **Switch off what you are not using.** `/skill-doctor` shows each skill's cost and last use. On
+>   claude.ai use Customize, which also removes the skill from Cowork. In Claude Code use `/skills`;
+>   plugin skills switch off by whole plugin in `/plugin`. A switched-off skill costs nothing.
+> - **Still short of room?** Set a skill you only call by name to `"name-only"` in `skillOverrides`, or
+>   raise `skillListingBudgetFraction`, which spends more context on every turn.
 > - **Hide synced twins in Claude Code.** A skill uploaded to claude.ai also appears in Claude Code as
 >   `anthropic-skills:<name>`. Turn it off with `"skillOverrides": {"anthropic-skills:<name>": "off"}`
->   in `~/.claude/settings.json`, so only your installed copy loads.
+>   in `~/.claude/settings.json`, so only your installed copy loads. A plugin synced from claude.ai
+>   needs no entry: your installed plugin of the same name wins.
 >
 > To check all of this on your machine, ask for `gatewarden loads` (warden pack). It reports double
-> loads, wrong-surface skills and the listing cost, and never changes a setting.
+> loads, wrong-surface skills and the listing against its budget, and never changes a setting.
 
 | Packs (Option A) | Featured skills (Option B), and the pack that already holds them |
 |---|---|
