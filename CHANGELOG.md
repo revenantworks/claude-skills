@@ -5,6 +5,43 @@ Every pack, every member and every featured plugin launches at 1.0.0. Each membe
 `<pack>-vX.Y.Z`, member versions move on their own semver, and a featured plugin carries its
 member's version.
 
+## [gamedev-v1.1.0] - 2026-11-04
+
+### New
+
+- **slicesmith**: Add stacked pin round; run touched scripts, full suite once.
+- **godotsmith**: Add shared user:// trap and pushed-head stamp rule.
+- **godotsmith**: Add godot_check.py for import, lint and GUT in order.
+- **gamedev**: Add the opt-in gdscript-lsp plugin with a format hook.
+- **godotsmith**: Add the play-log convention and the polygon lesson.
+- **gamedev**: Add the godot-mcp plugin, a security-first Godot MCP server.
+- **slicesmith**: Add deviation classes, debug file, stub check.
+- **godotsmith**: Add --parse-all to parse every .gd file in a repo.
+
+### Improved
+
+- **godotsmith**: Pin-round controls, -gconfig=, summary parser, perf window.
+- **pixelsmith**: Flatten onto grey ground and count opaque pixels.
+- **gamedev**: Name the gdscript-lsp plugin in the pack README.
+- **gdscript-lsp**: Install by --plugin-dir until the registry lists it.
+- **uismith**: Carry the probe's pixel figure in a break row.
+- **godotsmith**: Route a one-file run that ran the whole suite.
+- **pixelsmith**: Keep remedies out of the contrast table.
+- **slicesmith**: Refuse test-later plainly; name the skill in C3.
+- **uismith**: Give a cause-proof overflow fix; split the judge.
+- **slicesmith**: Take a playtest evidence row as a fix's reproduction.
+- **godotsmith**: Prove OS-touching changes on every CI platform first.
+- Gamedev, dispatchwright: fold in a game's test-speed lessons.
+- **packs**: Name the /rw- command in every skill description.
+- **uismith**: Fail the probe on page errors, empty sections, hidden overflow.
+- **godotsmith**: Harden --parse-all after a fresh review.
+- **uismith**: A report names a bare request, counts sections read with folds open, and states the crushed-box limit.
+
+### Fixed
+
+- **godot-mcp**: Harden the server after a security review.
+- **uismith**: Stop the probe calling good pages empty.
+
 ## [Unreleased]
 
 - **New pack: hearth** (`-tender` motif, standard profile), for personal and household life
