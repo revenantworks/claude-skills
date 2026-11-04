@@ -156,6 +156,8 @@ folds; `folds_open` also counts toward the row's `status`.
   where the probe does not wait for the network) is not seen.
 - **An empty section can be on purpose.** A results panel waiting for a search reads as empty; hide
   it until it fills (`hidden`), or name it in the report as intended, never as clean.
+- **A crushed box is not called clipped.** Text in a box with no height or width reports nothing, so an
+  overflow-hidden block crushed to zero height passes here. Look at the screenshot.
 - **A drawn box can be empty.** Anything the CSS draws counts as content, so a card with a background
   or border and nothing but a heading does not read as empty, and neither does a skeleton placeholder.
   That shape is caught only if the script logged or threw an error. Look at the screenshot.

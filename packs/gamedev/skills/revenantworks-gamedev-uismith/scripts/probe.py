@@ -472,6 +472,20 @@ def _state_cells(state: str, j: dict, screenshot: str) -> str:
             f"{sections} | {errors} | {'FINDING' if j['finding'] else 'PASS'} | {screenshot} |")
 
 
+def bare_url(url):
+    """A report names the request, never its query, its fragment or a local folder."""
+    if not url:
+        return url
+    url = url.split("?")[0].split("#")[0]
+    return url.rsplit("/", 1)[-1] if url.startswith("file:") else url
+
+
+def _sections_checked(row):
+    """Sections read in either state: a page whose only sections sit in closed folds still counts."""
+    opened = (row.get("folds_open") or {}).get("result") or {}
+    return row["result"]["sections_checked"] or opened.get("sections_checked")
+
+
 def format_report(target: str, note: str, out_dir: Path, rows: list[dict]) -> str:
     lines = [f"uismith probe: {target}", f"Themes: {note}", f"Screenshots: {out_dir}", ""]
     for theme in dict.fromkeys(r["theme"] for r in rows):
@@ -490,11 +504,11 @@ def format_report(target: str, note: str, out_dir: Path, rows: list[dict]) -> st
                 lines.append(f"| {r['width']} | " + _state_cells(state, opened["result"], opened["screenshot"]))
         lines.append("")
     ran = [r for r in rows if r["status"] != "not-run"]
-    if ran and not any(r["result"]["sections_checked"] for r in ran):
+    if ran and not any(_sections_checked(r) for r in ran):
         lines += ["Sections: none found to check, so an empty region was not ruled out. "
                   "Name the page's own with --section.", ""]
     verdict = {EXIT_PASS: "PASS", EXIT_FINDING: "FINDINGS or NOT-RUN rows"}[exit_code(rows)]
-    if exit_code(rows) == EXIT_PASS and not any(r["result"]["sections_checked"] for r in ran):
+    if exit_code(rows) == EXIT_PASS and not any(_sections_checked(r) for r in ran):
         verdict = "PASS (empty sections not checked)"
     lines.append(f"Verdict: {verdict}. Interaction states (open menus, inactive tabs, errors after submit) "
                  "are not probed.")
@@ -536,7 +550,7 @@ def _watch_errors(page) -> dict:
 
     def on_console(msg):
         if msg.type == "error" and len(seen["console"]) < MAX_ERRORS:
-            url = (getattr(msg, "location", None) or {}).get("url")  # says which request failed
+            url = bare_url((getattr(msg, "location", None) or {}).get("url"))  # says which request failed
             seen["console"].append(_one_line(msg.text) + (f" ({_one_line(url)})" if url else ""))
 
     def on_page_error(err):

@@ -835,5 +835,17 @@ class RealBrowser(unittest.TestCase):
         self.assertEqual((code, row["status"]), (0, "pass"))
 
 
+class ReportWording(unittest.TestCase):
+    def test_a_url_loses_its_query_and_a_local_folder(self):
+        self.assertEqual("https://a.test/x.png", probe.bare_url("https://a.test/x.png?token=abc#top"))
+        self.assertEqual("page.html", probe.bare_url("file:///site/page.html"))
+        self.assertIsNone(probe.bare_url(None))
+
+    def test_sections_read_only_with_folds_open_still_count(self):
+        row = {"result": {"sections_checked": 0}, "folds_open": {"result": {"sections_checked": 1}}}
+        self.assertTrue(probe._sections_checked(row))
+        self.assertFalse(probe._sections_checked({"result": {"sections_checked": 0}}))
+
+
 if __name__ == "__main__":
     unittest.main()
