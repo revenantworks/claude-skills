@@ -2,6 +2,8 @@
 
 ## [1.0.0] — 2026-10-13
 
+2026-11-03: the probe fails a page on a console error or an uncaught page error, and on a visibly empty section (`main`, `section`, `article`, an open `details`, the matching ARIA roles, plus `--section SELECTOR`, which also fails when it matches nothing). A page with closed `details` is measured twice, as loaded and with every fold open, each with its own report line and screenshot; folds that will not stay open make the row NOT-RUN. A closed fold's body no longer counts as visible as loaded. A published page whose script crashed had passed every fit check with most sections blank, and a layout pass that folded wide content read as a fix. New `RealBrowser` tests load real pages in headless Chromium and skip without Playwright. `probe.md` sections 3 to 7.
+
 2026-10-17 (eval rerun, U41): an element past the edge gets a cause-proof change (a sideways-scroll wrapper or a reflow) before any guessed cause; case `behaviour-probe-overflow`'s judge, which failed compliant replies 3/3, is split into a shorter judge plus two regex graders (probe pixels, `td.name`).
 
 2026-10-16 (owner eval run, U38): a measured-break row carries the probe's own pixel figure; the reply to `behaviour-probe-overflow` cited a derived width, not the 92 and 37 px the probe reported.

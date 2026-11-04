@@ -56,7 +56,7 @@ Any request to design, lay out or review the design of a screen: "design the pau
 
 1. **Target**: a local HTML file or a URL the user names (a dev server the user started). A generated page is rebuilt first (law 4).
 2. **Run**: `python scripts/probe.py <file-or-url>` with the default widths 320, 375, 768, 1024 and 1440 and every theme the page offers (`probe.md` for flags and theme detection). Headless; never a window.
-3. **Report** one table per theme: width, page width against viewport width, elements past the right edge, clipped text, and the screenshot path. Exit 0 pass, 1 a finding or a NOT-RUN row, 2 a missing dependency, 3 a usage error (`probe.md` section 5).
+3. **Report** one table per theme: width, page width against viewport width, elements past the right edge, clipped text, empty sections, page errors and the screenshot path, as loaded and with every `details` open. Exit 0 pass, 1 a finding or a NOT-RUN row, 2 a missing dependency, 3 a usage error (`probe.md` section 5).
 4. **No Playwright or no shell**: hand back the install line and the exact command, mark every row NOT-RUN, and never report a fit nobody measured.
 
 ## Entry — Audit

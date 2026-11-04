@@ -25,7 +25,7 @@ revenantworks-gamedev-uismith/
 │   └── pack.md         # gamedev advisory manifest (generated from the registry)
 ├── scripts/
 │   ├── probe.py        # run, not read: the rendered fit check (Playwright for Python, optional)
-│   └── test_probe.py   # stdlib unit tests for everything that runs without a browser
+│   └── test_probe.py   # stdlib unit tests, plus real-page tests that skip without Playwright
 └── evals/              # hand-run suites + native `claude plugin eval` cases
 ```
 
@@ -46,7 +46,7 @@ and direct and audit still work from the page source, your screenshots or a desc
 | Entry | Say | Delivers |
 |---|---|---|
 | Direct | "design the pause menu", "lay out the settings pane", "review this dashboard mockup" | A design brief, or ranked findings on a design |
-| Probe | `uismith probe`, "does this fit on a phone", "check it at every width in light and dark" | A fit table per theme with screenshot paths; exit 0, 1 or 2 |
+| Probe | `uismith probe`, "does this fit on a phone", "check it at every width in light and dark" | A table per theme with screenshot paths: fit, page errors and empty sections, as loaded and with every fold open; exit 0, 1 or 2 |
 | Audit | `uismith audit`, "audit the side pane", "why does this page scroll sideways on my phone" | Probe plus the checklist, findings ranked from measured breaks to taste |
 
 ## Commands and switches

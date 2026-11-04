@@ -2,8 +2,9 @@
 """Tests for probe.py (uismith's rendered fit probe), for every part that runs without a browser.
 
 Run: python -m unittest discover -s scripts -p "test_*.py"
-Stdlib only. Playwright is never imported here: the browser path is driven through a fake
-sync API that returns fixture numbers, and the missing-dependency path hides the package.
+Stdlib only. The browser path is driven through a fake sync API that returns fixture numbers, and
+the missing-dependency path hides the package. Playwright is imported only by RealBrowser, which
+loads small real pages and skips where the package or its Chromium build is absent.
 """
 import importlib.util
 import io
@@ -256,18 +257,34 @@ class FakeBrowserRun(unittest.TestCase):
         """The page's colours: they follow the colour scheme, forced colours and the last toggle."""
         return f"{ctx.get('color_scheme')}/{ctx.get('forced_colors')}/{applied[0] if applied else None}"
 
-    def _api(self, css, measures, look=None, failing_gotos=0):
-        calls = {"contexts": [], "launch": None, "theme": [], "gotos": 0}
+    def _api(self, css, measures, look=None, failing_gotos=0, sections=None, folds=(), load_errors=(),
+             open_measures=None, open_errors=()):
+        """folds: what each JS_OPEN_FOLDS call returns in turn, then 0. load_errors and open_errors
+        are (kind, text) pairs fired during the load and while the folds open."""
+        calls = {"contexts": [], "launch": None, "theme": [], "gotos": 0, "shots": [], "sections": []}
         look = look or self._default_look
 
         class Page:
             def __init__(self, ctx):
                 self.ctx, self.url, self.applied = ctx, "file:///page.html", None
+                self.handlers, self.folds, self.opened = {}, list(folds), False
+
+            def on(self, event, handler):
+                self.handlers[event] = handler
+
+            def _fire(self, errors):
+                for kind, text in errors:
+                    if kind == "page":
+                        self.handlers["pageerror"](SimpleNamespace(message=text))
+                    else:
+                        self.handlers["console"](SimpleNamespace(type=kind, text=text))
 
             def goto(self, url, **kw):
                 calls["gotos"] += 1
                 if calls["gotos"] <= failing_gotos + 1 and calls["gotos"] > 1:  # detection load succeeds
                     raise Exception("net::ERR_ABORTED at file:///page.html\nCall log: ...")
+                if self.handlers:
+                    self._fire(load_errors)
                 return SimpleNamespace(status=200)
 
             def wait_for_load_state(self, *a, **kw):
@@ -281,13 +298,24 @@ class FakeBrowserRun(unittest.TestCase):
                     self.applied = arg
                     return True
                 if js is probe.JS_MEASURE:
-                    return measures(self.ctx["viewport"]["width"], self.ctx.get("color_scheme"))
+                    fn = open_measures if self.opened and open_measures else measures
+                    return fn(self.ctx["viewport"]["width"], self.ctx.get("color_scheme"))
+                if js is probe.JS_SECTIONS:
+                    calls["sections"].append(arg)
+                    return sections(self.opened) if sections else {"checked": 1, "empty": [], "missing": []}
+                if js is probe.JS_OPEN_FOLDS:
+                    n = self.folds.pop(0) if self.folds else 0
+                    if n:
+                        self.opened = True
+                        self._fire(open_errors)
+                    return n
                 if js is getattr(probe, "JS_LOOK", object()):
                     return look(self.ctx, self.applied)
                 return True
 
             def screenshot(self, path, full_page):
                 assert full_page
+                calls["shots"].append(Path(path).name)
                 Path(path).write_bytes(b"png")
 
         class Ctx(dict):
@@ -418,6 +446,89 @@ class FakeBrowserRun(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertEqual([c.get("forced_colors") for c in calls["contexts"][1:]], ["active"])
 
+    # A page that throws, a section left empty, a fold hiding overflow: each passed before.
+    def test_page_error_is_a_finding_though_the_page_fits(self):
+        api, _ = self._api("", lambda w, s: measure(width=w),
+                           load_errors=[("page", "TypeError: x is\n  null"), ("log", "fine")])
+        code, text = self._run(["--widths", "375", "--json"], api)
+        row = json.loads(text)["rows"][0]
+        self.assertEqual((code, row["status"]), (1, "finding"))
+        self.assertEqual(row["result"]["page_errors"], ["TypeError: x is null"])
+        self.assertEqual(row["result"]["console_errors"], [])
+
+    def test_console_error_is_a_finding_and_other_levels_are_not(self):
+        api, _ = self._api("", lambda w, s: measure(width=w), load_errors=[("error", "boom")])
+        code, text = self._run(["--widths", "375", "--json"], api)
+        self.assertEqual((code, json.loads(text)["rows"][0]["result"]["console_errors"]), (1, ["boom"]))
+        api, _ = self._api("", lambda w, s: measure(width=w), load_errors=[("warning", "w"), ("info", "i")])
+        self.assertEqual(self._run(["--widths", "375"], api)[0], 0)
+
+    def test_error_text_is_capped(self):
+        api, _ = self._api("", lambda w, s: measure(width=w), load_errors=[("error", "x" * 900)] * 40)
+        rep = json.loads(self._run(["--widths", "375", "--json"], api)[1])
+        errors = rep["rows"][0]["result"]["console_errors"]
+        self.assertEqual(len(errors), probe.MAX_ERRORS)
+        self.assertEqual(len(errors[0]), probe.MAX_ERROR_CHARS)
+
+    def test_empty_and_missing_sections_are_findings(self):
+        api, calls = self._api("", lambda w, s: measure(width=w), sections=lambda opened: {
+            "checked": 3, "empty": ['section#trends "Trends"'], "missing": ["#detail"]})
+        code, text = self._run(["--widths", "375", "--section", "#detail"], api)
+        self.assertEqual(code, 1)
+        self.assertIn('section#trends "Trends"', text)
+        self.assertIn("#detail (missing)", text)
+        self.assertEqual(calls["sections"][0], ["#detail"])
+
+    def test_a_page_with_no_sections_says_the_check_saw_nothing(self):
+        api, _ = self._api("", lambda w, s: measure(width=w),
+                           sections=lambda opened: {"checked": 0, "empty": [], "missing": []})
+        code, text = self._run(["--widths", "375"], api)
+        self.assertEqual(code, 0)
+        self.assertIn("not ruled out", text)
+
+    def test_no_folds_measures_once(self):
+        api, calls = self._api("", lambda w, s: measure(width=w))
+        code, text = self._run(["--widths", "375", "--json"], api)
+        self.assertEqual(code, 0)
+        self.assertNotIn("folds_open", json.loads(text)["rows"][0])
+        self.assertEqual(calls["shots"], ["375-light.png"])
+
+    def test_overflow_only_with_folds_open_is_a_finding_and_both_states_report(self):
+        api, calls = self._api("", lambda w, s: measure(width=w), folds=[2],
+                               open_measures=lambda w, s: measure(width=w, scroll=467,
+                                                                  elements=[el("table.wide", right=467)]))
+        code, text = self._run(["--widths", "375", "--json"], api)
+        row = json.loads(text)["rows"][0]
+        self.assertEqual((code, row["status"]), (1, "finding"))
+        self.assertFalse(row["result"]["finding"])
+        self.assertEqual(row["folds_open"]["folds"], 2)
+        self.assertEqual(row["folds_open"]["result"]["past_right"], [{"sel": "table.wide", "px": 92}])
+        self.assertEqual(calls["shots"], ["375-light.png", "375-light-open.png"])
+        api, _ = self._api("", lambda w, s: measure(width=w), folds=[2],
+                           open_measures=lambda w, s: measure(width=w, scroll=467))
+        _, md = self._run(["--widths", "375"], api)
+        self.assertIn("| 375 | as loaded | 375 / 375", md)
+        self.assertIn("| 375 | 2 folds open | 467 / 375", md)
+
+    def test_an_error_thrown_while_opening_is_charged_to_the_open_state(self):
+        api, _ = self._api("", lambda w, s: measure(width=w), folds=[1], open_errors=[("page", "lazy fold died")])
+        code, text = self._run(["--widths", "375", "--json"], api)
+        row = json.loads(text)["rows"][0]
+        self.assertEqual((code, row["result"]["page_errors"]), (1, []))
+        self.assertEqual(row["folds_open"]["result"]["page_errors"], ["lazy fold died"])
+
+    def test_a_fold_opened_by_a_fold_takes_another_round(self):
+        api, _ = self._api("", lambda w, s: measure(width=w), folds=[2, 1])
+        code, text = self._run(["--widths", "375", "--json"], api)
+        self.assertEqual((code, json.loads(text)["rows"][0]["folds_open"]["folds"]), (0, 3))
+
+    def test_folds_that_will_not_stay_open_are_not_run_never_a_pass(self):
+        api, _ = self._api("", lambda w, s: measure(width=w), folds=[1] * 40)
+        code, text = self._run(["--widths", "375", "--json"], api)
+        row = json.loads(text)["rows"][0]
+        self.assertEqual((code, row["status"]), (1, "not-run"))
+        self.assertIn("would not stay open", row["reason"])
+
 
 class ThemeTarget(unittest.TestCase):
     """R3-03: detection records the element the theme selector sits on."""
@@ -526,6 +637,142 @@ class InPageMeasure(unittest.TestCase):
     def test_visible_element_off_the_left_still_counts(self):
         m = run_measure(375, [{"tag": "nav", "rect": [-40, 0, 240, 50]}])
         self.assertEqual(probe.judge(m)["off_left"], [{"sel": "nav", "px": 40}])
+
+
+CLEAN = "<!doctype html><title>t</title><main><section><h2>A</h2><p>Text here.</p></section></main>"
+
+
+@unittest.skipUnless(HAS_PLAYWRIGHT, "Playwright is not installed; the real page path cannot run")
+class RealBrowser(unittest.TestCase):
+    """Small real pages in headless Chromium: the in-page checks no fake can prove."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.api = probe.load_playwright()
+        try:
+            with cls.api.sync_playwright() as pw:
+                pw.chromium.launch(headless=True).close()
+        except Exception as err:
+            raise unittest.SkipTest(f"Chromium did not start: {str(err).splitlines()[0]}")
+
+    def _probe(self, html, *argv, width="375"):
+        with tempfile.TemporaryDirectory() as d:
+            f = Path(d) / "page.html"
+            f.write_text(html, encoding="utf-8")
+            args = probe.build_parser().parse_args([str(f), "--widths", width, "--json", *argv])
+            code, text = probe.run(args, self.api, f.as_uri(), Path(d))
+        return code, json.loads(text)["rows"][0]
+
+    def test_clean_page_passes(self):
+        code, row = self._probe(CLEAN)
+        self.assertEqual((code, row["status"]), (0, "pass"), row)
+        self.assertEqual(row["result"]["sections_checked"], 2)
+        self.assertNotIn("folds_open", row)
+
+    def test_a_script_that_throws_fails_a_page_that_fits(self):
+        code, row = self._probe(CLEAN + "<script>const x = null; x.do;</script>")
+        self.assertEqual(code, 1)
+        self.assertEqual(len(row["result"]["page_errors"]), 1)
+        self.assertIn("null", row["result"]["page_errors"][0])
+
+    def test_console_error_fails_console_log_does_not(self):
+        code, row = self._probe(CLEAN + "<script>console.error('bad thing')</script>")
+        self.assertEqual((code, row["result"]["console_errors"]), (1, ["bad thing"]))
+        self.assertEqual(self._probe(CLEAN + "<script>console.log('ok');console.warn('w')</script>")[0], 0)
+
+    def test_sections_a_crash_leaves_blank_are_named(self):
+        code, row = self._probe("<!doctype html><title>t</title><p>Intro</p>"
+                                "<section id=a></section>"
+                                "<section id=b><h2>Trends</h2><div></div></section>"
+                                "<section id=c><table><thead><tr><th>Name</th></tr></thead><tbody></tbody></table></section>"
+                                "<section id=d><p> </p></section>")
+        self.assertEqual(code, 1)
+        self.assertEqual(row["result"]["empty_sections"],
+                         ["section#a", 'section#b "Trends"', "section#c", "section#d"])
+
+    def test_only_the_outermost_empty_section_is_named(self):
+        _, row = self._probe("<!doctype html><title>t</title><main id=m><section id=a></section></main><p>x</p>")
+        self.assertEqual(row["result"]["empty_sections"], ["main#m"])
+
+    def test_visually_hidden_text_does_not_count_as_content(self):
+        hidden = "position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)"
+        _, row = self._probe(f"<!doctype html><title>t</title><p>x</p><section id=a><span style='{hidden}'>label</span></section>")
+        self.assertEqual(row["result"]["empty_sections"], ["section#a"])
+
+    def test_what_is_not_an_empty_section(self):
+        cases = {
+            "image": "<section><img alt=x width=20 height=20 src='data:image/gif;base64,R0lGODlhAQABAAAAACw='></section>",
+            "svg": "<section><svg width=20 height=20></svg></section>",
+            "canvas": "<section><canvas width=20 height=20></canvas></section>",
+            "control": "<section><button>Retry</button></section>",
+            "background": "<section style='height:40px;background-image:linear-gradient(red,blue)'></section>",
+            "hidden attr": "<section hidden></section><p>x</p>",
+            "display none": "<section style='display:none'></section><p>x</p>",
+            "aria-hidden": "<section aria-hidden=true style='height:4px'></section><p>x</p>",
+            "absolute child": "<section style='position:relative'><p style='position:absolute'>x</p></section>",
+            "only a closed fold": "<section><details><summary>More</summary>Body</details></section>",
+        }
+        for name, body in cases.items():
+            with self.subTest(name):
+                _, row = self._probe("<!doctype html><title>t</title>" + body)
+                self.assertEqual(row["result"]["empty_sections"], [])
+
+    def test_crushed_section_with_text_is_empty(self):
+        _, row = self._probe("<!doctype html><title>t</title><p>x</p>"
+                             "<section id=a style='height:0;overflow:hidden'><p>gone</p></section>")
+        self.assertEqual(row["result"]["empty_sections"], ["section#a"])
+
+    def test_named_sections(self):
+        page = "<!doctype html><title>t</title><div id=full>x</div><div id=blank></div><div id=off hidden>y</div>"
+        code, row = self._probe(page, "--section", "#full", "--section", "#blank", "--section", "#nope",
+                                "--section", "#off", "--section", "[[bad")
+        self.assertEqual(code, 1)
+        self.assertEqual(row["result"]["empty_sections"], ["div#blank"])
+        self.assertEqual(row["result"]["missing_sections"], ["#nope", "#off", "[[bad (invalid selector)"])
+        self.assertEqual(self._probe(page, "--section", "#full")[0], 0)
+
+    def test_overflow_inside_a_closed_fold_is_found_with_the_folds_open(self):
+        wide = "<div id=wide style='width:900px'>wide</div>"
+        code, row = self._probe(f"<!doctype html><title>t</title><main><p>x</p><details><summary>More</summary>{wide}</details></main>")
+        self.assertEqual((code, row["status"]), (1, "finding"))
+        self.assertFalse(row["result"]["finding"], row["result"])
+        self.assertEqual(row["folds_open"]["folds"], 1)
+        self.assertEqual(row["folds_open"]["result"]["past_right"][0]["sel"], "div#wide")
+
+    def test_an_empty_fold_is_found_with_the_folds_open(self):
+        code, row = self._probe("<!doctype html><title>t</title><p>x</p><details id=f><summary>More</summary></details>")
+        self.assertEqual(code, 1)
+        self.assertEqual(row["result"]["empty_sections"], [])
+        self.assertEqual(row["folds_open"]["result"]["empty_sections"], ['details#f "More"'])
+
+    def test_every_fold_of_an_exclusive_accordion_and_nested_folds_open(self):
+        wide = "<div id=wide style='width:900px'>wide</div>"
+        code, row = self._probe("<!doctype html><title>t</title><p>x</p>"
+                                "<details name=g><summary>A</summary>a</details>"
+                                f"<details name=g><summary>B</summary><details><summary>C</summary>{wide}</details></details>")
+        self.assertEqual(code, 1)
+        self.assertEqual(row["folds_open"]["folds"], 3)
+        self.assertEqual(row["folds_open"]["result"]["past_right"][0]["sel"], "div#wide")
+
+    def test_a_fold_that_closes_itself_is_not_run(self):
+        code, row = self._probe("<!doctype html><title>t</title><p>x</p>"
+                                "<details id=f><summary>S</summary>b</details><script>"
+                                "f.addEventListener('toggle', () => { f.open = false; });</script>")
+        self.assertEqual((code, row["status"]), (1, "not-run"))
+        self.assertIn("would not stay open", row["reason"])
+
+    def test_an_error_thrown_by_opening_a_fold_is_found(self):
+        code, row = self._probe("<!doctype html><title>t</title><p>x</p>"
+                                "<details id=f><summary>S</summary>b</details><script>"
+                                "f.addEventListener('toggle', () => { throw new Error('lazy fold died'); });</script>")
+        self.assertEqual(code, 1)
+        self.assertEqual(row["result"]["page_errors"], [])
+        self.assertIn("lazy fold died", row["folds_open"]["result"]["page_errors"][0])
+
+    def test_a_hidden_tab_is_not_measured_as_the_reference_says(self):
+        code, row = self._probe("<!doctype html><title>t</title><section><p>x</p></section>"
+                                "<div role=tabpanel hidden><div style='width:900px'>wide</div></div>")
+        self.assertEqual((code, row["status"]), (0, "pass"))
 
 
 if __name__ == "__main__":

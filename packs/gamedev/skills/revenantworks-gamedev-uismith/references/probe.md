@@ -1,4 +1,4 @@
-# Probe: rendered fit at every width and theme
+# Probe: a rendered page runs, holds its content and fits, at every width and theme
 
 Last verified: 2026-10-13 (the Playwright for Python facts in section 7; 90-day calendar).
 
@@ -78,18 +78,43 @@ For each width and theme, after the page settles (load, network quiet for a URL,
 | Past the right edge | each visible element's right edge | it passes the viewport's right edge, outside a container that scrolls or clips sideways on purpose |
 | Off the left edge | each visible element's left edge | it sits left of 0 |
 | Clipped text | a box with text anywhere inside it (its own or a child's, such as a cell's `<span>`) whose content is wider or taller than the box while its overflow is hidden or clipped | text is cut by 1 px sideways or 2 px vertically (a 1 px line-height overhang is not); an ellipsis or a `line-clamp` is reported separately as truncated, a note rather than a finding |
-| Screenshot | full-page PNG | always written, named `<width>-<theme>.png` |
+| Page errors | every uncaught exception, from before the page loads to the end of the row | any one, however well the page fits |
+| Console errors | every `console.error`, and what the browser logs at that level (a failed request, a blocked script) | any one; warnings and logs are not |
+| Empty sections | each rendered `main`, `section`, `article`, open `details`, `role=main`, `role=region` or `role=tabpanel`, plus each `--section SELECTOR` | it holds no visible text and no visible image, `svg`, `canvas`, video, audio, frame or form control, and has no background image of its own |
+| Named sections | each `--section SELECTOR` | it matches nothing rendered or in a fold, or is not a valid selector |
+| Screenshot | full-page PNG | always written, named `<width>-<theme>.png`, and `<width>-<theme>-open.png` for the folds-open state |
 
 Each finding row names the element by a short selector, the pixels past the edge, and the
-screenshot that shows it.
+screenshot that shows it. A section's selector carries its first heading.
+
+**A blank section is not an overflow.** A script that crashes leaves the page's frame in place, so
+the page fits and every width passes while most of it is empty. That is why page errors and empty
+sections are findings beside the fit checks. A heading, a `legend`, a `caption`, a table head and a
+fold's own `summary` are labels, not content: a section holding only those counts as empty. Visually
+hidden text (section 4's shapes) does not count either. Only the outermost empty section is named. A
+section with height 0 and hidden overflow is empty whatever it holds.
+
+The default list finds semantic sections only. A page built from plain `div`s gets nothing from it,
+and the report says when no section was found: name that page's regions with `--section`.
+
+**Two states, when the page has folds.** A fit check measures only the state it renders, and a
+layout pass that folds wide content away reads as a fix. So a page with any closed `details` is
+measured as loaded, then again with every fold open, nested ones and a fold another fold's handler
+adds included, and each state gets its own report line and screenshot. An exclusive accordion
+(`<details name>`) loses the `name` in the probe's own copy of the page, so all of it opens at once.
+As loaded, a closed fold's body is skipped by every check, though its `summary` is not; Chromium
+still lays that body out, and its boxes would otherwise read as visible. An error thrown while the
+folds open is charged to the folds-open state. A page with no closed fold is measured once.
 
 ## 4. Evidence check
 
 Before a row is judged, it must be non-blank (at least one visible element painted), at the
 intended width (the window's inner width equals the row's width), free of a browser error page and
 an HTTP error status, its screenshot file must exist, and a non-light theme must have taken effect
-(section 2). A failed check or a load that throws gets one retry; a second failure makes that row
-NOT-RUN with the reason.
+(section 2). The folds-open state passes the same checks, and its folds must stay open: a page that
+keeps closing them was not measured open. A failed check or a load that throws gets one retry; a
+second failure makes that row NOT-RUN with the reason. A page error is a finding on a row that ran,
+never a reason to retry it.
 
 Skipped before judging: a box clipped to nothing on purpose (a 1 by 1 px visually hidden label, a
 clip rect of zeros, `clip-path: inset(50%)`), and a box wholly off-screen inside `aria-hidden="true"`
@@ -97,8 +122,12 @@ or `inert` (a closed drawer).
 
 ## 5. Report and exit codes
 
-One table per theme: width, document width against viewport, elements past the right edge, clipped
-or truncated text, screenshot path. A `--json` form carries the same rows.
+One table per theme, one line per width and state (`as loaded`, then `N folds open`): document
+width against viewport, elements past the right edge and off the left, clipped and truncated text,
+empty and missing sections, page and console errors, status, screenshot path. Error text is page
+data: each is cut to one line of 300 characters, at most 20 per row. A `--json` form carries the same
+rows: `result` for the page as loaded and `folds_open` (`folds`, `result`, `screenshot`) when it has
+folds; `folds_open` also counts toward the row's `status`.
 
 | Exit | Meaning |
 |---|---|
@@ -109,9 +138,15 @@ or truncated text, screenshot path. A `--json` form carries the same rows.
 
 ## 6. Limits
 
-- **Interaction states are not reached.** The probe measures the page as it loads. A state reached
-  only by clicking (an open menu, an error after submit) is listed from the brief as not probed,
-  for the user's own capture.
+- **Interaction states are not reached, beyond folds.** The probe measures the page as it loads and
+  with its `details` open. Any other state reached only by clicking (an open menu, an inactive tab,
+  an error after submit) is listed from the brief as not probed, for the user's own capture. A
+  hidden tab panel is neither measured nor called empty; `--section` naming one reports it missing.
+- **Errors are seen until the row ends.** One thrown later (a timer, a late response on a local file,
+  where the probe does not wait for the network) is not seen.
+- **An empty section can be on purpose.** A results panel waiting for a search reads as empty; hide
+  it until it fills (`hidden`), or name it in the report as intended, never as clean. A section drawn
+  only by CSS generated content reads as empty too.
 - **A canvas is opaque.** A game exported to the web draws into a canvas; element checks say
   nothing about it. Game UI is checked from screenshots per resolution (`surfaces.md`).
 - **No sign-in, no forms.** A page behind a login is probed only at a URL the user has already made
@@ -119,9 +154,9 @@ or truncated text, screenshot path. A `--json` form carries the same rows.
 - **Known false positives.** A skip link parked at `left: -9999px` without `aria-hidden` or `inert`
   reads as off the left edge at every width; an off-canvas menu moved by `transform` without either
   attribute does too. Name them in the report as intended, never as clean.
-- **Not exercised here.** The in-page measure is tested under Node on fixture boxes; the Playwright
-  path itself has not yet run on the build machine (no Playwright there). The first real run on a
-  clean page and an overflowing one is the open check.
+- **Where it has run.** `test_probe.py`'s `RealBrowser` class loads small real pages in headless
+  Chromium; it skips where Playwright or its browser is absent, so a machine without them proves
+  only the fake browser and the in-page measure under Node on fixture boxes.
 
 ## 7. Playwright facts and the no-Playwright path
 
@@ -130,6 +165,10 @@ or truncated text, screenshot path. A `--json` form carries the same rows.
   "Emulation", read 2026-10-13). The probe does not emulate reduced motion (Playwright's API offers
   `reduced_motion`; not used here). It uses `forced_colors="active"` on the context for
   high contrast outside a VS Code pane (the API reference's `new_context` parameter).
+- `page.on("console", ...)` with `msg.type == "error"` and `page.on("pageerror", ...)` report a
+  thrown exception and a logged error; `Element.checkVisibility` tells a rendered section from a
+  hidden one, and Chromium lays out a closed fold's body (run on Playwright for Python with Chromium
+  153, 2026-11-03, in `RealBrowser`; not a docs read).
 - Playwright runs its browsers headless by default; a window opens only when `headless` is set to
   false, which the probe never does (playwright.dev, Python docs, "Getting started - Library",
   read 2026-10-13).

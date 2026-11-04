@@ -23,6 +23,8 @@ Fetched pages were read as data; none carried a directive addressed to the run.
 | Browsers run headless by default; a window needs `headless=False`; install is `pip install playwright` then `playwright install` (Chromium, Firefox, WebKit binaries) | playwright.dev, Python docs, "Getting started - Library", read 2026-10-13 |
 | VS Code webviews get a body class per theme kind (`vscode-light`, `vscode-dark`, `vscode-high-contrast`) and theme colours as CSS variables prefixed `--vscode-` with dots turned into hyphens | code.visualstudio.com, "Webview API", theming section, read 2026-10-13 |
 | Godot 4 focus: focus mode per Control (All, Click, None), directional and next/previous focus neighbours, `grab_focus()` deferred in `_ready()` for first focus; without it controller input does nothing at start-up | docs.godotengine.org, "Keyboard/Controller Navigation and Focus", Godot 4.7 docs, read 2026-10-13 |
+| `page.on("console")` and `page.on("pageerror")` report logged and thrown errors; `checkVisibility` separates rendered from hidden; Chromium lays out a closed fold's body | Run, not read: Playwright for Python with Chromium 153, `RealBrowser` in `scripts/test_probe.py`, 2026-11-03 |
+| A blank section passes every fit check, and closed folds hide overflow from one, so the probe fails on page errors and empty sections and measures with folds open | Internal observations of a published page whose script crashed and of a layout pass that folded wide content (2026-11) |
 | A page committed by its generator lags the generator; probe a fresh build | Internal observation of a stale committed dashboard (2026-10-11), the source of law 4 |
 
 ## Ideas credited (described in our own words; no text copied, nothing fetched or installed)
@@ -57,10 +59,9 @@ fetched by this build. Their licences were not re-read here; nothing of theirs i
 | Palettes and fonts | out of scope | out of scope | met | beaten by U4 | out of scope | Law 1: tokens come from brandscribe or the project. Near-miss: a palette request routes to brandscribe |
 | Generic-look checklist | met | out of scope | met | met | met | Ours is a set of questions answered in the brief; brandscribe asks similar questions of a built page |
 
-† **Unverified.** U1-U4 were read by name and description only, not fetched, and the probe's browser
-path has not yet run (no Playwright on the build machine; the in-page measure runs under Node in the
-tests on fixture boxes). Restore a plain "beaten" after one fetch of each incumbent and the first real
-probe run on a clean page and an overflowing one.
+† **Unverified.** U1-U4 were read by name and description only, not fetched. The probe's browser path
+first ran on 2026-11-03, on real clean and overflowing pages. Restore a plain "beaten" after one fetch
+of each incumbent.
 
 **Named margins.**
 

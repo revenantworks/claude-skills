@@ -1,17 +1,19 @@
 #!/usr/bin/env python3
-"""uismith probe: does a rendered page fit at every width in every theme it offers?
+"""uismith probe: does a rendered page run, hold its content and fit at every width and theme?
 
 Usage:
     python probe.py <file-or-url> [--widths 320,375,768,1024,1440] [--themes auto]
                     [--theme-attr data-theme] [--theme-class dark] [--vscode]
-                    [--out DIR] [--height 900] [--json]
+                    [--section SELECTOR ...] [--out DIR] [--height 900] [--json]
 
 Loads one local HTML file or one URL the user names, in a headless Chromium (never a window),
 at each width and theme. Chromium also fetches whatever that page itself requests and follows
 redirects; the script adds no request and sends no data of its own. Per row it measures the document's scroll width against the viewport,
-visible elements past the right edge or left of 0, and text clipped by its own box, and writes a
-full-page screenshot `<width>-<theme>.png` to the output folder. The contract is
-`references/probe.md`.
+visible elements past the right edge or left of 0, and text clipped by its own box; it records
+console errors and uncaught page errors, and names every section left visibly empty. It measures
+twice when the page has closed `details` folds: as loaded, then with every fold open. Each state
+writes a full-page screenshot to the output folder (`<width>-<theme>.png`, then
+`<width>-<theme>-open.png`). The contract is `references/probe.md`.
 
 Exit codes: 0 every row ran and passed · 1 at least one finding or NOT-RUN row ·
 2 Playwright or its browser is missing (a plain message names the install lines) or the browser
@@ -35,6 +37,9 @@ CLIPS = ("hidden", "clip")
 TOLERANCE_PX = 1  # a finding at 1 px or more (probe.md section 3)
 TOLERANCE_Y_PX = 2  # vertical clipping: a 1 px line-height overhang is not cut text
 MAX_ELEMENTS = 200
+MAX_ERRORS = 20  # kept per row, each cut to one line
+MAX_ERROR_CHARS = 300
+FOLD_ROUNDS = 3  # a fold opened by another fold's handler; still closing after this is a NOT-RUN
 
 EXIT_PASS, EXIT_FINDING, EXIT_MISSING, EXIT_USAGE = 0, 1, 2, 3
 
@@ -121,6 +126,12 @@ JS_MEASURE = """(maxElements) => {
   for (const el of document.body.querySelectorAll('*')) {
     const cs = getComputedStyle(el);
     if (cs.display === 'none' || cs.visibility === 'hidden' || cs.visibility === 'collapse') continue;
+    // Chromium still lays out a closed fold's body, so its boxes read as visible: skip them here.
+    const fold = el.parentElement.closest('details:not([open])');
+    if (fold) {
+      const label = fold.querySelector(':scope > summary');
+      if (!label || !label.contains(el)) continue;
+    }
     const r = el.getBoundingClientRect();
     if (r.width === 0 && r.height === 0) continue;
     out.visible++;
@@ -144,6 +155,92 @@ JS_MEASURE = """(maxElements) => {
     });
   }
   return out;
+}"""
+
+# Which section-like elements are visibly empty. A heading, a table head or a fold's own summary is
+# a label, not content: a script that crashed leaves exactly those behind. Raw names only; judge()
+# decides. A named selector that matches nothing rendered is reported as missing.
+JS_SECTIONS = """(named) => {
+  const DEFAULT = 'main,section,article,[role="main"],[role="region"],[role="tabpanel"],details';
+  const MEDIA = /^(IMG|SVG|CANVAS|VIDEO|AUDIO|IFRAME|OBJECT|EMBED|INPUT|SELECT|TEXTAREA|BUTTON|METER|PROGRESS)$/;
+  const LABEL = /^(H[1-6]|LEGEND|CAPTION|THEAD)$/;
+  const out = {checked: 0, empty: [], missing: []};
+  const tag = el => el.tagName.toUpperCase();
+  const area = r => r.width > 0 && r.height > 0;
+  const clips = v => v === 'hidden' || v === 'clip';
+  const sel = el => {
+    let s = el.tagName.toLowerCase();
+    if (el.id) s += '#' + el.id;
+    const c = (typeof el.className === 'string' ? el.className : '').trim().split(/\\s+/).filter(Boolean).slice(0, 2);
+    if (c.length) s += '.' + c.join('.');
+    const h = el.querySelector('h1,h2,h3,h4,h5,h6,summary');
+    const name = h && h.textContent ? h.textContent.trim().slice(0, 40) : '';
+    return name ? s + ' "' + name + '"' : s;
+  };
+  // Clipped to nothing on purpose: the same visually hidden shapes JS_MEASURE skips.
+  const clippedAway = (cs, r) => (r.width <= 1 && r.height <= 1) ||
+    /rect\\(\\s*0(px)?[\\s,]+0(px)?[\\s,]+0(px)?[\\s,]+0(px)?\\s*\\)/.test(cs.clip || '') ||
+    /inset\\(\\s*50%/.test(cs.clipPath || '');
+  const folded = el => !!(el.parentElement && el.parentElement.closest('details:not([open])'));
+  const rendered = el => el.checkVisibility({visibilityProperty: true}) && !folded(el) &&
+    !el.closest('[aria-hidden="true"],[inert]');
+  const holds = (el, root) => {
+    for (const node of el.childNodes) {
+      if (node.nodeType === 3) {
+        if (!node.textContent.trim()) continue;
+        const range = document.createRange();
+        range.selectNodeContents(node);
+        const r = range.getBoundingClientRect();
+        if (area(r) && !clippedAway(getComputedStyle(el), el.getBoundingClientRect())) return true;
+        continue;
+      }
+      if (node.nodeType !== 1) continue;
+      const cs = getComputedStyle(node);
+      const name = tag(node);
+      if (cs.display === 'none' || cs.visibility === 'hidden' || cs.visibility === 'collapse') continue;
+      if (LABEL.test(name) || (name === 'SUMMARY' && el === root)) continue;
+      const r = node.getBoundingClientRect();
+      if (area(r) && (MEDIA.test(name) || cs.backgroundImage !== 'none')) return true;
+      if (name === 'DETAILS' && !node.open) {
+        const s = node.querySelector(':scope > summary');
+        if (s && holds(s, root)) return true;
+        continue;
+      }
+      if (holds(node, root)) return true;
+    }
+    return false;
+  };
+  const roots = new Set(document.querySelectorAll(DEFAULT));
+  for (const s of named) {
+    let found;
+    try { found = [...document.querySelectorAll(s)]; } catch (e) { out.missing.push(s + ' (invalid selector)'); continue; }
+    const usable = found.filter(el => rendered(el) || folded(el));
+    if (!usable.length) { out.missing.push(s); continue; }
+    for (const el of usable) roots.add(el);
+  }
+  const ordered = [...roots].sort((a, b) => a.compareDocumentPosition(b) & 4 ? -1 : 1);
+  const emptied = [];
+  for (const el of ordered) {
+    if (!rendered(el) || el.matches('details:not([open])')) continue;
+    out.checked++;
+    if (emptied.some(p => p.contains(el))) continue;  // the outermost empty section is the finding
+    const cs = getComputedStyle(el);
+    const box = el.getBoundingClientRect();
+    const crushed = cs.display !== 'contents' && !area(box) && (clips(cs.overflowX) || clips(cs.overflowY));
+    const painted = area(box) && cs.backgroundImage !== 'none';
+    if (crushed || !(painted || holds(el, el))) { emptied.push(el); out.empty.push(sel(el)); }
+  }
+  return out;
+}"""
+
+# Opens every closed fold and returns how many it opened. An exclusive accordion (<details name>)
+# would close the others as each one opens, so the probe's own copy of the page drops the name.
+JS_OPEN_FOLDS = """() => {
+  const all = [...document.querySelectorAll('details')];
+  for (const d of all) d.removeAttribute('name');
+  const closed = all.filter(d => !d.open);
+  for (const d of closed) d.open = true;
+  return closed.length;
 }"""
 
 
@@ -170,6 +267,9 @@ def build_parser() -> argparse.ArgumentParser:
                    help="class put on for every theme but light, e.g. dark (same element rule)")
     p.add_argument("--vscode", action="store_true",
                    help="a VS Code webview: set body class vscode-light / vscode-dark / vscode-high-contrast")
+    p.add_argument("--section", action="append", default=[], metavar="SELECTOR",
+                   help="a CSS selector that must match a section holding content; repeat it. Added to "
+                        "the defaults: main, section, article, details and the matching ARIA roles")
     p.add_argument("--out", default=None, help="screenshot folder (default: a fresh temp folder, printed)")
     p.add_argument("--height", type=int, default=900, help="viewport height in CSS px (default 900)")
     p.add_argument("--json", action="store_true", help="print the report as JSON")
@@ -270,7 +370,15 @@ def judge(m: dict, tol: int = TOLERANCE_PX) -> dict:
                 ellipsis = (e.get("text_overflow") == "ellipsis" and cut_x and not cut_y) or \
                     (e.get("line_clamp") and cut_y and not cut_x)
                 res["truncated" if ellipsis else "clipped"].append(row)
-    res["finding"] = bool(res["page_over"] or res["past_right"] or res["off_left"] or res["clipped"])
+    sections = m.get("sections") or {}
+    res["sections_checked"] = sections.get("checked", 0)
+    res["empty_sections"] = list(sections.get("empty", []))
+    res["missing_sections"] = list(sections.get("missing", []))
+    res["console_errors"] = list(m.get("console_errors", []))
+    res["page_errors"] = list(m.get("page_errors", []))
+    res["finding"] = bool(res["page_over"] or res["past_right"] or res["off_left"] or res["clipped"]
+                          or res["empty_sections"] or res["missing_sections"]
+                          or res["console_errors"] or res["page_errors"])
     return res
 
 
@@ -300,23 +408,45 @@ def _names(items: list[dict]) -> str:
     return shown + (f" +{len(items) - 3} more" if len(items) > 3 else "")
 
 
+def _plain(items: list[str]) -> str:
+    if not items:
+        return "-"
+    shown = ", ".join(items[:3])
+    return shown + (f" +{len(items) - 3} more" if len(items) > 3 else "")
+
+
+def _state_cells(state: str, j: dict, screenshot: str) -> str:
+    sections = _plain(j["empty_sections"] + [f"{s} (missing)" for s in j["missing_sections"]])
+    errors = _plain([f"page: {e}" for e in j["page_errors"]] + [f"console: {e}" for e in j["console_errors"]])
+    return (f"{state} | {j['doc_width']} / {j['viewport']} | {_names(j['past_right'])} | "
+            f"{_names(j['off_left'])} | {_names(j['clipped'])} | {_names(j['truncated'])} | "
+            f"{sections} | {errors} | {'FINDING' if j['finding'] else 'PASS'} | {screenshot} |")
+
+
 def format_report(target: str, note: str, out_dir: Path, rows: list[dict]) -> str:
     lines = [f"uismith probe: {target}", f"Themes: {note}", f"Screenshots: {out_dir}", ""]
     for theme in dict.fromkeys(r["theme"] for r in rows):
         lines += [f"Theme: {theme}", "",
-                  "| Width | Page / viewport | Past right | Off left | Clipped | Truncated | Status | Screenshot |",
-                  "|---|---|---|---|---|---|---|---|"]
+                  "| Width | State | Page / viewport | Past right | Off left | Clipped | Truncated | "
+                  "Empty sections | Errors | Status | Screenshot |",
+                  "|---|---|---|---|---|---|---|---|---|---|---|"]
         for r in (r for r in rows if r["theme"] == theme):
             if r["status"] == "not-run":
-                lines.append(f"| {r['width']} | - | - | - | - | - | NOT-RUN: {r['reason']} | - |")
+                lines.append(f"| {r['width']} | - | - | - | - | - | - | - | - | NOT-RUN: {r['reason']} | - |")
                 continue
-            j = r["result"]
-            lines.append(f"| {r['width']} | {j['doc_width']} / {j['viewport']} | {_names(j['past_right'])} | "
-                         f"{_names(j['off_left'])} | {_names(j['clipped'])} | {_names(j['truncated'])} | "
-                         f"{r['status'].upper()} | {r['screenshot']} |")
+            lines.append(f"| {r['width']} | " + _state_cells("as loaded", r["result"], r["screenshot"]))
+            opened = r.get("folds_open")
+            if opened:
+                state = f"{opened['folds']} folds open"
+                lines.append(f"| {r['width']} | " + _state_cells(state, opened["result"], opened["screenshot"]))
         lines.append("")
+    ran = [r for r in rows if r["status"] != "not-run"]
+    if ran and not any(r["result"]["sections_checked"] for r in ran):
+        lines += ["Sections: none found to check, so an empty region was not ruled out. "
+                  "Name the page's own with --section.", ""]
     verdict = {EXIT_PASS: "PASS", EXIT_FINDING: "FINDINGS or NOT-RUN rows"}[exit_code(rows)]
-    lines.append(f"Verdict: {verdict}. Interaction states (open menus, errors after submit) are not probed.")
+    lines.append(f"Verdict: {verdict}. Interaction states (open menus, inactive tabs, errors after submit) "
+                 "are not probed.")
     return "\n".join(lines)
 
 
@@ -345,6 +475,46 @@ def _start_message(err: Exception) -> str:
             "Every row is NOT-RUN. Fix the browser start, then run the same probe command again.")
 
 
+def _one_line(text: str) -> str:
+    return " ".join(str(text).split())[:MAX_ERROR_CHARS]
+
+
+def _watch_errors(page) -> dict:
+    """Listen before the page loads: a script that throws during load is the case that matters."""
+    seen: dict = {"console": [], "page": []}
+
+    def on_console(msg):
+        if msg.type == "error" and len(seen["console"]) < MAX_ERRORS:
+            seen["console"].append(_one_line(msg.text))
+
+    def on_page_error(err):
+        if len(seen["page"]) < MAX_ERRORS:
+            seen["page"].append(_one_line(getattr(err, "message", err)))
+
+    page.on("console", on_console)
+    page.on("pageerror", on_page_error)
+    return seen
+
+
+def _measure(page, opts: dict) -> dict:
+    page.evaluate(JS_SETTLE)
+    m = page.evaluate(JS_MEASURE, MAX_ELEMENTS)
+    m["sections"] = page.evaluate(JS_SECTIONS, opts.get("sections", []))
+    return m
+
+
+def _open_folds(page) -> tuple[int, bool]:
+    """(folds opened, whether they stayed open). A fold can reveal another, so it takes rounds."""
+    opened = 0
+    for _ in range(FOLD_ROUNDS):
+        n = page.evaluate(JS_OPEN_FOLDS)
+        if not n:
+            return opened, True
+        opened += n
+        page.evaluate(JS_SETTLE)
+    return opened, page.evaluate(JS_OPEN_FOLDS) == 0
+
+
 def _probe_row(browser, url: str, width: int, height: int, theme: str, opts: dict, shot: Path,
                ref_look: str | None) -> dict:
     kw = {"viewport": {"width": width, "height": height}, "color_scheme": "light" if theme == "light" else "dark"}
@@ -353,6 +523,7 @@ def _probe_row(browser, url: str, width: int, height: int, theme: str, opts: dic
     ctx = browser.new_context(**kw)
     try:
         page = ctx.new_page()
+        seen = _watch_errors(page)
         resp = page.goto(url, wait_until="load", timeout=30000)
         if url.lower().startswith(("http://", "https://")):
             try:
@@ -361,8 +532,7 @@ def _probe_row(browser, url: str, width: int, height: int, theme: str, opts: dic
                 pass
         if opts["attr"] or opts["class"] or opts["vscode"]:
             page.evaluate(JS_APPLY_THEME, [theme, opts["attr"], opts["class"], opts["vscode"], opts["on"]])
-        page.evaluate(JS_SETTLE)
-        m = page.evaluate(JS_MEASURE, MAX_ELEMENTS)
+        m = _measure(page, opts)
         look = page.evaluate(JS_LOOK)
         page.screenshot(path=str(shot), full_page=True)
         status = resp.status if resp is not None else None
@@ -370,7 +540,22 @@ def _probe_row(browser, url: str, width: int, height: int, theme: str, opts: dic
         if problem is None and theme != "light" and (ref_look is None or look == ref_look):
             problem = (f"the {theme} theme did not take effect: the page's colours match light"
                        if ref_look is not None else f"the {theme} theme could not be checked: no light reference")
-        return {"m": m, "look": look, "problem": problem}
+        got = {"m": m, "look": look, "problem": problem, "open": None}
+        if problem is not None:
+            return got
+        counts = len(seen["console"]), len(seen["page"])
+        m["console_errors"], m["page_errors"] = list(seen["console"]), list(seen["page"])
+        folds, stayed = _open_folds(page)
+        if not folds:
+            return got
+        open_shot = shot.with_name(f"{shot.stem}-open{shot.suffix}")
+        opened = _measure(page, opts)
+        page.screenshot(path=str(open_shot), full_page=True)
+        got["problem"] = evidence_problem(opened, width, status, page.url, open_shot) if stayed else \
+            "the closed folds would not stay open, so the page was not measured with them open"
+        opened["console_errors"], opened["page_errors"] = seen["console"][counts[0]:], seen["page"][counts[1]:]
+        got["open"] = {"m": opened, "folds": folds, "screenshot": str(open_shot)}
+        return got
     finally:
         ctx.close()
 
@@ -407,7 +592,7 @@ def run(args, sync_api, url: str, out_dir: Path) -> tuple[int, str]:
             finally:
                 ctx.close()
             opts = {"attr": args.theme_attr or mech["attr"], "class": args.theme_class or mech["class"],
-                    "vscode": args.vscode or mech["vscode"], "on": mech["on"]}
+                    "vscode": args.vscode or mech["vscode"], "on": mech["on"], "sections": args.section}
             themes, note = themes_for({**mech, "vscode": opts["vscode"]}, requested)
             rows, light_look = [], {}
             for theme in themes:
@@ -424,7 +609,14 @@ def run(args, sync_api, url: str, out_dir: Path) -> tuple[int, str]:
                         if theme == "light":
                             light_look[width] = got["look"]
                         res = judge(got["m"])
-                        row.update(status="finding" if res["finding"] else "pass", result=res)
+                        row["result"] = res
+                        found = res["finding"]
+                        if got.get("open"):
+                            opened = judge(got["open"]["m"])
+                            row["folds_open"] = {"folds": got["open"]["folds"], "result": opened,
+                                                 "screenshot": got["open"]["screenshot"]}
+                            found = found or opened["finding"]
+                        row["status"] = "finding" if found else "pass"
                     rows.append(row)
         finally:
             browser.close()
