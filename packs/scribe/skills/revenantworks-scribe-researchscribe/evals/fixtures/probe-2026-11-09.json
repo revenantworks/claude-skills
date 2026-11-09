@@ -1,0 +1,1267 @@
+{
+ "probed": "2026-11-09",
+ "tool": "the fetch tool (WebFetch), one call per URL, no retry",
+ "note": "Counts are per fetch. Tiers per references/source-routes.md section 1. r1 and r2 informed the route table; validation used new entities after the table was fixed.",
+ "rows": [
+  {
+   "id": 1,
+   "round": "r1",
+   "set": "search",
+   "family": "paper",
+   "url": "https://cs.paperswithcode.com/paper/attention-is-all-you-need",
+   "outcome": "OK",
+   "tier": 5
+  },
+  {
+   "id": 2,
+   "round": "r1",
+   "set": "search",
+   "family": "paper",
+   "url": "https://research.google/pubs/pub46201/?stream=top",
+   "outcome": "OK",
+   "tier": 2
+  },
+  {
+   "id": 3,
+   "round": "r1",
+   "set": "search",
+   "family": "paper",
+   "url": "https://research.google/pubs/attention-is-all-you-need/",
+   "outcome": "OK",
+   "tier": 2
+  },
+  {
+   "id": 4,
+   "round": "r1",
+   "set": "search",
+   "family": "paper",
+   "url": "https://research.google/pubs/pub46201/",
+   "outcome": "OK",
+   "tier": 2
+  },
+  {
+   "id": 5,
+   "round": "r1",
+   "set": "search",
+   "family": "package",
+   "url": "https://packages.msys2.org/base/python-requests",
+   "outcome": "OK",
+   "tier": 3
+  },
+  {
+   "id": 6,
+   "round": "r1",
+   "set": "search",
+   "family": "package",
+   "url": "https://simple-repository.app.cern.ch/project/requests",
+   "outcome": "OK",
+   "tier": 5
+  },
+  {
+   "id": 7,
+   "round": "r1",
+   "set": "search",
+   "family": "package",
+   "url": "https://simple-repository.app.cern.ch/project/Requests",
+   "outcome": "OK",
+   "tier": 5
+  },
+  {
+   "id": 8,
+   "round": "r1",
+   "set": "search",
+   "family": "package",
+   "url": "https://pkg.adelielinux.org/1.0-BETA1/py3-requests",
+   "outcome": "OK",
+   "tier": 3
+  },
+  {
+   "id": 9,
+   "round": "r1",
+   "set": "search",
+   "family": "cve",
+   "url": "https://osv.dev/vulnerability/CVE-2024-3094",
+   "outcome": "OK",
+   "tier": 2
+  },
+  {
+   "id": 10,
+   "round": "r1",
+   "set": "search",
+   "family": "cve",
+   "url": "https://www.ncsc.gov.ie/pdfs/2403290139_Critical_vulnerability_in_XZ_Utils.pdf",
+   "outcome": "OK",
+   "tier": 2
+  },
+  {
+   "id": 11,
+   "round": "r1",
+   "set": "search",
+   "family": "cve",
+   "url": "https://upwind.io/feed/tag/xz-utils",
+   "outcome": "OK",
+   "tier": 4
+  },
+  {
+   "id": 12,
+   "round": "r1",
+   "set": "search",
+   "family": "cve",
+   "url": "https://Tenable.com/blog/frequently-asked-questions-cve-2024-3094-supply-chain-backdoor-in-xz-utils",
+   "outcome": "OK",
+   "tier": 4
+  },
+  {
+   "id": 13,
+   "round": "r1",
+   "set": "search",
+   "family": "standard",
+   "url": "https://developer.mozilla.org/en/docs/Web/HTTP/Status/429",
+   "outcome": "OK",
+   "tier": 2
+  },
+  {
+   "id": 14,
+   "round": "r1",
+   "set": "search",
+   "family": "standard",
+   "url": "https://developer.mozilla.org/docs/Web/HTTP/Reference/Status/429",
+   "outcome": "OK",
+   "tier": 2
+  },
+  {
+   "id": 15,
+   "round": "r1",
+   "set": "search",
+   "family": "standard",
+   "url": "https://www.holisticseo.digital/?p=8624",
+   "outcome": "OK",
+   "tier": 5
+  },
+  {
+   "id": 16,
+   "round": "r1",
+   "set": "search",
+   "family": "standard",
+   "url": "https://wheregoes.com/?p=451",
+   "outcome": "OK",
+   "tier": 5
+  },
+  {
+   "id": 17,
+   "round": "r1",
+   "set": "search",
+   "family": "govdata",
+   "url": "https://www.rte.ie/news/business/2026/0512/1572980-us-consumer-prices/",
+   "outcome": "OK",
+   "tier": 4
+  },
+  {
+   "id": 18,
+   "round": "r1",
+   "set": "search",
+   "family": "govdata",
+   "url": "https://rismedia.com/2023/01/12/us-inflation-declines-sixth-consecutive-month",
+   "outcome": "OK",
+   "tier": 4
+  },
+  {
+   "id": 19,
+   "round": "r1",
+   "set": "search",
+   "family": "govdata",
+   "url": "https://www.centralbanking.com/node/7959961",
+   "outcome": "LOGIN_PAYWALL",
+   "tier": 4
+  },
+  {
+   "id": 20,
+   "round": "r1",
+   "set": "search",
+   "family": "govdata",
+   "url": "https://www.centralbanking.com/central-banks/economics/data/7959961/little-progress-in-latest-us-cpi-report",
+   "outcome": "LOGIN_PAYWALL",
+   "tier": 4
+  },
+  {
+   "id": 21,
+   "round": "r1",
+   "set": "search",
+   "family": "release",
+   "url": "https://advisories.mageia.org/MGAA-2024-0005.html",
+   "outcome": "OK",
+   "tier": 3
+  },
+  {
+   "id": 22,
+   "round": "r1",
+   "set": "search",
+   "family": "release",
+   "url": "https://umarcor.github.io/godot-docs/about/release_policy.html",
+   "outcome": "OK",
+   "tier": 5
+  },
+  {
+   "id": 23,
+   "round": "r1",
+   "set": "search",
+   "family": "release",
+   "url": "https://advisories.mageia.org/MGAA-2023-0116.html",
+   "outcome": "OK",
+   "tier": 3
+  },
+  {
+   "id": 24,
+   "round": "r1",
+   "set": "search",
+   "family": "release",
+   "url": "https://github.com/godotengine/godot-docs/pull/8577/files",
+   "outcome": "OK",
+   "tier": 3
+  },
+  {
+   "id": 25,
+   "round": "r1",
+   "set": "search",
+   "family": "product",
+   "url": "https://csr.hdsupply.com/?p=16904",
+   "outcome": "OK",
+   "tier": 5
+  },
+  {
+   "id": 26,
+   "round": "r1",
+   "set": "search",
+   "family": "product",
+   "url": "https://keyirobot.com/de-de/blogs/buying-guide/best-robot-vacuums-for-pet-hair-in-2025-top-picks-for-every-pet-owner",
+   "outcome": "OK",
+   "tier": 4
+  },
+  {
+   "id": 27,
+   "round": "r1",
+   "set": "search",
+   "family": "product",
+   "url": "https://rankscout.pages.dev/blog/articles/2026-04-03-best-robot-vacuums-under-400-2026/",
+   "outcome": "OK",
+   "tier": 5
+  },
+  {
+   "id": 28,
+   "round": "r1",
+   "set": "search",
+   "family": "product",
+   "url": "https://shopsavvy.com/best-picks/best-robot-vacuum-cleaners-under-300-for-2026.md",
+   "outcome": "OK",
+   "tier": 5
+  },
+  {
+   "id": 29,
+   "round": "r1",
+   "set": "search",
+   "family": "community",
+   "url": "https://feddit.it/comment/19834074",
+   "outcome": "BOT_CHALLENGE",
+   "tier": 4
+  },
+  {
+   "id": 30,
+   "round": "r1",
+   "set": "search",
+   "family": "community",
+   "url": "https://discuss.mschae23.de/comment/185207",
+   "outcome": "OK",
+   "tier": 4
+  },
+  {
+   "id": 31,
+   "round": "r1",
+   "set": "search",
+   "family": "community",
+   "url": "https://discuss.logseq.com/t/thoughts-on-logseq-vs-obsidian/8614",
+   "outcome": "OK",
+   "tier": 4
+  },
+  {
+   "id": 32,
+   "round": "r1",
+   "set": "search",
+   "family": "community",
+   "url": "https://discuss.logseq.com/t/why-logseq-rather-than-obsidian/18806/10",
+   "outcome": "OK",
+   "tier": 4
+  },
+  {
+   "id": 33,
+   "round": "r1",
+   "set": "search",
+   "family": "medical",
+   "url": "https://www.ncbi.nlm.nih.gov/pmc/articles/PMC11275561/",
+   "outcome": "REDIRECT_CROSS_HOST",
+   "tier": 1
+  },
+  {
+   "id": 34,
+   "round": "r1",
+   "set": "search",
+   "family": "medical",
+   "url": "https://gwern.net/creatine",
+   "outcome": "OK",
+   "tier": 4
+  },
+  {
+   "id": 35,
+   "round": "r1",
+   "set": "search",
+   "family": "medical",
+   "url": "https://pubmed.ncbi.nlm.nih.gov/39070254/",
+   "outcome": "BOT_CHALLENGE",
+   "tier": 2
+  },
+  {
+   "id": 36,
+   "round": "r1",
+   "set": "search",
+   "family": "medical",
+   "url": "https://www.frontiersin.org/journals/nutrition/articles/10.3389/fnut.2024.1424972/epub",
+   "outcome": "OTHER",
+   "tier": 1
+  },
+  {
+   "id": 37,
+   "round": "r1",
+   "set": "search",
+   "family": "games",
+   "url": "https://www.gamesradar.com/8-years-after-launch-stardew-valley-is-still-breaking-records-with-a-new-peak-concurrent-player-count-just-hours-after-the-16-update-release",
+   "outcome": "OK",
+   "tier": 4
+  },
+  {
+   "id": 38,
+   "round": "r1",
+   "set": "search",
+   "family": "games",
+   "url": "https://wnhub.io/news/stores-and-publishing/item-43127",
+   "outcome": "OK",
+   "tier": 4
+  },
+  {
+   "id": 39,
+   "round": "r1",
+   "set": "search",
+   "family": "games",
+   "url": "https://gameworldobserver.com/tag/eric-barone",
+   "outcome": "OK",
+   "tier": 4
+  },
+  {
+   "id": 40,
+   "round": "r1",
+   "set": "search",
+   "family": "games",
+   "url": "https://www.gamespot.com/articles/stardew-valley-hits-new-peak-concurrents-record-on-steam-thanks-to-update-1-6/1100-6521971/",
+   "outcome": "OK",
+   "tier": 4
+  },
+  {
+   "id": 41,
+   "round": "r1",
+   "set": "primary-html",
+   "family": "paper",
+   "url": "https://arxiv.org/abs/1706.03762",
+   "outcome": "OK",
+   "tier": 1
+  },
+  {
+   "id": 42,
+   "round": "r1",
+   "set": "primary-html",
+   "family": "package",
+   "url": "https://pypi.org/project/requests/",
+   "outcome": "OK",
+   "tier": 1
+  },
+  {
+   "id": 43,
+   "round": "r1",
+   "set": "primary-html",
+   "family": "cve",
+   "url": "https://nvd.nist.gov/vuln/detail/CVE-2024-3094",
+   "outcome": "JS_EMPTY",
+   "tier": 1
+  },
+  {
+   "id": 44,
+   "round": "r1",
+   "set": "primary-html",
+   "family": "standard",
+   "url": "https://www.rfc-editor.org/rfc/rfc6585",
+   "outcome": "OK",
+   "tier": 1
+  },
+  {
+   "id": 45,
+   "round": "r1",
+   "set": "primary-html",
+   "family": "govdata",
+   "url": "https://www.bls.gov/cpi/",
+   "outcome": "OK",
+   "tier": 1
+  },
+  {
+   "id": 46,
+   "round": "r1",
+   "set": "primary-html",
+   "family": "release",
+   "url": "https://github.com/godotengine/godot/releases",
+   "outcome": "OK",
+   "tier": 1
+  },
+  {
+   "id": 47,
+   "round": "r1",
+   "set": "primary-html",
+   "family": "product",
+   "url": "https://www.rtings.com/vacuum/reviews/best/robot",
+   "outcome": "JS_EMPTY",
+   "tier": 3
+  },
+  {
+   "id": 48,
+   "round": "r1",
+   "set": "primary-html",
+   "family": "community",
+   "url": "https://forum.obsidian.md/t/logseq-vs-obsidian-first-impressions/56854",
+   "outcome": "OK",
+   "tier": 4
+  },
+  {
+   "id": 49,
+   "round": "r1",
+   "set": "primary-html",
+   "family": "medical",
+   "url": "https://pubmed.ncbi.nlm.nih.gov/39070254/",
+   "outcome": "BOT_CHALLENGE",
+   "tier": 2
+  },
+  {
+   "id": 50,
+   "round": "r1",
+   "set": "primary-html",
+   "family": "games",
+   "url": "https://store.steampowered.com/app/413150/Stardew_Valley/",
+   "outcome": "OK",
+   "tier": 1
+  },
+  {
+   "id": 51,
+   "round": "r1",
+   "set": "naive-api",
+   "family": "paper",
+   "url": "https://export.arxiv.org/api/query?id_list=1706.03762",
+   "outcome": "ROBOTS_REFUSED",
+   "tier": 1
+  },
+  {
+   "id": 52,
+   "round": "r1",
+   "set": "naive-api",
+   "family": "paper",
+   "url": "https://api.semanticscholar.org/graph/v1/paper/arXiv:1706.03762?fields=title,year,abstract,externalIds",
+   "outcome": "OTHER",
+   "tier": 3
+  },
+  {
+   "id": 53,
+   "round": "r1",
+   "set": "naive-api",
+   "family": "paper",
+   "url": "https://api.openalex.org/works/doi:10.48550/arXiv.1706.03762",
+   "outcome": "OTHER",
+   "tier": 3
+  },
+  {
+   "id": 54,
+   "round": "r1",
+   "set": "naive-api",
+   "family": "package",
+   "url": "https://pypi.org/pypi/requests/json",
+   "outcome": "ROBOTS_REFUSED",
+   "tier": 1
+  },
+  {
+   "id": 55,
+   "round": "r1",
+   "set": "naive-api",
+   "family": "package",
+   "url": "https://api.github.com/repos/psf/requests/releases/latest",
+   "outcome": "OK",
+   "tier": 1
+  },
+  {
+   "id": 56,
+   "round": "r1",
+   "set": "naive-api",
+   "family": "package",
+   "url": "https://raw.githubusercontent.com/psf/requests/main/LICENSE",
+   "outcome": "OK",
+   "tier": 1
+  },
+  {
+   "id": 57,
+   "round": "r1",
+   "set": "naive-api",
+   "family": "cve",
+   "url": "https://api.osv.dev/v1/vulns/CVE-2024-3094",
+   "outcome": "OK",
+   "tier": 2
+  },
+  {
+   "id": 58,
+   "round": "r1",
+   "set": "naive-api",
+   "family": "cve",
+   "url": "https://services.nvd.nist.gov/rest/json/cves/2.0?cveId=CVE-2024-3094",
+   "outcome": "OK",
+   "tier": 1
+  },
+  {
+   "id": 59,
+   "round": "r1",
+   "set": "naive-api",
+   "family": "cve",
+   "url": "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json",
+   "outcome": "OTHER",
+   "tier": 1
+  },
+  {
+   "id": 60,
+   "round": "r1",
+   "set": "naive-api",
+   "family": "standard",
+   "url": "https://www.rfc-editor.org/rfc/rfc6585.txt",
+   "outcome": "OK",
+   "tier": 1
+  },
+  {
+   "id": 61,
+   "round": "r1",
+   "set": "naive-api",
+   "family": "standard",
+   "url": "https://www.rfc-editor.org/rfc/rfc9110.txt",
+   "outcome": "OK",
+   "tier": 1
+  },
+  {
+   "id": 62,
+   "round": "r1",
+   "set": "naive-api",
+   "family": "standard",
+   "url": "https://datatracker.ietf.org/api/v1/doc/document/rfc6585/",
+   "outcome": "OK",
+   "tier": 1
+  },
+  {
+   "id": 63,
+   "round": "r1",
+   "set": "naive-api",
+   "family": "govdata",
+   "url": "https://api.bls.gov/publicAPI/v2/timeseries/data/CUUR0000SA0",
+   "outcome": "ROBOTS_REFUSED",
+   "tier": 1
+  },
+  {
+   "id": 64,
+   "round": "r1",
+   "set": "naive-api",
+   "family": "govdata",
+   "url": "https://www.federalregister.gov/api/v1/documents.json?per_page=1&conditions[term]=consumer+price+index",
+   "outcome": "OK",
+   "tier": 1
+  },
+  {
+   "id": 65,
+   "round": "r1",
+   "set": "naive-api",
+   "family": "govdata",
+   "url": "https://api.worldbank.org/v2/country/US/indicator/FP.CPI.TOTL.ZG?format=json&mrv=1",
+   "outcome": "OK",
+   "tier": 1
+  },
+  {
+   "id": 66,
+   "round": "r1",
+   "set": "naive-api",
+   "family": "release",
+   "url": "https://api.github.com/repos/godotengine/godot/releases/latest",
+   "outcome": "OK",
+   "tier": 1
+  },
+  {
+   "id": 67,
+   "round": "r1",
+   "set": "naive-api",
+   "family": "release",
+   "url": "https://endoflife.date/api/godot.json",
+   "outcome": "OK",
+   "tier": 3
+  },
+  {
+   "id": 68,
+   "round": "r1",
+   "set": "naive-api",
+   "family": "release",
+   "url": "https://raw.githubusercontent.com/godotengine/godot/master/version.py",
+   "outcome": "OK",
+   "tier": 1
+  },
+  {
+   "id": 69,
+   "round": "r1",
+   "set": "naive-api",
+   "family": "product",
+   "url": "https://www.rtings.com/vacuum/reviews/best/robot",
+   "outcome": "OK",
+   "tier": 3
+  },
+  {
+   "id": 70,
+   "round": "r1",
+   "set": "naive-api",
+   "family": "product",
+   "url": "https://en.wikipedia.org/api/rest_v1/page/summary/Robotic_vacuum_cleaner",
+   "outcome": "HTTP_404",
+   "tier": 3
+  },
+  {
+   "id": 71,
+   "round": "r1",
+   "set": "naive-api",
+   "family": "product",
+   "url": "https://www.saferproducts.gov/RestWebServices/Recall?format=json&ProductName=robot%20vacuum",
+   "outcome": "OK",
+   "tier": 2
+  },
+  {
+   "id": 72,
+   "round": "r1",
+   "set": "naive-api",
+   "family": "community",
+   "url": "https://forum.obsidian.md/t/56854.json",
+   "outcome": "OK",
+   "tier": 4
+  },
+  {
+   "id": 73,
+   "round": "r1",
+   "set": "naive-api",
+   "family": "community",
+   "url": "https://discuss.logseq.com/t/8614.json",
+   "outcome": "OK",
+   "tier": 4
+  },
+  {
+   "id": 74,
+   "round": "r1",
+   "set": "naive-api",
+   "family": "community",
+   "url": "https://hn.algolia.com/api/v1/search?query=obsidian%20logseq&tags=story",
+   "outcome": "OK",
+   "tier": 4
+  },
+  {
+   "id": 75,
+   "round": "r1",
+   "set": "naive-api",
+   "family": "medical",
+   "url": "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=pubmed&id=39070254&retmode=json",
+   "outcome": "ROBOTS_REFUSED",
+   "tier": 2
+  },
+  {
+   "id": 76,
+   "round": "r1",
+   "set": "naive-api",
+   "family": "medical",
+   "url": "https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=EXT_ID:39070254&format=json",
+   "outcome": "HTTP_429",
+   "tier": 2
+  },
+  {
+   "id": 77,
+   "round": "r1",
+   "set": "naive-api",
+   "family": "medical",
+   "url": "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC11275561/fullTextXML",
+   "outcome": "HTTP_429",
+   "tier": 1
+  },
+  {
+   "id": 78,
+   "round": "r1",
+   "set": "naive-api",
+   "family": "games",
+   "url": "https://api.steampowered.com/ISteamUserStats/GetNumberOfCurrentPlayers/v1/?appid=413150",
+   "outcome": "ROBOTS_REFUSED",
+   "tier": 1
+  },
+  {
+   "id": 79,
+   "round": "r1",
+   "set": "naive-api",
+   "family": "games",
+   "url": "https://store.steampowered.com/api/appdetails?appids=413150",
+   "outcome": "OK",
+   "tier": 1
+  },
+  {
+   "id": 80,
+   "round": "r1",
+   "set": "naive-api",
+   "family": "games",
+   "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=413150&count=1",
+   "outcome": "ROBOTS_REFUSED",
+   "tier": 1
+  },
+  {
+   "id": 81,
+   "round": "r2",
+   "set": "alternate",
+   "family": "paper",
+   "url": "https://arxiv.org/html/2310.06825",
+   "outcome": "OK",
+   "tier": 1
+  },
+  {
+   "id": 82,
+   "round": "r2",
+   "set": "alternate",
+   "family": "paper",
+   "url": "https://arxiv.org/pdf/1706.03762",
+   "outcome": "OK",
+   "tier": 1
+  },
+  {
+   "id": 83,
+   "round": "r2",
+   "set": "alternate",
+   "family": "paper",
+   "url": "https://api.openalex.org/works?filter=doi:10.48550/arXiv.1706.03762",
+   "outcome": "OTHER",
+   "tier": 3
+  },
+  {
+   "id": 84,
+   "round": "r2",
+   "set": "alternate",
+   "family": "paper",
+   "url": "https://api.semanticscholar.org/graph/v1/paper/search?query=attention+is+all+you+need&fields=title,year&limit=1",
+   "outcome": "OTHER",
+   "tier": 3
+  },
+  {
+   "id": 85,
+   "round": "r2",
+   "set": "alternate",
+   "family": "medical",
+   "url": "https://api.crossref.org/works/10.3389/fnut.2024.1424972",
+   "outcome": "OK",
+   "tier": 2
+  },
+  {
+   "id": 86,
+   "round": "r2",
+   "set": "alternate",
+   "family": "medical",
+   "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC11275561/",
+   "outcome": "OK",
+   "tier": 1
+  },
+  {
+   "id": 87,
+   "round": "r2",
+   "set": "alternate",
+   "family": "product",
+   "url": "https://en.wikipedia.org/wiki/Robotic_vacuum_cleaner",
+   "outcome": "OK",
+   "tier": 3
+  },
+  {
+   "id": 88,
+   "round": "r2",
+   "set": "alternate",
+   "family": "product",
+   "url": "https://en.wikipedia.org/w/api.php?action=query&prop=extracts&explaintext=1&exintro=1&titles=Robotic_vacuum_cleaner&format=json",
+   "outcome": "HTTP_404",
+   "tier": 3
+  },
+  {
+   "id": 89,
+   "round": "r2",
+   "set": "alternate",
+   "family": "govdata",
+   "url": "https://www.bls.gov/news.release/cpi.nr0.htm",
+   "outcome": "OK",
+   "tier": 1
+  },
+  {
+   "id": 90,
+   "round": "r2",
+   "set": "alternate",
+   "family": "package",
+   "url": "https://pypi.org/simple/requests/",
+   "outcome": "ROBOTS_REFUSED",
+   "tier": 1
+  },
+  {
+   "id": 91,
+   "round": "r2",
+   "set": "alternate",
+   "family": "package",
+   "url": "https://deps.dev/_/s/pypi/p/requests",
+   "outcome": "OK",
+   "tier": 3
+  },
+  {
+   "id": 92,
+   "round": "r2",
+   "set": "alternate",
+   "family": "package",
+   "url": "https://api.deps.dev/v3/systems/pypi/packages/requests",
+   "outcome": "ROBOTS_REFUSED",
+   "tier": 3
+  },
+  {
+   "id": 93,
+   "round": "r2",
+   "set": "alternate",
+   "family": "cve",
+   "url": "https://www.cisa.gov/known-exploited-vulnerabilities-catalog",
+   "outcome": "OTHER",
+   "tier": 1
+  },
+  {
+   "id": 94,
+   "round": "r2",
+   "set": "alternate",
+   "family": "release",
+   "url": "https://docs.godotengine.org/en/stable/about/release_policy.html",
+   "outcome": "TOO_LARGE",
+   "tier": 2
+  },
+  {
+   "id": 95,
+   "round": "r2",
+   "set": "alternate",
+   "family": "docs",
+   "url": "https://code.claude.com/docs/llms.txt",
+   "outcome": "OK",
+   "tier": 2
+  },
+  {
+   "id": 96,
+   "round": "r2",
+   "set": "alternate",
+   "family": "community",
+   "url": "https://api.stackexchange.com/2.3/search?order=desc&sort=votes&intitle=index-pack&site=stackoverflow",
+   "outcome": "SITE_BLOCKED",
+   "tier": 4
+  },
+  {
+   "id": 97,
+   "round": "r2",
+   "set": "alternate",
+   "family": "medical",
+   "url": "https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=creatine%20cognition&format=json&pageSize=1",
+   "outcome": "HTTP_429",
+   "tier": 2
+  },
+  {
+   "id": 98,
+   "round": "r2",
+   "set": "alternate",
+   "family": "games",
+   "url": "https://store.steampowered.com/appreviews/413150?json=1&num_per_page=1",
+   "outcome": "OK",
+   "tier": 1
+  },
+  {
+   "id": 99,
+   "round": "r2",
+   "set": "alternate",
+   "family": "govdata",
+   "url": "https://www.federalregister.gov/api/v1/documents.json?per_page=1",
+   "outcome": "OK",
+   "tier": 1
+  },
+  {
+   "id": 100,
+   "round": "r2",
+   "set": "alternate",
+   "family": "release",
+   "url": "https://api.github.com/repos/godotengine/godot/releases?per_page=1",
+   "outcome": "OTHER",
+   "tier": 1
+  },
+  {
+   "id": 101,
+   "round": "validation",
+   "set": "search",
+   "family": "paper",
+   "url": "https://www.arxiv.org/pdf/2005.14165v2",
+   "outcome": "OK",
+   "tier": 1
+  },
+  {
+   "id": 102,
+   "round": "validation",
+   "set": "search",
+   "family": "paper",
+   "url": "https://arxiv.org/pdf/2005.14165",
+   "outcome": "OK",
+   "tier": 1
+  },
+  {
+   "id": 103,
+   "round": "validation",
+   "set": "search",
+   "family": "paper",
+   "url": "https://www.cs.ucf.edu/~lboloni/Teaching/CAP5636_Fall2023/homeworks/GPT-3.pdf",
+   "outcome": "OK",
+   "tier": 5
+  },
+  {
+   "id": 104,
+   "round": "validation",
+   "set": "search",
+   "family": "paper",
+   "url": "https://ui.adsabs.harvard.edu/abs/2020arXiv200514165B",
+   "outcome": "OK",
+   "tier": 3
+  },
+  {
+   "id": 105,
+   "round": "validation",
+   "set": "search",
+   "family": "package",
+   "url": "https://numpy.org/doc/1.14/license.html",
+   "outcome": "OK",
+   "tier": 2
+  },
+  {
+   "id": 106,
+   "round": "validation",
+   "set": "search",
+   "family": "package",
+   "url": "https://data.safetycli.com/packages/pypi/np",
+   "outcome": "REDIRECT_CROSS_HOST",
+   "tier": 5
+  },
+  {
+   "id": 107,
+   "round": "validation",
+   "set": "search",
+   "family": "package",
+   "url": "https://licenses.dev/npm/numpy-miji-zhongwen-dier-ban-chuyi/2023.213.0",
+   "outcome": "OK",
+   "tier": 5
+  },
+  {
+   "id": 108,
+   "round": "validation",
+   "set": "search",
+   "family": "package",
+   "url": "https://snyk.io/advisor/python/numpy",
+   "outcome": "OK",
+   "tier": 3
+  },
+  {
+   "id": 109,
+   "round": "validation",
+   "set": "search",
+   "family": "cve",
+   "url": "https://pitstop.manageengine.com/portal/en/community/topic/apache-log4shell-vulnerability-cve-2021-44228",
+   "outcome": "OK",
+   "tier": 4
+  },
+  {
+   "id": 110,
+   "round": "validation",
+   "set": "search",
+   "family": "cve",
+   "url": "https://anvilogic.com/threat-reports/cve-2021-44228-log4shell-flaw",
+   "outcome": "OK",
+   "tier": 4
+  },
+  {
+   "id": 111,
+   "round": "validation",
+   "set": "search",
+   "family": "cve",
+   "url": "https://windriver.com/security/vulnerability-responses/apache-log4j",
+   "outcome": "OK",
+   "tier": 4
+  },
+  {
+   "id": 112,
+   "round": "validation",
+   "set": "search",
+   "family": "cve",
+   "url": "https://snyk.io/fr/blog/log4j-rce-log4shell-vulnerability-cve-2021-4428",
+   "outcome": "OK",
+   "tier": 4
+  },
+  {
+   "id": 113,
+   "round": "validation",
+   "set": "search",
+   "family": "standard",
+   "url": "https://www.rfc-editor.org/rfc/rfc9309",
+   "outcome": "OK",
+   "tier": 1
+  },
+  {
+   "id": 114,
+   "round": "validation",
+   "set": "search",
+   "family": "standard",
+   "url": "https://datatracker.ietf.org/doc/html/rfc9309",
+   "outcome": "OK",
+   "tier": 1
+  },
+  {
+   "id": 115,
+   "round": "validation",
+   "set": "search",
+   "family": "standard",
+   "url": "https://rfc-editor.org/rfc/rfc9309.html",
+   "outcome": "OK",
+   "tier": 1
+  },
+  {
+   "id": 116,
+   "round": "validation",
+   "set": "search",
+   "family": "standard",
+   "url": "https://ftp.kaist.ac.kr/rfc/rfc9309.pdf",
+   "outcome": "OK",
+   "tier": 5
+  },
+  {
+   "id": 117,
+   "round": "validation",
+   "set": "search",
+   "family": "games",
+   "url": "https://opencritic.com/news/21926/hades-2-is-a-huge-hit",
+   "outcome": "OK",
+   "tier": 4
+  },
+  {
+   "id": 118,
+   "round": "validation",
+   "set": "search",
+   "family": "games",
+   "url": "https://www.pcgamesn.com/hades/best-steam-games-of-2020",
+   "outcome": "OK",
+   "tier": 4
+  },
+  {
+   "id": 119,
+   "round": "validation",
+   "set": "search",
+   "family": "games",
+   "url": "https://respawn.outlookindia.com/amp/story/gaming/gaming-news/hades-2-opencritic-score-hits-95-joins-in-elite-tier",
+   "outcome": "OK",
+   "tier": 4
+  },
+  {
+   "id": 120,
+   "round": "validation",
+   "set": "search",
+   "family": "games",
+   "url": "https://www.gamesradar.com/games/hades/hades-2s-1-0-update-continues-its-run-of-overwhelmingly-positive-steam-reviews-and-doubles-the-original-roguelikes-all-time-peak-player-count",
+   "outcome": "OK",
+   "tier": 4
+  },
+  {
+   "id": 121,
+   "round": "validation",
+   "set": "routed",
+   "family": "paper",
+   "url": "https://arxiv.org/abs/2005.14165",
+   "outcome": "OK",
+   "tier": 1
+  },
+  {
+   "id": 122,
+   "round": "validation",
+   "set": "routed",
+   "family": "paper",
+   "url": "https://arxiv.org/pdf/2005.14165",
+   "outcome": "OK",
+   "tier": 1
+  },
+  {
+   "id": 123,
+   "round": "validation",
+   "set": "routed",
+   "family": "paper",
+   "url": "https://api.crossref.org/works/10.1038/s41586-021-03819-2",
+   "outcome": "OK",
+   "tier": 2
+  },
+  {
+   "id": 124,
+   "round": "validation",
+   "set": "routed",
+   "family": "package",
+   "url": "https://pypi.org/project/numpy/",
+   "outcome": "OK",
+   "tier": 1
+  },
+  {
+   "id": 125,
+   "round": "validation",
+   "set": "routed",
+   "family": "package",
+   "url": "https://raw.githubusercontent.com/numpy/numpy/main/LICENSE.txt",
+   "outcome": "OK",
+   "tier": 1
+  },
+  {
+   "id": 126,
+   "round": "validation",
+   "set": "routed",
+   "family": "cve",
+   "url": "https://api.osv.dev/v1/vulns/CVE-2021-44228",
+   "outcome": "OK",
+   "tier": 2
+  },
+  {
+   "id": 127,
+   "round": "validation",
+   "set": "routed",
+   "family": "cve",
+   "url": "https://services.nvd.nist.gov/rest/json/cves/2.0?cveId=CVE-2021-44228",
+   "outcome": "OK",
+   "tier": 1
+  },
+  {
+   "id": 128,
+   "round": "validation",
+   "set": "routed",
+   "family": "standard",
+   "url": "https://www.rfc-editor.org/rfc/rfc9309.txt",
+   "outcome": "OK",
+   "tier": 1
+  },
+  {
+   "id": 129,
+   "round": "validation",
+   "set": "routed",
+   "family": "standard",
+   "url": "https://datatracker.ietf.org/api/v1/doc/document/rfc9309/",
+   "outcome": "OK",
+   "tier": 1
+  },
+  {
+   "id": 130,
+   "round": "validation",
+   "set": "routed",
+   "family": "govdata",
+   "url": "https://www.federalregister.gov/api/v1/documents.json?per_page=1&conditions[term]=artificial+intelligence",
+   "outcome": "OK",
+   "tier": 1
+  },
+  {
+   "id": 131,
+   "round": "validation",
+   "set": "routed",
+   "family": "govdata",
+   "url": "https://api.worldbank.org/v2/country/US/indicator/NY.GDP.MKTP.CD?format=json&mrv=1",
+   "outcome": "OK",
+   "tier": 1
+  },
+  {
+   "id": 132,
+   "round": "validation",
+   "set": "routed",
+   "family": "govdata",
+   "url": "https://www.bls.gov/news.release/empsit.nr0.htm",
+   "outcome": "OK",
+   "tier": 1
+  },
+  {
+   "id": 133,
+   "round": "validation",
+   "set": "routed",
+   "family": "release",
+   "url": "https://endoflife.date/api/python.json",
+   "outcome": "OK",
+   "tier": 3
+  },
+  {
+   "id": 134,
+   "round": "validation",
+   "set": "routed",
+   "family": "games",
+   "url": "https://store.steampowered.com/api/appdetails?appids=1145360",
+   "outcome": "OK",
+   "tier": 1
+  },
+  {
+   "id": 135,
+   "round": "validation",
+   "set": "routed",
+   "family": "games",
+   "url": "https://store.steampowered.com/appreviews/1145360?json=1&num_per_page=1",
+   "outcome": "OTHER",
+   "tier": 1
+  },
+  {
+   "id": 136,
+   "round": "validation",
+   "set": "routed",
+   "family": "community",
+   "url": "https://hn.algolia.com/api/v1/search?query=godot&tags=story",
+   "outcome": "OK",
+   "tier": 4
+  },
+  {
+   "id": 137,
+   "round": "validation",
+   "set": "routed",
+   "family": "community",
+   "url": "https://forum.godotengine.org/latest.json",
+   "outcome": "OK",
+   "tier": 4
+  },
+  {
+   "id": 138,
+   "round": "validation",
+   "set": "routed",
+   "family": "medical",
+   "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC8371605/",
+   "outcome": "OK",
+   "tier": 1
+  },
+  {
+   "id": 139,
+   "round": "validation",
+   "set": "routed",
+   "family": "product",
+   "url": "https://en.wikipedia.org/wiki/Godot_(game_engine)",
+   "outcome": "OK",
+   "tier": 3
+  },
+  {
+   "id": 140,
+   "round": "validation",
+   "set": "routed",
+   "family": "product",
+   "url": "https://www.saferproducts.gov/RestWebServices/Recall?format=json&ProductName=air%20fryer",
+   "outcome": "OK",
+   "tier": 2
+  }
+ ]
+}

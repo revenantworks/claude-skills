@@ -17,6 +17,9 @@ on its own 30-day clock. Site routes for hard sources live in `references/hard-s
 | claude.ai Research help article (support.claude.com, article 11088861, page dated 2026-06-02) | 2026-10-01 | Route (a): plans, surfaces, web search prerequisite, connected sources |
 | Anthropic engineering, "How we built our multi-agent research system" (2025-06-13) | 2026-10-01 (pack research unit) | Scale effort to the query (1 agent for a fact, 2–4 for a comparison), start broad then narrow, a separate citation pass |
 | Hard-sources route research (pack research unit, 2026-10-01): Reddit, YouTube, X, Hacker News, GitHub, Discord terms and APIs | 2026-10-01 | `hard-sources.md` route table; Reddit's own pages were unreadable to the fetch tool, so Reddit terms are quoted through two secondary sources and marked |
+| Fetch probe, 2026-11-09: 140 fetch-tool calls over ten question families, then five new questions (`evals/fixtures/probe-2026-11-09.json`) | 2026-11-09 | `source-routes.md` route table, avoid list and stop rule; `route-health.json`; the before and after numbers in README |
+| RFC 9309, Robots Exclusion Protocol (rfc-editor.org) | 2026-11-09 | A robots refusal is the site's answer: logged as a refusal, never retried or reached another way |
+| Provider API docs (arXiv API user manual and terms, NCBI E-utilities usage guidelines, SEC EDGAR fair access, OSV, NVD 2.0, Crossref REST, Federal Register, World Bank) | 2026-11-09 | Tier 1 and 2 routes; the owner-run route rate rules (arXiv one request per three seconds, NCBI three a second without a key, SEC declared user agent) |
 | The predecessor skill's evidence doctrine (four tags, kind-of-fact test, verdict and playbook contracts), carried with its eval history | at the base commit | Every rule in `verification.md`, `verdict-mode.md`, `verdict-measurement.md`, `playbook-mode.md` |
 
 ## Parity register
@@ -47,6 +50,7 @@ Scanned 2026-10-01. Re-check every 90 days.
 | Cost control before a fan-out | beaten | out of scope | met | route, size and role stated, owner yes first · C7 |
 | Instructions inside sources | beaten | unknown | unknown | finding, never acted on · C17 |
 | Walled sources (Reddit, YouTube, X) | beaten | out of scope | out of scope | access order, capture requests, no bypass · C10, C11 |
+| Fewer blocked fetches, better sources | beaten | unknown | unknown | measured tier routes, stop rule, counts-only block log; 2026-11-09 probe: not read 37.5% → 5% against primary-first, tier 1-2 reads 32% → 79% against search-first · C26, C27, C28 |
 | Long HTML or PDF report | out of scope | met | met | a report is data to grade, or a graded Markdown report |
 | Connected workspace data | out of scope | met | out of scope | reached only through R2 |
 

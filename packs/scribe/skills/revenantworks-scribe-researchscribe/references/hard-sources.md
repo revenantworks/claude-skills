@@ -4,7 +4,9 @@ Last verified: 2026-10-01 (route table, terms lines and dates). Calendar surface
 routes on these sites change often. `researchscribe refresh` re-checks each route's terms page
 and probe; a route whose probe fails is marked **down** in the product, never skipped silently.
 
-Loaded by the `sources` entry, and by any mode when a needed source is on a site below.
+Loaded by the `sources` entry, and by any mode when a needed source is on a site below. Open
+sources that refuse only the fetch tool (robots rules on an API, a captcha on one page) are
+`source-routes.md`'s: its route table names the readable route of the same publisher.
 
 ## Contents
 

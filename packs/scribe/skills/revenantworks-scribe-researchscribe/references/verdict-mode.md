@@ -89,14 +89,15 @@ This table adds examples, never a definition; the body's kind-of-fact test settl
 field name and value), its URL and the check date. A quote the fetch tool rendered is a close
 rendering; for a deciding cell that turns on exact wording, read the raw page.
 
-**Source order per domain** (first readable wins; mirror when the first is blocked):
+**Source order per domain** (first readable wins; exact routes per family in
+`source-routes.md` §3; a refused source is never reached through an archive, cache or mirror):
 
-| Domain | Source order | Mirror |
+| Domain | Source order | When the first is not readable |
 |---|---|---|
-| Software, tools, libraries | code host (README, releases, licence file) → maker docs → registry entry | the registry's page of the same release |
-| Games | the store's public API or page → the developer's own posts → press | an archived copy of the store page |
-| Science, medicine | PMC or the preprint server → the publisher's page | the author's copy or the institutional repository |
-| Products, hardware | maker spec page → an independent lab's measurement → retailer listing | a second retailer listing |
+| Software, tools, libraries | code host via `gh` or its API (releases, licence file) → registry page → maker docs | the registry's page of the same release |
+| Games | the store's public endpoint or page → the developer's own posts → press (tier 4) | the developer's own post on its own host |
+| Science, medicine | PMC or the preprint server (abstract, PDF or HTML) → the publisher's page → the DOI record | the author's copy on the author's institution's host |
+| Products, hardware | maker spec page → an independent lab's measurement → a regulator or recall database → retailer listing | a second retailer listing, for terms the retailer sets only |
 
 **Contested cells.** Where two readable, independent sources disagree on a deciding cell, show
 both values with their sources, decide on the weaker (less favourable to the candidate), and
