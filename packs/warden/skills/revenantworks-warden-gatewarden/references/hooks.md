@@ -277,8 +277,16 @@ the stamp pass.
 The gate counts the commits the pushed branch holds that the remote's main does not (the default
 branch from `git ls-remote --symref <remote> HEAD`, the same ten-second read; the local tracking refs
 when the remote cannot be reached). When that count is above zero and the repository is public, the
-rule refuses, before the intent and stamp checks, naming the branch, the count and the fix: land the
-commits on main first and push main, or push the branch to a private remote. When the remote's main
+rule refuses, before the intent and stamp checks, unless the branch is a fast-forward of the remote's
+main (owner decision 2026-11-04, Lab proposal P-2026-11-04-01): the main tip read from the remote is
+an ancestor of the pushed commit and the range holds no merge commit, so the branch carries only new
+linear work on today's main. That push passes and the cleared note says those commits become public
+now; it then lands through a PR as on any repo, and a push to main itself keeps its own checks. A
+remote that cannot be reached, a tip missing from the clone, a branch built on an older main, or a
+merge in the range is not a fast-forward. The refusal names the branch, the count, why it is not a
+fast-forward and the fix: rebase onto a fresh main with no merge commits, or push the branch to a
+private remote. The leak checks still run first: `pii_guard` at commit, and the intent and CI stamp
+after this rule, as for every push. When the remote's main
 tip is not in the clone (the main moved or was rewritten), it counts every commit the branch holds
 and says to fetch first. Unchanged: a push of `main` or of the remote's default branch, a tag, a
 branch with nothing off main, and every push to a private repository. The rule follows the mode

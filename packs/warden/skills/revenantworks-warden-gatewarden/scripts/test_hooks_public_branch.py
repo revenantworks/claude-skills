@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """push_gate.public_branch: a branch carrying commits not on the remote's main is not pushed to a
-public repository (observation 0441; owner decision 2026-10-17).
+public repository (observation 0441; owner decision 2026-10-17), unless it is a fast-forward of that
+main with no merge commit (P-2026-11-04-01, owner 2026-11-04).
 
 Fixture repos only, no network: the remote's URL reads as a GitHub repository, and a git
 `insteadOf` rewrite sends every git call to a local bare repo. The visibility lookup is stubbed: a
@@ -109,6 +110,14 @@ class PublicBranchBase(unittest.TestCase):
         for i in range(n):
             commit(self.work, f"f{i}.txt", f"{i}\n")
 
+    def stale_feature(self, n=2):
+        """A branch whose base is no longer the remote's main tip: not a fast-forward."""
+        self.feature(n)
+        git(self.work, "checkout", "main")
+        commit(self.work, "m.txt", "moved\n")
+        git(self.work, "push", "origin", "main")  # fixture step, outside the hook
+        git(self.work, "checkout", "feature")
+
     def events(self):
         try:
             with open(os.path.join(self.state, "events.jsonl"), encoding="utf-8") as fh:
@@ -120,20 +129,21 @@ class PublicBranchBase(unittest.TestCase):
 class PublicBranchGuardTests(PublicBranchBase):
     def test_public_branch_with_commits_off_main_is_refused(self):
         self.seed(private=False)
-        self.feature(2)
+        self.stale_feature(2)
         self.ready(2)
         code, _, err = self.run_hook("git push -u origin feature")
         self.assertEqual(code, 2, err)
         self.assertIn("feature", err)
         self.assertIn("2 commits not on origin/main", err)
         self.assertIn("public", err)
-        self.assertIn("land", err.lower())
+        self.assertIn("not a fast-forward", err)
+        self.assertIn("rebase", err)
         self.assertIn("private remote", err)
         self.assertEqual([e["outcome"] for e in self.events() if e["rule"] == RULE], ["blocked"])
 
     def test_refused_before_the_intent_and_stamp_are_asked_for(self):
         self.seed(private=False)
-        self.feature(1)
+        self.stale_feature(1)
         code, _, err = self.run_hook("git push origin feature")
         self.assertEqual(code, 2)
         self.assertIn("1 commit not on origin/main", err)
@@ -189,11 +199,38 @@ class PublicBranchGuardTests(PublicBranchBase):
         self.assertIn("feature", err)
 
 
+    def test_fast_forward_branch_passes_and_says_it_goes_public(self):
+        # P-2026-11-04-01: a branch built on today's main with linear new work passes; the PR lands it.
+        self.seed(private=False)
+        self.feature(2)
+        self.ready(2)
+        code, out, err = self.run_hook("git push -u origin feature")
+        self.assertEqual(code, 0, err)
+        note = json.loads(out)["hookSpecificOutput"]["additionalContext"]
+        self.assertIn("fast-forward of origin/main", note)
+        self.assertIn("2 new commits become public", note)
+        self.assertEqual([e["outcome"] for e in self.events() if e["rule"] == RULE], ["passed"])
+
+    def test_merge_commit_in_the_range_is_refused(self):
+        # A merge can carry history the remote's main never had, even when main's tip is an ancestor.
+        self.seed(private=False)
+        git(self.work, "checkout", "-b", "side")
+        commit(self.work, "s.txt", "side\n")
+        git(self.work, "checkout", "main")
+        git(self.work, "checkout", "-b", "feature")
+        commit(self.work, "f.txt", "f\n")
+        git(self.work, "merge", "--no-ff", "-m", "merge side", "side")
+        self.ready(5)
+        code, _, err = self.run_hook("git push -u origin feature")
+        self.assertEqual(code, 2, err)
+        self.assertIn("merge commit", err)
+
+
 class PublicBranchModeTests(PublicBranchBase):
     def test_watch_logs_and_lets_the_push_run(self):
         self.mode = "watch"
         self.seed(private=False)
-        self.feature(2)
+        self.stale_feature(2)
         self.ready(2)
         code, out, err = self.run_hook("git push -u origin feature")
         self.assertEqual(code, 0, err)
@@ -203,7 +240,7 @@ class PublicBranchModeTests(PublicBranchBase):
     def test_nudge_tells_claude_and_lets_the_push_run(self):
         self.mode = "nudge"
         self.seed(private=False)
-        self.feature(2)
+        self.stale_feature(2)
         self.ready(2)
         code, out, err = self.run_hook("git push -u origin feature")
         self.assertEqual(code, 0, err)
@@ -222,7 +259,7 @@ class VisibilityLookupTests(PublicBranchBase):
     def test_fresh_cache_makes_no_lookup(self):
         self.seed(private=False)
         self.stub_gh("true")
-        self.feature(1)
+        self.stale_feature(1)
         self.ready(1)
         code, _, _ = self.run_hook("git push origin feature")
         self.assertEqual(code, 2)
@@ -231,7 +268,7 @@ class VisibilityLookupTests(PublicBranchBase):
     def test_stale_cache_is_refreshed_by_one_read_only_call(self):
         self.seed(private=True, age=10 * 86400)
         self.stub_gh("false")
-        self.feature(1)
+        self.stale_feature(1)
         self.ready(1)
         code, _, err = self.run_hook("git push origin feature")
         self.assertEqual(code, 2, err)

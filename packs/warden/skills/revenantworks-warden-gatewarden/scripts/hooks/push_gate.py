@@ -11,7 +11,9 @@ git, the PowerShell tool) it:
      reached it falls back to the local remote-tracking ref and says so (0356);
   2b. refuses a branch carrying commits not on the remote's main when the repository is public
      (`push_gate.public_branch`, observation 0441): visibility from a cached `gh api` answer
-     (`push_gate.py visibility`); unknown visibility checks the push as before and says so;
+     (`push_gate.py visibility`); unknown visibility checks the push as before and says so; a
+     fast-forward of the remote's main with no merge commit passes and says it goes public
+     (P-2026-11-04-01; the PR then lands it);
   3. refuses unless a push intent is recorded for this repo and the range fits it
      (`max_commits`, and `head` when the intent names one);
   4. refuses unless a local-CI stamp exists for the exact commit being pushed;
@@ -1133,9 +1135,30 @@ def off_main(repo: str, remote: str, sha: str) -> tuple[str, int, str]:
     return name, int(hl.run_git(repo, "rev-list", "--count", sha) or 0), note
 
 
+def fast_forward(repo: str, remote: str, sha: str) -> tuple[bool, str]:
+    """(True, "") when `sha` is a fast-forward of the remote's main: the main tip read from the remote is
+    an ancestor of `sha` and every commit between them has one parent, so the branch carries only new
+    linear work on today's main. Otherwise (False, why). An unreachable remote, a tip missing from the
+    clone, or a merge commit in the range is not a fast-forward (P-2026-11-04-01)."""
+    name, tip, note = remote_main(repo, remote)
+    if not tip or note:
+        return False, note or f"the remote's {name} tip is unknown"
+    try:
+        hl.run_git(repo, "merge-base", "--is-ancestor", tip, sha)
+    except RuntimeError:
+        return False, f"the branch is not built on {remote}/{name}'s tip; rebase it on a fresh fetch"
+    try:
+        merges = hl.run_git(repo, "rev-list", "--merges", "--count", sha, f"^{tip}")
+    except RuntimeError:
+        return False, "the range could not be read"
+    if int(merges or 0):
+        return False, f"the range holds {merges} merge commit(s); a merge can carry history not on {name}"
+    return True, ""
+
+
 def public_branch(push: dict, rows: list[dict]) -> list[tuple[str, str]]:
     """The public-branch rule for one push: refuses in guard, else returns rows for the cleared note
-    (the nudge, or "visibility unknown"). Watch logs only."""
+    (the nudge, the fast-forward pass, or "visibility unknown"). Watch logs only."""
     out: list[tuple[str, str]] = []
     repo = push["repo"]
     for r in rows:
@@ -1154,16 +1177,26 @@ def public_branch(push: dict, rows: list[dict]) -> list[tuple[str, str]]:
             out.append(("public", f"visibility unknown ({source}); `{branch}` has {n} {noun} not on {where}, "
                                   "pushed as before"))
             continue
+        # P-2026-11-04-01 (owner 2026-11-04): a fast-forward of the remote's main carries only the new
+        # work, which the PR then lands; it passes, said aloud. The PR rule for main is unchanged.
+        ff, ff_why = fast_forward(repo, r["remote"], r["sha"])
+        if ff:
+            hl.log_event(PUBLIC_RULE, hl.mode_for(PUBLIC_RULE), "passed",
+                         f"{branch}: fast-forward of {where}, {n} {noun} made public", False)
+            out.append(("public", f"`{branch}` is a fast-forward of {where}: its {n} new {noun} become public "
+                                  f"on {slug} with this push; land them through a PR"))
+            continue
         why = (f"`{branch}` carries {n} {noun} not on {where}, and {slug} is a public repository: the push "
-               "would publish them (observation 0441).")
+               f"would publish them (observation 0441). It is not a fast-forward: {ff_why}.")
         mode = hl.mode_for(PUBLIC_RULE)
         if mode == "guard":
             hl.block(hl.note("push gate", "refused", why=why,
                              rows=[("read", push.get("segment", "?")), ("branch", f"{branch} → {r['remote']}"),
                                    ("off main", f"{n} {noun}" + (f" ({note})" if note else "")),
                                    ("visibility", f"public ({source})")],
-                             fix=f"land the commits on {main} first and push {main}, or push {branch} to a "
-                                 "private remote"),
+                             fix=f"rebase {branch} onto a fresh {where} with no merge commits so it is a "
+                                 f"fast-forward, then push it and land it through a PR; or push {branch} to "
+                                 "a private remote"),
                      rule=PUBLIC_RULE)
         nudged = mode == "nudge" and not hl._nudged_before(PUBLIC_RULE)
         hl.log_event(PUBLIC_RULE, mode, "nudged" if nudged else "logged", why, False)
