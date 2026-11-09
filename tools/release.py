@@ -21,7 +21,10 @@ Steps, in order (each stops the run on failure, nothing after it runs):
                      python tools/warden_suites.py (every warden member's script suite)
   6. commit          git add -A; pii_scan.py --staged (the public CHANGELOG included, armed
                      hook or not); git commit -m <message>
-  7. tag + push      git tag <pack>-v<ver> per pack; git push origin HEAD --follow-tags
+  7. tag + push      git tag -a <pack>-v<ver> per pack (annotated); on main only, git push
+                     origin main, then each tag by its full ref, one push per tag
+                     (GitHub fires no event past three tags in one push); success only after
+                     git ls-remote reads main and every tag back from origin at this commit
                      (--no-push leaves the tags local; CI attaches the member zips on tag)
   8. upload list     members whose zip changed since the previous tag, and the exact claude.ai
                      upload list (an install variant, dist/install/*+install.zip, is listed
@@ -71,6 +74,62 @@ def sh(*args: str, cwd: Path = ROOT, check: bool = True, quiet: bool = False) ->
 
 def step(n: int, title: str) -> None:
     print(f"\n[{n}] {title}")
+
+
+# Step 7 (observation 0618). A lightweight tag never rides `--follow-tags`, so the 2026-11-04 releases
+# reached origin with no tags and CI built no zips; the push gate also refuses `push origin HEAD` and
+# `--tags` on a public repo. So: annotated tags, main pushed by name, each tag by its full ref, and
+# success only once origin is read back holding main and every tag at this commit.
+def make_tags(tags: list[str], cwd: Path = ROOT) -> None:
+    head = sh("git", "rev-parse", "HEAD", cwd=cwd, quiet=True).stdout.strip()
+    for t in tags:
+        if sh("git", "rev-parse", "-q", "--verify", f"refs/tags/{t}", cwd=cwd, check=False, quiet=True).returncode:
+            sh("git", "tag", "-a", t, "-m", t, cwd=cwd, quiet=True)
+            print(f"  ✓ tagged {t} (annotated)")
+            continue
+        kind = sh("git", "cat-file", "-t", f"refs/tags/{t}", cwd=cwd, quiet=True).stdout.strip()
+        at = sh("git", "rev-parse", f"refs/tags/{t}^{{commit}}", cwd=cwd, quiet=True).stdout.strip()
+        if kind != "tag":
+            raise SystemExit(f"✗ tag {t} exists but is lightweight; recreate it annotated: "
+                             f"git tag -d {t} && git tag -a {t} -m {t} {at[:12]}")
+        if at != head:
+            raise SystemExit(f"✗ tag {t} exists at {at[:12]}, not at HEAD {head[:12]}")
+        print(f"  = tag {t} exists (annotated, at HEAD)")
+
+
+def remote_tags(tags: list[str], cwd: Path = ROOT) -> dict[str, str]:
+    """tag -> the commit origin's tag points at (the peeled ^{} line of an annotated tag), read
+    from the remote itself with `git ls-remote`, never from local refs."""
+    # No ref patterns: a pattern matches the ref's tail, so `refs/tags/x` would drop the `x^{}` line.
+    out = sh("git", "ls-remote", "--tags", "origin", cwd=cwd, quiet=True).stdout
+    seen: dict[str, str] = {}
+    for line in out.splitlines():
+        sha, _, ref = line.partition("\t")
+        name = ref[len("refs/tags/"):-3] if ref.endswith("^{}") else ""
+        if name in tags:
+            seen[name] = sha
+    return seen
+
+
+def push_release(tags: list[str], cwd: Path = ROOT) -> None:
+    head = sh("git", "rev-parse", "HEAD", cwd=cwd, quiet=True).stdout.strip()
+    branch = sh("git", "symbolic-ref", "-q", "--short", "HEAD", cwd=cwd, check=False, quiet=True).stdout.strip()
+    if branch != "main":
+        raise SystemExit(f"✗ a release pushes main by name; HEAD is on {branch or 'a detached commit'}. "
+                         "Land the release commit on main first, or rerun with --no-push")
+    sh("git", "push", "-q", "origin", "main", cwd=cwd, quiet=True)
+    # One push per tag: GitHub creates no push event, so no tag CI and no release zips, for any tag
+    # when more than three tags arrive in one push (the 2026-11-09 recovery of four tags hit it).
+    for t in tags:
+        sh("git", "push", "-q", "origin", f"refs/tags/{t}", cwd=cwd, quiet=True)
+    main_line = sh("git", "ls-remote", "origin", "refs/heads/main", cwd=cwd, quiet=True).stdout.split()
+    if not main_line or main_line[0] != head:
+        raise SystemExit(f"✗ origin main is {main_line[0][:12] if main_line else 'missing'}, not {head[:12]}")
+    seen = remote_tags(tags, cwd)
+    bad = [t for t in tags if seen.get(t) != head]
+    if bad:
+        raise SystemExit(f"✗ origin does not hold {', '.join(bad)} at {head[:12]} (read back with ls-remote); "
+                         "main is already pushed: rerun the same release command to push the tags again")
 
 
 def pack_version(pack: str) -> str:
@@ -201,15 +260,10 @@ def main() -> int:
         print(f"  ✓ committed: {message}")
 
     step(7, "tag + push")
-    for t in tags:
-        if sh("git", "rev-parse", "-q", "--verify", f"refs/tags/{t}", check=False, quiet=True).returncode == 0:
-            print(f"  = tag {t} exists")
-        else:
-            sh("git", "tag", t, quiet=True); print(f"  ✓ tagged {t}")
+    make_tags(tags)
     if push:
-        sh("git", "push", "-q", "origin", "HEAD", "--follow-tags", quiet=True)
-        sh("git", "push", "-q", "origin", "--tags", quiet=True)
-        print("  ✓ pushed branch + tags — CI attaches the member zips to each Release")
+        push_release(tags)
+        print("  ✓ pushed main + tags, read back from origin — CI attaches the member zips to each Release")
     else:
         print("  --no-push: tags stay local")
 

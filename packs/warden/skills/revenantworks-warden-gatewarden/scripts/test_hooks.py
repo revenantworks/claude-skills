@@ -1157,6 +1157,12 @@ class HeredocGuardTests(unittest.TestCase):
         "cat a.py | python3 -u -",
     )
 
+    def test_stdin_refusal_says_a_full_heredoc_is_refused_too(self):
+        # Observation 0589: the refusal blamed an empty heredoc on a call that held a full one.
+        code, _, err = run_hook("heredoc_guard.py", bash("python3 - <<'EOF'\nprint(1)\nEOF"))
+        self.assertEqual(code, 2)
+        self.assertIn("a full heredoc included", " ".join(err.split()))
+
     def test_python_reading_stdin_is_blocked_in_every_mode(self):
         for cmd in self.STDIN_SHAPES:
             for mode in ("guard", "watch"):
@@ -2401,6 +2407,10 @@ B1_PASS = [  # (hook, tool, the refused line's shape from the observation body)
      "\"A/$n/x.ts\").Hash; $b = (Get-FileHash \"B/$n/x.ts\").Hash; \"$n $($a -eq $b)\" }"),
     # 0392: a grep pattern holding dash (already passing since 0410; kept as a control).
     ("push_gate.py", "Bash", 'git status -sb | head; git log --oneline -3; grep -l "mods/dash\\|dash suggest" *.md | head'),
+    # 0497: an escaped regex star in a grep on a line that names git.
+    ("push_gate.py", "Bash", 'git show HEAD:file | grep "\\*\\*Step"'),
+    # 0392: a PowerShell filter whose quoted value ends in a star.
+    ("push_gate.py", "PowerShell", "Get-ScheduledTask | ? { $_.TaskPath -notlike '\\Microsoft\\*' } | Select TaskName"),
     # 0435 second shape: an observation write whose quoted heredoc body holds `$(` and the word push.
     ("push_gate.py", "Bash", "cd obs && n=$(ls | grep -E '^[0-9]{4}-' | sort | tail -1 | cut -c1-4) && "
      "cat > \"$((10#${n:-0}+1))-x.md\" <<'EOF'" + NL + "---" + NL + "title: gate refused" + NL + "---" + NL

@@ -277,8 +277,16 @@ the stamp pass.
 The gate counts the commits the pushed branch holds that the remote's main does not (the default
 branch from `git ls-remote --symref <remote> HEAD`, the same ten-second read; the local tracking refs
 when the remote cannot be reached). When that count is above zero and the repository is public, the
-rule refuses, before the intent and stamp checks, naming the branch, the count and the fix: land the
-commits on main first and push main, or push the branch to a private remote. When the remote's main
+rule refuses, before the intent and stamp checks, unless the branch is a fast-forward of the remote's
+main (owner decision 2026-11-04, Lab proposal P-2026-11-04-01): the main tip read from the remote is
+an ancestor of the pushed commit and the range holds no merge commit, so the branch carries only new
+linear work on today's main. That push passes and the cleared note says those commits become public
+now; it then lands through a PR as on any repo, and a push to main itself keeps its own checks. A
+remote that cannot be reached, a tip missing from the clone, a branch built on an older main, or a
+merge in the range is not a fast-forward. The refusal names the branch, the count, why it is not a
+fast-forward and the fix: rebase onto a fresh main with no merge commits, or push the branch to a
+private remote. Every other check still runs: `pii_guard` at commit, then the intent and CI stamp
+after this rule, as for every push. When the remote's main
 tip is not in the clone (the main moved or was rewritten), it counts every commit the branch holds
 and says to fetch first. Unchanged: a push of `main` or of the remote's default branch, a tag, a
 branch with nothing off main, and every push to a private repository. The rule follows the mode
@@ -304,6 +312,13 @@ and to the owner in one line: a push once printed "Everything up-to-date" with t
 still ahead. This pass only reads: it asks for no intent or stamp, never refuses, and stays
 silent when the line moved HEAD after the push. `perm_audit.py harden` wires it beside the
 PreToolUse entry.
+
+**One repo per push call (observation 0456).** Two parallel shell calls, each starting with its
+own `cd`, once ended with the second printing "Everything up-to-date" and clearing as "nothing
+new to push" while its repo stayed one commit ahead. Push one repo per call, one after another,
+with `git -C <repo> push`, and read back each repo's ahead count (`git -C <repo> status -sb`)
+before reporting a batch pushed. Both passes judge the folder a `cd` or `-C` on the line names; a
+bare `git push` is judged in the folder the harness reports, which can have drifted.
 
 Pushes are found after unwrapping (see "What the command hooks read"), so `sh -c "git push"` or an
 encoded push is gated like a plain one. Also refused: an inline alias (`git -c alias.x=push x`), a
