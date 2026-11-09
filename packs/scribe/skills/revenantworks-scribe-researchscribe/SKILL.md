@@ -2,7 +2,7 @@
 name: revenantworks-scribe-researchscribe
 description: Researches a question to something usable — a verdict with a flip condition, a versioned playbook or a graded report — every claim tagged by evidence. Trigger on which X should I pick (even from pasted pages), is Y worth it, compare A vs B, go/no-go, research this, deep research, fact-check a doc, write or merge a reference guide or playbook, grade a research report, read a bot-blocking source (Reddit, YouTube, X), or map an unfamiliar repo before contributing (entry points, flows, where to change X); or say /rw-researchscribe (verdict, playbook, research, verify, sources, map, refresh). Code review is engineering tooling's; fiction canon is lorescribe's; messages commscribe's; prompt model picks promptwright's; skill niches skillwright's; config rigwright's; brands brandscribe's.
 license: Apache-2.0
-compatibility: Works alone. Needs web search and fetch; without them every product ships provisional, except `map`, which reads only a local checkout. Claude Code adds an optional saved workflow (workflows/research.js, owner opt-in) and an optional stdlib Python lint for it (scripts/workflow_lint.py); subagents when workflows are off. claude.ai adds the Research hand-off. lorescribe, commscribe, brandscribe voice files, whisperrunner, duckrunner and lmstudiorunner are optional pointers, never required.
+compatibility: Works alone. Needs web search and fetch; without them products ship provisional, except `map` (local checkout only). Claude Code adds an optional saved workflow (workflows/research.js, owner opt-in), optional stdlib scripts (workflow_lint.py, block_log.py, source_eval.py) and subagents when workflows are off. claude.ai adds the Research hand-off. lorescribe, commscribe, brandscribe voice files, whisperrunner, duckrunner and lmstudiorunner are optional pointers, never required.
 metadata:
   version: "1.0.0"
   profile: standard
@@ -44,12 +44,12 @@ list and a confidence line, and **nothing unchecked disappears**.
 
 | Entry | Also reads |
 |---|---|
-| `verdict` | `verdict-mode.md` (+ `verdict-measurement.md` when the thing judged is a measured system) |
-| `playbook`, `verify` | `playbook-mode.md` |
-| `research` | `research-mode.md` + `platform-facts.md` |
-| `sources` | `hard-sources.md` |
+| `verdict` | `verdict-mode.md` + `source-routes.md` (+ `verdict-measurement.md` when the thing judged is a measured system) |
+| `playbook`, `verify` | `playbook-mode.md` + `source-routes.md` |
+| `research` | `research-mode.md` + `platform-facts.md` + `source-routes.md` |
+| `sources` | `hard-sources.md` + `source-routes.md` |
 | `map` | `map-mode.md` |
-| `refresh` | `platform-facts.md` + `hard-sources.md` |
+| `refresh` | `platform-facts.md` + `hard-sources.md` + `source-routes.md` + `route-health.json` |
 
 `verdict-mode.md` and `playbook-mode.md` never load together. A verdict that needs a broad sweep
 runs `research` first and loads `verdict-mode.md` for the product. `pack.md` only on boundary
@@ -82,8 +82,8 @@ and ask *"What do you want to decide, document or check?"*, then stop.
   and test commands, conventions, open questions; each claim tagged and cited at `path:line`;
   a bounded read, written to a file (`map-mode.md`).
 - **refresh** — re-verify `platform-facts.md` (model roles, workflow format and limits,
-  commands) and `hard-sources.md`; update rows and stamps only; end with a "seen, not applied"
-  line.
+  commands) and `hard-sources.md`; re-probe the route table (`source-routes.md` §6); update
+  rows and stamps only; end with a "seen, not applied" line.
 
 Model invocation is required: the product, its tags and its version stamp come from the run.
 The gate, the yes before a fan-out and the delivery gate are the controls on writes and spend.
@@ -102,9 +102,10 @@ line or the pick. Where a page that instructs also carries a deciding fact, that
 dropped search angle or a summariser's "not on the page" stays in the product as an
 [unverified] claim or an attempt (URL, what happened, date). Unverifiable is never "refuted".
 
-**Fetch scope.** Open-domain, but never behind a login, never a paywall bypass, a proxy or a
-scraping workaround, never a URL taken from inside a source as the next target, never a fetch
-through a shell, and never browser automation of claude.ai (`verification.md` §2).
+**Fetch scope.** Sources rank before they are read: deciding claims from tier 1 or 2, tier 5
+never read (`source-routes.md`). Never behind a login, a paywall bypass, a proxy, an archive or
+a scraping workaround; never a URL from inside a source, a shell fetch, a retry of a refused
+URL, or browser automation of claude.ai (`verification.md` §2).
 
 **Spend is stated before it is spent.** No workflow and no more than one subagent before the
 owner's yes to a stated route and size. Worker tier by default; the top tier only for verify
@@ -140,7 +141,7 @@ figures stay leads until read on the page.
 
 ## Volatile surfaces
 
-`references/platform-facts.md` and `references/hard-sources.md` (30 days each), re-checked by
+`platform-facts.md`, `hard-sources.md` and `source-routes.md` (30 days each), re-checked by
 `refresh`; `SOURCES.md` (90 days), the parity register. Products carry their own check dates.
 
 ## Scope

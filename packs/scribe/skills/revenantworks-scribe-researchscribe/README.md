@@ -4,7 +4,8 @@ Research that ends in something usable, from any route. Native research tools (c
 Research, Claude Code's bundled deep-research workflow) return cited reports; researchscribe
 grades what any route finds by **kind of fact** ([documented] / [vendor-reported] / [estimate] /
 [unverified]), keeps **every unchecked claim visible** (blocked pages, budget cuts, rate-limited
-checks), and ends in a **verdict** with one pick and a flip condition, a versioned **playbook**,
+checks), reads **tier 1 and 2 sources by a measured route table** so fewer fetches are refused,
+and ends in a **verdict** with one pick and a flip condition, a versioned **playbook**,
 or a **graded research report**. It states the size and cost of any fan-out and waits for a yes
 before spending.
 
@@ -23,20 +24,26 @@ revenantworks-scribe-researchscribe/
 │   ├── playbook-mode.md          # template-first living docs; verify
 │   ├── research-mode.md          # route picker, hand-off prompt, graded report
 │   ├── map-mode.md               # a cited map of an unfamiliar repo
+│   ├── source-routes.md          # source tiers, fetch ladder, route table, stop rule (dated, 30 days)
+│   ├── route-health.json         # per-route probe status behind the route table
 │   ├── hard-sources.md           # sites that block bots (dated, 30 days)
 │   └── platform-facts.md         # the one dated file: roles, workflow format, limits
 ├── workflows/research.js         # saved workflow (Claude Code)
 ├── scripts/
 │   ├── workflow_lint.py          # stdlib lint for the workflow file
-│   └── test_workflow_lint.py
-└── evals/                        # trigger-evals.md, test-cases.md, native case folders
+│   ├── block_log.py              # counts-only log of refused fetches (host, code, count)
+│   ├── source_eval.py            # block rate and source-tier scoring of a probe file
+│   ├── test_workflow_lint.py
+│   └── test_sources.py
+└── evals/                        # trigger-evals.md, test-cases.md, native case folders,
+                                  # fixtures/probe-*.json (fetch probes behind the route table)
 ```
 
 ## Dependencies
 
 Web search and fetch; without them every product ships provisional and [unverified]. Optional:
 the Workflow tool or a subagent tool in Claude Code; claude.ai Research on paid plans; Python 3
-for the lint. Optional pointers, never required: lorescribe, commscribe, a brand's `VOICE.md`,
+for the lint, the block log and the probe scorer. Optional pointers, never required: lorescribe, commscribe, a brand's `VOICE.md`,
 whisperrunner, duckrunner, lmstudiorunner. No package to install, no MCP server, no key.
 
 ## Install
@@ -58,7 +65,7 @@ folder (or points the manifest's `workflows` field at it), and it then runs as
 | `researchscribe verify` | Fact and form drift catalog for an existing doc or report |
 | `researchscribe sources` | A walled source: route table, capture request, owner-run API route |
 | `researchscribe map` | An unfamiliar repo → entry points, flows, where to change X, build and test, conventions → a cited map file |
-| `researchscribe refresh` | Re-verify `platform-facts.md` and `hard-sources.md` |
+| `researchscribe refresh` | Re-verify `platform-facts.md` and `hard-sources.md`; re-probe the route table |
 
 | In-request switch | Effect |
 |---|---|
@@ -75,10 +82,28 @@ python scripts/workflow_lint.py workflows/research.js
 python -m unittest discover -s scripts -p "test_*.py"
 ```
 
+## Block rate and source quality
+
+`evals/fixtures/probe-2026-11-09.json` holds 140 fetch-tool probes: search-then-read, primary
+pages, naive API calls, and the routed table on new questions. Score it, or a newer probe file,
+with:
+
+```
+python scripts/source_eval.py score evals/fixtures/probe-2026-11-09.json
+python scripts/source_eval.py compare evals/fixtures/probe-2026-11-09.json --before r1:primary-html,r1:naive-api --after validation:routed --gate
+python scripts/source_eval.py routes references/route-health.json
+python scripts/block_log.py report --days 30
+```
+
+On 2026-11-09 the routed table read 19 of 20 fetches on new questions with no refusals (5% not
+read), against 15 of 40 not read going straight to primary pages and well-known APIs (37.5%).
+Search-then-read was rarely refused but only 21% to 32% of its reads were tier 1 or 2.
+
 ## Staying current
 
-`references/platform-facts.md` and `references/hard-sources.md` carry Last-verified stamps (30
-days); `researchscribe refresh` re-reads their sources. Before each workflow launch the skill
+`references/platform-facts.md`, `references/hard-sources.md` and `references/source-routes.md`
+carry Last-verified stamps (30 days); `researchscribe refresh` re-reads their sources and
+re-probes the route table. Before each workflow launch the skill
 checks the format stamp and re-reads the workflow docs when it is stale. `SOURCES.md` holds the
 parity register (90 days). Every product dates its own checks.
 

@@ -1,0 +1,157 @@
+{
+  "last_verified": "2026-11-09",
+  "tool": "the fetch tool (WebFetch), one call per URL, no retry",
+  "probe_file": "evals/fixtures/probe-2026-11-09.json",
+  "status_key": {
+    "built": "a route through an authorised CLI or connector in the session (gh, a connected MCP server)",
+    "ok": "every probe of this pattern returned the content",
+    "flaky": "returned the content on some probes and failed on others; one retry later in the run at most",
+    "robots": "the fetch tool refused it under the site's robots.txt; never fetched another way",
+    "blocked": "the site or the tool refused it (bot challenge, captcha, site block, paywall)",
+    "rate-limited": "HTTP 429 on every probe; one retry later in the run at most",
+    "js-empty": "returned a shell with no content; use the same publisher's other format",
+    "too-large": "returned navigation only; use the same publisher's other format",
+    "error": "client error with no status on every probe"
+  },
+  "families": [
+    {
+      "family": "paper-arxiv",
+      "first": [
+        {"pattern": "https://arxiv.org/abs/<id>", "status": "ok", "tier": 1, "probes": [41, 121]},
+        {"pattern": "https://arxiv.org/pdf/<id>", "status": "ok", "tier": 1, "probes": [82, 102, 122]},
+        {"pattern": "https://arxiv.org/html/<id>", "status": "ok", "tier": 1, "probes": [81]}
+      ],
+      "avoid": [
+        {"pattern": "https://export.arxiv.org/api/query", "status": "robots", "probes": [51]},
+        {"pattern": "https://api.semanticscholar.org/graph/v1/", "status": "error", "probes": [52, 84]},
+        {"pattern": "https://api.openalex.org/works", "status": "error", "probes": [53, 83]}
+      ]
+    },
+    {
+      "family": "paper-doi",
+      "first": [
+        {"pattern": "https://api.crossref.org/works/<doi>", "status": "ok", "tier": 2, "probes": [85, 123]}
+      ],
+      "avoid": []
+    },
+    {
+      "family": "biomedical",
+      "first": [
+        {"pattern": "https://pmc.ncbi.nlm.nih.gov/articles/<PMCID>/", "status": "ok", "tier": 1, "probes": [86, 138]}
+      ],
+      "avoid": [
+        {"pattern": "https://pubmed.ncbi.nlm.nih.gov/<pmid>/", "status": "blocked", "probes": [35, 49]},
+        {"pattern": "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/", "status": "robots", "probes": [75]},
+        {"pattern": "https://www.ebi.ac.uk/europepmc/webservices/rest/", "status": "rate-limited", "probes": [76, 77, 97]}
+      ]
+    },
+    {
+      "family": "python-package",
+      "first": [
+        {"pattern": "https://pypi.org/project/<name>/", "status": "ok", "tier": 1, "probes": [42, 124]},
+        {"pattern": "https://raw.githubusercontent.com/<owner>/<repo>/<branch>/<LICENSE file>", "status": "ok", "tier": 1, "probes": [56, 125]}
+      ],
+      "avoid": [
+        {"pattern": "https://pypi.org/pypi/<name>/json", "status": "robots", "probes": [54]},
+        {"pattern": "https://pypi.org/simple/<name>/", "status": "robots", "probes": [90]},
+        {"pattern": "https://api.deps.dev/v3/", "status": "robots", "probes": [92]}
+      ]
+    },
+    {
+      "family": "github",
+      "first": [
+        {"pattern": "gh api repos/<owner>/<repo>/releases/latest", "status": "built", "tier": 1, "probes": []},
+        {"pattern": "https://api.github.com/repos/<owner>/<repo>/releases/latest", "status": "flaky", "tier": 1, "probes": [55, 66, 100]},
+        {"pattern": "https://github.com/<owner>/<repo>/releases", "status": "ok", "tier": 1, "probes": [46]}
+      ],
+      "avoid": []
+    },
+    {
+      "family": "vulnerability",
+      "first": [
+        {"pattern": "https://api.osv.dev/v1/vulns/<id>", "status": "ok", "tier": 2, "probes": [57, 126]},
+        {"pattern": "https://services.nvd.nist.gov/rest/json/cves/2.0?cveId=<id>", "status": "ok", "tier": 1, "probes": [58, 127]}
+      ],
+      "avoid": [
+        {"pattern": "https://nvd.nist.gov/vuln/detail/<id>", "status": "js-empty", "probes": [43]},
+        {"pattern": "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json", "status": "error", "probes": [59]},
+        {"pattern": "https://www.cisa.gov/known-exploited-vulnerabilities-catalog", "status": "error", "probes": [93]}
+      ]
+    },
+    {
+      "family": "standard-ietf",
+      "first": [
+        {"pattern": "https://www.rfc-editor.org/rfc/rfc<N>.txt", "status": "ok", "tier": 1, "probes": [60, 61, 128]},
+        {"pattern": "https://datatracker.ietf.org/api/v1/doc/document/rfc<N>/", "status": "ok", "tier": 1, "probes": [62, 129]}
+      ],
+      "avoid": []
+    },
+    {
+      "family": "us-gov-data",
+      "first": [
+        {"pattern": "https://www.bls.gov/news.release/<release>.nr0.htm", "status": "ok", "tier": 1, "probes": [89, 132]},
+        {"pattern": "https://www.federalregister.gov/api/v1/documents.json", "status": "ok", "tier": 1, "probes": [64, 99, 130]},
+        {"pattern": "https://api.worldbank.org/v2/", "status": "ok", "tier": 1, "probes": [65, 131]}
+      ],
+      "avoid": [
+        {"pattern": "https://api.bls.gov/publicAPI/", "status": "robots", "probes": [63]}
+      ]
+    },
+    {
+      "family": "release-lifecycle",
+      "first": [
+        {"pattern": "https://endoflife.date/api/<product>.json", "status": "ok", "tier": 3, "probes": [67, 133]}
+      ],
+      "avoid": [
+        {"pattern": "https://docs.godotengine.org/en/stable/about/release_policy.html", "status": "too-large", "probes": [94]}
+      ]
+    },
+    {
+      "family": "steam",
+      "first": [
+        {"pattern": "https://store.steampowered.com/api/appdetails?appids=<id>", "status": "ok", "tier": 1, "probes": [79, 134]},
+        {"pattern": "https://store.steampowered.com/app/<id>/", "status": "ok", "tier": 1, "probes": [50]},
+        {"pattern": "https://store.steampowered.com/appreviews/<id>?json=1", "status": "flaky", "tier": 1, "probes": [98, 135]}
+      ],
+      "avoid": [
+        {"pattern": "https://api.steampowered.com/", "status": "robots", "probes": [78, 80]}
+      ]
+    },
+    {
+      "family": "encyclopedia",
+      "first": [
+        {"pattern": "https://en.wikipedia.org/wiki/<Title>", "status": "ok", "tier": 3, "probes": [87, 139]}
+      ],
+      "avoid": [
+        {"pattern": "https://en.wikipedia.org/api/rest_v1/page/summary/<Title>", "status": "error", "probes": [70]},
+        {"pattern": "https://en.wikipedia.org/w/api.php", "status": "error", "probes": [88]}
+      ]
+    },
+    {
+      "family": "community",
+      "first": [
+        {"pattern": "https://<discourse forum>/t/<id>.json", "status": "ok", "tier": 4, "probes": [72, 73]},
+        {"pattern": "https://<discourse forum>/latest.json", "status": "ok", "tier": 4, "probes": [137]},
+        {"pattern": "https://hn.algolia.com/api/v1/search", "status": "ok", "tier": 4, "probes": [74, 136]}
+      ],
+      "avoid": [
+        {"pattern": "https://api.stackexchange.com/", "status": "blocked", "probes": [96]}
+      ]
+    },
+    {
+      "family": "product",
+      "first": [
+        {"pattern": "https://www.saferproducts.gov/RestWebServices/Recall?format=json", "status": "ok", "tier": 2, "probes": [71, 140]},
+        {"pattern": "https://www.rtings.com/<category>/reviews/", "status": "flaky", "tier": 3, "probes": [47, 69]}
+      ],
+      "avoid": []
+    },
+    {
+      "family": "docs-site",
+      "first": [
+        {"pattern": "https://<docs host>/llms.txt", "status": "ok", "tier": 2, "probes": [95]}
+      ],
+      "avoid": []
+    }
+  ]
+}

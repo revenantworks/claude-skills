@@ -10,6 +10,11 @@
     "cadence_days": 30
   },
   {
+    "file": "references/source-routes.md",
+    "class": "calendar",
+    "cadence_days": 30
+  },
+  {
     "file": "SOURCES.md",
     "class": "calendar",
     "cadence_days": 90
