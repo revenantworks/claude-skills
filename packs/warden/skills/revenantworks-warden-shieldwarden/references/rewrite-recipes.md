@@ -4,6 +4,11 @@ Loaded for `plan`, `rewrite`, `land` and `after`. Flags that move between releas
 `tool-surface.md`; check it first. Every recipe works on a **fresh clone in a scratch folder
 outside every repo**, never on the working checkout. `<outside>` below is such a folder.
 
+## Contents
+
+Before anything: secrets · Plan: measure and pick the mode · Gate 1: the backup bundle · Emit the
+inputs · Gate 2: rewrite a fresh clone · Gate 3: verify · Gate 4: the user's go · Land · After
+
 **These steps bind any rewrite, not only this skill's.** A sweep once wrote its own rewrite script:
 filter-repo ran in a TEMP mirror, the commit map stayed there for cleanup to delete, and no record
 was re-pointed, so the next session found every run record citing ids that no longer existed
