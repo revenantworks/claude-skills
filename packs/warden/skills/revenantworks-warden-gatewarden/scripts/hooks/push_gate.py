@@ -1144,6 +1144,10 @@ def fast_forward(repo: str, remote: str, sha: str) -> tuple[bool, str]:
     if not tip or note:
         return False, note or f"the remote's {name} tip is unknown"
     try:
+        hl.run_git(repo, "cat-file", "-e", f"{tip}^{{commit}}")
+    except RuntimeError:
+        return False, f"the remote's {name} tip is not in this clone; fetch first"
+    try:
         hl.run_git(repo, "merge-base", "--is-ancestor", tip, sha)
     except RuntimeError:
         return False, f"the branch is not built on {remote}/{name}'s tip; rebase it on a fresh fetch"
@@ -1202,7 +1206,7 @@ def public_branch(push: dict, rows: list[dict]) -> list[tuple[str, str]]:
         hl.log_event(PUBLIC_RULE, mode, "nudged" if nudged else "logged", why, False)
         if nudged:
             out.append(("public", f"nudge: {branch} carries {n} {noun} not on {where}; {slug} is public. "
-                                  f"Land them on {main} first"))
+                                  f"Rebase it onto a fresh {where} so it is a fast-forward, then land it through a PR"))
     return out
 
 

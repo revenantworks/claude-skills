@@ -128,7 +128,8 @@ def push_release(tags: list[str], cwd: Path = ROOT) -> None:
     seen = remote_tags(tags, cwd)
     bad = [t for t in tags if seen.get(t) != head]
     if bad:
-        raise SystemExit(f"✗ origin does not hold {', '.join(bad)} at {head[:12]} (read back with ls-remote)")
+        raise SystemExit(f"✗ origin does not hold {', '.join(bad)} at {head[:12]} (read back with ls-remote); "
+                         "main is already pushed: rerun the same release command to push the tags again")
 
 
 def pack_version(pack: str) -> str:

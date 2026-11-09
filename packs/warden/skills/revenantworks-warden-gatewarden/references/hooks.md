@@ -285,7 +285,7 @@ now; it then lands through a PR as on any repo, and a push to main itself keeps 
 remote that cannot be reached, a tip missing from the clone, a branch built on an older main, or a
 merge in the range is not a fast-forward. The refusal names the branch, the count, why it is not a
 fast-forward and the fix: rebase onto a fresh main with no merge commits, or push the branch to a
-private remote. The leak checks still run first: `pii_guard` at commit, and the intent and CI stamp
+private remote. Every other check still runs: `pii_guard` at commit, then the intent and CI stamp
 after this rule, as for every push. When the remote's main
 tip is not in the clone (the main moved or was rewritten), it counts every commit the branch holds
 and says to fetch first. Unchanged: a push of `main` or of the remote's default branch, a tag, a

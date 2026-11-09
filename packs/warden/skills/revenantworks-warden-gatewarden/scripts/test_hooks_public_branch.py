@@ -211,6 +211,14 @@ class PublicBranchGuardTests(PublicBranchBase):
         self.assertIn("2 new commits become public", note)
         self.assertEqual([e["outcome"] for e in self.events() if e["rule"] == RULE], ["passed"])
 
+    def test_fast_forward_pass_still_asks_for_the_intent_and_stamp(self):
+        self.seed(private=False)
+        self.feature(1)
+        code, _, err = self.run_hook("git push origin feature")
+        self.assertEqual(code, 2, err)
+        self.assertIn("intent", err)
+        self.assertNotIn("not a fast-forward", err)
+
     def test_merge_commit_in_the_range_is_refused(self):
         # A merge can carry history the remote's main never had, even when main's tip is an ancestor.
         self.seed(private=False)
