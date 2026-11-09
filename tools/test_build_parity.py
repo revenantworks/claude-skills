@@ -125,5 +125,35 @@ class PluginFolders(unittest.TestCase):
             self.assertEqual(build._plugin_folders(bad), {})
 
 
+class ParitySkipsIgnoredFiles(unittest.TestCase):
+    """A gitignored working-tree file never ships, so a loaded copy without it is not drift."""
+
+    def test_ignored_eval_results_are_not_drift_and_tracked_files_still_are(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        repo, inst = Path(tmp.name) / "repo", Path(tmp.name) / "inst"
+        (repo / "pack-evals" / "results").mkdir(parents=True)
+        inst.mkdir()
+        subprocess.run(["git", "init", "-q", str(repo)], check=True)
+        (repo / ".gitignore").write_bytes(b"pack-evals/results/\n")
+        (repo / "pack-evals" / "results" / "report.html").write_bytes(b"run output\n")
+        (repo / "SKILL.md").write_bytes(b"body\n")
+        (inst / ".gitignore").write_bytes(b"pack-evals/results/\n")
+        (inst / "SKILL.md").write_bytes(b"body\n")
+        out = io.StringIO()
+        with redirect_stdout(out):
+            self.assertEqual(build._compare_tree(repo, inst, "loaded copy"), 0, out.getvalue())
+        (repo / "SKILL.md").write_bytes(b"body v2\n")
+        with redirect_stdout(io.StringIO()):
+            self.assertEqual(build._compare_tree(repo, inst, "loaded copy"), 1)
+
+    def test_outside_a_work_tree_nothing_is_skipped(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        root = Path(tmp.name)
+        (root / "a.md").write_bytes(b"x\n")
+        self.assertEqual(build._git_ignored(root, [Path("a.md")]), set())
+
+
 if __name__ == "__main__":
     unittest.main()

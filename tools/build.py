@@ -2408,6 +2408,26 @@ def _norm(p: Path) -> str:
 # `.in_use` is the plugin manager's live-session marker directory, not shipped content.
 PARITY_SKIP = {".in_use", ".DS_Store", ".git", "__pycache__"}
 
+def _git_ignored(root: Path, rels: list) -> set:
+    """The subset of `rels` (relative to `root`) that git ignores in the checkout holding `root`.
+
+    A gitignored working-tree file (an eval run's `pack-evals/results/`) never ships, so it is not
+    drift: on 2026-11-09 parity counted 68 such files as missing from the loaded copy. No git, or
+    `root` outside a work tree, yields an empty set and every file is compared as before.
+    """
+    if not rels:
+        return set()
+    try:
+        p = subprocess.run(["git", "-C", str(root), "check-ignore", "--no-index", "--stdin", "-z"],
+                           input="\0".join(r.as_posix() for r in rels).encode("utf-8"),
+                           capture_output=True, timeout=60)
+    except (OSError, subprocess.SubprocessError):
+        return set()
+    if p.returncode not in (0, 1):                 # 1 = nothing ignored; 128 = not a work tree
+        return set()
+    return {Path(s) for s in p.stdout.decode("utf-8", "replace").split("\0") if s}
+
+
 def _shipped(root: Path):
     """Every file that ships from a pack root, relative to it."""
     for p in sorted(root.rglob("*")):
@@ -2426,7 +2446,10 @@ def _compare_tree(repo_root: Path, inst_root: Path, label: str) -> int:
     reference doc, README, ledger or spec is not frontmatter and was never compared.
     """
     drift = []
+    ignored = _git_ignored(repo_root, list(_shipped(repo_root)))
     for rel in _shipped(repo_root):
+        if rel in ignored:
+            continue
         inst = inst_root / rel
         src = repo_root / rel
         if not inst.is_file():
