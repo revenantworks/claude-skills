@@ -94,7 +94,10 @@ The read-only commands above are what report-only passes are allowed to run.)
 - **Bumps follow the two-clock rule** (member clock vs. pack clock; see
   `packs/foundation/skills/revenantworks-foundation-skillwright/references/release-doctrine.md`).
 - **No `ask` rules** in any tracked `.claude/settings.json`; a committed `ask`
-  freezes an unattended run. Hook wired here: the post-commit pack-bump nudge
+  freezes an unattended run. No push or GitHub write grants there either: the
+  repo is public, so every clone would push and edit PRs without a prompt; a
+  maintainer keeps those grants in the untracked `.claude/settings.local.json`.
+  Hook wired here: the post-commit pack-bump nudge
   (PostToolUse on `git commit`).
 - **`.claude/hooks/` also stores what it does not arm.** It version-controls
   dispatchwright's two forcing hooks — `dispatch_gate.py`,
