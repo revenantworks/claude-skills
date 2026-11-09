@@ -2,6 +2,8 @@
 
 ## [1.0.0] — 2026-10-01
 
+2026-11-04 (observation review, 0456, 0589): `hooks.md` says to push one repo per call and read back each ahead count. `heredoc_guard.stdin` says plainly that a full heredoc is refused too; the verdict is unchanged. One test.
+
 2026-11-04: `harden` rewrites a dead deny (`Write(path)`, `NotebookEdit`, `MultiEdit`, `Glob`) to its `Edit` or `Read` form, and drops it when the twin exists; it had only reported them. A dead allow stays, because a rewrite would widen a grant. New audit rule `colon-star-literal` names the Bash shape Claude Code warns about and says when to leave it. Tests: 2 more (red first).
 
 2026-11-04: `loads` covers the load-once note in the repo README. Kind 7 flags warden and localops skills on claude.ai as a review row, and every run prints the listing cost. Kind 6 stops reading one plugin both installed and synced as a double load: the old fix told the owner to uninstall the working install. An old synced plugin generation is no longer read as a third copy. Tests: LoadsTests gains 6 (red first: 4 failing).

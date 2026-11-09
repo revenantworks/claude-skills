@@ -305,6 +305,13 @@ still ahead. This pass only reads: it asks for no intent or stamp, never refuses
 silent when the line moved HEAD after the push. `perm_audit.py harden` wires it beside the
 PreToolUse entry.
 
+**One repo per push call (observation 0456).** Two parallel shell calls, each starting with its
+own `cd`, once ended with the second printing "Everything up-to-date" and clearing as "nothing
+new to push" while its repo stayed one commit ahead. Push one repo per call, one after another,
+with `git -C <repo> push`, and read back each repo's ahead count (`git -C <repo> status -sb`)
+before reporting a batch pushed. Both passes judge the folder a `cd` or `-C` on the line names; a
+bare `git push` is judged in the folder the harness reports, which can have drifted.
+
 Pushes are found after unwrapping (see "What the command hooks read"), so `sh -c "git push"` or an
 encoded push is gated like a plain one. Also refused: an inline alias (`git -c alias.x=push x`), a
 configured alias that expands to `push` or to a shell command that pushes (the gate resolves any

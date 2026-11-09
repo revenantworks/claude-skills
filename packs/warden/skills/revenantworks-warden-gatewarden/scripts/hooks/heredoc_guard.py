@@ -492,8 +492,9 @@ def unbounded_follow(cmd: str, cwd: str = "", depth: int = 0) -> str:
     return ""
 
 
-STDIN_REASON = ("heredoc guard: `{slip}` makes Python read its program from standard input; an empty "
-                "or missing heredoc, or no input at all, leaves the call waiting until it times out. Write "
+STDIN_REASON = ("heredoc guard: `{slip}` makes Python read its program from standard input. This rule "
+                "refuses that in every form, a full heredoc included: an empty or missing heredoc, or no "
+                "input at all, leaves the call waiting until it times out (observation 0352). Write "
                 "the script with the Write tool and run `python <file>`, or use `python -c`.")
 OTHER_REASON = ("heredoc guard: `{slip}` starts a shell or REPL that reads standard input, and nothing feeds "
                 "it; the call waits until it times out. Run a script file, pass the code inline (`-c`, `-e`, "
