@@ -22,7 +22,8 @@ Steps, in order (each stops the run on failure, nothing after it runs):
   6. commit          git add -A; pii_scan.py --staged (the public CHANGELOG included, armed
                      hook or not); git commit -m <message>
   7. tag + push      git tag -a <pack>-v<ver> per pack (annotated); on main only, git push
-                     origin main, then each tag by its full ref; success only after
+                     origin main, then each tag by its full ref, one push per tag
+                     (GitHub fires no event past three tags in one push); success only after
                      git ls-remote reads main and every tag back from origin at this commit
                      (--no-push leaves the tags local; CI attaches the member zips on tag)
   8. upload list     members whose zip changed since the previous tag, and the exact claude.ai
@@ -117,7 +118,10 @@ def push_release(tags: list[str], cwd: Path = ROOT) -> None:
         raise SystemExit(f"✗ a release pushes main by name; HEAD is on {branch or 'a detached commit'}. "
                          "Land the release commit on main first, or rerun with --no-push")
     sh("git", "push", "-q", "origin", "main", cwd=cwd, quiet=True)
-    sh("git", "push", "-q", "origin", *[f"refs/tags/{t}" for t in tags], cwd=cwd, quiet=True)
+    # One push per tag: GitHub creates no push event, so no tag CI and no release zips, for any tag
+    # when more than three tags arrive in one push (the 2026-11-09 recovery of four tags hit it).
+    for t in tags:
+        sh("git", "push", "-q", "origin", f"refs/tags/{t}", cwd=cwd, quiet=True)
     main_line = sh("git", "ls-remote", "origin", "refs/heads/main", cwd=cwd, quiet=True).stdout.split()
     if not main_line or main_line[0] != head:
         raise SystemExit(f"✗ origin main is {main_line[0][:12] if main_line else 'missing'}, not {head[:12]}")

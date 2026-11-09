@@ -88,6 +88,22 @@ class ReleaseTagTests(unittest.TestCase):
             release.push_release(["scribe-v1.0.1"], cwd=self.work)
         self.assertIn("does not hold scribe-v1.0.1", str(cm.exception))
 
+    def test_each_tag_goes_in_its_own_push(self):
+        # GitHub fires no tag event when more than three tags arrive in one push.
+        from unittest import mock
+        real, pushes = release.sh, []
+
+        def record(*args, **kw):
+            if args[:2] == ("git", "push"):
+                pushes.append([a for a in args if a.startswith("refs/tags/")])
+            return real(*args, **kw)
+
+        tags = ["foundation-v1.1.0", "warden-v1.1.0", "localops-v1.0.1", "scribe-v1.0.1"]
+        release.make_tags(tags, cwd=self.work)
+        with mock.patch.object(release, "sh", record):
+            release.push_release(tags, cwd=self.work)
+        self.assertEqual([[]] + [[f"refs/tags/{t}"] for t in tags], pushes)
+
     def test_the_script_no_longer_uses_follow_tags_or_push_head(self):
         src = (Path(release.__file__)).read_text(encoding="utf-8")
         code = src.split('"""', 2)[2]  # past the module docstring
