@@ -1,6 +1,6 @@
 # Pack — localops *(standard profile)*
 
-> Advisory only — consulted on boundary doubt; initial routing stays at the name + description level. **Last stamped: 2026-10-08** (seven-member roster + canonical repo; generated from the registry in skillwright's `pack-registry.md`).
+> Advisory only — consulted on boundary doubt; initial routing stays at the name + description level. **Last stamped: 2026-11-09** (seven-member roster + canonical repo; generated from the registry in skillwright's `pack-registry.md`).
 
 | Member | Job | Route there when |
 |---|---|---|
@@ -59,6 +59,7 @@
 | obsrunner | gatewarden (warden) | Left (gatewarden) owns: golive_block.py, the second lock that blocks go-live, virtual-camera, output and stream-key requests and service.json reads for every Claude tool call (Bash, PowerShell, Read, Write/Edit of scripts, any MCP server). Right (obsrunner) owns: its own allow-list, which refuses the same requests inside its script. Router keys on: guard the session or drive OBS. Cold-listing: none — table only |
 | obsrunner | trustwarden (warden) | Left (trustwarden) owns: vetting an OBS plugin, an OBS MCP server or the obsws-python package before the user installs it. Right (obsrunner) owns: driving OBS once installed. Router keys on: trust or operate. Cold-listing: none — table only |
 | obsrunner | soundsmith (gamedev) | Left (soundsmith) owns: game audio direction. Right (obsrunner) owns: the stream mix audit (VOD track, loudness of a recording). Router keys on: game asset or stream. Cold-listing: none — table only. Left open 2026-10-01 (A5 PK-P3-1); reopen on a recorded misroute in J1 or a RESULTS run |
+| lmstudiorunner | vaultscribe (scribe) | Left (vaultscribe) owns: filing sources into cited concept pages and checking a local model's summary like any other source before it reaches the wiki. Right (lmstudiorunner) owns: running the summaries on a local model, task and model fit, and the run's own check. Router keys on: keep it in the vault, or run it locally. Added 2026-11-09 with the member. Cold-listing: one description (vaultscribe names lmstudiorunner) |
 
 **Pack conformance checks** (adopted 2026-09-09, scored on every member audit): **C-1 drift-audit verb** · **C-2 neutral default**.
 

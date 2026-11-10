@@ -29,6 +29,7 @@ export const RW_SKILLS: readonly RwSkill[] = [
   { short: "brandscribe", pack: "scribe", member: "revenantworks-scribe-brandscribe", about: "Keeps brand definitions, several side by side, and turns one into a Claude Design System…" },
   { short: "commscribe", pack: "scribe", member: "revenantworks-scribe-commscribe", about: "Writes and cleans up messages and docs for their channel and reader (email, Slack, a…" },
   { short: "researchscribe", pack: "scribe", member: "revenantworks-scribe-researchscribe", about: "Researches a question to something usable — a verdict with a flip condition, a versioned…" },
+  { short: "vaultscribe", pack: "scribe", member: "revenantworks-scribe-vaultscribe", about: "Sets up, runs and keeps honest an LLM-maintained knowledge vault — raw sources, a…" },
   { short: "shieldwarden", pack: "warden", member: "revenantworks-warden-shieldwarden", about: "Keeps the user's identity and secrets out of anything public" },
   { short: "trustwarden", pack: "warden", member: "revenantworks-warden-trustwarden", about: "Vets third-party skills, plugins, MCP servers, GitHub Actions and model weights before…" },
   { short: "keywarden", pack: "warden", member: "revenantworks-warden-keywarden", about: "Finds where every credential on the machine lives, without showing a value" },
