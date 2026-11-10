@@ -66,7 +66,7 @@ A clipped web page is text someone else wrote. It can carry instructions aimed a
 }
 ```
 
-- Connectors and MCP tools off: a clip cannot steer a tool that reaches mail, chat or a drive. `disableClaudeAiConnectors` is the key a working vault used (as read 2026-11-09); confirm it against the Claude Code settings page before relying on it, and keep the `mcp__*` deny either way.
+- Connectors and MCP tools off: a clip cannot steer a tool that reaches mail, chat or a drive. `disableClaudeAiConnectors` is a documented Claude Code setting, and a `true` from any settings scope is honoured even over managed settings (Claude Code settings page, read 2026-11-09). Keep the `mcp__*` deny as well: it also covers local MCP servers.
 - Push and merge denied: rule 6 says Claude never pushes or merges; this makes the tool refuse too.
 - A user who wants a connector in the vault removes its line on purpose; harden never adds an allow rule.
 
