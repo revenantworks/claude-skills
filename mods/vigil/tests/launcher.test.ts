@@ -49,7 +49,7 @@ const pack = (name: string): CommandInfo => ({ name, description: '', source: 'p
 describe('the short-command logic', () => {
   test('every rostered skill has a short name, and none repeats', () => {
     const shorts = RW_SKILLS.map(s => s.short)
-    expect(shorts.length).toBe(30)
+    expect(shorts.length).toBe(31)
     expect(new Set(shorts).size).toBe(shorts.length)
   })
   test('a skill is found by short name, /rw- form or member name', () => {
