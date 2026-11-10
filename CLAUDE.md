@@ -1,11 +1,11 @@
 # CLAUDE.md — claude-skills
 
 The canonical home of every Revenantworks Agent Skill (repository
-`revenantworks/claude-skills`). Six packs, 30 members, live under `packs/`:
+`revenantworks/claude-skills`). Six packs, 31 members, live under `packs/`:
 
 - **foundation** — nine `-wright` members, standalone profile.
-- **scribe** — four `-scribe` members (researchscribe, brandscribe, commscribe,
-  lorescribe), standard profile; declared scripts allowed.
+- **scribe** — five `-scribe` members (researchscribe, brandscribe, commscribe,
+  lorescribe, vaultscribe), standard profile; declared scripts allowed.
 - **warden** — four `-warden` members (shieldwarden, trustwarden, keywarden,
   gatewarden), standard profile.
 - **localops** — seven `-runner` members, standard profile; one program per runner,
