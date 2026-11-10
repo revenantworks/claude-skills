@@ -1,6 +1,6 @@
 # Pack — warden *(standard profile)*
 
-> Advisory only — consulted on boundary doubt; initial routing stays at the name + description level. **Last stamped: 2026-11-03** (four-member roster + canonical repo; generated from the registry in skillwright's `pack-registry.md`).
+> Advisory only — consulted on boundary doubt; initial routing stays at the name + description level. **Last stamped: 2026-11-09** (four-member roster + canonical repo; generated from the registry in skillwright's `pack-registry.md`).
 
 | Member | Job | Route there when |
 |---|---|---|
@@ -50,6 +50,8 @@
 | trustwarden | obsrunner (localops) | Left (trustwarden) owns: vetting an OBS plugin, an OBS MCP server or the obsws-python package before the user installs it. Right (obsrunner) owns: driving OBS once installed. Router keys on: trust or operate. Cold-listing: none — table only |
 | gatewarden | grillwright (foundation) | Left (grillwright) owns: interviewing a request before something is built. Right (gatewarden) owns: scoring what a running agent may already do — grants and blast radius. Router keys on: the object, not the shared verb "grill". Cold-listing: one description (grillwright names gatewarden, 2026-10-08) |
 | trustwarden | faretender (hearth) | Left (faretender) owns: using a travel connector already installed, read tools only. Right (trustwarden) owns: whether to install a connector, plugin or third-party toolkit, and on what terms. Router keys on: use or vet. Added 2026-11-03. Cold-listing: one description (faretender names trustwarden) |
+| shieldwarden | vaultscribe (scribe) | Left (vaultscribe) owns: the vault lint's privacy and secret lines on the current tree, by file and line, never the value, and the privacy-signals escalation to a git-ignored folder. Right (shieldwarden) owns: a deep leak scan of history, identities and names, and planning a history rewrite. Router keys on: the vault's current files, or its history. "Check my vault for emails and keys" is vaultscribe; "remove the key from every commit" is shieldwarden. Added 2026-11-09 with the member. Cold-listing: one description (vaultscribe names shieldwarden) |
+| gatewarden | vaultscribe (scribe) | Left (vaultscribe) owns: writing a vault's own deny rules, local settings and trust-boundary lines (`harden`). Right (gatewarden) owns: auditing permission rules across every settings level, dead rules and hook safety. Router keys on: write the vault's rules, or audit what rules allow. Added 2026-11-09 with the member. Cold-listing: one description (vaultscribe names gatewarden) |
 
 **Pack conformance checks** (adopted 2026-10-01, scored on every member audit): **C-1 drift-audit verb** · **C-2 neutral default**.
 

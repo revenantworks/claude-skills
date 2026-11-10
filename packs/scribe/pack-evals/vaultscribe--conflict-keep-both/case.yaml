@@ -1,0 +1,7 @@
+schema_version: "1.1"
+name: conflict-keep-both
+tags: [behaviour, margin]
+# Needs --scaffold: scaffold.sh writes the fixture vault into the run's working folder
+# (context.add_dirs never reached the run on Windows; scaffold trial 2026-10-16).
+context:
+  scaffold_script: scaffold.sh

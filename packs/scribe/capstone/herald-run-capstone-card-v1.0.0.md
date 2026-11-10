@@ -131,7 +131,8 @@ researchscribe's tag legend, since the carriage rule is built on it; and after
 a change to commscribe's fact moves or audit thresholds, since LEG 5 is built
 on them. A bump of the brand definition re-runs LEG 2 onward for any message
 not yet sent. Adding a pack member updates this card's roster only.
-Roster: researchscribe, brandscribe, commscribe, lorescribe (scribe);
+Roster: researchscribe, brandscribe, commscribe, lorescribe, vaultscribe (scribe;
+vaultscribe drives no leg, added 2026-11-09);
 shieldwarden (warden) as an optional pointer across packs.
 First live run: PENDING. Success test: one real decision through LEG 1 to
 LEG 6, the four closing lines filled and every claim in every draft traced to a

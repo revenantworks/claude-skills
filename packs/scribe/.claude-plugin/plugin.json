@@ -2,7 +2,7 @@
   "name": "scribe",
   "displayName": "Revenantworks Scribe",
   "version": "1.0.1",
-  "description": "revenantworks-scribe — skills for words and knowledge on the -scribe motif (standard profile). Four members: researchscribe, brandscribe, commscribe and lorescribe. Declared scripts are allowed. researchscribe's saved research workflow ships as /scribe:research.",
+  "description": "revenantworks-scribe — skills for words and knowledge on the -scribe motif (standard profile). Five members: researchscribe, brandscribe, commscribe, lorescribe and vaultscribe. Declared scripts are allowed. researchscribe's saved research workflow ships as /scribe:research.",
   "author": {
     "name": "Revenantworks"
   },

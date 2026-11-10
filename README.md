@@ -1,9 +1,9 @@
 # claude-skills
 
-**30 Agent Skills for Claude in six packs, plus optional mods. Each skill does one job, shows its
+**31 Agent Skills for Claude in six packs, plus optional mods. Each skill does one job, shows its
 evidence, and works alone.**
 
-![skills: 30](https://img.shields.io/badge/skills-30-blue)
+![skills: 31](https://img.shields.io/badge/skills-31-blue)
 ![packs: 6](https://img.shields.io/badge/packs-6-blue)
 ![version: 1.0.0](https://img.shields.io/badge/version-1.0.0-informational)
 ![mods: optional](https://img.shields.io/badge/mods-optional-lightgrey)
@@ -124,7 +124,7 @@ each one loads only when a request needs it.
 | Pack | Skills | What it covers | Featured | Install |
 |---|---|---|---|---|
 | [**foundation**](packs/foundation/) | 9 | Building and running the work around Claude: skills and their evals, prompts, interviews, agents, config, fan-out, handoffs, pacing, platform change | pacewright | `/plugin install foundation@revenantworks` |
-| [**scribe**](packs/scribe/) | 4 | Words and knowledge: research verdicts, brands and design systems, messages and docs, story canon | brandscribe | `/plugin install scribe@revenantworks` |
+| [**scribe**](packs/scribe/) | 5 | Words and knowledge: research verdicts, brands and design systems, messages and docs, story canon, knowledge vaults | brandscribe | `/plugin install scribe@revenantworks` |
 | [**warden**](packs/warden/) | 4 | Guarding what Claude writes or manages: leaks, identity, third-party code, disk and reach, credentials, permissions | trustwarden | `/plugin install warden@revenantworks` |
 | [**localops**](packs/localops/) | 7 | Local programs, one per runner: LM Studio, ComfyUI, Docker, DuckDB, whisper.cpp, Hyper-V, OBS | whisperrunner | `/plugin install localops@revenantworks` |
 | [**gamedev**](packs/gamedev/) | 5 | Game development: pixel art across zoom bands, Godot build proof, game audio by the numbers, test-first game code, screen direction with a fit probe | pixelsmith | `/plugin install gamedev@revenantworks` |
@@ -162,6 +162,7 @@ voice or canon: nothing exists until you build one or hand one in. Capstone: Her
 | [brandscribe](packs/scribe/skills/revenantworks-scribe-brandscribe/) | Keeps brand definitions and builds a live Claude Design System from one, plus DESIGN.md and VOICE.md; re-syncs it when the brand changes; scores pages against a neutral UI floor | *"Turn this style guide into a Claude Design System"* |
 | [commscribe](packs/scribe/skills/revenantworks-scribe-commscribe/) | Writes and reshapes messages and docs for their channel and reader, and never moves a fact | *"Make this release note sound less like AI"* |
 | [lorescribe](packs/scribe/skills/revenantworks-scribe-lorescribe/) | Keeps a fiction project's story bible and checks text, briefs and drafts against canon | *"Check this chapter against the story bible"* |
+| [vaultscribe](packs/scribe/skills/revenantworks-scribe-vaultscribe/) | Sets up and keeps an LLM-maintained knowledge vault (works with Obsidian, not affiliated): cited pages, a lint that catches personal data and keys, drift checks on living sources, deny rules for web clips | *"Set up a second brain in Obsidian that Claude keeps up to date"* |
 
 ### warden · guarding what Claude touches
 

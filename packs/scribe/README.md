@@ -1,6 +1,6 @@
 # scribe pack
 
-**Four scribes for words and knowledge: research verdicts, brands, messages and story canon.** On
+**Five scribes for words and knowledge: research verdicts, brands, messages, story canon and knowledge vaults.** On
 the `-scribe` motif, standard profile, version 1.0.0.
 
 ```
@@ -16,6 +16,7 @@ the `-scribe` motif, standard profile, version 1.0.0.
 | `revenantworks-scribe-brandscribe` | Brand definitions built into a live Claude Design System (and re-synced when the brand changes), DESIGN.md and VOICE.md, drift audits, and a neutral UI floor | *"Turn this style guide into a Claude Design System"* |
 | `revenantworks-scribe-commscribe` | Messages and docs shaped to their channel and reader, with a claim-level fact check | *"Make this release note sound less like AI"* |
 | `revenantworks-scribe-lorescribe` | A fiction project's story bible and canon checks | *"Check this chapter against the story bible"* |
+| `revenantworks-scribe-vaultscribe` | An LLM-maintained knowledge vault (a second brain or LLM wiki, works with Obsidian, not affiliated): setup, ingest, cited answers, a lint with privacy and secret checks, living-source drift, and deny rules for web clips | *"Set up a second brain in Obsidian that Claude keeps up to date"* |
 
 ## Which skill for which need
 
@@ -33,6 +34,11 @@ Paste this table into a project's CLAUDE.md to route requests without loading ev
 | Say it again because the reader did not follow | commscribe `retell` | promptwright (a prompt a model misreads) |
 | Keep a story bible, check a chapter against canon, set naming rules | lorescribe | researchscribe (real-world facts for a story) |
 | Brief a local model on a scene with its shape and beats | lorescribe `brief` | lmstudiorunner (running the brief) |
+| Start or keep a second brain, Obsidian vault or LLM wiki; file sources into cited pages | vaultscribe `setup`, `ingest` | lorescribe (fiction canon, not real-world knowledge) |
+| Ask the vault a question, or file a research report into it | vaultscribe `query`, `ingest` | researchscribe (researching the question itself) |
+| Lint a vault for broken links, orphans, emails, home paths or keys | vaultscribe `lint` | shieldwarden (a deep leak scan or a history rewrite) |
+| Re-snapshot repo docs a vault cites and update only the stale pages | vaultscribe `refresh` | researchscribe `verify` (a doc checked against vendor docs) |
+| Lock down a vault that takes web clips against prompt injection | vaultscribe `harden` | gatewarden (auditing every permission rule) |
 
 **Featured:** brandscribe also ships on its own as a one-skill plugin (`/plugin install brandscribe@revenantworks`).
 
@@ -40,8 +46,12 @@ researchscribe's saved research workflow ships as `/scribe:research` (the plugin
 points at the member's `workflows/` folder).
 
 researchscribe, brandscribe and commscribe select one of several brands or voices per request;
-lorescribe keeps one canon per universe and pins it across repos. Every member ships with none;
-nothing exists until the user builds or hands one in.
+lorescribe keeps one canon per universe and pins it across repos; vaultscribe keeps one vault per
+folder. Every member ships with none; nothing exists until the user builds or hands one in.
+
+vaultscribe works with Obsidian (not affiliated) or any Markdown folder. Obsidian's own formats
+(Bases, Canvas, its Markdown extensions, its CLI) are
+[kepano/obsidian-skills](https://github.com/kepano/obsidian-skills)' job.
 
 **Capstone:** the Herald Run in `capstone/` takes one decision from a graded verdict to a gated
 announcement in the right voice.

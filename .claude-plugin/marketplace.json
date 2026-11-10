@@ -73,7 +73,7 @@
       "name": "scribe",
       "displayName": "Revenantworks Scribe",
       "source": "./packs/scribe",
-      "description": "Skills on the -scribe motif for words and knowledge. Four members: researchscribe (graded research verdicts, playbooks and reports), brandscribe (brand definitions, design systems and voice files), commscribe (messages and docs shaped to their channel, with a fact check), lorescribe (a fiction project's story bible and canon checks). Each routes on its own description and works alone.",
+      "description": "Skills on the -scribe motif for words and knowledge. Five members: researchscribe (graded research verdicts, playbooks and reports), brandscribe (brand definitions, design systems and voice files), commscribe (messages and docs shaped to their channel, with a fact check), lorescribe (a fiction project's story bible and canon checks), vaultscribe (an LLM-maintained knowledge vault with lint and drift checks). Each routes on its own description and works alone.",
       "version": "1.0.1",
       "license": "Apache-2.0",
       "category": "productivity",
@@ -84,6 +84,7 @@
         "branding",
         "writing",
         "worldbuilding",
+        "knowledge-base",
         "pack"
       ],
       "repository": "https://github.com/revenantworks/claude-skills"
