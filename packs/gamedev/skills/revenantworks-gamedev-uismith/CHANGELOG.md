@@ -1,5 +1,9 @@
 # Changelog — revenantworks-gamedev-uismith
 
+## [1.1.0] — 2026-11-11
+
+New references/artifact-pages.md: the theme and phone pass for published artifact pages, from a pass over 17 live pages. Also: a shared card kit over hand-rolled switches (attributes it owns, never the host's data-theme), tabs (bottom bar on phones, same bar on top elsewhere), freshness stamps, the downloads capability for saves inside claude.ai, and a vetted adopt/reject list from MDN, web.dev, WAI-ARIA APG, GOV.UK and Nielsen Norman Group. Purpose and source first; palettes only from the page's own brand definition; token-ise before theming; a theme watcher that ignores its own writes; new controls in their own class; contrast and 44 px checks per palette and mode; probe traps. Load-budget line added.
+
 ## [1.0.0] — 2026-10-13
 
 2026-11-04 (a fresh review, false failures on good pages reproduced in Chromium): an empty section is now one that draws nothing. Text under `display: contents`, open shadow roots, slots, a background colour, a visible border and `::before` or `::after` content all count. A collapsed panel that a control's `aria-expanded="false"` names is not empty, and neither is a `hidden`, `inert` or `aria-hidden` one. Settling waits for DOM quiet (300 ms, 2 s cap), so a section filled just after load or after a fold opens reads as filled. A console error carries its URL. A page with no section says `PASS (empty sections not checked)`. Text in a box of no size is no longer reported as clipped.
