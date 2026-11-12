@@ -174,6 +174,80 @@ class CheckoutTests(Base):
         self.assertIn("not inside a git checkout", err)
 
 
+class DirectionTests(Base):
+    """2026-11-12: --check says which side is newer, and install refuses to discard a rig-side edit."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        repo = self.root / "repo"
+        subprocess.run(["git", "init", "-q", "-b", "main", str(repo)], check=True, capture_output=True,
+                       stdin=subprocess.DEVNULL, **NOWIN)
+        (self.src / "a_hook.py").write_text("print('a v1')\n", encoding="utf-8", newline="\n")
+        git(repo, "add", "-A")
+        git(repo, "commit", "-q", "-m", "v1")
+        (self.src / "a_hook.py").write_text("print('a v2')\n", encoding="utf-8", newline="\n")
+        git(repo, "commit", "-q", "-am", "v2")
+        (self.live / "b_hook.py").write_bytes((self.src / "b_hook.py").read_bytes())
+
+    def live_a(self, text: str, newline: str = "\n") -> None:
+        (self.live / "a_hook.py").write_text(text, encoding="utf-8", newline=newline)
+
+    def test_older_repo_version_reads_repo_newer(self) -> None:
+        self.live_a("print('a v1')\n")
+        rc, out, _ = run("--check", *self.args())
+        self.assertEqual(rc, 1)
+        self.assertIn("repo newer a_hook.py", out)
+
+    def test_older_repo_version_with_crlf_still_reads_repo_newer(self) -> None:
+        self.live_a("print('a v1')\n", newline="\r\n")
+        self.assertIn("repo newer a_hook.py", run("--check", *self.args())[1])
+
+    def test_content_not_in_history_reads_rig_newer(self) -> None:
+        self.live_a("print('a edited on the rig')\n")
+        rc, out, _ = run("--check", *self.args())
+        self.assertEqual(rc, 1)
+        self.assertIn("rig newer a_hook.py", out)
+        self.assertIn("1 same, 1 not same", out)
+
+    def test_untracked_file_has_no_history_and_reads_differs(self) -> None:
+        (self.src / "c_hook.py").write_text("print('c')\n", encoding="utf-8", newline="\n")
+        (self.live / "c_hook.py").write_text("print('c other')\n", encoding="utf-8", newline="\n")
+        self.live_a("print('a v2')\n")
+        self.assertIn("differs  c_hook.py", run("--check", *self.args())[1])
+
+    def test_install_refuses_rig_newer_per_file_and_changes_nothing_there(self) -> None:
+        self.live_a("print('a edited on the rig')\n")
+        (self.live / "b_hook.py").unlink()
+        rc, out, _ = run(*self.args())
+        self.assertEqual(rc, 2)
+        self.assertIn("REFUSED   a_hook.py", out)
+        self.assertIn("--force-older", out)
+        self.assertIn("added     b_hook.py", out)
+        self.assertEqual((self.live / "a_hook.py").read_text(encoding="utf-8"), "print('a edited on the rig')\n")
+        self.assertFalse((self.live / ".backup").exists())
+
+    def test_force_older_installs_rig_newer_after_a_backup(self) -> None:
+        self.live_a("print('a edited on the rig')\n")
+        rc, out, _ = run(*self.args("--force-older"))
+        self.assertEqual(rc, 0, out)
+        self.assertIn("updated   a_hook.py", out)
+        self.assertEqual((self.live / "a_hook.py").read_text(encoding="utf-8"), "print('a v2')\n")
+        (backup,) = list((self.live / ".backup").iterdir())
+        self.assertEqual((backup / "a_hook.py").read_text(encoding="utf-8"), "print('a edited on the rig')\n")
+
+    def test_install_over_an_older_repo_version_proceeds(self) -> None:
+        self.live_a("print('a v1')\n")
+        rc, out, _ = run(*self.args())
+        self.assertEqual(rc, 0, out)
+        self.assertIn("updated   a_hook.py", out)
+        self.assertEqual((self.live / "a_hook.py").read_text(encoding="utf-8"), "print('a v2')\n")
+
+    def test_shipped_hooks_have_history_in_this_checkout_or_read_differs(self) -> None:
+        # Guard on the helper itself: it returns a set of hashes or None, never raises.
+        got = ih.history_hashes(ih.DEFAULT_SOURCE, "hooklib.py")
+        self.assertTrue(got is None or all(len(h) == 64 for h in got))
+
+
 class SettingsNoteTests(Base):
     def test_note_reads_and_never_writes_settings(self) -> None:
         settings = self.root / "settings.json"

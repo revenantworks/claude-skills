@@ -5,13 +5,18 @@ Run, never read into context. Stdlib only, no network, windowless. The owner run
 gatewarden itself installs nothing.
 
     install_hooks.py --check [--hooks DIR] [--source DIR]
-    install_hooks.py [--hooks DIR] [--source DIR] [--allow-branch]
+    install_hooks.py [--hooks DIR] [--source DIR] [--allow-branch] [--force-older]
                      [--settings FILE] [--no-settings-note]
 
 --check lists each hook file in the source (`scripts/hooks/*.py` beside this script) with its
-live hash, its repo hash and `same`, `differs` or `missing`; it writes nothing and exits 1 on
-any difference (a scheduled drift check can call it). Without --check it installs:
-each live file that differs is copied first to `<hooks>/.backup/<UTC stamp>/`, the repo
+live hash, its repo hash and `same`, `differs`, `rig newer`, `repo newer` or `missing`; it writes
+nothing and exits 1 on any difference (a scheduled drift check can call it). Direction comes from
+the repo's git history of that file: a live file whose content is any older version of it reads
+`repo newer`; a live file that is not in the history at all reads `rig newer` (an edit made on the
+rig that never reached the repo); with no history to read (no git, a shallow clone, an untracked
+file) it stays `differs`. Without --check it installs: a `rig newer` file is refused, per file,
+unless --force-older is given, because the copy would silently discard the rig's edit (exit 2 if
+any file was refused). Each other live file that differs is copied first to `<hooks>/.backup/<UTC stamp>/`, the repo
 version is written in, the live file is read back and its hash verified, and one line per file
 prints. It refuses to run from a checkout that is dirty or not on `main` unless
 --allow-branch is given, and refuses outside a git checkout. It never writes settings.json:
@@ -65,20 +70,47 @@ def compare(source: Path, hooks: Path) -> list[tuple[str, str, str, str]]:
             rows.append((src.name, "-", want, "missing"))
             continue
         have = sha(live)
-        rows.append((src.name, have, want, "same" if have == want else "differs"))
+        if have == want:
+            rows.append((src.name, have, want, "same"))
+            continue
+        past = history_hashes(source, src.name)
+        status = "differs" if past is None else ("repo newer" if have in past else "rig newer")
+        rows.append((src.name, have, want, status))
     return rows
 
 
-def git(repo: Path, *args: str) -> str | None:
+def _git_run(repo: Path, *args: str, text: bool = True):
     kw: dict = {}
     if os.name == "nt":
         kw["creationflags"] = 0x08000000  # CREATE_NO_WINDOW
     try:
-        r = subprocess.run(["git", "-C", str(repo), *args], capture_output=True, text=True,
+        r = subprocess.run(["git", "-C", str(repo), *args], capture_output=True, text=text,
                            stdin=subprocess.DEVNULL, timeout=60, **kw)
     except (OSError, subprocess.SubprocessError):
         return None
-    return r.stdout.strip() if r.returncode == 0 else None
+    return r if r.returncode == 0 else None
+
+
+def git(repo: Path, *args: str) -> str | None:
+    r = _git_run(repo, *args)
+    return r.stdout.strip() if r is not None else None
+
+
+def history_hashes(source: Path, name: str) -> set[str] | None:
+    """Hashes (CRLF-normalised) of every committed version of source/name, or None when the
+    history cannot be read whole: no git, a shallow clone, an untracked or never-committed file."""
+    if git(source, "rev-parse", "--is-shallow-repository") != "false":
+        return None
+    shas = git(source, "log", "--format=%H", "--", f"./{name}")
+    if not shas:
+        return None
+    out: set[str] = set()
+    for commit in shas.split():
+        r = _git_run(source, "show", f"{commit}:./{name}", text=False)
+        if r is None:
+            return None
+        out.add(hashlib.sha256(r.stdout.replace(b"\r\n", b"\n")).hexdigest())
+    return out
 
 
 def checkout_problem(source: Path) -> str | None:
@@ -162,18 +194,23 @@ def run_check(source: Path, hooks: Path) -> int:
     return 1 if bad else 0
 
 
-def run_install(source: Path, hooks: Path, stamp: str) -> int:
+def run_install(source: Path, hooks: Path, stamp: str, force_older: bool = False) -> int:
     rows = compare(source, hooks)
     backup = hooks / ".backup" / stamp
-    failed = 0
+    failed = refused = 0
     for name, _have, _want, status in rows:
         src, live = source / name, hooks / name
         if status == "same":
             print(f"same      {name}")
             continue
+        if status == "rig newer" and not force_older:
+            print(f"REFUSED   {name}: the live file is not in the repo's history of it (an edit made on "
+                  "the rig); installing would discard it. Port it into the repo first, or pass --force-older.")
+            refused += 1
+            continue
         try:
             hooks.mkdir(parents=True, exist_ok=True)
-            if status == "differs":
+            if status != "missing":
                 backup.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(live, backup / name)
             tmp = hooks / (name + ".install-tmp")
@@ -185,12 +222,14 @@ def run_install(source: Path, hooks: Path, stamp: str) -> int:
             failed += 1
             continue
         if ok:
-            print(f"{'updated' if status == 'differs' else 'added':9} {name}  verified {sha(live)[:12]}"
-                  + (f"  (old copy in .backup/{stamp})" if status == "differs" else ""))
+            print(f"{'added' if status == 'missing' else 'updated':9} {name}  verified {sha(live)[:12]}"
+                  + (f"  (old copy in .backup/{stamp})" if status != "missing" else ""))
         else:
             print(f"FAILED    {name}: hash after copy does not match the repo")
             failed += 1
-    return 1 if failed else 0
+    if refused:
+        print(f"{refused} file(s) refused as newer on the rig; nothing was done to them.")
+    return 1 if failed else (2 if refused else 0)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -199,6 +238,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--hooks", type=Path, default=DEFAULT_HOOKS, help="live hooks folder")
     ap.add_argument("--source", type=Path, default=DEFAULT_SOURCE, help="repo hooks folder")
     ap.add_argument("--allow-branch", action="store_true", help="install from a dirty or non-main checkout")
+    ap.add_argument("--force-older", action="store_true",
+                    help="also overwrite a live file that is newer than the repo's history (backed up first)")
     ap.add_argument("--settings", type=Path, default=DEFAULT_SETTINGS, help="settings file, read only")
     ap.add_argument("--no-settings-note", action="store_true")
     a = ap.parse_args(argv)
@@ -215,7 +256,7 @@ def main(argv: list[str] | None = None) -> int:
             print(f"refused: {why}. Fix that, or pass --allow-branch.", file=sys.stderr)
             return 2
     stamp = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    rc = run_install(source, hooks, stamp)
+    rc = run_install(source, hooks, stamp, a.force_older)
     if not a.no_settings_note:
         for line in settings_note(a.settings.expanduser(), {p.name for p in hook_files(source)}):
             print(line)

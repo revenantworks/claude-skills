@@ -28,6 +28,8 @@ To see the drift without changing anything (exit 1 on any difference, so a sched
 call it): `python "<skill>\scripts\install_hooks.py" --check`. Run the install again after every
 claude-skills update that touches a hook; the `--check` line then reads `same` for all eleven.
 
+A live file that is not any version in the repo's history of it reads `rig newer` (an edit made on the rig that never reached the repo). The install refuses it, per file, and says so; port the edit into the repo first, or pass `--force-older` to back it up and overwrite it. A live file that matches an older repo version reads `repo newer` and installs normally.
+
 The manual route, if you prefer it:
 
 ```powershell
