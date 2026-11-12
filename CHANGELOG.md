@@ -5,6 +5,47 @@ Every pack, every member and every featured plugin launches at 1.0.0. Each membe
 `<pack>-vX.Y.Z`, member versions move on their own semver, and a featured plugin carries its
 member's version.
 
+## [warden-v1.1.1] - 2026-11-11
+
+### Improved
+
+- **gatewarden**: The gate lets a branch go to a public repository when it is a fast-forward of that repository's main, and says the commits become public now; a branch built on an older main is still refused, with a rebase fix.
+- **gatewarden**: One repository per call; the heredoc refusal says plainly that a full heredoc is refused too; the gate says to fetch when it cannot read main's tip.
+- **warden**: Every member's pack roster now lists vaultscribe; shieldwarden adds a rewrite recipe.
+
+## [scribe-v1.1.0] - 2026-11-11
+
+### New
+
+- **vaultscribe**: The fifth scribe sets up, runs and keeps honest an LLM-maintained knowledge vault (raw sources, a cited wiki and a rules file, viewed in Obsidian or any Markdown folder), with ingest, query, lint, refresh and harden.
+
+### Improved
+
+- **researchscribe**: Fetches go by source tier, primary first, and a run stops cleanly when a source refuses automated reads.
+- **brandscribe**: Every UI handback opens with what was injected and the verdict.
+- **scribe**: The pack and repo docs route vault work to vaultscribe.
+
+## [localops-v1.0.2] - 2026-11-11
+
+### Improved
+
+- **localops**: Every runner's pack roster now lists vaultscribe, so vault summaries route to it.
+
+## [gamedev-v1.2.0] - 2026-11-11
+
+### New
+
+- **uismith 1.1.0**: A new artifact-pages reference for a theme and phone pass on published pages: purpose first, one shared theme kit instead of hand-rolled switches, tabs with a phone bottom bar, freshness stamps, downloads that work inside claude.ai, and a vetted adopt and reject list of page best practices.
+
+### Improved
+
+- **gamedev**: Plugin descriptions are shorter, to fit the claude.ai limit.
+
+## [foundation-v1.1.1] - 2026-11-11
+
+### Improved
+
+- **skillwright**: The pack registry now lists vaultscribe in the scribe pack.
 ## [warden-v1.1.0] - 2026-11-04
 
 ### Improved
