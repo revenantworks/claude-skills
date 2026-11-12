@@ -110,6 +110,20 @@ class PushGateTests(unittest.TestCase):
         self.assertEqual(code, 2)
         self.assertIn("intent", err)
 
+    def test_intend_chained_before_the_push_is_refused_with_an_explanation(self):
+        # Review 2026-11-11: the gate reads the whole line before any of it runs, so the intend on the
+        # line has not been recorded yet. The refusal says so and tells the caller to split the command.
+        gate = str(HOOKS / "push_gate.py")
+        for verb in ("intend", "preflight"):
+            cmd = f'python "{gate}" {verb} --repo "{self.work}" --max 3 && git push origin main'
+            code, _, err = run_hook("push_gate.py", bash(cmd, self.work))
+            self.assertEqual(code, 2, verb)
+            self.assertIn("has not run yet", err, verb)
+            self.assertIn("its own command", err, verb)
+        code, _, err = run_hook("push_gate.py", bash("git push origin main", self.work))
+        self.assertEqual(code, 2)
+        self.assertNotIn("has not run yet", err)
+
     def test_push_without_ci_stamp_is_refused(self):
         self.assertEqual(self.intend(3).returncode, 0)
         code, _, err = run_hook("push_gate.py", bash("git push", self.work))
@@ -885,6 +899,32 @@ class GoLiveBlockTests(unittest.TestCase):
         self.assertEqual(code, 2)
         code, _, _ = run_hook("golive_block.py", {}, raw='{"tool_input": {"command": "git sta')
         self.assertEqual(code, 0)
+
+    # Review 2026-11-11 (observation 0392): on a line the hook cannot read, a go-live hint word that sits
+    # only inside an inert quoted literal runs nothing; a literal that can run code, or a request name in
+    # a quote, still fails closed.
+    LITERAL_ONLY = [
+        "Get-ChildItem -Filter 'stream*' $dir | ForEach-Object { & $_.FullName }",
+        "$f = 'stream notes.txt'; & $tool $f",
+        '& $tool --label "live stream notes"',
+    ]
+
+    def test_hint_word_only_in_an_inert_literal_passes_an_unreadable_line(self):
+        for cmd in self.LITERAL_ONLY:
+            for tool in ("Bash", "PowerShell"):
+                code, _, err = run_hook("golive_block.py", bash(cmd, tool=tool))
+                self.assertEqual(code, 0, f"{tool}: {cmd}: {err}")
+
+    def test_hint_word_outside_a_literal_or_in_a_live_literal_still_fails_closed(self):
+        req = "Start" + "Stream"
+        for cmd in ["& $tool --live stream",
+                    "& $tool 'quiet' --mode stream",
+                    '& $tool "$(Get-Date) stream"',
+                    "& $tool `stream`",
+                    f'$r = "{req}"; & $c $r',
+                    f"$r = '{req}'; & $c $r"]:
+            code, _, _ = run_hook("golive_block.py", bash(cmd, tool="PowerShell"))
+            self.assertEqual(code, 2, cmd)
 
 
 # ---------------------------------------------------------------- call cap
