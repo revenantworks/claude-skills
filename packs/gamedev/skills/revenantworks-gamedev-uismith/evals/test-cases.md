@@ -1,6 +1,6 @@
 # Test cases — revenantworks-gamedev-uismith
 
-Provenance: derived from SKILL.md v1.0.0 (2026-10-13). Status: **authored, not run.** Assertion-only:
+Provenance: derived from SKILL.md v1.0.0 (2026-10-13); re-anchored to v1.1.0 (2026-11-11), which adds a reference only. Status: **authored, not run.** Assertion-only:
 each case is an Input and mechanical checks on the run's output, plus a `Without:` line (what a run
 with no skill loaded likely does) and a `Discriminates:` line (the assert that behaviour fails).
 Fixtures are invented. The native `claude plugin eval` cases live beside this file in `evals/<case>/`.
