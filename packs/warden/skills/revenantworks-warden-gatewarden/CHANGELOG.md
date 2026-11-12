@@ -2,6 +2,8 @@
 
 ## [1.0.0] — 2026-10-01
 
+2026-11-12 (owner decision, HOOK-03 drift): `scripts/install_hooks.py`, an owner-run one-command install. `--check` lists each shipped hook file with its live and repo hash as `same`, `differs` or `missing` and exits 1 on any difference; the default backs up each differing live file to `<hooks>/.backup/<UTC stamp>/`, copies the repo version in and verifies the hash after the copy. It refuses a dirty or non-main checkout without `--allow-branch`, leaves files the repo does not ship alone, and only reads `settings.json` (to name documented hooks it does not register). gatewarden still installs nothing; the walkthrough's step 1 now points at the script. Tests: `test_install_hooks.py`, 16, temp folders on both sides.
+
 2026-11-09 (observations 0556, 0605; owner decision 2026-11-04): `push_gate.public_branch` passes a branch push to a public repository when the branch is a fast-forward of the remote's main (the tip read from the remote is an ancestor and the range holds no merge commit), and says those commits become public now; the PR lands them. A branch built on an older main, a merge in the range, or an unreachable remote is still refused, and the fix now says to rebase. Tests: 2 new, 6 moved to a branch built on an older main.
 
 2026-11-04 (observation review, 0456, 0589): `hooks.md` says to push one repo per call and read back each ahead count. `heredoc_guard.stdin` says plainly that a full heredoc is refused too; the verdict is unchanged. One test.
