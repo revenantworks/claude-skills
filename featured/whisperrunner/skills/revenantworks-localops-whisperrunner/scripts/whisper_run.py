@@ -14,7 +14,7 @@ Commands:
 
 Run options: --bin PATH  --model PATH  --formats txt,srt,vtt,json  --cpu
   --mode interactive|unattended  --out DIR  --language auto  --vad-model PATH  --no-vad
-  --threads N  --flash-attn  --overwrite  --take-stale  --timeout SECONDS
+  --threads N  --flash-attn  --overwrite  --take-stale  --timeout SECONDS  --no-context
 
 Rules the code enforces (never softened by a flag the user did not give):
   - A GPU run whose log lacks a GPU "using <device> backend" line is FAILED-GPU.
@@ -24,6 +24,8 @@ Rules the code enforces (never softened by a flag the user did not give):
     whose transcript check fails goes to _failed/, never to the final folder.
   - run takes vad_model from whisperrunner.json when --vad-model is not given
     (--no-vad opts out); the JSON says vad: on|off. check never defaults it.
+  - A configured bin or model path that no longer exists is a stale config
+    ("configured ... is gone"), never reported as a missing install.
   - Nothing is downloaded, nothing leaves the machine, no existing output is
     overwritten without --overwrite.
 
@@ -259,6 +261,8 @@ def build_cmd(a, binary: str, wav: Path, base: Path, flags: dict, formats: list[
         cmd.append("-nfa")  # this build defaults flash attention on; keep it off until check passes with it
     if a.vad_model:
         cmd += ["--vad", "-vm", a.vad_model]
+    if getattr(a, "no_context", False):
+        cmd += ["-mc", "0"]  # no text carried between windows: stops loops on synthetic or processed audio
     return cmd
 
 
@@ -313,11 +317,22 @@ def preflight(a, cfg: dict) -> tuple[str | None, list[str]]:
     """The binary and the refusals that stop a run before it starts."""
     stops = []
     binary = resolve_bin(a.bin, cfg)
-    if not binary:
+    configured_bin = cfg.get("bin")
+    if not binary and not a.bin and configured_bin and not Path(configured_bin).is_file():
+        stops.append(f"configured bin {configured_bin} is gone (whisperrunner.json is stale; the install may "
+                     "have moved): search the drives for whisper-cli by name with no depth limit, then "
+                     "whisper_run.py configure --root <whisper.cpp folder> --force")
+    elif not binary:
         stops.append("whisper-cli not found: pass --bin, set 'bin' in whisperrunner.json, or put it on PATH "
-                     "(install is the user's; references/install-walkthrough.md)")
-    a.model = a.model or cfg.get("model_cpu" if a.cpu else "model_gpu")
-    if not a.model or not Path(a.model).is_file():
+                     "(search for an existing build by name first; install is the user's; "
+                     "references/install-walkthrough.md)")
+    model_key = "model_cpu" if a.cpu else "model_gpu"
+    from_cfg = not a.model and bool(cfg.get(model_key))
+    a.model = a.model or cfg.get(model_key)
+    if from_cfg and not Path(a.model).is_file():
+        stops.append(f"configured {model_key} {a.model} is gone (whisperrunner.json is stale): find the model "
+                     "file by name, then whisper_run.py configure --root <whisper.cpp folder> --force")
+    elif not a.model or not Path(a.model).is_file():
         stops.append("model file not found: pass --model or set model_gpu / model_cpu in whisperrunner.json "
                      "(downloads are the user's step)")
     if binary and a.mode == "unattended":
@@ -522,6 +537,8 @@ def main(argv=None) -> int:
         s.add_argument("--overwrite", action="store_true")
         s.add_argument("--take-stale", action="store_true")
         s.add_argument("--timeout", type=float)
+        s.add_argument("--no-context", action="store_true",
+                       help="pass -mc 0: no text context between windows (synthetic or effect-processed audio)")
     a = p.parse_args(argv)
     if a.cmd == "backend":
         try:

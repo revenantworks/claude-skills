@@ -139,6 +139,10 @@ a number kept from an earlier file) or `--parallel <n>` with n <= 6, which the l
 holds as written. There is no "no cap" answer: the writer refuses `--parallel none` and a turbo
 number above 6. An unattended start takes the
 pick. A later answer from the user replaces it; it is not asked again at each check.
+The entry call carries no `--parallel` unless the user named a lower number: a number copied from
+a normal-mode call shape becomes the "lower number", and every renewal keeps it, because a renewal
+without `--parallel` keeps the file's number and says nothing (observation 0626). To return a
+renewed turbo file to rig-aware, write normal, then turbo again with no `--parallel`.
 
 **Every launch passes four launch gates:**
 1. **Real work only**: a planned row on the path to a landed row — builds of designed rows first,
@@ -200,7 +204,9 @@ slot runner and the queue own the CPU; read them first (observation 0462).
 engines / B, queue wait / H, WIP, land state, the 5-hour and weekly readings, and with a spend
 target the needed rate and its lane count (The spend target, above). **Renewal is a check**: the
 writer renews turbo only with `--landed <n>` and a reading under 15 minutes old, at a TTL of 2 h at
-most. **Drops to normal** after two checks in a row with 0 rows landed (the writer does it), with
+most. Count `<n>` from the record at each renewal (ledger rows that turned done, or main's merges,
+since the file's `written_at`); never reuse a renewal line from earlier in the session, whose
+copied `--landed 0` drops a landing run to normal (observation 0518). **Drops to normal** after two checks in a row with 0 rows landed (the writer does it), with
 queue wait over 2 x H, or below the baseline rate (rows landed per meter point; the first measured
 figure was 0.21, from one turbo day — a local overlay replaces it with the environment's own).
 **Ends** at PACE + 15, at the end of the stated period, at the Overnight start (unless the user
@@ -232,6 +238,12 @@ least-allowed command. Before the user leaves:
   for the night (the writer records their words: `--night-order "<quote>"`). Turbo then runs
   under the rig gate and its 2-hour checks, the renewals are the controller's, and Overnight's
   conduct holds: no questions, defaults taken, a morning file, a morning report.
+- **Write paths are checked, not only commands** (observation 0477). List every path the queued
+  units will write and check it against the platform's protected paths as well as the ask rules:
+  edits inside a `.claude/` folder (settings, hooks, agents, skills) ask for approval whatever the
+  allow list says. A unit whose files sit there runs while the user is present, or its brief stages
+  the edits outside `.claude/` and a later attended step copies them in. A "nothing will prompt
+  tonight" claim names what was checked: the command forms and the write paths.
 - **No questions, and never a blocking question tool** (observation 0348). Launch every
   launchable row first; each question then goes to a morning file with a recommended answer, and
   only the rows that depend on it wait. A reversible fork takes the default; an irreversible one

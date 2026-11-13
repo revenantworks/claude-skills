@@ -971,6 +971,37 @@ def vet_dir(root: Path, kind: str, sha: str | None, max_bytes: int, scanner_name
             **decision, "coverage": vet.coverage, "findings": vet.findings, "scanners": scanners}
 
 
+LICENCE_NAME = re.compile(r"^(?:LICEN[CS]E|COPYING)(?:[.-][\w.-]*)?$", re.I)
+
+
+def licence_files(root: Path, sha: str) -> dict:
+    """Top-level licence files at one commit, name -> blob id, read from git objects."""
+    out = _git(root, "ls-tree", sha) or ""
+    found = {}
+    for line in out.splitlines():
+        meta, _, name = line.partition("\t")
+        parts = meta.split()
+        if len(parts) == 3 and parts[1] == "blob" and LICENCE_NAME.match(name):
+            found[name] = parts[2]
+    return found
+
+
+def licence_drift(root: Path, old: str, new: str) -> dict:
+    """The licence file at both pins (observation 0571): renamed, changed, added or gone."""
+    a, b = licence_files(root, old), licence_files(root, new)
+    if a == b:
+        state = "same" if a else "none"
+    elif not b:
+        state = "gone"
+    elif not a:
+        state = "added"
+    elif set(a.values()) == set(b.values()):
+        state = "renamed"
+    else:
+        state = "changed"
+    return {"from": a, "to": b, "state": state}
+
+
 def revet(root: Path, old: str, new: str, max_bytes: int) -> dict:
     """Drift since the pinned SHA: what changed, which changes need a fresh read, the new tree hash.
     Reads git objects only; nothing is checked out or run."""
@@ -991,14 +1022,19 @@ def revet(root: Path, old: str, new: str, max_bytes: int) -> dict:
     tree_old = _git(root, "rev-parse", f"{old}^{{tree}}")
     tree_new = _git(root, "rev-parse", f"{new}^{{tree}}")
     need = [c["file"] for c in changes if c["needs_read"]]
-    verdict = "HOLD" if need else "CONDITIONAL"
+    lic = licence_drift(root, old, new)
+    verdict = "HOLD" if need or lic["state"] in ("changed", "gone", "added") else "CONDITIONAL"
     reasons = ([f"{len(need)} changed file(s) need a fresh vet before the pin moves"] if need
                else ["no change touches code, config or instructions"])
-    terms = [] if need else [f"pin-sha: move the pin to {new}",
-                             "auto-update-off: keep auto-update off for the marketplace it comes from"]
+    if lic["state"] in ("changed", "gone", "added"):
+        reasons.append(f"licence file {lic['state']} between the pins: read the licence text before the pin moves")
+    elif lic["state"] == "renamed":
+        reasons.append("licence file renamed, same text: the host's licence label may change; re-read it")
+    terms = [] if verdict == "HOLD" else [f"pin-sha: move the pin to {new}",
+                                          "auto-update-off: keep auto-update off for the marketplace it comes from"]
     return {"mode": "revet", "version": VERSION, "from": old, "to": new, "tree_from": tree_old,
             "tree_to": tree_new, "verdict": verdict, "reasons": reasons, "changes": changes,
-            "terms": terms}
+            "licence": lic, "terms": terms}
 
 
 # ---- licence per weight (observation 0428 point 3) ------------------------------------------
