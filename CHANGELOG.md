@@ -5,6 +5,26 @@ Every pack, every member and every featured plugin launches at 1.0.0. Each membe
 `<pack>-vX.Y.Z`, member versions move on their own semver, and a featured plugin carries its
 member's version.
 
+## [hearth-v1.0.1] - 2026-11-12
+
+### Improved
+
+- **faretender**: The fee and claim rules now cite primary sources: the FTC's own FAQ on what a price may leave out, the UK CAA and US DOT pages, and the UK text of Article 7 (GBP 220, 350, 520). The trigger description gains "fees reviewers mention".
+- **faretender**: The nine native evals were run and the results recorded; the fees trigger case now names its hotels and one grader ignores case.
+
+
+## [warden-v1.1.2] - 2026-11-12
+
+### New
+
+- **gatewarden**: `install_hooks.py`, an owner-run one-command installer for the shipped hooks. `--check` lists each hook file as same, differs or missing; the default backs up each differing live file, copies the repo version in and verifies it. It refuses a rig-newer file unless told to, and refuses a dirty or non-main checkout.
+
+### Fixed
+
+- **gatewarden**: A go-live hint word inside an inert quoted literal no longer fails the whole line closed.
+- **gatewarden**: A `push_gate` intend or preflight chained before a push on one line is refused with a message that says to run intend as its own command.
+
+
 ## [warden-v1.1.1] - 2026-11-11
 
 ### Improved

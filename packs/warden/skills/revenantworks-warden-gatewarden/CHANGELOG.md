@@ -1,5 +1,9 @@
 # Changelog — revenantworks-warden-gatewarden
 
+## [1.0.1] — 2026-11-12
+
+- install_hooks.py owner-run installer with downgrade guard; golive_block and push_gate hook fixes
+
 ## [1.0.0] — 2026-10-01
 
 2026-11-12 (owner decisions #25, #3; HOOK-03): two hook fixes made on the rig on 2026-11-11 reach the repo (review observation 0392). `golive_block`: on a line it cannot read, a go-live hint word that sits only inside an inert quoted literal (no `$( )`, no backtick) no longer fails the line closed; request names, the CLI and service.json are still read on the full text. `push_gate`: an `intend` or `preflight` chained before the push on one line is refused with a message that says the gate reads the whole line before any of it runs, and to run intend as its own command. `install_hooks.py` gains a downgrade guard: `--check` reads `rig newer` (live content is in no committed version of the file), `repo newer` (live matches an older version) or `differs` (no readable history); install refuses a `rig newer` file per file, exit 2, unless `--force-older`. Tests: 2 hook tests (red first on the old files), `test_install_hooks.py` 16 -> 24. Skill version unchanged; the pack release commit carries the bump.
