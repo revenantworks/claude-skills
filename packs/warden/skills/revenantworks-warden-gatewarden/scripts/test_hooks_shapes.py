@@ -480,6 +480,75 @@ class GW2Candidates(PushShapeBase):
         self.expect(0, self.EVERYDAY_PS, tool="PowerShell")
 
 
+class GW2Literal(PushShapeBase):
+    """FIX-GW2 round 3 (re-review of 850eb3b): a folder word counts as a candidate only when it is a plain
+    literal path that exists now. For a non-builtin subcommand the gate refuses a folder word that is
+    missing (bare cd, cd -, pushd +N), holds a glob, brace, quote splice, POSIX backslash escape or `~`,
+    names a drive or provider that is not a drive letter, or names a folder that does not exist yet on a
+    line that may create it; and any line that changes how names resolve (CDPATH, OLDPWD, New-PSDrive,
+    subst, net use, mklink, ln -s). Each shape reaches `pp` in `other` for real (review probe)."""
+
+    PP = GW2.PP
+    refused = GW2.refused
+
+    def setUp(self):
+        GW2.setUp(self)
+
+    def test_s01_cdpath_exported(self):
+        self.refused(f"export CDPATH=..; cd other && {self.PP}")
+
+    def test_s02_cdpath_assigned(self):
+        self.refused(f"CDPATH=.. ; cd other; {self.PP}")
+
+    def test_s03_oldpwd_then_cd_dash(self):
+        self.refused(f"OLDPWD=../other; cd -; {self.PP}")
+
+    def test_s04_glob_star(self):
+        self.refused(f"cd ../oth* && {self.PP}")
+
+    def test_s05_glob_question_mark(self):
+        self.refused(f"cd ../othe? && {self.PP}", f"cd ../{{other,x}} && {self.PP}")
+
+    def test_s06_quote_splice(self):
+        self.refused(f"cd ../ot''her && {self.PP}")
+
+    def test_s07_backslash_escape(self):
+        self.refused(f"cd ../ot\\her && {self.PP}")
+
+    def test_s08_powershell_glob(self):
+        self.refused(f"cd ..\\oth*; {self.PP}", tool="PowerShell")
+
+    def test_s09_powershell_drive(self):
+        self.refused(f"New-PSDrive -Name QQ -PSProvider FileSystem -Root ../other | Out-Null; Set-Location QQ:; "
+                     f"{self.PP}", tool="PowerShell")
+
+    def test_s10_folder_copied_by_python(self):
+        self.refused(f"python -c \"import shutil; shutil.copytree('../other','../cpy')\" && cd ../cpy && {self.PP}")
+
+    def test_s11_folder_copied_by_node(self):
+        self.refused(f"node -e \"require('fs').cpSync('../other','../cpy2',{{recursive:true}})\" && "
+                     f"{G} -C ../cpy2 pp origin main")
+
+    def test_s12_subst_drive(self):
+        self.refused(f"subst Q: ..\\other && cd /q && {self.PP}")
+
+    def test_s13_cd_with_no_literal_folder(self):
+        self.refused(f"cd; {self.PP}", f"cd ~; {self.PP}", f"cd -; {self.PP}", f"pushd +1; {self.PP}")
+
+    def test_builtins_pass_beside_every_new_rule(self):
+        st = f"{G} status"
+        self.expect(0, [f"export CDPATH=..; cd other && {st}", f"cd ../oth* && {st}", f"cd -; {st}", f"cd; {st}",
+                        f"cd ../ot''her && {st}", f"subst Q: ..\\other && cd /q && {st}"])
+
+    def test_literal_existing_folders_still_resolve(self):
+        git(self.other, "config", "alias.st", "status")
+        self.expect(0, [f"cd ../other && {G} st", f"{G} -C ../other st", f"cd \"../other\" && {G} st"])
+
+    def test_everyday_lines_still_pass(self):
+        self.expect(0, GW2Candidates.EVERYDAY)
+        self.expect(0, GW2Candidates.EVERYDAY_PS, tool="PowerShell")
+
+
 DECODE_AND_RUN = "inline code that decodes text and runs it"
 HELLO = "aGVsbG8="  # the base64 of the word hello: a harmless literal
 B64D, SYSTEM = "b64" + "decode", "os." + "system"

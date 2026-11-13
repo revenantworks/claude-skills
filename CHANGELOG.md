@@ -9,7 +9,7 @@ member's version.
 
 ### Fixed
 
-- **gatewarden**: push_gate checks a non-builtin git subcommand against every folder or git dir the line names (cd in any form, `-C`, `--git-dir`, `GIT_DIR`, `env -C`, `-WorkingDirectory`, find paths, `cwd=` in inline code), read lexically and through junctions, and refuses it when it is a pushing alias in any of them. A pushing alias set in another repo no longer passes through a subshell, a pipe, `&`, a failed cd, a nested shell, eval, `find -execdir`, Start-Process or a split program name in inline code. The builtin list is git's whole command list, so everyday commands such as `prune`, `rerere` and `verify-tag` pass.
+- **gatewarden**: push_gate checks a non-builtin git subcommand against every folder or git dir the line names (cd in any form, `-C`, `--git-dir`, `GIT_DIR`, `env -C`, `-WorkingDirectory`, find paths, `cwd=` in inline code), read lexically and through junctions, and refuses it when it is a pushing alias in any of them. A pushing alias set in another repo no longer passes through a subshell, a pipe, `&`, a failed cd, a nested shell, eval, `find -execdir`, Start-Process or a split program name in inline code. A folder word must be a plain literal path that exists now: a glob, quote splice, backslash escape, `~`, bare `cd` or `cd -`, a provider drive, a folder the line may create, or a line that sets CDPATH or OLDPWD or uses New-PSDrive, subst or a link refuses a non-builtin. The builtin list is git's whole command list, so everyday commands such as `prune`, `rerere` and `verify-tag` pass.
 
 ## [hearth-v1.0.2] - 2026-11-13
 

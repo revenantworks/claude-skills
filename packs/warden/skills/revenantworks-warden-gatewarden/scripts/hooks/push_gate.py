@@ -454,18 +454,34 @@ CODE_DYNAMIC = re.compile(r"""(?i)\bgetattr\b|(['"])\1\s*\.\s*join\b|b64decode|f
 SPLIT_LITERAL = re.compile(r"""(['"])\s*\+\s*(['"])""")
 
 
+MISSING = "\x00missing"  # a cd-like word with no folder after it (bare cd, popd)
+SEPARATOR = re.compile(r"^[;&|()<>{}\n]+$")
+# A line that changes how a folder name resolves (FIX-GW2 round 3): CDPATH, OLDPWD, a PowerShell drive,
+# subst, net use, a junction or symlink made on the line. A non-builtin subcommand there is refused.
+NAME_REMAP = re.compile(r"(?i)(?<![\w-])(?:CDPATH|OLDPWD)\s*=|(?<![\w-])(?:new-psdrive|ndr|subst|mklink"
+                        r"|net\s+use)(?![\w-])|(?<![\w-])ln\s+(?:-\w*s|--symbolic)")
+# Programs that cannot create a folder: a line that runs only these does not make a missing folder exist.
+NO_CREATE = CD_WORDS | {"git", "test", "[", "[[", "true", "false", ":", "echo", "printf", "test-path", "pwd",
+                        "exit", "return", "write-host", "write-output", "out-null", "export", "set", "fi",
+                        "done", "for", "if", "while", "until", "local", "read", "sleep", "which", "type", "esac"}
+
+
 def dir_words(words: list[str]) -> list[str]:
-    """The folder and git-dir words a list of shell words names, in any position."""
+    """The folder and git-dir words (raw, quotes kept) a list of shell words names, in any position.
+    A cd-like word with no folder after it gives MISSING."""
     out = []
     for k, w in enumerate(words):
         nxt = words[k + 1] if k + 1 < len(words) else ""
-        lw = w.lower().strip("({")
+        lw = hl.unquote(w).lower().strip("({")
         if lw in CD_WORDS:
+            got = MISSING
             for a in words[k + 1:k + 8]:
-                if a and not CD_OPTS.match(a) and not REDIR_WITH_TARGET.match(a) and not REDIR.match(a) \
-                        and a not in ("}", ")", "-"):
-                    out.append(a)
+                if not a or SEPARATOR.match(a) or a in ("}", ")"):
                     break
+                if not CD_OPTS.match(a) and not REDIR_WITH_TARGET.match(a) and not REDIR.match(a):
+                    got = a
+                    break
+            out.append(got)
         elif (w == "-C" or w in ("-D", "--chdir") and "sudo" in (x.lower() for x in words[:k])) and nxt:
             out.append(nxt)
         elif w.startswith("-C") and len(w) > 2:
@@ -483,8 +499,30 @@ def dir_words(words: list[str]) -> list[str]:
             for a in words[k + 1:k + 8]:
                 if not a or a[0] in "-!(\\;":
                     break
-                out += [a, os.path.join(a, "..")]  # -execdir runs in each match's own folder
-    return [hl.unquote(x).strip() for x in out if hl.unquote(x).strip()]
+                out += [a, a + "/.."]  # -execdir runs in each match's own folder
+    return [x for x in out if x.strip()]
+
+
+def word_cause(raw: str, ps: bool) -> str:
+    """Why a folder word is not a plain literal path, or "" (FIX-GW2 round 3)."""
+    if raw == MISSING:
+        return "a cd with no folder (bare cd, popd)"
+    u = hl.unquote(raw).strip()
+    if RUN_TIME_DIR.search(u):
+        return "folder set at run time"
+    if u == "-" or re.fullmatch(r"[+-]\d+", u):
+        return "a cd to the previous or a stacked folder (cd -, pushd +N)"
+    if re.search(r"['\"]", u) or "`" in raw:
+        return "a quote splice or escape in a folder word"
+    if "\\" in u and not ps:
+        return "a backslash escape in a folder word"
+    if re.search(r"[*?\[]|\{[^}]*,", u):
+        return "a glob or brace pattern in a folder word"
+    if u.startswith("~"):
+        return "a home-folder path (~)"
+    if re.match(r"^[A-Za-z][\w.-]+:", u):
+        return "a drive or provider path that is not a drive letter"
+    return ""
 
 
 def physical(base: str, rel: str) -> str:
@@ -509,18 +547,21 @@ def line_dirs(texts: list[str], bases: list[str]) -> tuple[list[str], str]:
     words: list[str] = []
     for text in texts:
         for seg in hl.segments(text):
-            words += dir_words([hl.unquote(t) for t in hl.tokens(seg)])
-        words += dir_words([w for w in re.split(r"[\s;&|()<>{}]+", re.sub(r"['\"]", " ", text)) if w])
+            words += dir_words(hl.tokens(seg))
+        words += dir_words(re.findall(r"[;&|()<>{}\n]+|[^\s;&|()<>{}\n]+", re.sub(r"['\"]", " ", text)))
         words += [m.group(2) for m in CODE_DIR.finditer(text)]
-    creates = any(CREATES.search(t) for t in texts)
-    cause = ""
+    creates = line_creates(texts)
+    ps = hl.is_powershell()
+    cause = next(("the line changes how folder names resolve (CDPATH, OLDPWD, New-PSDrive, subst, net use, "
+                  "mklink, ln -s)" for t in texts if NAME_REMAP.search(t)), "")
     raw = []
     for w in dict.fromkeys(words):
-        if RUN_TIME_DIR.search(w):
-            cause = cause or "folder set at run time"
-        else:
-            raw.append(re.sub(r"^/([a-zA-Z])(?=/|$)", r"\1:", os.path.expanduser(w)) if os.name == "nt"
-                       else os.path.expanduser(w))
+        why = word_cause(w, ps)
+        if why:
+            cause = cause or why
+            continue
+        u = hl.unquote(w).strip()
+        raw.append(re.sub(r"^/([a-zA-Z])(?=/|$)", r"\1:", u) if os.name == "nt" else u)
     found = {os.path.normcase(os.path.abspath(b)): os.path.abspath(b) for b in bases if os.path.isdir(b)}
     for b in list(found.values()):
         found.setdefault(os.path.normcase(os.path.realpath(b)), os.path.realpath(b))
@@ -534,10 +575,24 @@ def line_dirs(texts: list[str], bases: list[str]) -> tuple[list[str], str]:
                         found.setdefault(os.path.normcase(p), p)
     if creates and not cause:
         for r in raw:
-            if not any(os.path.exists(os.path.join(b, r)) for b in bases):
-                cause = "a folder the same line creates"
+            if not any(os.path.exists(os.path.join(b, r)) for b in list(found.values()) + list(bases)):
+                cause = "a folder that does not exist yet, on a line that may create it"
                 break
     return list(found.values())[:60], cause
+
+
+def line_creates(texts: list[str]) -> bool:
+    """Whether the line runs anything that may create a folder: a known creator, or any program outside
+    NO_CREATE (`python -c "shutil.copytree(…)"`, `node -e "fs.cpSync(…)"`)."""
+    if any(CREATES.search(t) for t in texts):
+        return True
+    for text in texts:
+        for seg in hl.segments(text):
+            toks = hl.tokens(seg)
+            k = command_index(toks)
+            if k is not None and hl.prog(toks[k]) not in NO_CREATE and not re.match(r"^[A-Za-z_]\w*=", toks[k]):
+                return True
+    return False
 
 
 def alias_pushes(repo: str, name: str) -> bool:

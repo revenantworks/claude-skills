@@ -387,8 +387,13 @@ own folder: cd, pushd, Set-Location, sl and chdir targets in any position, `-C d
 `sudo -D`, `-WorkingDirectory`, find paths, and `cwd=` or `chdir(…)` in inline code, each read
 lexically and through junctions and symlinks (`cd -P L/..`). When the line names more than one folder,
 a non-builtin subcommand that is a pushing alias (or one nested past five levels) in any of them is
-refused; a candidate set at run time (`$d`, `$(…)`, `{}`) or one the same line may create refuses any
-non-builtin ("could not read git aliases (<cause>)"). Inline code that starts a process is refused when
+refused. A folder word counts only when it is a plain literal path that exists now; any other refuses
+a non-builtin ("could not read git aliases (<cause>)"): one set at run time (`$d`, `$(…)`, `{}`), a
+missing one (bare `cd`, `popd`, `cd -`, `pushd +N`), a glob or brace pattern, a quote splice, a
+backslash escape in a POSIX shell, `~`, a drive or provider that is not a drive letter (`QQ:`), and
+a folder that does not exist yet on a line that may create it (any program beyond cd, git, test and
+echo-like words). So does a line that changes how names resolve: CDPATH, OLDPWD, New-PSDrive, subst,
+net use, mklink, `ln -s`. Inline code that starts a process is refused when
 it runs a pushing alias from any candidate, or builds a program name at run time (`'g'+'it'`, an
 empty-separator join, getattr, a decode); text that only names git passes. The builtin list is git's
 whole command list (`git help -a`), so `prune`, `rerere` or `verify-tag` are never read as aliases.
