@@ -752,6 +752,25 @@ def git_path_word_cause(seg: str, dirs: list[str]) -> str:
     return ""
 
 
+# Fix round 3 (review of b535a60): config injected through the environment. GIT_CONFIG_PARAMETERS
+# (`"'alias.x=push'"` or `"'alias.x'='push'"`), GIT_CONFIG, GIT_CONFIG_SYSTEM and GIT_CONFIG_GLOBAL named
+# anywhere on the line, in any form (prefix, export, env, declare, set, $env:, Set-Item env:,
+# [Environment]::SetEnvironmentVariable, read), refuse a non-builtin. The COUNT/KEY_<n>/VALUE_<n> trio
+# keeps its literal reading (`NAME=value`, M14e: an alias to a builtin passes); any other form of it
+# (SetEnvironmentVariable, Set-Item env:, read) cannot be read and refuses.
+CONFIG_ENV_NAME = re.compile(r"(?i)(?<![A-Za-z0-9_])GIT_CONFIG(?:_PARAMETERS|_SYSTEM|_GLOBAL)?(?![A-Za-z0-9_])")
+CONFIG_ENV_TRIO = re.compile(r"(?i)(?<![A-Za-z0-9_])GIT_CONFIG_(?:COUNT|KEY_\d+|VALUE_\d+)(?![A-Za-z0-9_])(?!\s*=)")
+
+
+def config_env_cause(texts: list[str]) -> str:
+    """Why the line may inject git config through the environment, or "" (FIX-GW3 round 3)."""
+    for text in texts:
+        m = CONFIG_ENV_NAME.search(text) or CONFIG_ENV_TRIO.search(text)
+        if m:
+            return f"git config injected through the environment ({m.group(0)[:30]})"
+    return ""
+
+
 def class_write_cause(shells: list[str], codes: list[str], dirs: list[str], runs: bool = True) -> str:
     """Why the line may change any git config before a non-builtin subcommand runs (FIX-GW3), or "".
     `runs=False` is the check for a git call inside the inline code itself: a process the code starts
@@ -1330,6 +1349,7 @@ def all_pushes(cmd: str, cwd: str, head_moves: bool = True) -> list[dict]:
     texts = [cmd] + [t for t, _ in ex.shells] + [b for b, p in ex.code if not p]
     dirs, cause = line_dirs(texts, [cwd] + [w for _, w in ex.shells if w])
     shells, codes = [t for t, _ in ex.shells], [b for b, p in ex.code if not p]
+    cause = cause or config_env_cause([cmd] + shells)
     code_cause = cause or class_write_cause(shells, codes, dirs, runs=False)
     cause = cause or class_write_cause(shells, codes, dirs)
     _LINE.update(dirs=dirs, cause=cause)

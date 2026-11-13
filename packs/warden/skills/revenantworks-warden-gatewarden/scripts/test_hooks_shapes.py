@@ -671,6 +671,31 @@ class GW3ConfigWrites(PushShapeBase):
                         f"{G} --git-dir=.git rerere status", f"GIT_DIR=.git {G} status; {G} flow init -d"])
         self.expect(0, [f"Get-Content .git/config; {G} flow init -d"], tool="PowerShell")
 
+    def test_round3_config_parameters_in_the_environment(self):
+        # Fix round 3 (review of b535a60): git reads GIT_CONFIG_PARAMETERS like `-c`, in both quoting forms.
+        p1, p2 = f"\"'alias.x={U}'\"", f"\"'alias.x'='{U}'\""
+        self.refused(f"GIT_CONFIG_PARAMETERS={p1} {self.X}", f"GIT_CONFIG_PARAMETERS={p2} {self.X}",
+                     f"export GIT_CONFIG_PARAMETERS={p1}; {self.X}", f"env GIT_CONFIG_PARAMETERS={p2} {self.X}",
+                     f"declare -x GIT_CONFIG_PARAMETERS={p1}; {self.X}", f"GIT_CONFIG=../xx {self.X}")
+        self.refused(f"$env:GIT_CONFIG_PARAMETERS={p1}; {self.X}",
+                     f"[Environment]::SetEnvironmentVariable('GIT_CONFIG_PARAMETERS', {p1}); {self.X}",
+                     tool="PowerShell")
+
+    def test_round3_count_key_value_trio_in_unread_forms(self):
+        # The literal `NAME=value` trio is read as an alias (B5env); a form the gate cannot read refuses.
+        sev = "[Environment]::SetEnvironmentVariable"
+        self.refused(f"{sev}('GIT_CONFIG_COUNT', '1'); {sev}('GIT_CONFIG_KEY_0', 'alias.x'); "
+                     f"{sev}('GIT_CONFIG_VALUE_0', '{U}'); {self.X}",
+                     f"Set-Item env:GIT_CONFIG_COUNT 1; Set-Item env:GIT_CONFIG_KEY_0 alias.x; "
+                     f"Set-Item env:GIT_CONFIG_VALUE_0 {U}; {self.X}", tool="PowerShell")
+
+    def test_round3_builtins_beside_environment_config_pass(self):
+        self.expect(0, [f"GIT_CONFIG_PARAMETERS=\"'core.pager=cat'\" {G} log -1",
+                        f"GIT_CONFIG_PARAMETERS=\"'alias.x={U}'\" {G} status",
+                        f"export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=core.pager GIT_CONFIG_VALUE_0=cat; {G} status"])
+        self.expect(0, [f"[Environment]::SetEnvironmentVariable('GIT_CONFIG_COUNT', '1'); {G} log -1"],
+                    tool="PowerShell")
+
     def test_inline_code_that_only_prints_and_ordinary_writes_pass(self):
         self.expect(0, [f"python -c \"print('.git/' + 'config')\"; {G} flow init -d",
                         f"node -e \"console.log('[alias] x')\"; {G} flow init -d",

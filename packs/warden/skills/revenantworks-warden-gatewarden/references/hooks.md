@@ -411,8 +411,16 @@ word on the line (an argument, an option value such as `-C`, `-d`, `-o`, `--outp
 head, tail, less, more, grep, rg, findstr, Get-Content, a git read verb, test, ls, dir, stat, wc,
 diff, cmp, file, echo, printf, cd): so `tar -C .git`, `unzip -d .git`, `7z -o.git`, `certutil …
 .git/config`, `ed .git/config` and `Expand-Archive -DestinationPath .git` are refused without a list
-of them, and so is any non-git program on a line that may run inside a `.git` folder. Inline code that
-only prints, ordinary file writes and every builtin still pass.
+of them, and so is any non-git program on a line that may run inside a `.git` folder. Git config set
+through the environment refuses a non-builtin too: `GIT_CONFIG_PARAMETERS` (`"'alias.x=push'"` or
+`"'alias.x'='push'"`), `GIT_CONFIG`, `GIT_CONFIG_SYSTEM` or `GIT_CONFIG_GLOBAL` named anywhere on the
+line in any form (a prefix, export, env, declare, set, `$env:`, `Set-Item env:`,
+`[Environment]::SetEnvironmentVariable`, read), and the `GIT_CONFIG_COUNT`/`KEY_<n>`/`VALUE_<n>` trio
+in any form other than a literal `NAME=value` (which is read as an alias, as above). Inline code that
+only prints, a shell redirection or copy to an ordinary file name (`echo hi > out.txt`, `cp a b`), and
+every builtin still pass. Two false refusals are kept on purpose, both only beside a non-builtin
+subcommand: inline code that writes any file (`python -c "open('out.json','w')…"; git lfs pull`),
+and a copy or write to a name that ends in `config` (`cp app.config app.config.bak && git flow init`).
 
 **Limit, stated plainly (config written earlier).** These rules read one line. A git config written in
 an earlier tool call, by a file-edit tool (Write, Edit) or by a script file an interpreter runs
