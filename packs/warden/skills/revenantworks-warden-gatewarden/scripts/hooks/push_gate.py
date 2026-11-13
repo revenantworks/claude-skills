@@ -1279,6 +1279,14 @@ def check_push(push: dict) -> dict:
         except (OSError, ValueError):
             intent = None
         if not intent or float(intent.get("expires_at", 0)) < time.time():
+            if push.get("intend_on_line"):
+                # Review 2026-11-11: the gate reads the whole line before any of it runs, so an intend
+                # chained before the push has not been recorded yet. That is by design; say so.
+                refuse(f"no live push intent for this repo ({'expired' if intent else 'absent'}). The intend "
+                       "on this line has not run yet: the gate checks the whole line before any part runs. "
+                       "Run intend as its own command, then the push.",
+                       f"{intend} --max {total} --head {head}   (its own command, then the push)",
+                       "push_gate.no_intent")
             refuse(f"no live push intent for this repo ({'expired' if intent else 'absent'}). Record the "
                    "range the request named first.", f"{intend} --max {total} --head {head}", "push_gate.no_intent")
         if total > int(intent.get("max_commits", 0)):
@@ -1473,6 +1481,9 @@ def hook_main() -> None:
         if not pushes:
             hl.allow()
         refuse_hard(pushes)
+        same_line = bool(re.search(r"push_gate\.py[\"']?\s+(?:intend|preflight)\b", cmd))
+        for p in pushes:
+            p["intend_on_line"] = same_line
         views = [check_push(p) for p in pushes]
         rows = [r for v in views for r in v["rows"]]
         partial = [s for v in views for s in v["partial"]]

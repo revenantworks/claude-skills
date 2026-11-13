@@ -14,6 +14,24 @@ then needs an intent and a CI stamp), so start with it in one repo.
 
 ## 1 · Copy the files
 
+One command, from a clean checkout of claude-skills on `main` (it refuses a dirty or other
+branch unless you add `--allow-branch`). It backs up each live file that differs to
+`~\.claude\hooks\gatewarden\.backup\<UTC stamp>\`, copies the repo version in, reads it back and
+checks the hash, and prints one line per file. It never writes `settings.json`; it only reads it
+and says which documented hooks are not registered.
+
+```powershell
+python "<skill>\scripts\install_hooks.py"
+```
+
+To see the drift without changing anything (exit 1 on any difference, so a scheduled check can
+call it): `python "<skill>\scripts\install_hooks.py" --check`. Run the install again after every
+claude-skills update that touches a hook; the `--check` line then reads `same` for all eleven.
+
+A live file that is not any version in the repo's history of it reads `rig newer` (an edit made on the rig that never reached the repo). The install refuses it, per file, and says so; port the edit into the repo first, or pass `--force-older` to back it up and overwrite it. A live file that matches an older repo version reads `repo newer` and installs normally.
+
+The manual route, if you prefer it:
+
 ```powershell
 New-Item -ItemType Directory -Force "$HOME\.claude\hooks\gatewarden" | Out-Null; Copy-Item "<skill>\scripts\hooks\*.py" "$HOME\.claude\hooks\gatewarden\"
 ```

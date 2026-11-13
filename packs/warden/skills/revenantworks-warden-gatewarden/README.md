@@ -76,7 +76,8 @@ revenantworks-warden-gatewarden/
 │   ├── scan_tree.py  footprint.py  drive_rules.py  treemap_page.py  drift.py  loads.py
 │   ├── warden_fs.py               # pack-shared redaction and link helpers (source: packs/warden/shared/)
 │   ├── hooks/  hooklib.py push_gate.py ci_stamp.py hyperv_lock.py call_cap.py launch_throttle.py heredoc_guard.py golive_block.py warden_digest.py follow_sweep.py warden_review.py
-│   └── test_perm_audit.py  test_hooks.py  test_cap_review.py  test_settings_layout.py  test_reach.py  test_warden_fs.py
+│   ├── install_hooks.py           # owner-run: check or install the hook files from a clean main checkout
+│   └── test_perm_audit.py  test_hooks.py  test_cap_review.py  test_settings_layout.py  test_reach.py  test_warden_fs.py  test_install_hooks.py
 └── evals/  trigger-evals.md  test-cases.md  <native cases>/
 ```
 

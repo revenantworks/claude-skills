@@ -80,6 +80,18 @@ CLIENT = re.compile(r"(?i)obsws|obs[-_]?websocket")
 CLIENT_RUN = re.compile(r"(?i)(?:obsws|obs[-_]?websocket)[\w.-]*\.(?:py|js|mjs|ts|ps1|sh)\b"
                         r"|\b(?:import|from)\s+obsws")
 
+# Review 2026-11-11 (observation 0392): on a line the hook cannot read, a go-live HINT word that sits only
+# inside an inert quoted literal (a -Filter pattern, a file name, a message) runs nothing. A literal that
+# can run code ($( ), backticks) stays in. Request names, the CLI and service.json are still read on the
+# full text (text_hits), quotes and all, so `$r = "<request name>"; & $c $r` keeps failing closed.
+INERT_LITERAL = re.compile(r"'[^'$`]*'|\"(?:[^\"$`\\]|\$(?![({]))*\"")
+
+
+def hint_outside_literals(cmd: str) -> bool:
+    # Dequote the raw text first: despliced() drops quote marks, so it must run after, never before.
+    return bool(HINT.search(hl.despliced(INERT_LITERAL.sub("''", cmd)))) or text_hits(cmd)
+
+
 REASON = ("go-live block: go-live and stream-key requests are the owner's button; obsrunner never "
           "sends them. Tell the owner what to press in OBS instead.")
 
@@ -132,7 +144,7 @@ def command_blocked(cmd: str, cwd: str = "") -> str:
     try:
         ex = hl.expand(cmd, cwd)
     except hl.Unparseable as exc:
-        return str(exc) if exc.hard or HINT.search(hl.despliced(cmd)) or CLIENT_RUN.search(cmd) else ""
+        return str(exc) if exc.hard or hint_outside_literals(cmd) or CLIENT_RUN.search(cmd) else ""
     # A scratch script rewritten in place and run (observation 0384) counts as read when neither its text
     # nor the line holds a request name, a go-live flag, service.json, a go-live word or an OBS client.
     hl.settle_rewrites(ex, cmd, cwd, lambda text: not (text_hits(cmd + "\n" + text) or HINT.search(
@@ -163,7 +175,7 @@ def command_blocked(cmd: str, cwd: str = "") -> str:
         m = NAMES.search(body) or CLI.search(body) or SERVICE_JSON.search(body)
         if m and not (path and own_file(path)):
             return m.group(0)
-    if ex.opaque and (HINT.search(hl.despliced(cmd)) or CLIENT_RUN.search(cmd)):
+    if ex.opaque and (hint_outside_literals(cmd) or CLIENT_RUN.search(cmd)):
         return ex.opaque[0]
     return ""
 
