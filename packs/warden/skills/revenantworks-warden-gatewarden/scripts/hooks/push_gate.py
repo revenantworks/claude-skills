@@ -373,8 +373,12 @@ def aliases(repo: str) -> dict[str, str]:
     if key not in _ALIASES:
         table: dict[str, str] = {}
         if repo and not os.path.isdir(repo):
-            # No such folder (`cd $HOME && git zz`: the path is built at run time): git cannot run
-            # there, so there are no aliases to read and nothing to fail closed on.
+            # No such folder. A line can create it first (`git worktree add ../w && cd ../w && git pp`;
+            # the new worktree shares the repo's aliases), so the table is unreadable and a non-builtin
+            # subcommand is refused. A path with a run-time variable in it (`cd $HOME && git zz`) names
+            # no real folder, so it keeps an empty table (test_config_redirect_on_a_builtin_passes).
+            if not re.search(r"[$`%]", repo):
+                _ALIAS_UNREAD[key] = "no such folder"
             _ALIASES[key] = table
             return table
         try:

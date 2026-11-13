@@ -1436,6 +1436,12 @@ class PushGateBypassTests(unittest.TestCase):
                 self.assertIn("could not read git aliases", str(cm.exception))
                 self.assertEqual(mod.all_pushes("git status", self.work), [], label)
 
+    def test_alias_in_a_folder_the_line_creates_is_gated(self):
+        # A new worktree shares the repo's config, so its aliases apply before the folder exists.
+        git(self.work, "config", "alias.pp", "push")
+        self.gated(["git worktree add ../wtnew -b z && cd ../wtnew && git pp origin z",
+                    "git worktree add ../wtnew2 -b y && git -C ../wtnew2 pp origin y"])
+
     def test_push_from_code_is_blocked(self):
         self.gated(['python -c "import subprocess; subprocess.run([\'git\', \'push\', \'origin\', \'main\'])"',
                     "node -e \"require('child_process').execSync('git push origin main')\"",
