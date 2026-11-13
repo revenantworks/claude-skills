@@ -61,9 +61,9 @@ an alias the gate cannot read (B5; on a push it counts as a redirected config), 
 the environment (GIT_CONFIG_KEY_n=alias.<name>, GIT_CONFIG_VALUE_n) that pushes or whose value cannot be
 read, a config redirect (GIT_CONFIG_GLOBAL, GIT_CONFIG_SYSTEM, GIT_CONFIG_NOSYSTEM, HOME,
 XDG_CONFIG_HOME) on a line whose git subcommand is not a builtin (M14e), a non-builtin subcommand
-where the folder or git dir it runs with cannot be known (FIX-GW2: --git-dir, --work-tree, GIT_DIR,
-GIT_WORK_TREE, GIT_COMMON_DIR, a folder change the gate cannot follow, git in inline code; aliases are
-read where git really runs: subshells, `env -C`, `-C<dir>`, `cd -P`, `builtin cd`), and a push the gate
+that is a pushing alias in any folder or git dir the line names, or where one of those is set at run
+time (FIX-GW2: an order-independent candidate set, read lexically and through junctions; inline code
+that runs such an alias or builds a program name at run time), and a push the gate
 sees but cannot parse. So is a
 shell script on disk too large or locked to read, a shell script over 256 KB that names push, and a mirror or `+`/`:` push refspec set in git config (K7-4-03, K7-4-07).
 A git command that moves HEAD (commit, merge, cherry-pick, am, rebase, pull, revert, reset, checkout,
@@ -94,15 +94,27 @@ REFUSED_LONG = {"--force": "force", "--force-with-lease": "force", "--force-if-i
                 "--delete": "delete", "--mirror": "mirror", "--all": "all branches",
                 "--tags": "all tags", "--prune": "prune"}
 PUSH_VALUE_OPTS = {"-o", "--push-option", "--repo", "--receive-pack", "--exec"}
-# Git's own commands. Any other subcommand may be an alias, so it is resolved before it passes.
-BUILTINS = set("""add am annotate apply archive bisect blame branch bugreport bundle cat-file check-attr
-check-ignore checkout cherry cherry-pick citool clean clone commit commit-tree config count-objects
-credential describe diff diff-files diff-index diff-tree difftool fetch for-each-ref format-patch fsck gc
-grep gui hash-object help init instaweb lfs log ls-files ls-remote ls-tree maintenance merge merge-base
-merge-file mergetool mv name-rev notes pull range-diff read-tree rebase reflog remote repack replace
-request-pull reset restore rev-list rev-parse revert rm shortlog show show-branch show-ref
-sparse-checkout stash status submodule switch symbolic-ref tag update-index update-ref var
-verify-commit version whatchanged worktree write-tree push""".split())
+# Git's own commands. Any other subcommand may be an alias, so it is resolved before it passes. The
+# command sections of `git help -a` (git 2.56: porcelain, ancillary, interacting, low-level and internal
+# helpers), plus a few older or platform-only names; git runs its own command before any alias of that
+# name, so none of these can be an alias (FIX-GW2: `prune`, `rerere`, `verify-tag` read as aliases).
+BUILTINS = set("""add am archive backfill bisect branch bundle checkout cherry-pick citool clean clone commit
+describe diff fetch format-patch gc gitk grep gui history init log maintenance merge mv notes pull push
+range-diff rebase reset restore revert rm scalar shortlog show sparse-checkout stash status submodule survey
+switch tag worktree config fast-export fast-import filter-branch mergetool pack-refs prune reflog refs remote
+repack replace annotate blame bugreport count-objects diagnose difftool fsck gitweb help instaweb merge-tree
+rerere show-branch verify-commit verify-tag version whatchanged archimport cvsexportcommit cvsimport
+cvsserver imap-send p4 quiltimport request-pull send-email svn apply checkout-index commit-graph commit-tree
+hash-object index-pack merge-file merge-index mktag mktree multi-pack-index pack-objects prune-packed
+read-tree replay symbolic-ref unpack-objects update-index update-ref write-tree cat-file cherry diff-files
+diff-index diff-pairs diff-tree for-each-ref for-each-repo format-rev get-tar-commit-id last-modified
+ls-files ls-remote ls-tree merge-base name-rev pack-redundant repo rev-list rev-parse show-index show-ref
+unpack-file var verify-pack daemon fetch-pack http-backend send-pack update-server-info check-attr
+check-ignore check-mailmap check-ref-format column credential credential-cache credential-store
+fmt-merge-msg hook interpret-trailers mailinfo mailsplit merge-one-file patch-id sh-i18n sh-setup
+stripspace url-parse lfs http-push http-fetch receive-pack upload-pack upload-archive shell init-db
+fsck-objects merge-recursive merge-ours merge-octopus merge-resolve merge-subtree stage subtree
+credential-manager mergetool--lib web--browse""".split())
 ALIAS_DEPTH = 5
 ENV_REDIRECT = re.compile(r"(?i)(?<![\w])(?:GIT_(?:DIR|WORK_TREE|COMMON_DIR|CONFIG_PARAMETERS|CONFIG_COUNT|CONFIG_KEY_\d+"
                           r"|CONFIG_GLOBAL|CONFIG_SYSTEM|CONFIG|EXEC_PATH)|HOME|XDG_CONFIG_HOME)\s*=")
@@ -380,8 +392,7 @@ def aliases(repo: str) -> dict[str, str]:
             # the new worktree shares the repo's aliases), so the table is unreadable and a non-builtin
             # subcommand is refused. So is a path set at run time (`d=x; cd $d && git pp`): the literal
             # text names no folder, but the real one may exist and carry aliases (owner ruling 2026-11-13).
-            _ALIAS_UNREAD[key] = ("a folder change the gate cannot follow" if UNTRACKED in repo
-                                  else "folder set at run time" if re.search(r"[$`%]", repo) else "no such folder")
+            _ALIAS_UNREAD[key] = "folder set at run time" if re.search(r"[$`%]", repo) else "no such folder"
             _ALIASES[key] = table
             return table
         try:
@@ -417,21 +428,158 @@ def alias_of(repo: str, sub: str) -> str | None:
     return table.get(sub.lower())
 
 
-# FIX-GW2: the folder a git call really runs in. A pushing alias set in another repo reached a push when
-# the gate read the wrong folder's aliases: a subshell, `env -C`, `cd -P`, `builtin cd`, a redirection
-# after cd, a cd in a loop. A folder change the gate cannot follow leaves this marker in the path, and
-# aliases() reads that folder as unreadable, so a non-builtin subcommand there is refused.
-UNTRACKED = "$__cd_untracked"
+# FIX-GW2: which config a git call reads its aliases from. Stepping through the line's folder changes
+# cannot be made exact (subshells, pipes, `&`, a cd that fails, eval, nested shells, find -execdir,
+# Start-Process -WorkingDirectory), so the alias check is order-independent: every folder or git dir the
+# line names anywhere, plus the hook's own folder, is a candidate, read lexically and through junctions
+# and symlinks. A non-builtin subcommand that is a pushing alias in ANY candidate is refused; a candidate
+# set at run time is refused as unreadable. The step-by-step folder (cd_step, scope_parens) still names
+# the repo a plain `git push` is range-checked in.
 CD_WORDS = {"cd", "chdir", "pushd", "popd", "set-location", "sl", "push-location", "pop-location"}
 CD_LEADS = {"if", "then", "else", "elif", "do", "while", "until", "!", "{", "(", "builtin", "command"}
-CD_OPTS = re.compile(r"(?i)^-(?:[PLe@]+|path|literalpath)$")
-# A cd the segment runs past its first word (`if ($x) { Set-Location d }`, `x=$(cd d && pwd)`).
-CD_INSIDE = re.compile(r"(?i)[{(]\s*(?:builtin\s+|command\s+)?(?:cd|chdir|pushd|popd|set-location|sl|push-location"
-                       r"|pop-location)(?![\w-])")
-CONTROL_OPEN = {"if", "for", "while", "until", "case", "select", "foreach"}
-CONTROL_CLOSE = {"fi", "done", "esac"}
-# A redirected git dir or work tree: aliases come from a config the gate does not read (FIX-GW2 4, 5).
-GIT_DIR_ENV = re.compile(r"(?i)(?<![\w-])GIT_(?:DIR|WORK_TREE|COMMON_DIR)\s*=(?!=)")
+CD_OPTS = re.compile(r"(?i)^(?:-(?:[PLe@]+|path|literalpath)|/d)$")
+DIR_OPT_JOINED = re.compile(r"^(?:--chdir|--git-dir|--work-tree)=(.+)$")
+DIR_OPT_ALONE = {"--chdir", "--git-dir", "--work-tree"}
+DIR_ENV = re.compile(r"(?i)^(?:\$env:)?GIT_(?:DIR|WORK_TREE|COMMON_DIR)=(.*)$")
+CODE_DIR = re.compile(r"""(?i)(?:\bcwd\s*[=:]\s*|chdir\s*\(\s*|-workingdirectory\s+)(['"])([^'"\n]{1,300})\1""")
+RUN_TIME_DIR = re.compile(r"[$`]|%[A-Za-z_]\w*%|\{\}")
+# A line that may create the folder it names (`git worktree add ../w && cd ../w && git pp`).
+CREATES = re.compile(r"(?i)(?<![\w-])(?:mkdir|md|new-item|ni|mklink|ln|cp|copy|copy-item|cpi|mv|move|move-item"
+                     r"|rename-item|tar|unzip|expand-archive|7z|rsync|robocopy|xcopy|git(?:\.exe)?\s+(?:-\S+\s+)*"
+                     r"(?:init|clone|worktree|submodule))(?![\w-])")
+# Inline code that builds a program name at run time: a split literal (`'g'+'it'`), an empty-separator
+# join, getattr, a decode. With a process call it may run any git subcommand (FIX-GW2).
+CODE_DYNAMIC = re.compile(r"""(?i)\bgetattr\b|(['"])\1\s*\.\s*join\b|b64decode|frombase64|fromcharcode|\bchr\s*\("""
+                          r"""|\[::-1\]|codecs\s*\.\s*decode|bytes\s*\.\s*fromhex""")
+SPLIT_LITERAL = re.compile(r"""(['"])\s*\+\s*(['"])""")
+
+
+def dir_words(words: list[str]) -> list[str]:
+    """The folder and git-dir words a list of shell words names, in any position."""
+    out = []
+    for k, w in enumerate(words):
+        nxt = words[k + 1] if k + 1 < len(words) else ""
+        lw = w.lower().strip("({")
+        if lw in CD_WORDS:
+            for a in words[k + 1:k + 8]:
+                if a and not CD_OPTS.match(a) and not REDIR_WITH_TARGET.match(a) and not REDIR.match(a) \
+                        and a not in ("}", ")", "-"):
+                    out.append(a)
+                    break
+        elif (w == "-C" or w in ("-D", "--chdir") and "sudo" in (x.lower() for x in words[:k])) and nxt:
+            out.append(nxt)
+        elif w.startswith("-C") and len(w) > 2:
+            out.append(w[2:])
+        elif w in DIR_OPT_ALONE and nxt:
+            out.append(nxt)
+        elif DIR_OPT_JOINED.match(w):
+            out.append(DIR_OPT_JOINED.match(w).group(1))
+        elif DIR_ENV.match(w):
+            val = DIR_ENV.match(w).group(1)
+            out.append(val or (words[k + 2] if nxt == "=" and k + 2 < len(words) else nxt))
+        elif re.fullmatch(r"(?i)-wo\w*", w) and nxt:  # Start-Process -WorkingDirectory
+            out.append(nxt)
+        elif lw == "find":
+            for a in words[k + 1:k + 8]:
+                if not a or a[0] in "-!(\\;":
+                    break
+                out += [a, os.path.join(a, "..")]  # -execdir runs in each match's own folder
+    return [hl.unquote(x).strip() for x in out if hl.unquote(x).strip()]
+
+
+def physical(base: str, rel: str) -> str:
+    """`rel` from `base` the way the file system walks it: a junction or symlink is followed before a
+    `..` after it (`cd -P L/..`), where os.path.normpath drops the pair."""
+    drive, tail = os.path.splitdrive(rel)
+    if drive or tail[:1] in ("/", "\\"):
+        cur, rel = os.path.realpath(drive + os.sep), tail
+    else:
+        cur = os.path.realpath(base)
+    for part in re.split(r"[\\/]+", rel):
+        if part in ("", "."):
+            continue
+        cur = os.path.dirname(cur) if part == ".." else os.path.realpath(os.path.join(cur, part))
+    return cur
+
+
+def line_dirs(texts: list[str], bases: list[str]) -> tuple[list[str], str]:
+    """(every folder the line names that exists, resolved lexically and physically against the hook's
+    folder and each other, plus the bases; the cause when a named folder is set at run time or is one
+    the line may create first, else "")."""
+    words: list[str] = []
+    for text in texts:
+        for seg in hl.segments(text):
+            words += dir_words([hl.unquote(t) for t in hl.tokens(seg)])
+        words += dir_words([w for w in re.split(r"[\s;&|()<>{}]+", re.sub(r"['\"]", " ", text)) if w])
+        words += [m.group(2) for m in CODE_DIR.finditer(text)]
+    creates = any(CREATES.search(t) for t in texts)
+    cause = ""
+    raw = []
+    for w in dict.fromkeys(words):
+        if RUN_TIME_DIR.search(w):
+            cause = cause or "folder set at run time"
+        else:
+            raw.append(re.sub(r"^/([a-zA-Z])(?=/|$)", r"\1:", os.path.expanduser(w)) if os.name == "nt"
+                       else os.path.expanduser(w))
+    found = {os.path.normcase(os.path.abspath(b)): os.path.abspath(b) for b in bases if os.path.isdir(b)}
+    for b in list(found.values()):
+        found.setdefault(os.path.normcase(os.path.realpath(b)), os.path.realpath(b))
+    for _ in range(2):  # a folder named relative to another named folder (`cd ../other; cd sub`)
+        for base in list(found.values())[:40]:
+            for r in raw:
+                for p in (os.path.normpath(os.path.join(base, r)), physical(base, r)):
+                    if os.path.isfile(p):
+                        p = os.path.dirname(p)
+                    if os.path.isdir(p):
+                        found.setdefault(os.path.normcase(p), p)
+    if creates and not cause:
+        for r in raw:
+            if not any(os.path.exists(os.path.join(b, r)) for b in bases):
+                cause = "a folder the same line creates"
+                break
+    return list(found.values())[:60], cause
+
+
+def alias_pushes(repo: str, name: str) -> bool:
+    """Whether `name` resolves, in `repo`'s config, to a push, a shell command naming push, git options
+    on a push, or a chain deeper than ALIAS_DEPTH."""
+    exp, depth = alias_of(repo, name), 0
+    while exp is not None:
+        depth += 1
+        if depth > ALIAS_DEPTH:
+            return True
+        if exp.lstrip().startswith("!"):
+            return bool(PUSH_HINT.search(hl.despliced(exp)))
+        words = exp.split()
+        while words and words[0].startswith("-"):
+            if PUSH_HINT.search(exp):
+                return True
+            words.pop(0)
+        if not words:
+            return False
+        sub = arg(words[0])
+        if sub in ("push", "send-pack", "http-push"):
+            return True
+        if sub in BUILTINS:
+            return False
+        exp = alias_of(repo, sub)
+    return False
+
+
+_LINE: dict = {}  # the line's candidate folders and their unread cause, set by all_pushes for find_pushes
+
+
+def check_candidates(name: str, dirs: list[str], cause: str) -> None:
+    """Refuse a non-builtin `name` that may be a pushing alias in any candidate folder."""
+    if cause:
+        raise unreadable(cause, name)
+    if len({os.path.normcase(os.path.realpath(d)) for d in dirs}) < 2:
+        return  # one folder: the caller resolves the alias there and range-checks a push
+    for d in dirs:
+        if alias_pushes(d, name):
+            raise PushBlock(f"push gate: `{name[:40]}` is a git alias that pushes in `{os.path.basename(d)[:40]}`, "
+                            "one of the folders this line names, and the gate cannot tell which folder git "
+                            "runs in. Blocked; run the push as a plain `git push` line.")
 
 
 def scope_parens(seg: str) -> tuple[int, int, str]:
@@ -459,11 +607,6 @@ def scope_parens(seg: str) -> tuple[int, int, str]:
     return depth, closes, body
 
 
-def first_word(seg: str) -> str:
-    toks = hl.tokens(seg.lstrip("({! "))
-    return hl.word(toks[0]) if toks else ""
-
-
 def cd_step(seg: str) -> str | None:
     """None when the segment changes no folder; "" for one the gate cannot follow (`popd`, `cd -`, a
     bare `cd`, two targets); else the target word. `cd -P`, `cd -L`, `builtin cd`, `command cd`, a
@@ -489,7 +632,7 @@ def env_chdir(toks: list[str], i: int) -> str | None:
     while m < i:
         t = hl.unquote(toks[m])
         if t == "--chdir" or re.fullmatch(r"-[A-Za-z]*C", t):
-            found = toks[m + 1] if m + 1 < i else UNTRACKED
+            found = toks[m + 1] if m + 1 < i else "$__unnamed"
             m += 2
             continue
         if t.startswith("--chdir="):
@@ -652,34 +795,30 @@ def find_pushes(command: str, cwd: str, resolve: bool = True, head_moves: bool =
     # an assignment (`Y=push; $X $Y`) or any other place keeps the line-wide rule.
     plain = all(_plain_git(ops[idx][0]) for idx in naming)
     moved: list[str] = []  # segments before this point that move HEAD (observation 0407)
-    gitdir_line = bool(GIT_DIR_ENV.search(command))
-    # FIX-GW2: the folder each segment runs in. A subshell is its own scope (`stack`); a cd that may not
-    # run (inside if/for/while, after && or ||, before ||) leaves the old folder possible too (`alts`).
-    stack: list[tuple[str, list[str]]] = []
-    alts: list[str] = []
-    control, pending = 0, (0, False)
+    # FIX-GW2: the line's candidate folders for the alias check (order-independent), set by all_pushes;
+    # computed here when find_pushes runs on its own.
+    line_dirs_, line_cause = _LINE.get("dirs"), _LINE.get("cause", "")
+    if line_dirs_ is None:
+        line_dirs_, line_cause = line_dirs([command], [cwd])
+    creates = bool(_LINE.get("creates", CREATES.search(command)))
+    # The repo a plain push is range-checked in: a subshell is its own scope; a cd is followed.
+    stack: list[str] = []
+    pending = 0
     for idx, (seg, sep) in enumerate(ops):
         hl.check_budget()
-        for _ in range(pending[0]):
+        for _ in range(pending):
             if stack:
-                cwd, alts = stack.pop()
-        control = max(0, control - pending[1])
-        opens, closes, seg = scope_parens(seg)
-        stack.extend((cwd, list(alts)) for _ in range(opens))
-        head = first_word(seg)
-        control += head in CONTROL_OPEN
-        pending = (closes, head in CONTROL_CLOSE)
+                cwd = stack.pop()
+        opens, pending, seg = scope_parens(seg)
+        stack.extend(cwd for _ in range(opens))
         target = cd_step(seg)
         if target is None and hl.cd_target(seg):
             target = hl.cd_target(seg)
-        if target is not None:
-            prev = ops[idx - 1][1] if idx else ""
-            uncertain = control > 0 or prev in ("&&", "||") or sep == "||"
-            alts = [a for a in alts + [cwd] if uncertain]
-            cwd = hl.resolve(target, cwd) if target else os.path.join(cwd, UNTRACKED)
+        if target:
+            cwd = hl.resolve(target, cwd)
             continue
-        if CD_INSIDE.search(blank_quotes(seg)):
-            alts, cwd = [], os.path.join(cwd, UNTRACKED)
+        # A cd the gate cannot follow (`cd ../w & git pp`, `popd`) keeps the folder; the segment is still
+        # read for git calls, and the alias check covers every folder the line names.
         # A substitution in a word makes that word run-time text (git $(echo push), git `echo push`).
         flat = re.sub(r"`[^`]*`|\$\([^()]*\)", "$__SUB", seg)
         toks = hl.tokens(hl.IFS.sub(" ", flat))
@@ -699,11 +838,10 @@ def find_pushes(command: str, cwd: str, resolve: bool = True, head_moves: bool =
             if p != "git":
                 continue
             repo, j, redirected, include = cwd, i + 1, redirected_line, include_line
-            repo_alts, gitdir = list(alts), gitdir_line
 
             def move(path: str) -> None:
-                nonlocal repo, repo_alts
-                repo, repo_alts = hl.resolve(path, repo), [hl.resolve(path, a) for a in repo_alts]
+                nonlocal repo
+                repo = hl.resolve(path, repo)
 
             chdir = env_chdir(toks, i)
             if chdir is not None:
@@ -725,8 +863,6 @@ def find_pushes(command: str, cwd: str, resolve: bool = True, head_moves: bool =
                                     "run the push as a plain `git push` line.")
                 if opt in ("--git-dir", "--work-tree") or (opt == "--exec-path" and "=" in o):
                     redirected = True
-                if opt in ("--git-dir", "--work-tree"):
-                    gitdir = True
                 if opt == "-C" and j + 1 < len(toks):
                     move(toks[j + 1])
                     j += 2
@@ -757,25 +893,21 @@ def find_pushes(command: str, cwd: str, resolve: bool = True, head_moves: bool =
                                 f"aliases from. `{sub[:40]}` is not a git builtin, so it may be an alias the "
                                 "gate cannot read. Blocked; run the command the alias stands for, or drop "
                                 "the redirect.")
-            if resolve and gitdir and sub and sub not in BUILTINS and sub.lower() not in env_table:
-                raise unreadable("a redirected git dir or work tree: --git-dir, --work-tree, GIT_DIR, "
-                                 "GIT_WORK_TREE, GIT_COMMON_DIR", sub)
 
-            def lookup(name: str, repo: str = repo, others: tuple = tuple(repo_alts)) -> str | None:
-                """An alias the line sets in the environment first (M14e), then the repo's own. A folder
-                the call may run in instead (a cd that may not have run) must agree (FIX-GW2)."""
+            def lookup(name: str, repo: str = repo) -> str | None:
+                """An alias the line sets in the environment first (M14e), then the line's candidate
+                folders (FIX-GW2: a pushing alias in any of them is refused), then the repo's own."""
                 if name.lower() in env_unread:
                     raise PushBlock(f"push gate: a git alias set in the environment cannot be read: "
                                     f"`GIT_CONFIG_KEY_<n>=alias.{name[:40]}` has a value set at run time or "
                                     "none. Blocked; run the command the alias stands for.")
                 if name.lower() in env_table:
                     return env_table[name.lower()]
-                found = alias_of(repo, name)
-                for other in others:
-                    if os.path.normcase(other) != os.path.normcase(repo) and alias_of(other, name) != found:
-                        raise unreadable(f"this may run in `{os.path.basename(other)[:40]}` or "
-                                         f"`{os.path.basename(repo)[:40]}`, and their aliases differ", name)
-                return found
+                here = os.path.isdir(repo)
+                if not here and (creates or re.search(r"[$`%]", repo)):
+                    return alias_of(repo, name)  # refuses: no such folder yet, or one set at run time
+                check_candidates(name, line_dirs_ + ([repo] if here else []), line_cause)
+                return alias_of(repo, name) if here else None
 
             from_env = False
             expansion = None
@@ -958,14 +1090,21 @@ def all_pushes(cmd: str, cwd: str, head_moves: bool = True) -> list[dict]:
                         "cannot be read before it runs, on a line that names push. Blocked; write the "
                         "script in one call and run it in the next.")
     found = []
-    for text, where in ex.shells:
-        head, bodies = split_heredocs(inert_writer_bodies(text))
-        for run in [head] + [body for reader, body in bodies if reader not in WRITERS]:
-            for seg in hl.segments(run):
-                gh_ref_check(hl.tokens(seg))
-        found += find_pushes(head, where or cwd, head_moves=head_moves)
-        for reader, body in bodies:
-            found += find_pushes(body, where or cwd, resolve=reader not in WRITERS, head_moves=head_moves)
+    # FIX-GW2: every folder the whole line names, nested shells and inline code included.
+    texts = [cmd] + [t for t, _ in ex.shells] + [b for b, p in ex.code if not p]
+    dirs, cause = line_dirs(texts, [cwd] + [w for _, w in ex.shells if w])
+    _LINE.update(dirs=dirs, cause=cause, creates=any(CREATES.search(t) for t in texts))
+    try:
+        for text, where in ex.shells:
+            head, bodies = split_heredocs(inert_writer_bodies(text))
+            for run in [head] + [body for reader, body in bodies if reader not in WRITERS]:
+                for seg in hl.segments(run):
+                    gh_ref_check(hl.tokens(seg))
+            found += find_pushes(head, where or cwd, head_moves=head_moves)
+            for reader, body in bodies:
+                found += find_pushes(body, where or cwd, resolve=reader not in WRITERS, head_moves=head_moves)
+    finally:
+        _LINE.clear()
     for body, path in ex.code:
         # Inline code only (python -c, node -e, a quoted heredoc an interpreter reads). A source file an
         # interpreter runs is not read for pushes: release tooling pushes by design (stated limit,
@@ -975,12 +1114,26 @@ def all_pushes(cmd: str, cwd: str, head_moves: bool = True) -> list[dict]:
         if not path and CODE_PUSH.search(body) and CODE_RUNS.search(body):
             raise PushBlock("push gate: a push run from inline code cannot be range-checked. Blocked; "
                             "run it as a plain `git push` line.")
-        # FIX-GW2 10: inline code picks its own folder (`os.chdir`, `cwd=`), so the gate cannot know which
-        # alias table a git call in it reads. A non-builtin subcommand there is refused.
+        # FIX-GW2 10: inline code picks its own folder (`os.chdir`, `cwd=`), so a git call in it is checked
+        # against every candidate folder: a non-builtin subcommand that is a pushing alias in any of them is
+        # refused, and so is a program name the code builds at run time (`'g'+'it'`, getattr, a decode).
+        # Plain text that only names git (`writeFileSync('x', 'git hub')`) passes.
         if not path and CODE_RUNS.search(body):
-            for sub in code_git_subs(body):
+            joined = SPLIT_LITERAL.sub("", body)
+            if CODE_DYNAMIC.search(body) or len(re.findall(r"(?i)(?<![\w.-])git(?![\w-])", joined)) > \
+                    len(re.findall(r"(?i)(?<![\w.-])git(?![\w-])", body)):
+                raise PushBlock("push gate: inline code that starts a process builds a program name at run time "
+                                "(a split string, join, getattr or decode), so the git subcommand it runs "
+                                "cannot be checked for a pushing alias. Blocked; write the command out.")
+            for sub in code_git_subs(joined):
                 if sub not in BUILTINS and re.fullmatch(r"[\w.-]+", sub):
-                    raise unreadable("git runs from inline code, in a folder the gate cannot know", sub)
+                    if cause:
+                        raise unreadable(cause, sub)
+                    for d in dirs:
+                        if alias_pushes(d, sub):
+                            raise PushBlock(f"push gate: inline code runs git `{sub[:40]}`, a git alias that "
+                                            f"pushes in `{os.path.basename(d)[:40]}`, a folder this line names. "
+                                            "Blocked; run the push as a plain `git push` line.")
     detected = detect_count(inert_writer_bodies(hl.data_view(cmd)))
     if detected > len(found):
         raise PushBlock("push gate: this line holds a push the gate cannot parse. Blocked; run the push "

@@ -379,14 +379,19 @@ gate reads `remote.<name>.mirror` and `remote.<name>.push` (every remote when th
 each member of a `remotes.<group>`) and refuses a mirror, or a configured refspec starting `+`
 (force) or `:` (delete) when the line names no refspec of its own (K7-4-07). Every hard check runs
 before any range work, and the alias table is read once per run (`git config --get-regexp`).
-The table is read in the folder each git call really runs in (FIX-GW2, 2026-11-13): a subshell
-`( … )` is its own scope; `cd -P`, `cd -L`, `builtin cd`, `command cd`, redirections after the target,
-`env -C dir`, `env --chdir=dir` and `git -C<dir>` are followed; a cd that may not run (in a branch or
-loop, after `&&` or `||`) keeps the old folder possible, and both tables must agree. A non-builtin
-subcommand is refused ("could not read git aliases (<cause>)") in a folder the gate cannot follow
-(`popd`, `cd -`, a cd target set at run time), under `--git-dir`, `--work-tree`, `GIT_DIR`,
-`GIT_WORK_TREE` or `GIT_COMMON_DIR`, and in inline code that can start a process
-(`python -c "…os.system('git pp')"`). Builtins pass in every one of those shapes.
+Which config a git call reads its aliases from is decided order-independently (FIX-GW2, 2026-11-13):
+stepping through a line's folder changes cannot be exact (subshells, pipes, `&`, a cd that fails,
+eval, nested shells). Every folder or git dir the line names anywhere is a candidate, beside the hook's
+own folder: cd, pushd, Set-Location, sl and chdir targets in any position, `-C dir` and `-C<dir>`,
+`--git-dir`, `--work-tree`, `GIT_DIR`, `GIT_WORK_TREE`, `GIT_COMMON_DIR`, `env -C` and `--chdir`,
+`sudo -D`, `-WorkingDirectory`, find paths, and `cwd=` or `chdir(…)` in inline code, each read
+lexically and through junctions and symlinks (`cd -P L/..`). When the line names more than one folder,
+a non-builtin subcommand that is a pushing alias (or one nested past five levels) in any of them is
+refused; a candidate set at run time (`$d`, `$(…)`, `{}`) or one the same line may create refuses any
+non-builtin ("could not read git aliases (<cause>)"). Inline code that starts a process is refused when
+it runs a pushing alias from any candidate, or builds a program name at run time (`'g'+'it'`, an
+empty-separator join, getattr, a decode); text that only names git passes. The builtin list is git's
+whole command list (`git help -a`), so `prune`, `rerere` or `verify-tag` are never read as aliases.
 A remote ref write through gh skips git push, so three plain shapes are hard refusals too
 (`push_gate.irreversible`, V-K8w2): `gh api -X DELETE` (or `--method DELETE`) on a `git/refs/…`
 endpoint, `gh api -X PATCH` on one with a `force=true` field, and `gh repo sync --force`. A read of a

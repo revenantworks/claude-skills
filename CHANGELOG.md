@@ -9,7 +9,7 @@ member's version.
 
 ### Fixed
 
-- **gatewarden**: push_gate reads git aliases in the folder and git dir each git call really runs with. A pushing alias set in another repo no longer passes through a subshell, `env -C` or `--chdir`, `git -C<dir>`, `cd -P`, `cd -L`, `builtin cd` or `command cd`, a redirection after `cd`, or a `cd` in a loop or branch. A non-builtin subcommand is refused where that folder or git dir cannot be known for sure: `--git-dir`, `--work-tree`, `GIT_DIR`, `GIT_WORK_TREE` or `GIT_COMMON_DIR`, a folder change the gate cannot follow, or a git call in inline code (`python -c`, `node -e`).
+- **gatewarden**: push_gate checks a non-builtin git subcommand against every folder or git dir the line names (cd in any form, `-C`, `--git-dir`, `GIT_DIR`, `env -C`, `-WorkingDirectory`, find paths, `cwd=` in inline code), read lexically and through junctions, and refuses it when it is a pushing alias in any of them. A pushing alias set in another repo no longer passes through a subshell, a pipe, `&`, a failed cd, a nested shell, eval, `find -execdir`, Start-Process or a split program name in inline code. The builtin list is git's whole command list, so everyday commands such as `prune`, `rerere` and `verify-tag` pass.
 
 ## [hearth-v1.0.2] - 2026-11-13
 
