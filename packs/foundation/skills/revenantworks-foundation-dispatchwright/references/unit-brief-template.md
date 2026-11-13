@@ -3,13 +3,25 @@
 Write this into a brief file in the run folder (`briefs/<unit>.md`); the launch prompt only
 points at it: "Your brief is <path>. Read it now and re-read it after any context reset." A
 brief that lives only in a launch prompt is lost at the first reset (observation 0464: three
-units in one evening). It carries the durability contract verbatim
+units in one evening). **The launch prompt's first words are `Ledger row <id>.`** — the anchor
+the ledger guard reads first (`ledger-schema.md`, How a brief names its unit); a prompt that
+opens `Unit <id> (read-only…)` bound no row, was gated as a heavy writer, and was refused behind
+a land flag a read-only lane may pass (observation 0627). It carries the durability contract verbatim
 (SKILL.md §5) so a unit that never saw this doctrine still behaves the way the doctrine requires.
 Fill the bracketed fields; do not paraphrase the contract itself.
 
+**Run rules are referenced, not copied** (observations 0475, 0495). A brief points at the run's
+standing rules file by path and section instead of pasting it, so a fix to the rules reaches
+every brief at once. Where a brief must restate a rule, a fix to the source carries a sweep in
+the same turn: grep every brief, the ledger header and the plan for the changed line, fix each
+copy, and tell every running unit to re-read its brief file. A brief that changes where or how
+a unit works (its worktree, its tools) changes the standing rules file in the same edit; check
+each new brief against the rules file before launch, so no unit has to pick which rule wins.
+
 ## Contents
 
-- The brief head — owner words, pre-digested facts, owner bars on changed initial conditions,
+- Launch line and run rules by reference
+- The brief head — owner words, pre-digested facts, owner approvals, owner bars on changed initial conditions,
   port map, first pushable state, build ladder, scope,
   files, tier, tools, fetch path, base, account, artifacts, tests, CI list, budget and call cap
   with its verification reserve, return shape (and its retriever variant), stop condition
@@ -17,14 +29,14 @@ Fill the bracketed fields; do not paraphrase the contract itself.
   gate, asserted edits, fix units fail first, fetch cache, escalation
 - Waiting on a job
 - Process and git isolation — one process tree, shared refs, guard-safe command shapes,
-  `.unit-out/`, per-unit scratch
+  `.unit-out/`, per-unit scratch, destructive ref moves
 - Boundaries this brief does not move — readers before a freeze, implication checks, proofs
   before measurements, perf method, adoption arms, status lines replaced not appended, stateful
   controls, live-state expiry, install halves, generated collections, pasted commands, helper
   skills
 - Brief variants — design, prep ahead of a ruling, sim build, amendment, review (with design
   close), fix round, measurement, blind comparison, verifier, adversarial verifier, eval run,
-  research, join-check, wave join, env switch, retirement, split or rename, pin-arc join, briefs
+  research, join-check, wave join, env switch, run-tool, retirement, split or rename, pin-arc join, briefs
   written ahead
 - Observations — return them, do not log them
 - On resume
@@ -55,7 +67,30 @@ its scope: at the shipped base, or after a named change, and under which landing
 it asks for, and states its bar in figures (observation 0182). Before calling a behaviour a bug,
 the controller searched the decision log for it (observation 0173); say which log. Every figure
 cites its source `file:line`, never a remembered number: briefs have cited a decision range that
-lived in another file and a 3,000-token budget the registry set at 2,500.]
+lived in another file and a 3,000-token budget the registry set at 2,500. **Cite the record,
+never the plan** (observation 0526): a line that rests on another unit's output names the file
+and section where that output is recorded, opened by the controller before writing the line;
+an output that does not exist reads "not measured" and names the row that will measure it (a
+planned census travelled into two briefs as a figure after its unit cut it). **Every premise is
+true at this unit's base and after this brief's own changes** (observation 0514): name the
+base's pin state ("phase-1 head, no re-pin: control rows call the stack-off helper first"),
+re-read each example against the brief's other pieces, run `git log -S'<key line>' <base>` for
+each "port X" or "add X" premise (one had landed a week earlier, so the real step ran the other
+way), and derive `files_allowed` from each finding's own file fields, not by hand. Parallel
+briefs on one base state a shared premise once, in the wave's index file, and point at it.]
+
+**Owner approvals this brief builds** (observations 0512, 0528, 0583, 0596): [each approved
+answer quoted from the approval record, with its condition ("after its census arm", "only if")
+and the bar it promises as a figure ("about 30 heads", "by day 60"); an approval that promises
+an outcome with no figure goes back to the owner for one before launch. Where the owner approved
+one fix, the brief names that fix and offers no alternative; a unit that finds it unworkable
+stops and reports. A new switch names its shipped default in words: "behind a switch" is
+ambiguous between shipped on and shipped off pending a measure, and a conditioned answer ships
+off until its condition reads. Every rule in a design proposal traces to words in the owner's
+note; a rule with no trace is listed as an **addition** and built switched off, or left out,
+until the owner rules: an unasked penalty shipped on cost a re-pin and every land check twice.
+A row that joins a new system lists its old gates (rank, cost, season) and asks whether each
+still fits the new system's purpose. Else "none".]
 
 **Owner bars on changed initial conditions:** [a brief that changes where or how generated
 worlds start (seeds, anchors, start rules, calendar constants) lists every owner-ruled bar or
@@ -217,7 +252,17 @@ unit wrote and compares the sum with the decision record (one 800k approval beca
 caps). **Commit before the last 10 calls** of the cap, and verify
 each edit landed (a read or a grep of the changed line) before a commit message names it
 (observation 0352): units that ran past their cap left half-landed work and a message claiming an
-edit that failed. Where a hook enforces the cap, it is the barrier; this line is the reminder.]
+edit that failed. Where a hook enforces the cap, it is the barrier; this line is the reminder.
+**Budget by the hook's count** (observation 0510): every call in a parallel batch counts, and
+four units in one night tallied 30-60 calls below the hook. **Size the cap from the work list,
+not the tier default** (observations 0479, 0496, 0510, 0537): about 25 calls per red-first item
+plus the suite; a switch piece adds its duty edits (reset row, hook line, stack helper, control
+row) or batches them into one pass at the end; a merge about 2 calls per conflict block plus 5;
+a rename that retires many asserts more. A sum past about 70% of the cap (about 120 of 160) is
+split at a natural seam into sequential units, or run at a tier with the larger cap. Reserve the
+proof runs' calls up front ("stop fixing at cap less proofs") and order the pieces so the one
+most likely to be cut goes last and is named as the cut. A one-writer rule on a hub file bounds
+who writes it, not how much one unit can do.]
 
 **Return shape:** [short facts only — shas, counts, booleans, one-line verdicts, and a path.
 Anything longer goes in the commit body or in `waves/[unit_id]-<stage>.md`, and the field carries
@@ -291,10 +336,21 @@ path.]
 
 - **Results go to the wave report as they arrive** (`waves/<unit>.md`: piece, sha, counts, wall
   time per step), never only at the end. After a reset, that file plus `git log` say where you are.
+  **One writer per file** (observation 0521): parallel units each write their own file
+  (`waves/<set>/<unit>.md`); the set's index only links them, and the controller writes it. Five
+  units appending to one shared file put one unit's lines under another's header.
+- **Before creating a run file, list its folder case-insensitively** (observation 0473): on
+  NTFS, `MORNING-QUESTIONS.md` is the tracked `morning-questions.md`, and Write replaced 41 lines
+  of answered owner questions while reporting "created". Append to an existing morning or
+  check-in file; never replace it.
 - **Commit each green piece at once**, by path. A green fix left uncommitted while anything
   waits is lost at a reset.
 - **Use the repo's own worktree tool where it has one** (an Evolution run's `new_worktree.py`
   writes the per-worktree engine user folder). A bare `git worktree add` skips that safety step.
+  **Never point a repo's tool at another kind of repo** (observation 0485): a game repo's
+  worktree tool run on a repo with no `project.godot` started the engine there, and `--headless`
+  did not stop a native "no main scene" dialog on the owner's screen. A tool reused across repos
+  checks the marker file first and skips its engine steps without it.
 - **Leave count literals to the join.** A unit never edits the CI file's exact counts or the
   suite counts in the docs; the join syncs them once, and the unit reports its end-state counts.
 
@@ -312,7 +368,24 @@ path.]
 - **Every foreground wait is wrapped in `timeout <seconds>`** below the tool's own limit (for
   example `timeout 580` inside a 600 s call), so a hung run fails inside the call instead of
   being moved to the background by the tool (observation 0471). A "moved to background"
-  notice is a failed check: stop it, rerun under `timeout`.
+  notice is a failed check: stop it, rerun under `timeout`. **The whole call stays under the
+  limit, not each command**: three `timeout 580` runs looped in one call passed 600 s and were
+  moved too. One bounded run per call.
+- **A check longer than the per-call limit runs detached with its output in a log file**
+  (observation 0491); wait on it with repeated bounded foreground calls that read the log, and
+  never end your turn on "waiting": the controller sees a finished unit with an empty report.
+  When the log is the evidence, it must hold each child's output (a child with inherited stdout
+  wrote nothing into a redirected log), so read the lines that prove the step ran.
+- **A tool that answers "a land holds the rig" (or any distinct can't-start code) ends the
+  unit's step** (observation 0503): stop clean and report it. Never retry or poll the flag.
+- **A heavy step reads the rig-hold state just before it starts** (observation 0569): a
+  peer's "hold heavy runs" message lands between tool calls, so it cannot stop a blocking run
+  already in flight. Where the run keeps a hold marker or land flag, the step checks it in the
+  same command that starts the run.
+- **A refusal that names no reason, with a killed child (exit 137), is not yet an owner ruling**
+  (observation 0610): report it with its time and stop; the controller compares it across lanes
+  first. One refusal is a decision; the same refusal in every lane at once is an interrupt, and
+  each lane resumes from its commits. Long runs log to a file, so a kill leaves evidence.
 
 ### Process and git isolation
 
@@ -334,8 +407,14 @@ path.]
 - **A worktree unit never writes the main checkout.** A file the controller needs (a registry
   fragment, an annex) stays in the unit's `.unit-out/`, untracked; the controller copies it on
   land. A brief that says "copy it to the run dir" contradicts the guard.
-- **Scratch space is per unit:** `<scratchpad>/<unit_id>/` or unit-prefixed file names. Parallel
-  units that shared one scratchpad overwrote each other's helper script.
+- **Scratch space is per unit:** `<scratchpad>/<unit_id>/` or unit-prefixed file names, never a
+  bare name at the scratchpad root (observation 0492). Parallel units that shared one scratchpad
+  overwrote each other's helper script.
+- **A destructive ref move checks the branch it assumes in the same command** (observation 0624):
+  `reset --hard`, `branch -f` and `checkout -B` run only after `git branch --show-current` equals
+  the intended branch, and stop on a mismatch; better, `git checkout -B <land> origin/main` in one
+  step instead of switch-then-reset. Chain dependent steps with `&&`, never `;`: a switch that
+  failed on untracked files let `;` run the reset on the source branch.
 - **A worktree isolates the tree, not state outside it** (observation 0438). Before parallel units
   run checks in one project, list every out-of-tree store they share — an engine's user-data folder
   keyed by the project's name (Godot's `user://`), caches, fixed temp names, ports — and give each
@@ -415,7 +494,25 @@ path.]
   through the stamp tool (`ci_stamp.py run -- <ci command>`) on that head; then any platform pin
   measure; then record the push intent in its own call (the push hook reads the whole command
   before the intent runs); then push. A suite run bare, or before the land commit, is not the
-  verdict, and a 55-minute suite once ran twice for it.
+  verdict, and a 55-minute suite once ran twice for it. **The brief carries the stamp form
+  verbatim** (observation 0584): `python <hooks>/ci_stamp.py run --repo <wt> --workflow
+  <wt>/.github/workflows/ci.yml --covers all -- <the walk command>`. A land brief copied with the
+  bare walk command went green in 52 minutes, left no stamp, and the push gate needed a second
+  hour-long walk.
+- **Before writing or changing a land rule, read the workflow's triggers, guards, `concurrency`
+  block and dispatch paths, and count every suite run the rule causes end to end**, the
+  post-merge hosted run included (observation 0467). A rule that runs one suite shape twice on
+  one tree needs a written reason. A guard that skips a sha already green on its branch works
+  only with a fast-forward of main: a PR merge commit is a new sha and runs the suite again.
+  **A second run on the same ref replaces the first** where the group cancels in progress
+  (observation 0499): to race a slow run, push the same commit to a second branch and dispatch
+  there; before replacing a slow run on purpose, record which step it was in and for how long;
+  report a race only once both runs read in progress.
+- **The local walk mirrors every CI job on each platform it runs** (observation 0509): a job
+  whose harness steps run on Windows while only the test runner runs in the Linux container
+  leaves every Linux-only harness red to hosted CI, after the long jobs have spent their time.
+  Run each job's steps in the platform's container, or list the uncovered steps as
+  `partial: <step> skipped`.
 - **Code that talks to the operating system lands on every CI platform's proof** (observation
   0447): a row whose diff touches processes or pids, file locks, paths, line endings or exit
   cleanup runs its tests on each platform the CI file runs before the land (the repo's local
@@ -424,6 +521,13 @@ path.]
 - **An "apply" command that ends in an install crosses an owner boundary.** Write a `repo_apply`
   half this unit runs and an `owner_install` half it only reports, never one command string
   (observation #0026).
+- **A command handed to the owner is part of this unit's done-when** (observation 0466). An
+  import, an install, a `Copy-Item`: run it once — or its validate or dry-run form (register
+  then unregister under a scratch name, a parser check) — **in the shell the owner uses**
+  (PowerShell on Windows, never only through Git Bash), and put the output in the report. One
+  you cannot run reads `NOT RUN: <why>`. Three such commands failed on first owner use: a
+  UTF-8 task XML PowerShell refused to import, a `python -c` with `\"` escapes PowerShell cannot
+  parse, and a Git Bash `cd /v/...` path.
 - **Read the rebuild path before you cut anything from a generated collection.** Terminal states
   count as entries, so a cut is a tombstone the generator never re-adds. Read the regenerating
   function first and say what it treats as handled (observation #0053).
@@ -532,12 +636,32 @@ Add the block that matches the unit's job; leave the others out.
   unit changed. A join that re-points older control rows at a new stack helper deletes, in the
   same commit, every row whose setup and pin table now equal a stack row's, naming the covering
   row (godotsmith `test-tiers.md` section 8: 56 of 95 rows, 45% of one suite, were such copies).
+  **Per merge** (observations 0480, 0527, 0479, 0507): run the scripts that cover the files the
+  merge changed (the repo's test selector over that merge's diff), not only the conflicted ones.
+  When a merged branch appends to an enum or table, grep the test tree for size-relative and
+  absolute pins on it (`size() - N` and `size() == N`) and run those scripts too: such a pin
+  sat red through two joins on no script list. Attribute a red from its printed lines, one
+  switch at a time; a test name that failed in a sibling check is a lead, not a cause. Where the
+  repo selects test rows by tracing helpers, run the selector read-only for each new switch
+  before the gate file, and stop when one switch selects more than about a third of the rows:
+  a one-switch helper called from a stack helper once selected 72 rows instead of 8.
 - **A brief that adds an environment switch or a short-run mode** (observation 0553) lists every
   launcher in the tree that builds a child's environment (grep for the inherited environment near
   the engine launch) and gives each one a line: sets it, clears it, or refuses it. Every tool
   that gives a gate verdict refuses a switch that makes a check cheaper by checking less. A fresh
   review found a re-pin, a nightly, a bisect and a CI walk that would have run short and printed
   green.
+- **Run-tool unit** (a unit that changes the run's own tools: slot runner, re-pin, gate;
+  observations 0481, 0503, 0582). List each tool's live rig probes (land flag, long-check flag,
+  slot registry, running engines) in one place, and have the test base stub all of them by
+  default; a test opts in to a real one only on a scratch copy. A tool test must not read the
+  rig it runs on. For a test of a wait, stub the poll sleep to raise, so the old code fails at
+  once instead of hanging. A tool that cannot make progress fails fast: it reads the land flag
+  before it starts and exits with a distinct code naming the holder and its expected end. A
+  resumable runner keys every cached job on the content of every input the job loads, refuses
+  reuse when the worktree head or dirty set differs from the recorded one, and treats "nothing
+  to write" after a source change as a signal to re-verify, never a success; until it does, the
+  controller passes a fresh state directory each round.
 - **Retirement brief** (observation 0557): the proof list names, beside the rows that remain,
   every other switch whose only rows the retirement drops and every hook, helper and arm keyed
   on the retired switch (manual controls no CI runs included), each with a new row, a
@@ -587,6 +711,9 @@ Close your report with:
   belongs to; the dispatcher writes them] — or "none".
 - **Decisions the brief did not cover:** [every ambiguity you resolved yourself] — or "none". Two
   units flagging the same ambiguity means the brief is the defect.
+- **Findings outside my scope:** [every red, LOW or open item you saw that is not yours — a base
+  red, a review finding between two units' scopes — with where you saw it] — or "none". The
+  controller routes each one (observation 0508).
 
 ### On resume (if you are picking this unit back up)
 

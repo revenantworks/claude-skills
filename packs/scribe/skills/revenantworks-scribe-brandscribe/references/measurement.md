@@ -45,3 +45,22 @@ another ground. Token `usage` notes are grader input: they name the grounds the 
 token at a time and re-check the whole palette, because one fix can move another pair. A linter that
 scores every colour against a fixed white ground gives false failures on themed pages; confirm themed
 pairs with the script and report the linter's rows as unresolved, not failed.
+
+## 6. A collision floor is per theme
+
+A stated colour-distance floor (the tightest Delta E 2000 pair a new colour must beat) is a claim
+about the theme it was measured on. When a new colour is gated in another theme, use the
+definition's stated floor only where it covers that theme; elsewhere derive the theme's own floor,
+its tightest existing pair, and print it beside the result. A candidate that clears the derived
+floor but not the stated one is reported as exactly that, never as a pass or a fail. Gating every
+theme on a dark-only floor rejects every hue by construction, and the rejection reads as a finding
+about the candidate. In `audit`, a definition that states a floor its own non-dark themes do not
+meet is a finding.
+
+## 7. The figure gate covers every definition
+
+A gate wired to one file name measures that file only. When a build adds a definition to a repo
+that already has a figure gate, the build is not done until the gate lists every definition it
+reads, a definition missing from that list counts as unmeasured (never as passing), and a negative
+control proves the gate can fail on the new file. Prefer one fixed table shape for new definitions
+so one checker reads them all.

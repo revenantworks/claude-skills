@@ -123,11 +123,24 @@ that finds a system whose `meta.definition` is older than the current version ru
 never as a fresh build over it. Write the changed files in one call and the index in the last call:
 large systems cost real usage, so nothing unchanged is re-sent.
 
+**A scripted re-sync edits a copy of a pristine copy.** Before any edit script runs over saved
+system files, copy them once to a pristine folder; the script reads the pristine copy and writes a
+working copy, so a run that stops halfway (a replacement that removed a later anchor, a missed
+match) reruns from the pristine files with no second read of the live systems. Make each
+replacement idempotent (skip a target that already holds the new text), run the whole script to
+its final sweep across every system before publishing any of them, and publish only after that
+sweep passes.
+
 **A bump re-syncs every system it touches, not only the one in hand.** A change to a shared rule
 (type, neutrals, spacing, a house-wide accent) reaches the parent system and every sibling. Before
 calling a bump done, read `meta.definition` on every system named in the definition's Applications
 and re-sync each one that is older; a recorded run left the parent four versions behind while its
-member system was kept current. A refusal because the system has a newer version than the one read
+member system was kept current. **It reaches the consumers outside the brand repo too.** The
+Applications (or the roster) lists every file outside the brand repo that copies brand hexes: a
+mod's theme code and its tests, a mockup stylesheet, a page generator. A bump hunts the retired
+hexes in each of them as well; a stale-value gate covers only the tree it scans, so a consumer left
+off the list drifts while every gate stays green (a recorded mod kept retired inks for two
+versions, its tests pinning the stale values). A refusal because the system has a newer version than the one read
 means read again: if the content is unchanged, re-apply the same edit to the fresh read.
 
 ## 7. Making it the default, and how other work reads it

@@ -1,5 +1,17 @@
 # Changelog — revenantworks-localops-whisperrunner
 
+## [Unreleased] — staged 2026-11-09 (observation review)
+
+- Locate (observations 0531, 0607): a configured `bin` or model path that no longer exists stops
+  with `configured bin <path> is gone` and the one `configure --root <folder> --force` line,
+  never "install is the user's"; SKILL.md says "not found" is a claim about where you looked
+  (search by file name with no depth limit, state the scope); the walkthrough gains step 0, a
+  search for an existing build. Three tests.
+- Run (observation 0550): `--no-context` passes `-mc 0`; SKILL.md sends synthetic or
+  effect-processed audio over a minute through VAD plus `--no-context`; checks.md gains
+  "Verifying spoken content against a script" (confirm each drop by timestamp; looped lines are
+  a transcriber fault first). One test.
+
 ## [1.0.0] — 2026-10-01
 
 2026-10-21 (a recorded playtest: `check` on a 21-minute file without VAD looped one line 88 times; `run` with VAD on the same file passed with a longest repeat of 2): `whisper_run.py run` takes `vad_model` from `whisperrunner.json` when no `--vad-model` is passed (the file must exist and the build must list `--vad`), `--no-vad` opts out, `check` never defaults it, and the run JSON records `vad: on|off` with a `vad_note` when it fell back. SKILL.md says a long file goes to `run` with VAD, never `check`. Four tests, red first (28 in `test_whisper_run.py`); test case T15.

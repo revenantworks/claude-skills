@@ -34,6 +34,11 @@ section 7. Neither is repeated here.
   additive key with a default needs no version bump.
 - **Load builds the new state aside, then swaps it in.** A load that fails halfway leaves the
   running game untouched and says why; it never leaves half the world loaded.
+- **A view's memory belongs to one game** (observation 0516). Where restart and load swap the
+  engine under the same scene, a view that remembers "already shown this season" or "last
+  person seen" under a key of only the day or season carries it into the next game. Key it on
+  the state's identity, or clear it on every swap (restart, load, play again), and write one
+  test that swaps the engine on the same day and checks the view starts fresh.
 - **A save a player can share is untrusted input.** Never decode it with a format that can
   carry objects or scripts. Plain data in, validated field by field.
 - **Prove it with a round trip:** save, load, save again, and compare the two files byte for

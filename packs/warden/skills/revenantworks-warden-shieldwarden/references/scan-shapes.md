@@ -87,6 +87,13 @@ The fix is in code: log a fingerprint or `set`/`missing`, wrap the value in a se
 `repr=False`, or dump an allowlist of fields. A hit in a deliberate test stub is accepted through
 `accepted` in config, never by weakening the shape.
 
+**A failing assertion is a print** (observation 0476). `assertIn(key, env)` or `assertEqual` on a
+dict prints the whole container when it fails, so an environment copy under test dumps every token
+in it into the run's output, and a red-first test makes that failure the planned path. In tests,
+assert membership with a fixed message (`assertTrue(key in env, "key missing")`), or build the
+environment under test from a stub dict holding no real values. `object-dump` does not see this
+shape; read a test that touches `os.environ` or `process.env` for it by hand.
+
 ## Control bytes (class `control-bytes`, Markdown, YAML and text files)
 
 `bare-cr` (a CR not followed by LF), `control-char` (C0 controls other than tab, LF and CR;

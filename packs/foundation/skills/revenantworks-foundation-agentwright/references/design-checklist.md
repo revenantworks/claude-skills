@@ -28,6 +28,14 @@ Decide in order: must it outlive the session? cron. Does the interval depend on 
 
 **Long runs — the objective** (added 2026-10-08). An agent given a goal and many hours (a goal-driven or autonomous mode) needs its objective drafted, not typed. The spec carries: **the outcome** in one observable sentence; **the done check** — the command, test or file state that proves it; **non-goals** and files it must not touch; **the budget** in tokens, wall time or passes, and what it does at the edge (a hold that announces itself, as above); **stop-and-ask conditions** — the decisions it may not make alone; **the progress file** it keeps, and its checkpoints. A draft that cannot name its done check is not ready to run; say so and ask for the check.
 
+**A job that reads repo state fetches it first** (added 2026-11-09, observation 0469). Lands merge on
+the host, so a local branch ref nobody fast-forwards sits behind for days, and a job that resolves
+it tests, briefs from or blesses a stale tree whose green looks like a real one. Step 1 of any
+scheduled job that reads "what has landed" is `git fetch` and a resolve of the remote ref (or a
+fast-forward-only update of the local one), failing closed when the fetch fails or the tree is
+behind and cannot fast-forward. The job also reports ahead/behind at start. A second breach made
+this a pre-step in the run script, not a sentence in the prompt.
+
 **Scheduled platform sweeps** (added 2026-10-08). A scheduled currency or research sweep runs scoutwright `since`, then scoutwright `fit` on each new model and each added feature, inside a stated budget (scoutwright's own cap per fit card and cards per run). Trials `fit` proposes are reported for the user's yes, never run unattended.
 
 ## 2. Guardrail tiers — soft vs hard
@@ -67,6 +75,14 @@ schedule's prompt or path, verify one fire, then merge the move. An audit diffs 
 against the branch or the default branch and names each deleted or renamed path as a P1 finding
 (P0 when the next fire is within a day).
 
+**Per-task settings for a local desktop task need a launch folder** (added 2026-11-09, observation
+0541). The desktop task record has no env field, and a session reads `.claude/settings.json` from
+its start folder only, never a parent, even inside one repo. Per-task env or rules therefore means
+a dedicated launch folder with its own settings, which drops the repo's own project settings:
+repeat the repo's deny rules as absolute paths (`//<drive>/...` matches on Windows), deny writes to
+the launch folder itself, write the prompt's paths as absolute, and strip from the env whatever a
+child `claude -p` must not inherit. Check what a scheduled run actually loads before designing it.
+
 **A narrow push is checked against the ref, not the commit** (added 2026-10-16, observation 0412). A push sends a ref, so "this script pushes one file" holds only while the branch is one commit ahead. A carve-out that commits one tracked file and then runs `git push origin HEAD:main` also sends every local commit other sessions made. The spec's push step checks `git rev-list --count origin/main..HEAD` equals 1 before pushing; otherwise it commits locally and logs "deferred". The pushed path goes into the workflow's `paths-ignore`, or the commit carries `[skip ci]` where the repo allows it, so the push starts no CI run. Review a push scope by reading what the push command sends.
 
 ## 5. Handoff schemas
@@ -99,6 +115,13 @@ Decided by the zero-signal rule in SKILL.md (*Anti-patterns*) — its output lin
 
 **Heartbeat staleness — the check that reads the line** (added 2026-10-01; the idea comes from claude-mods `loop-ops`, MIT, cited in SOURCES.md, no text copied). A zero-signal line proves a quiet run only to someone who looks for it. The spec names one staleness check outside the agent: when the newest run record (a zero-signal line counts) is older than about twice the cadence, the agent is down, not quiet. It names who or what runs the check (another scheduled job, a status page, the user's daily read), where it reads the last-run time, and what it raises. An agent cannot report its own silence; the check lives outside it.
 
+**A session ending is not a job succeeding** (added 2026-11-09, observation 0598). A run whose only
+command a hook refused ends normally, so the platform lists it as succeeded, and a long cadence
+turns one refusal into a lost month. Every routine with a cadence longer than a week carries (1) a
+written failure record in its repo, (2) a retry inside the cadence that no-ops once the output
+exists, and (3) a test that runs its entry script through the installed guards, so a script edit
+or a new guard is caught the day it happens. Judge it by the output it owes.
+
 ## 8. Failure & retry
 
 Per failure class: tool error (retry once, narrower; then report), data absent (zero-signal path, not invention), partial results (deliver + flag, or hold — chosen per consequence). Never loop; never silently degrade a cap. A quota or run-cap hit is its own failure class: the run states which meter stopped it, never a silent skip (observation #0185).
@@ -108,6 +131,39 @@ Per failure class: tool error (retry once, narrower; then report), data absent (
 **A long mechanical walk is checked for coverage** (added 2026-10-16, observation 0440). An unattended model shortens a long walk unless the shortfall is an error: four of five runs told to scan a range in 7-day windows sampled it instead. A ranged scan states the end date as a worked example, a window the tool can return with pagination, and a coverage log (first and last date scanned); short coverage is an error, never a skip reason. A count that could not be computed writes null plus an error naming why, never 0. One blanket retry rule covers every call to a flaky connector, and only exhausted retries are logged as errors. A fallback is checked against the tool's own schema text before it goes into the prompt (a label search matched display names only, so a retry by label id would have matched nothing).
 
 **An unattended edit of a live prompt verifies its input first** (added 2026-10-16, observation 0391). With the screen locked the clipboard cannot be written, and nothing says so until the paste empties the box; saving then wipes the live prompt. Before any paste, read the clipboard length back against the file's. Prefer an in-page edit that applies the file's diff as exact replacements, each anchor matching once or nothing written; finish with a get call compared against the versioned file.
+
+**Editing a live Cowork task prompt** (added 2026-11-09, observations 0580, 0585, 0586, 0595 and
+0625). Five facts an upkeep run plans around:
+- **Check the write path first.** The routine API reads every prompt, but its update replaces
+  `job_config` (and `ccr`) whole: a partial body is refused with HTTP 400, and the full one carries
+  a generated system prompt of about 90k characters that must never be retyped through a tool
+  parameter. Its `list` ignores `cursor`, so find a task past the first page by `get` with its
+  registry id. The working write path is the signed-in claude.ai edit form (built-in pane or the
+  owner's browser); confirm the sign-in before planning an unattended edit, and ask the owner for a
+  one-time sign-in rather than handing over pastes.
+- **Check the base before overwriting.** Hash the live prompt against the repo file the change was
+  built on and stop on a mismatch: a prompt edited in claude.ai and never committed is ahead of the
+  repo, and a repo-to-live paste rolls it back. When live is ahead, sync the repo copy and its tests
+  first.
+- **Name the equality.** The paste box drops the file's final newline, so a byte-for-byte check
+  fails on every task. Equality for a prompt install is the file's bytes, LF line ends, with exactly
+  one trailing newline removed; install briefs quote that rule.
+- **A form save rewrites platform fields.** Every save regenerates the platform's system prompt
+  (with a dated line), refreshes the account-instructions snapshot, appends default disallowed
+  tools and reissues event ids. Promise "no owner-set field changed", never "nothing changed":
+  diff name, cron, model, permission mode, tools minus platform defaults, `mcp_connections` and the
+  task prompt before and after, and report the platform churn in one line.
+- **A model or other nested-config change** is an owner step in the claude.ai form unless a tool
+  can send the body from a file.
+
+**A scheduler's restart setting is not a supervisor** (added 2026-11-09, observation 0487). A
+supervising task that loses its console (a crash wave, a headless console host) can leave a child
+that runs on until it next starts a program and then dies silently, while the task reads Ready and
+its restart-on-failure never fires. A local supervisor checks its console, or runs without one, and
+exits loudly when it is gone; every child loop logs each exit with its reason and restarts with
+backoff; a second watchdog task restarts the first. A self-hosted CI runner on a machine with a VPN
+has the runner's network process excluded from the tunnel (split tunnelling), named in its setup
+(observation 0489).
 
 **A config write is proven by reading the field back** (added 2026-10-16, observation 0404). An API or editor save that returns success has not set anything until a read-back shows the field, field by field. A routine triggers API accepted two auto-mode fields with HTTP 200 and dropped both; only the read-back showed it. Auto-mode rules are not settable per routine (the Claude Code docs, as read 2026-10-11, load `autoMode` from user, managed and `--settings` scopes only, never from a project settings file, and list no routine field for it), so no spec promises one; re-check that line at each platform refresh. Likewise, read the outcome-branch field back after every web-editor save — one save re-attached it, and every fire then cut a new `claude/<name>-<suffix>` branch — and count stale `claude/*` branches on origin in the audit.
 

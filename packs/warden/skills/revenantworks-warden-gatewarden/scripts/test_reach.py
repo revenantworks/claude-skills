@@ -416,6 +416,23 @@ class LoadsTests(Base):
         self.assertTrue([n for n in d["not_checked"] if "old synced plugin folder" in n])
         self.assertEqual(code, 1)
 
+    def test_a_renamed_plugin_leaves_stale_and_missing_enabled_ids(self):
+        # observation 0602: enabledPlugins kept the old id; the new install read as disabled.
+        home = self.surface_home("wright", "same", "same")
+        reg = json.loads((home / "plugins" / "installed_plugins.json").read_text(encoding="utf-8"))
+        installed = sorted(reg["plugins"])
+        (home / "settings.json").write_text(json.dumps(
+            {"enabledPlugins": {"oldname@mk": True, "pack@synced": True}}), encoding="utf-8")
+        _, d = self.loads_json(home)
+        self.assertTrue(d["plugin_ids"]["checked"])
+        self.assertEqual(d["plugin_ids"]["enabled_not_installed"], ["oldname@mk"])
+        self.assertEqual(d["plugin_ids"]["installed_not_enabled"], installed)
+        (home / "settings.json").write_text(json.dumps(
+            {"enabledPlugins": {k: True for k in installed}}), encoding="utf-8")
+        _, d = self.loads_json(home)
+        self.assertEqual(d["plugin_ids"]["enabled_not_installed"], [])
+        self.assertEqual(d["plugin_ids"]["installed_not_enabled"], [])
+
     def test_installed_and_synced_plugin_same_body_is_handled(self):
         code, d = self.loads_json(self.surface_home("wright", "same", "same"))
         self.assertEqual(d["rows"][0]["kinds"], [6])

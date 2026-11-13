@@ -34,7 +34,12 @@ Seven, in this order; a measured check lands in one of them, never an eighth.
    off-token value is a finding even when close; the fix names the **nearest token by CIEDE2000**
    (Delta E 2000, computed, with the figure) and the role it should probably be. Recompute contrast against the
    ground the mark actually sits on (the parent element's real background), not the token's designed
-   ground. Neutrals are in scope: print hue and lightness of each surface and border step.
+   ground. Neutrals are in scope: print hue and lightness of each surface and border step. Mark
+   files are in scope too: a hex inside a mark file that is not the definition's current value is
+   its own finding, **frozen art** (a theme moved and the approved file kept the old ground or ink),
+   with the fix "transparent ground, inks from `currentColor` or custom properties", never a generic
+   drift. Consumers outside the brand repo (the Applications list) are swept the same way, and an
+   identity accent bound to a state role (`ok`, `warn`, `error`) in any consumer is a finding.
 3. **Typography and mark usage** — faces off their roles; marks stretched, recoloured off-token,
    inside clear space, below minimum size, or redrawn instead of copied.
 4. **Voice and register drift** — prose against the register map for its surface, the lexicon, the

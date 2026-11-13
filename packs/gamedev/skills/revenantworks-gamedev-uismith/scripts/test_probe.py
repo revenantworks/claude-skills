@@ -157,6 +157,13 @@ class Judgement(unittest.TestCase):
         self.assertEqual(res["clipped"], [])
         self.assertFalse(res["finding"])
 
+    def test_visible_overflow_out_of_a_cell_spills(self):
+        e = el("td.time", has_text=True, sw=160, cw=90)
+        e["spill"] = True
+        res = probe.judge(measure(elements=[e]))
+        self.assertEqual((res["clipped"], res["spills"]), ([], [{"sel": "td.time", "px": 70}]))
+        self.assertTrue(res["finding"])
+
     def test_overflow_without_clipping_or_text_is_not_clipped_text(self):
         res = probe.judge(measure(elements=[el("div", has_text=True, ox="visible", sw=300, cw=200),
                                             el("img", has_text=False, ox="hidden", sw=300, cw=200)]))
@@ -639,6 +646,15 @@ class InPageMeasure(unittest.TestCase):
         ])
         self.assertFalse(probe.judge(m)["finding"], probe.judge(m))
 
+    def test_nowrap_text_spilling_out_of_a_visible_cell_spills(self):
+        m = run_measure(375, [
+            {"tag": "td", "cls": "time", "text": "Saturday 13:30 kickoff", "rect": [0, 0, 90, 20],
+             "sw": 160, "cw": 90, "sh": 20, "ch": 20, "cs": {"whiteSpace": "nowrap"}},
+            {"tag": "div", "text": "plain block wider inside", "rect": [0, 30, 90, 20], "sw": 160, "cw": 90},
+        ])
+        res = probe.judge(m)
+        self.assertEqual((res["clipped"], res["spills"]), ([], [{"sel": "td.time", "px": 70}]))
+
     def test_visible_element_off_the_left_still_counts(self):
         m = run_measure(375, [{"tag": "nav", "rect": [-40, 0, 240, 50]}])
         self.assertEqual(probe.judge(m)["off_left"], [{"sel": "nav", "px": 40}])
@@ -673,6 +689,16 @@ class RealBrowser(unittest.TestCase):
         self.assertEqual((code, row["status"]), (0, "pass"), row)
         self.assertEqual(row["result"]["sections_checked"], 2)
         self.assertNotIn("folds_open", row)
+
+    def test_a_nowrap_cell_painting_into_its_neighbour_is_a_spill(self):
+        page = ("<!doctype html><title>t</title><main><table style='table-layout:fixed;width:300px'>"
+                "<tr><td style='width:60px;white-space:nowrap'>Saturday 13:30 kickoff</td>"
+                "<td>Home side</td></tr></table></main>")
+        code, row = self._probe(page)
+        self.assertEqual(code, 1)
+        self.assertEqual([s["sel"] for s in row["result"]["spills"]], ["td"])
+        self.assertEqual(row["result"]["clipped"], [])
+        self.assertEqual(row["result"]["page_over"], 0)
 
     def test_a_script_that_throws_fails_a_page_that_fits(self):
         code, row = self._probe(CLEAN + "<script>const x = null; x.do;</script>")

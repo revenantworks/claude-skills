@@ -13,6 +13,9 @@ Read on an audit only, and only when the target holds a hook, a controls file or
 - State the extent you parsed (#0041)
 - A check you just wrote is an untested claim (#0042)
 - A step that makes a file is verified by the file (#0162)
+- A rule beside the value it guards needs a check (0601)
+- A new or tighter guard is rehearsed against the scheduled scripts (0598)
+- An intermittent failure: classify every window, good and bad (0487, 0489)
 - Rule backtest against session history
 
 ---
@@ -42,6 +45,27 @@ Read on an audit only, and only when the target holds a hook, a controls file or
 **A step that makes a file is verified by the file, never by its exit code** (observation #0162). Check that it exists, that its mtime moved past the step's start, and that its size is sane for what it should hold. A run that exits 0 without writing, or writes an empty file, passes an exit-code check and fails all three.
 
 **A check you just wrote is an untested claim, not the lesson made safe** (observation #0042). Before a newly authored check informs any verdict, give it a positive control, a negative control, and **one independent cross-measurement** of the same population by other means — another session's scan, a second script, a hand count of a sample. Where the check bins things, compare the bin sizes, not only the totals. A usage-evidence check written directly from this entry's own rules reproduced the very conflation it was written to prevent, twice in one hour, and both times produced a complete, well-formed, plausible report; what caught it was an unrelated unit's scan of the same data. Being the author of a fix is the state in which the fix is least examined.
+
+**A rule written beside the value it guards is invisible to an edit by search** (observation 0601).
+An agent that finds a key by grep and prints only its line never reads the "owner-only to change"
+note two lines up, so a pinned hash or an owner-held value guarded by a comment is guarded by
+nothing. Where an audit finds such a note, the finding is the missing check: a CI test or commit
+hook that refuses a change to that block without the owner's marker or the owner's tool, with the
+rule also stated in the instruction file every session there reads (P1; P0 where the value gates
+something that runs elevated or unattended).
+
+**Installing or tightening a guard rehearses the scheduled scripts against it** (observation 0598).
+A guard added after a monthly job's last run fails that job at its next fire, and the run reads as
+succeeded. The install step runs every routine and scheduled-task entry script on the machine
+through the new guard (its dry-run or controls mode), and a refusal is fixed before the guard goes
+live.
+
+**An intermittent failure is diagnosed from every window, good and bad** (observations 0487 and
+0489). Timing only the failures finds a cycle and then invites a load or crash theory; classifying
+every session by the environment at its start (network profile, VPN tunnel, sleep and resume,
+updates) finds what differs. A fixed delay usually points at a timeout or a client's own retry
+arithmetic (five retries of 100 s made one "9-minute drop"), not at pressure. Count the good
+windows before probing the stack.
 
 ## Rule backtest against session history
 

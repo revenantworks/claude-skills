@@ -1,5 +1,11 @@
 # Changelog — revenantworks-localops-comfyrunner
 
+## [Unreleased] — staged 2026-11-09 (observation review)
+
+- `comfy_client.py nodes --all --save-info FILE` (observation 0579): the batch path saves the
+  server's whole `/object_info` in one call, for a runner that guards many graphs (different
+  model families) against one file; SKILL.md Discover and recipes.md name it. Two tests.
+
 ## [1.0.0] — 2026-10-01
 
 First public release. Runs image, video and audio generation on a local ComfyUI server, and checks

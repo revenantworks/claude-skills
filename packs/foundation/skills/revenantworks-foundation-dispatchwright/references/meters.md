@@ -21,8 +21,11 @@ and has spent. Neither skill loads the other's files.
 - Reading each meter — the command, or the user question
 - The loop — cheapest route, re-read at each land, brake, record
 - Pace-motivated launches — planned rows only, the plan row named, no blocking question first
-- Wave conduct — the standing go and asking the user (SKILL.md §6, in full)
-- Liveness in an unattended stretch — the allow list and a watcher a prompt cannot block
+- Wave conduct — the standing go and asking the user (SKILL.md §6, in full); fan-in, scheduled
+  tasks, the remaining-rows table, finding owners, approval reconcile, spend by class, the
+  controller's own steps, lane-wide refusals
+- Liveness in an unattended stretch — the allow list, a watcher a prompt cannot block, detached
+  waits, hold markers
 - The fallback fit — when no budget decision file is fresh
 
 ## The meter list
@@ -137,6 +140,39 @@ SKILL.md §6 states these in one line each; the rules in full:
   the local CI where the stamp cannot be read back. The controller never marks a draft ready
   without that verdict. A blanket "take over everything" authorises review-then-merge, not the
   merge alone.
+- **Fan-in before lanes** (observation 0482). At plan time count each file's fan-in over the whole
+  build list. A file more than about a third of the units touch is a planning blocker: its split
+  (or region claims with a union merge policy) is the first row, before the wave plan is set.
+  One view file touched by 18 of 22 rows turned a 6-lane plan into 16 mostly single-unit waves.
+- **Scheduled tasks are units too** (observation 0525). Before dispatching a unit that needs a
+  long check, read the rig's scheduled tasks for any that take the long lane in its window (start
+  time, typical length) and order the work around them: a nightly gate took the lane for 4-5 h and
+  a unit's census sat in nine timed-out waits. When the owner changes a check's cadence, list
+  every place it lives (a scheduled task, CI, the land rule) and change or ask for each the same day.
+- **Readiness is a table** (observation 0505). The run keeps one remaining-rows table (row,
+  blocker, launches when), written from every brief's base line, re-read at every hand-back and
+  whenever a lane frees. A "nothing is unblocked" claim cites it: a row whose blocker lived only
+  in its brief sat ready for hours while the owner was told no row was.
+- **Every finding gets an owner** (observation 0508). At each hand-back the controller lists every
+  red, LOW or open item the report names (its "Findings outside my scope" list included) and gives
+  each an owner row, a brief line, or "dropped, why" in the remaining-rows table before the next
+  launch. A base red noted only in a wave file surfaced hours later as the only red in a full proof.
+- **Reconcile against the approval** (observation 0512). Each built fix is compared with the
+  approval record; where they differ, the record is corrected in the same pass or the gap goes back
+  to the owner. A unit's "free choice" between options the owner had already settled is a gap.
+- **Spend by class at each pace check** (observation 0488). Tally the ledger's actual tokens by
+  class (review, tools, fix, build, join); a class that dominates is seen before the owner asks.
+  Small fix rounds get one checking agent; multi-agent review workflows are for set joins,
+  releases, and changes to saves, CI verdicts or credentials. Review workflows once took 72% of a
+  build day's spend, late fix rounds 0.5-2M tokens for one finding each.
+- **The controller's own consequential steps** (observation 0500) — push, land, merge into live
+  tools, CI dispatch, cancel — run from the procedure re-read now, cited `file:line`, never from
+  memory, and the outcome is reported only after reading it back. Where the owner orders it, a
+  runbook written from the real files is checked by two fresh agents (rules, then mechanics and
+  current state) first.
+- **The same refusal in every lane at once is an event** (observation 0610). Compare timing across
+  lanes before asking the owner whether they denied something; an interrupt reaches each background
+  unit as a refusal. Resume each lane from its commits.
 
 ## Liveness in an unattended stretch
 
@@ -149,6 +185,15 @@ prompt blocks the cron too (observation 0340). Before the user leaves:
 - Liveness comes from something the same prompt cannot block: a scheduled cloud check, or a
   monitor on each unit's journal or worktree modification time that reports a unit silent for one
   interval.
+- **Detach the wait with the work** (observation 0620). A detached long run (a land walk) gets a
+  waker that survives a session restart — a scheduled re-check, or a notifier the run itself
+  fires; a shell loop in the session dies with it. A walk once passed and the land sat idle 2 h
+  40 min. On any resume or wake, read every detached run's log before anything else, and list a
+  step as owed only after reading its log.
+- **A hold reaches a run only through state it reads at its start** (observation 0569). A message
+  lands between a unit's tool calls, after a blocking run already in flight. A session that needs
+  the cores writes the run's hold marker (or land flag) before its own heavy run, as well as
+  messaging peers.
 
 ## The fallback fit
 

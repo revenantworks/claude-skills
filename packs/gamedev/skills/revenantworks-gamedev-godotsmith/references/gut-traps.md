@@ -172,6 +172,21 @@ its own repaint, so the effect would have frozen after the first flip — and a 
 that never painted at its final colour. The all-together run passed both. The review checks
 that each commit's suite line was taken alone, not copied from the final run.
 
+**A base that is already red excuses failing tests by name, never by script** (observation
+0501). A known-red list reads `script :: test name`, with the count. A red in a script on that
+list is A/B'd against the base by test name: a test green at the base and red at the head
+belongs to the change, whatever list its script is on. In one wave a unit added two reds to a
+script already listed, its sweep passed them, and only the join's base-versus-merge run caught
+them.
+
+**After a union merge in a `.gd` file, look for duplicate functions** (observation 0486). A
+conflict resolved by keeping both sides' tails can leave two `func after_each` (or
+`before_each`, `before_all`, a helper) in one script. GDScript rejects the duplicate, GUT drops
+the whole script, and gdlint passed it in one join. After any union resolution, list the
+function names per file and stop on a repeat
+(`grep -oE '^(static )?func [A-Za-z0-9_]+' <file>.gd | sort | uniq -d` prints nothing on a
+clean file), then run that script alone and read `Scripts 1`.
+
 ## 4. What GUT does not tell you at all
 
 - **Whether another run shared the project's `user://` folder.** Godot keys `user://` by the
@@ -190,12 +205,17 @@ that each commit's suite line was taken alone, not copied from the final run.
   with it: `-gconfig= -gtest=res://tests/unit/test_camp.gd` (a comma list takes several
   scripts, in list order); or narrow with the directory, the file and the test name together:
   `-gdir=res://tests/unit -gselect=test_camp.gd -gunit_test_name=test_winter` (check the
-  flag names against the installed GUT version). A scratch config file with a `"tests"` list
+  flag names against the installed GUT version). `-gselect` is a substring match, so keep the
+  `.gd` suffix: `-gselect=test_hud` took five scripts in one repo (observation 0484). A scratch config file with a `"tests"` list
   and no `dirs`, passed as `-gconfig=<absolute path>`, also works and makes a batch split.
   Confirm the narrowing worked by reading `Scripts` — a narrowed run says the number you
   asked for, and any larger count is the wrong command: kill it by its own pid. A target that
   fails to parse is dropped with exit 0 and "Could not find script", so the Scripts count and
-  a grep for `SCRIPT ERROR` are the witnesses, not the exit code.
+  a grep for `SCRIPT ERROR` are the witnesses, not the exit code. A one-script run that prints
+  no `Scripts` and `Tests` summary at all is no run, whatever the exit code (observation 0493).
+  One such drop: a `class_name` called as `ClassName.call("name", ...)` does not parse ("Cannot
+  call non-static function "call()" on the class ... directly", Godot 4.7.2); call through a
+  Script from `load()` instead.
 - **Whether the thing it measured is the thing that ships.** A headless run proves headless
   behaviour. Anything gated on `DisplayServer.get_name() != "headless"` took the other
   branch.

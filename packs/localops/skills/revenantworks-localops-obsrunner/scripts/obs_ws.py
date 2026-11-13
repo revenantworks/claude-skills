@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import os
 import re
 import sys
@@ -141,6 +142,9 @@ def call(request: str, data: dict | None = None, confirm: bool = False, host: st
     port = port or int(os.environ.get("OBS_WEBSOCKET_PORT") or DEFAULT_PORT)
     password = obs_secret.resolve()[0]
     factory = factory or _default_factory
+    # The client logs a full traceback for every refused request before raising; the refusal is
+    # reported in this function's JSON instead, so the library's own error log stays quiet.
+    logging.getLogger("obsws_python").setLevel(logging.CRITICAL)
     try:
         client = factory(host, port, password, timeout)
         resp = client.send(request, data, raw=True)
@@ -150,7 +154,8 @@ def call(request: str, data: dict | None = None, confirm: bool = False, host: st
     except Exception as e:  # noqa: BLE001 — the client raises several unrelated types
         name = type(e).__name__
         if name == "OBSSDKRequestError":
-            return {**out, "status": "ERROR", "reason": _scrub(f"OBS refused the request: {e}")}
+            return {**out, "status": "ERROR", "reason": _scrub(f"OBS refused the request: {e}"),
+                    "code": getattr(e, "code", None)}
         return {**out, "status": "ERROR", "reason": UNREACHABLE, "error": _scrub(f"{name}: {e}")}
     return {**out, "status": "OK", "response": mask(resp if resp is not None else {})}
 
@@ -210,15 +215,33 @@ def obs_state(factory=None) -> str:
 
 # ---- CLI --------------------------------------------------------------------------------
 
-def cmd_status() -> dict:
+REPLAY_BUFFER_OFF = 604  # obs-websocket v5 RequestStatus: the replay buffer is not available (turned off)
+
+
+def _replay_buffer_off(r: dict) -> bool:
+    return r.get("code") == REPLAY_BUFFER_OFF or "not available" in str(r.get("reason", "")).lower()
+
+
+def cmd_status(factory=None) -> dict:
+    """The verdict rests on the required reads. The replay buffer is optional: off is a state, not an error."""
     src = obs_secret.resolve()[1]
     out = {"command": "status", "password_source": src, "password_note": obs_secret.NOTES[src]}
     for req in ("GetVersion", "GetStreamStatus", "GetRecordStatus", "GetReplayBufferStatus", "GetRecordDirectory"):
-        out[req] = call(req)
+        out[req] = call(req, factory=factory)
+        if req == "GetReplayBufferStatus":
+            r = out[req]
+            if r["status"] == "OK":
+                out["replay_buffer"] = "active" if r["response"].get("outputActive") else "idle"
+                continue
+            if r["status"] == "ERROR" and _replay_buffer_off(r):
+                out["replay_buffer"] = "off"
+                continue
         if out[req]["status"] in ("NOT-RUN", "ERROR"):
             out["verdict"] = out[req]["status"]
             out["reason"] = out[req]["reason"]
             break
+    else:
+        out["verdict"] = "OK"
     try:
         from gpu_preflight import lease_state, state_dir  # pack-shared, byte-identical
         p = state_dir() / "gpu-lease.json"

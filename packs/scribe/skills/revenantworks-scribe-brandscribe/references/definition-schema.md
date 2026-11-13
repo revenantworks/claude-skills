@@ -65,7 +65,11 @@ Every value row carries a `source` cell (section 4).
 5. **Spacing and radius** — the scale steps the brand uses, with what each is for.
 6. **Marks and imagery** — the mark files (paths, inks, the ground each is for, clear space, minimum
    size, forbidden treatments) and imagery direction in words. No file, no mark: the name is set in
-   type and the definition says so.
+   type and the definition says so. **Theme values stay out of approved art**: a light or
+   high-contrast variant takes its ground as transparent and its inks from `currentColor` or CSS
+   custom properties wherever the format allows, so a theme change never needs an art edit. A mark
+   file that must bake theme hexes is listed with them, as frozen art, so the next palette change
+   finds it.
 7. **Voice** — the voice profile (`voice-profile.md`): register map, cadence, lexicon do/don't,
    sign-off, allowed surfaces, 3-5 before/after example pairs, banned tells, prefs.
 8. **Accessibility floor** — the brand's own minimums (text 4.5:1, large text and meaningful

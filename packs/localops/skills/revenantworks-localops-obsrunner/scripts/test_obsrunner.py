@@ -649,5 +649,41 @@ class SecretSources(StateDirCase):  # observation 0443
         self.assertNotIn("never-printed-value", out)
 
 
+class OBSSDKRequestError(Exception):
+    """Named like the client's refusal type; call() matches it by class name."""
+    def __init__(self, req, code):
+        super().__init__(f"Request {req} returned code {code}")
+        self.code = code
+
+
+class StatusVerdictTests(unittest.TestCase):
+    def factory(self, refuse=None):
+        class Client(FakeClient):
+            def send(self, request, data=None, raw=False):
+                if refuse and request in refuse:
+                    raise OBSSDKRequestError(request, refuse[request])
+                return {"outputActive": False}
+        return lambda *a: Client([])
+
+    def test_replay_buffer_off_is_a_state_not_an_error(self):
+        out = obs_ws.cmd_status(factory=self.factory({"GetReplayBufferStatus": 604}))
+        self.assertEqual(out["verdict"], "OK", out)
+        self.assertEqual(out["replay_buffer"], "off")
+        self.assertIn("GetRecordDirectory", out, "status must go on past the optional read")
+
+    def test_all_reads_ok_is_ok(self):
+        out = obs_ws.cmd_status(factory=self.factory())
+        self.assertEqual(out["verdict"], "OK", out)
+        self.assertEqual(out["replay_buffer"], "idle")
+
+    def test_a_required_read_refused_is_still_an_error(self):
+        out = obs_ws.cmd_status(factory=self.factory({"GetRecordStatus": 600}))
+        self.assertEqual(out["verdict"], "ERROR", out)
+
+    def test_replay_buffer_other_refusal_is_an_error(self):
+        out = obs_ws.cmd_status(factory=self.factory({"GetReplayBufferStatus": 500}))
+        self.assertEqual(out["verdict"], "ERROR", out)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -215,6 +215,12 @@ The consequences:
   `is_process_running` raises for a pid that is not the caller's child. A change touching any of
   them runs its tests on every platform the CI file runs (the local Linux container where one
   exists) before it lands; a Windows-only green is a one-platform verdict.
+- **A local stand-in for a CI step owes that step's other commands** (observation 0565). A
+  local walk that replaces a step with its own run (a sharded GUT run for the Tests step)
+  proves only what it ran: a tool test on another line of the same step never ran, local read
+  GREEN, and the branch failed four minutes in. The stand-in runs every other command line of
+  the step as written and reports each, and its parity check fails on a step command it does
+  not run.
 
 ---
 

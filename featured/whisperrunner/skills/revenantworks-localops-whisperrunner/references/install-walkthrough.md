@@ -10,6 +10,7 @@ run `winget show <id>` and confirm the publisher. Steps 3 and 5 may need an admi
 
 | # | Step | Command (owner runs) | Verify | Rollback |
 |---|---|---|---|---|
+| 0 | Search for an existing build first | PowerShell: `Get-PSDrive -PSProvider FileSystem \| ForEach-Object { Get-ChildItem -Path $_.Root -Recurse -Filter whisper-cli.exe -ErrorAction SilentlyContinue }` (no depth limit; slow on a large drive) | a path printed: skip to step 10 with that folder as `--root` (add `--force` if a config exists) | — |
 | 1 | GPU driver exposes Vulkan | Update the GPU vendor's driver the usual way | after step 4: `vulkaninfo --summary` lists the card | the vendor's driver rollback |
 | 2 | Git | `winget install --id Git.Git -e` | `git --version` | `winget uninstall --id Git.Git -e` |
 | 3 | C++ build tools (admin) | `winget install --id Microsoft.VisualStudio.2022.BuildTools -e --override "--quiet --wait --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"` — use the current Build Tools id from `winget search BuildTools` | step 7's configure finds a compiler | `winget uninstall` the same id |

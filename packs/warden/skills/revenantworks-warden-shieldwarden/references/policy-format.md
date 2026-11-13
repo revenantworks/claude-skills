@@ -92,6 +92,13 @@ and the commit went through. The shipped default blocks user-folder paths, names
 email addresses; a warn mode needs an explicit, dated accepted list, and a warning seen during a
 bulk move is a stop.
 
+**A machine hook guards one machine's path into a repo, not the repo** (observation 0616). A
+pre-push hook reads only the commits between the remote ref and the local one, so a commit a cloud
+session wrote, or a PR merged on the host, never passes it; a hook that skips a repo with no remote
+at pre-commit leaves the first commit unguarded. When a "no personal data" repo takes writes from
+anywhere else, say which paths the hook does not see, and add a repo-side check (the same `scan`
+shapes in the repo's CI, which every writer passes) or scan incoming commits after each pull.
+
 Each finding carries `rule`, `severity`, `where`, `field`, and where relevant `commit` (12 hex),
 `class`, `key`, `use`, `fp`, `fix`, `setup`. `fp` is an HMAC-SHA256 over the value, keyed by the
 environment variable `--salt-env` names: equal values give equal fingerprints within one salt, so

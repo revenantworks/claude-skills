@@ -51,6 +51,14 @@ no log scores the declared list and says so. In Claude Code the grant is the mer
 Deny-by-default is the standard: unlisted is denied. A grant written as "everything except X" is a
 finding of its own — what it permits changes whenever a tool ships.
 
+- **Does an elevated job run a file a non-admin can write?** A task that runs elevated and that an
+  unelevated caller can start is only as locked as its script file. Read the file's rights
+  (`icacls <file>` on Windows, `ls -l` and the folder's mode elsewhere); a write right for any
+  non-admin principal (Users, Authenticated Users) is **P0**. A content hash cannot see this: a
+  re-clone or clean start restores the bytes and drops the local lock, and every doc still calls it
+  locked (observation 0600). The fix is an admin-shell command the owner runs, plus a check that
+  reads the rights, not the content, and a re-lock step in the rebuild procedure.
+
 ## S2 — Untrusted-content flow
 
 The rule: content the agent did not author (fetched pages, received messages, attachments, tool

@@ -29,6 +29,16 @@ The skill name is the SKILL.md `name:` field, else the folder name. Anthropic's 
 | 6 | One plugin both installed and synced from claude.ai under one manifest name | Not a double load: Claude Code loads the other copy and reports the synced one as not loaded. Never an uninstall, which removes the working install. Alone it reads `handled`; with kind 5 it reads `stale`. To silence it here: `claude plugin disable <name>@synced`. |
 | 7 | A skill from a machine-driving pack (`warden`, `localops`) on claude.ai, as a skill or a synced plugin | The owner's choice, so it never fails the run. In chat it mostly reports NOT-RUN while still costing its description; Cowork loads more of a plugin (hooks, agents, local MCP on your computer), so check there first. Switch it off in Customize only if neither uses it. |
 
+## Plugin ids
+
+Every run also compares `enabledPlugins` in user settings with `installed_plugins.json`
+(`plugin_ids` in `--json`): an enabled id no installed plugin carries, and an installed id the
+settings never name. A plugin rename leaves both behind, the old id enabled and the new one unnamed,
+so `claude plugin list` shows the renamed plugin disabled while every check that runs inside it is
+silent, because it never loaded (observation 0602). A rename ends with a `loads` run; the fix is the
+owner's: `claude plugin enable <new id>`, and the old key removed from user settings. `@synced` keys
+are not compared.
+
 ## Status per row
 
 - **finding** — a double load still open (kind 1 not off, kind 3, kind 4, or a kind 2 named retired).

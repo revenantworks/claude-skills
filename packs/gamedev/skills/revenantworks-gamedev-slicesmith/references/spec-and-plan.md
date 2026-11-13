@@ -104,6 +104,20 @@ test in its row: a save from before the change, loaded under the new rules, asse
 invariant (joints closed, distances from an anchor), not only that it loads. A migration that
 applied one factor to everything is wrong once a later change scales only part of the world.
 
+**Building a planned feature stales the asserts that pin it as planned** (observation 0515).
+Before sizing the slice, grep the tests for the feature's "planned", "not yet" and "still"
+asserts, and for literal lists that include or exclude it. List each in the slice with its plan:
+keep it as written under the feature's off switch beside a new assert of the built state (the
+planned-state assert is the off arm), or update the literal and say why. Delete none of them
+silently.
+
+**A design constant's reach is its readers plus every test that wrote its value down**
+(observation 0522). A computed getter means readers need no edit; it does not mean tests need
+none. Before sizing a change to a design constant, grep `tests/` and `tools/` for its name and its
+literal values, count the rows that pin it, and check the measuring tool can see the change. Where
+more than a handful pin it, the slice is the constant plus its fixtures plus the measure: size it
+that way or give it its own unit.
+
 Never overwrite an unfinished plan: append a dated revision section instead.
 
 ## Stacked pin round: units that move determinism pins

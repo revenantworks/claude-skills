@@ -164,9 +164,12 @@ Hand the user one command to remove the scratch clone.
 - **`trustwarden revet <path> --from <pinned SHA> --to <new SHA>`** — the drift check. `trust_vet.py
   revet` lists every changed file from git objects (nothing is checked out or run) and both tree
   hashes; any change to code, config, hooks, servers or SKILL.md holds the pin until those files
-  are vetted. It also re-reads the licence from the host's API (for GitHub, read-only
-  `gh api repos/<owner>/<repo>/license`) and flags a value changed or gone since the recorded cell:
-  a stored licence is a dated claim. Changes nothing.
+  are vetted. It also compares the top-level licence file at both SHAs (`licence`: same, renamed,
+  changed, added or gone); a changed, added or gone licence holds the pin, a rename is reported. The
+  host's licence label is a separate read-only step the script does not take (for GitHub,
+  `gh api repos/<owner>/<repo>/license`): run it and compare with the licence recorded beside the
+  pin's SHA, which the pin row carries so the comparison has a cell. A stored licence is a dated
+  claim. Changes nothing.
 - **`trustwarden terms`** — the terms and gatewarden rules for a vet already done in this session,
   or from a pasted vet report.
 - **`trustwarden refresh`** — re-read every tool and control in `scanner-matrix.md`,

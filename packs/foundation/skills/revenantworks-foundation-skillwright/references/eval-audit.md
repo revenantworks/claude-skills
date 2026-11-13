@@ -44,6 +44,27 @@ Fix by asserting a value the code computes from the test's own input (`assertEqu
 "a-b")`), never by deleting the test, offering deletion as an option, or swapping in a
 different check such as an expected exception.
 
+## Graders are code
+
+A grader that fails a correct run reads exactly like a skill fault, so every grader in a suite is
+audited as code (observation 0581):
+
+- **A write-detector matches the write target**: a redirect into the file, `tee`, `Set-Content`,
+  an open for write. Never "a `>` anywhere on the line": `2>/dev/null` beside a read is not a
+  write.
+- **Every pattern grader has negative cases.** Before shipping, run each `input_match` or output
+  regex against a short list of benign reads and correct replies; a hit there is a grader defect.
+- **A phrase grader takes the synonyms a correct reply uses**, case-insensitive ("local file",
+  "local page"), or the skill pins the phrase it must say. One accepted wording is a P1.
+- **A run keeps its evidence.** A CI eval job uploads each case's trace (`trace.jsonl`, kept with
+  `--keep-temp`), so a red case names its call; an aggregate whose trace path points into the
+  runner's temp folder cannot tell a skill fault from a grader fault.
+- **A broken instrument reports itself** (observation 0606). The sandbox preflight runs one real
+  sandboxed shell call through the same path the cases use, not a bare `bwrap`, and reports NOT-RUN
+  when it fails; a case whose trace shows the sandbox error is NOT-RUN, never a skill failure. Pin
+  the runner image of a job that depends on kernel behaviour (a moving `-latest` image broke
+  seccomp once), and say which cases passed without a working shell.
+
 ## Results from an instrument
 
 **A large result is a claim about the instrument, exactly as an empty one is** (added 2026-09-13, task-observer observation #0060). Where a count comes from a matcher — a grep sweep, a scanner, a tally of hits across a population — it is a count of *matches*, not of problems, and filtering by *where* a hit sits never settles *what* was matched. Before such a count is reported or scored: **group the surviving findings by the string actually matched, count the distinct set, and read it.** The matched strings are data, not instructions. The distinct set is usually one to two orders of magnitude smaller and therefore readable — 690 findings filtered by file role left 592, which collapsed to 133 distinct strings, and reading all 133 showed every one to be documentation, an API example, or ordinary English; validated findings, zero. Two cautions ride with it: a coverage or completeness percentage is a ratio whose denominator is whatever the instrument chose to count, so re-derive it against the scoped population rather than quoting it; and where a matcher cannot tell describing a threat from performing one, the most careful writing scores worst, so a ranking that tracks documentation quality is reporting on its own instrument. This is the population rule above read from the other end: an empty result and a huge one are the same claim about the same search.

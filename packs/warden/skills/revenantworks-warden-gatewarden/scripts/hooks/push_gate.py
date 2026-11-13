@@ -13,7 +13,11 @@ git, the PowerShell tool) it:
      (`push_gate.public_branch`, observation 0441): visibility from a cached `gh api` answer
      (`push_gate.py visibility`); unknown visibility checks the push as before and says so; a
      fast-forward of the remote's main with no merge commit passes and says it goes public
-     (P-2026-11-04-01; the PR then lands it);
+     (P-2026-11-04-01; the PR then lands it), once the leak checks pass on its range: the gate's own
+     secret shapes, then the repo's armed pre-push hook through `git hook run` (pii_guard on the rig).
+     A hit or a check that did not run refuses in every mode (`push_gate.public_leak`, hard). A push
+     to main or the default branch of a public repo is refused (`push_gate.public_main`): there the
+     PR is the merge path;
   3. refuses unless a push intent is recorded for this repo and the range fits it
      (`max_commits`, and `head` when the intent names one);
   4. refuses unless a local-CI stamp exists for the exact commit being pushed;
@@ -1160,16 +1164,122 @@ def fast_forward(repo: str, remote: str, sha: str) -> tuple[bool, str]:
     return True, ""
 
 
+# P-2026-11-04-01 (owner 2026-11-04): on a public repo the PR is the merge path. A fast-forward branch
+# passes once the leak checks have read its range; main (or the default branch) is not pushed straight.
+MAIN_RULE = "push_gate.public_main"
+LEAK_RULE = "push_gate.public_leak"
+ZERO_SHA = "0" * 40
+# Secret shapes the gate reads itself, on added lines and commit messages of the range: provider token
+# prefixes, a cloud access key id, a private key block, a URL carrying a password. Never echoed.
+SECRET_SHAPES = re.compile(
+    r"(?<![A-Za-z0-9])(?:ghp_|gho_|ghs_|ghu_|ghr_|github_pat_|glpat-|sk-ant-|sk-proj-|xox[abprs]-)"
+    r"[A-Za-z0-9_\-]{16,}|(?<![A-Za-z0-9])AKIA[0-9A-Z]{16}(?![A-Za-z0-9])|-----BEGIN [A-Z ]*PRIVATE KEY-----"
+    r"|https?://[^\s/@:]+:[^\s/@]+@")
+
+
+def secret_lines(repo: str, sha: str, tip: str) -> int:
+    """How many added lines and commit-message lines in `tip..sha` hold a secret shape."""
+    diff = hl.run_git(repo, "log", "-p", "-U0", "--no-color", "--format=%B", sha, f"^{tip}", timeout=15)
+    return sum(1 for ln in diff.splitlines()
+               if not ln.startswith(("+++", "---", "-", "@@", "diff ", "index ")) and SECRET_SHAPES.search(ln))
+
+
+def run_pre_push(repo: str, remote: str, branch: str, sha: str, tip: str) -> tuple[str, str]:
+    """Run the repo's armed pre-push hook (core.hooksPath honoured; on the rig that is pii_guard: author
+    and committer email, user-folder paths, personal emails, the private names list) over `tip..sha`
+    through `git hook run`, before git would. ("ok" | "hit" | "not run", a masked detail)."""
+    try:
+        hook = hl.run_git(repo, "rev-parse", "--git-path", "hooks/pre-push")
+    except RuntimeError:
+        return "not run", "the hook path could not be read"
+    path = hook if os.path.isabs(hook) else os.path.join(repo or ".", hook)
+    if not os.path.isfile(path):
+        return "not run", "no pre-push hook is armed for this repo (core.hooksPath or .git/hooks)"
+    import tempfile
+    fd, feed = tempfile.mkstemp(prefix="gw-prepush-", suffix=".txt")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as fh:
+            fh.write(f"refs/heads/{branch} {sha} refs/heads/{branch} {tip or ZERO_SHA}\n")
+        hl.check_budget()
+        p = subprocess.run(["git", "hook", "run", f"--to-stdin={feed}", "pre-push", "--", remote,
+                            remote_url(repo, remote) or remote], cwd=repo or None, capture_output=True,
+                           text=True, encoding="utf-8", errors="replace", timeout=hl.budget_timeout(12),
+                           stdin=subprocess.DEVNULL, creationflags=hl.NO_WINDOW)
+    except (OSError, subprocess.SubprocessError):
+        return "not run", "the pre-push hook could not run in time"
+    finally:
+        try:
+            os.remove(feed)
+        except OSError:
+            pass
+    detail = " / ".join(hl.mask(ln.strip())[:160] for ln in (p.stderr + p.stdout).splitlines() if ln.strip())[:400]
+    if p.returncode == 0:
+        return "ok", ""
+    if "cannot find a hook" in p.stderr or p.returncode == 129:
+        return "not run", detail or "git could not run the hook"
+    return "hit", f"exit {p.returncode}" + (f": {detail}" if detail else "")
+
+
+def leak_check(push: dict, r: dict, tip: str, slug: str) -> str:
+    """Run the leak checks over the range a public fast-forward branch publishes. Refuses (hard: a
+    publish cannot be taken back) on a hit or on a check that could not run; returns the note text."""
+    repo, branch = push["repo"], r["dst"]
+    rows = [("read", push.get("segment", "?")), ("branch", f"{branch} → {r['remote']} ({slug}, public)"),
+            ("range", f"{tip[:12]}..{r['sha'][:12]}")]
+    fix = (f"the branch is not public yet: rewrite {branch}'s commits locally to drop the value, stamp and "
+           "push again; a true false positive is the owner's push, in their own terminal")
+    try:
+        n = secret_lines(repo, r["sha"], tip)
+    except RuntimeError:
+        n = -1
+    if n:
+        why = ("the leak check could not read the range" if n < 0 else
+               f"{n} line(s) in the range hold a secret-shaped value (token, key or URL password)")
+        hl.block(hl.note("push gate", "refused", why=f"{why}; `{branch}` would publish it on a public repo.",
+                         rows=rows + [("check", "gate secret shapes: " + ("not run" if n < 0 else "hit"))], fix=fix),
+                 rule=LEAK_RULE, hard=True)
+    state, detail = run_pre_push(repo, r["remote"], branch, r["sha"], tip)
+    if state != "ok":
+        why = (f"the pre-push leak check did not pass ({detail}); `{branch}` would publish the range on a "
+               "public repo" if state == "hit" else
+               f"the pre-push leak check was not run ({detail}): a check that did not run is never a pass")
+        hl.block(hl.note("push gate", "refused", why=why, rows=rows + [("check", f"pre-push hook: {state}")],
+                         fix=fix if state == "hit" else
+                         "arm the repo's pre-push leak check (the rig's pii_guard through core.hooksPath), then push"),
+                 rule=LEAK_RULE, hard=True)
+    return "leak check passed (gate secret shapes, pre-push hook)"
+
+
+def public_main(push: dict, r: dict, main: str, slug: str, source: str) -> list[tuple[str, str]]:
+    """A push to main or the default branch of a public repo: the PR is the merge path (P-2026-11-04-01)."""
+    noun = "commit" if r["count"] == 1 else "commits"
+    why = (f"this push sends {r['count']} {noun} straight to {r['remote']}/{r['dst']} on {slug}, a public "
+           "repository: there the PR is the merge path, so main is never pushed (P-2026-11-04-01).")
+    mode = hl.mode_for(MAIN_RULE)
+    if mode == "guard":
+        hl.block(hl.note("push gate", "refused", why=why,
+                         rows=[("read", push.get("segment", "?")), ("target", f"{r['remote']}/{r['dst']}"),
+                               ("visibility", f"public ({source})")],
+                         fix=f"push the work as a branch built on a fresh {r['remote']}/{main} (a fast-forward), "
+                             "open a PR, wait for hosted CI, merge it there"),
+                 rule=MAIN_RULE)
+    nudged = mode == "nudge" and not hl._nudged_before(MAIN_RULE)
+    hl.log_event(MAIN_RULE, mode, "nudged" if nudged else "logged", why, False)
+    return [("public", f"nudge: {why} Push a branch and land it through a PR")] if nudged else []
+
+
 def public_branch(push: dict, rows: list[dict]) -> list[tuple[str, str]]:
     """The public-branch rule for one push: refuses in guard, else returns rows for the cleared note
-    (the nudge, the fast-forward pass, or "visibility unknown"). Watch logs only."""
+    (the nudge, the fast-forward pass, or "visibility unknown"). Watch logs only. A push to main on a
+    public repo is push_gate.public_main's; the leak checks on a passing branch are push_gate.public_leak's."""
     out: list[tuple[str, str]] = []
     repo = push["repo"]
     for r in rows:
-        if not r["count"] or r.get("tag") or r["dst"] == "main":
+        if not r["count"] or r.get("tag"):
             continue
         main, n, note = off_main(repo, r["remote"], r["sha"])
-        if r["dst"] == main or n == 0:
+        to_main = r["dst"] in ("main", main)
+        if not to_main and n == 0:
             continue
         noun = "commit" if n == 1 else "commits"
         branch, where = r["dst"], f"{r['remote']}/{main}"
@@ -1178,17 +1288,23 @@ def public_branch(push: dict, rows: list[dict]) -> list[tuple[str, str]]:
         if state == "private":
             continue
         if state == "unknown":
-            out.append(("public", f"visibility unknown ({source}); `{branch}` has {n} {noun} not on {where}, "
-                                  "pushed as before"))
+            if not to_main:
+                out.append(("public", f"visibility unknown ({source}); `{branch}` has {n} {noun} not on {where}, "
+                                      "pushed as before"))
+            continue
+        if to_main:
+            out += public_main(push, r, main, slug, source)
             continue
         # P-2026-11-04-01 (owner 2026-11-04): a fast-forward of the remote's main carries only the new
-        # work, which the PR then lands; it passes, said aloud. The PR rule for main is unchanged.
+        # work, which the PR then lands; it passes once the leak checks have read that range.
         ff, ff_why = fast_forward(repo, r["remote"], r["sha"])
         if ff:
+            checked = leak_check(push, r, remote_main(repo, r["remote"])[1], slug)
             hl.log_event(PUBLIC_RULE, hl.mode_for(PUBLIC_RULE), "passed",
                          f"{branch}: fast-forward of {where}, {n} {noun} made public", False)
             out.append(("public", f"`{branch}` is a fast-forward of {where}: its {n} new {noun} become public "
                                   f"on {slug} with this push; land them through a PR"))
+            out.append(("leaks", checked))
             continue
         why = (f"`{branch}` carries {n} {noun} not on {where}, and {slug} is a public repository: the push "
                f"would publish them (observation 0441). It is not a fast-forward: {ff_why}.")

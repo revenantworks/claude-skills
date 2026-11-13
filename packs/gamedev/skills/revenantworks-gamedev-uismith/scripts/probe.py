@@ -156,12 +156,19 @@ JS_MEASURE = """(maxElements) => {
     // A box of no height or width shows nothing at all, so no text in it reads as cut.
     const cut = hasText && r.width > 0 && r.height > 0 && (clips(cs.overflowX) || clips(cs.overflowY)) &&
       (el.scrollWidth > el.clientWidth || el.scrollHeight > el.clientHeight);
-    if (!edge && !cut) continue;
+    // Text painting past its own box into a neighbour: a table cell or grid item whose overflow is
+    // visible, wider inside than out (a nowrap cell in a fixed-layout table). Nothing scrolls or clips.
+    const par = el.parentElement;
+    const cellLike = el.tagName === 'TD' || el.tagName === 'TH' ||
+      (!!par && /grid/.test(getComputedStyle(par).display || ''));
+    const spill = hasText && cellLike && r.width > 0 && cs.overflowX === 'visible' &&
+      el.scrollWidth > el.clientWidth;
+    if (!edge && !cut && !spill) continue;
     if (out.elements.length >= maxElements) continue;
     const clamp = cs.webkitLineClamp;
     out.elements.push({
       sel: sel(el), left: r.left, right: r.right, in_scroller: edge ? inScroller(el) : false,
-      off_edge: edge, has_text: hasText, overflow_x: cs.overflowX, overflow_y: cs.overflowY,
+      off_edge: edge, has_text: hasText, spill: spill, overflow_x: cs.overflowX, overflow_y: cs.overflowY,
       text_overflow: cs.textOverflow, line_clamp: !!clamp && clamp !== 'none',
       scroll_w: el.scrollWidth, client_w: el.clientWidth,
       scroll_h: el.scrollHeight, client_h: el.clientHeight
@@ -401,7 +408,7 @@ def judge(m: dict, tol: int = TOLERANCE_PX) -> dict:
     """The overflow judgement from the raw numbers JS_MEASURE returns (probe.md section 3)."""
     vw = m["clientWidth"]
     res = {"viewport": vw, "doc_width": m["scrollWidth"], "page_over": 0,
-           "past_right": [], "off_left": [], "clipped": [], "truncated": []}
+           "past_right": [], "off_left": [], "clipped": [], "truncated": [], "spills": []}
     if m["scrollWidth"] - vw >= tol:
         res["page_over"] = m["scrollWidth"] - vw
     for e in m.get("elements", []):
@@ -419,6 +426,9 @@ def judge(m: dict, tol: int = TOLERANCE_PX) -> dict:
                 ellipsis = (e.get("text_overflow") == "ellipsis" and cut_x and not cut_y) or \
                     (e.get("line_clamp") and cut_y and not cut_x)
                 res["truncated" if ellipsis else "clipped"].append(row)
+        if e.get("has_text") and e.get("spill") and e.get("overflow_x") == "visible" \
+                and e["scroll_w"] - e["client_w"] >= tol:
+            res["spills"].append({"sel": e["sel"], "px": round(e["scroll_w"] - e["client_w"])})
     sections = m.get("sections") or {}
     res["sections_checked"] = sections.get("checked", 0)
     res["empty_sections"] = list(sections.get("empty", []))
@@ -426,6 +436,7 @@ def judge(m: dict, tol: int = TOLERANCE_PX) -> dict:
     res["console_errors"] = list(m.get("console_errors", []))
     res["page_errors"] = list(m.get("page_errors", []))
     res["finding"] = bool(res["page_over"] or res["past_right"] or res["off_left"] or res["clipped"]
+                          or res["spills"]
                           or res["empty_sections"] or res["missing_sections"]
                           or res["console_errors"] or res["page_errors"])
     return res
@@ -464,11 +475,16 @@ def _plain(items: list[str]) -> str:
     return shown + (f" +{len(items) - 3} more" if len(items) > 3 else "")
 
 
+def _spilled(j: dict) -> list[dict]:
+    # Spills share the Clipped column, each named as a spill (probe.md section 3).
+    return [{"sel": s["sel"] + " spills", "px": s["px"]} for s in j.get("spills", [])]
+
+
 def _state_cells(state: str, j: dict, screenshot: str) -> str:
     sections = _plain(j["empty_sections"] + [f"{s} (missing)" for s in j["missing_sections"]])
     errors = _plain([f"page: {e}" for e in j["page_errors"]] + [f"console: {e}" for e in j["console_errors"]])
     return (f"{state} | {j['doc_width']} / {j['viewport']} | {_names(j['past_right'])} | "
-            f"{_names(j['off_left'])} | {_names(j['clipped'])} | {_names(j['truncated'])} | "
+            f"{_names(j['off_left'])} | {_names(j['clipped'] + _spilled(j))} | {_names(j['truncated'])} | "
             f"{sections} | {errors} | {'FINDING' if j['finding'] else 'PASS'} | {screenshot} |")
 
 

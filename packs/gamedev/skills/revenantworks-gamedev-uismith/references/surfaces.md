@@ -44,6 +44,19 @@ is the worked case.
   option the brief offers when the platform guideline asks for it.
 - **Pixel-art UI.** Integer scaling and nearest filtering are pixelsmith's precondition and
   godotsmith's settings; icons and sprites are pixelsmith's. uismith places them.
+- **Fit is proved where the text and the layout first meet** (observation 0504). A change to text
+  length and a change to a fold width or font size, made on separate branches, each fit on their
+  own base and can overflow together. The fit check runs on the merged head, never on either
+  branch alone.
+- **Moving text into an existing element spends that element's width** (observation 0519). "Put
+  it on the existing row" adds no row and can still overflow it: one such fix ran 49 px past its
+  row at 720p. Assert that element's width with its longest real new content at the smallest
+  supported resolution, assert it does not wrap, and pick the shorter wording before the fix lands.
+- **A fit fixture asserts its own premise** (observation 0524). A worst-case screen built from a
+  live run ("the busy day-60 camp") measures an empty screen once the game state it relied on
+  dies, and passes. Assert the premise (rows filled, blocks open) so the check fails with it, and
+  bound the blocks that grow (a line budget per block) or pin the fixture's contents, so the fit
+  measures the screen, not this week's balance.
 
 ## Store page
 
