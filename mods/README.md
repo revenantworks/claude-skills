@@ -32,7 +32,7 @@ PACE always in view, spend modes and the short list of what to do next.
 | Plugin | Holds | Features | At install |
 |---|---|---|---|
 | `vigil` | Skill use, failures and likely misroutes; tokens by skill; the meters; health; background tasks; suggestion cards; the `/rw-<skill>` short commands | 8 | On; collector, meter-writer and ledger-costs opt-in (records) |
-| `shroud` | Secret and stream-key masking, the rotate tripwire, untrusted and received markers | 5 | On |
+| `shroud` | Secret and stream-key masking, the rotate tripwire, untrusted and received markers | 7 | On |
 | VS Code extension | Pace, skills fired and flagged, budget mode and the kill switch in the VS Code status bar, and a read-only panel over the vigil feed (`mods/vscode`, a local extension, not a plugin) | - | Installed by hand; reads files only |
 
 `shroud` is kept apart from `vigil` on purpose: masking never waits on dashboard code, and either

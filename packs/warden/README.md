@@ -1,7 +1,7 @@
 # warden pack
 
 **Four wardens that guard what Claude writes or manages: identity and secrets, third-party code,
-credentials, and what Claude may do and actually reaches.** On the `-warden` motif, standard profile, version 1.0.0.
+credentials, and what Claude may do and actually reaches.** On the `-warden` motif, standard profile. The current version is in `.claude-plugin/plugin.json`.
 
 ```
 /plugin marketplace add revenantworks/claude-skills
