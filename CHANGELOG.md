@@ -18,6 +18,7 @@ member's version.
 - **gatewarden**: A push that sends commits straight to main on a public repository is refused (`push_gate.public_main`); the pull request is the merge path. A branch that goes to a public repository is first read for secret shapes and run through the repo's armed pre-push hook, and a hit, or a check that did not run, refuses in every mode (`push_gate.public_leak`).
 - **gatewarden**: The local-CI stamp script gives every step a deadline (`--step-timeout`, default 45 minutes) and kills a hung step with its children, and `loads` flags a plugin id that settings enable but nothing installs, or the reverse.
 - **gatewarden**: The tests mark the stub pre-push hook executable so Linux CI runs it, with a new test that a non-executable hook is refused.
+- **gatewarden**: push_gate refuses a non-builtin subcommand when git aliases cannot be read (it failed open on a timeout).
 - **trustwarden**: The pin check compares the top-level licence file at both SHAs and holds the pin on a changed, added or removed licence.
 - **shieldwarden**: The policy and scan-shape references gain a rule for repos that take writes from outside a machine hook's reach, and a test-output leak shape.
 - **warden**: The pack README points at plugin.json for its version.

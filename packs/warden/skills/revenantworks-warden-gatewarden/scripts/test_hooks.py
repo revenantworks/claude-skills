@@ -1409,6 +1409,33 @@ class PushGateBypassTests(unittest.TestCase):
         git(self.work, "config", "alias.ship", "!git push origin main")
         self.gated(["git pp origin main", "git ship"])
 
+    def test_unreadable_alias_table_fails_closed(self):
+        # The alias read timed out under rig load and the gate let `git pp` through. An unreadable
+        # table must refuse every non-builtin subcommand and keep builtins working.
+        import importlib.util
+        from unittest import mock
+        git(self.work, "config", "alias.pp", "push")
+        spec = importlib.util.spec_from_file_location("push_gate_unread", HOOKS / "push_gate.py")
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        real = subprocess.run
+        failures = {
+            "timeout": mock.Mock(side_effect=subprocess.TimeoutExpired(["git"], 1)),
+            "non-zero": mock.Mock(return_value=subprocess.CompletedProcess(
+                ["git"], 128, stdout="", stderr="fatal: bad config")),
+        }
+        for label, fake in failures.items():
+            def run(cmd, *a, _fake=fake, **kw):
+                is_alias_read = isinstance(cmd, list) and cmd[:3] == ["git", "config", "--get-regexp"]
+                return _fake(cmd, *a, **kw) if is_alias_read else real(cmd, *a, **kw)
+            mod._ALIASES.clear()
+            getattr(mod, "_ALIAS_UNREAD", {}).clear()
+            with mock.patch.object(mod.subprocess, "run", run):
+                with self.assertRaises(mod.PushBlock, msg=label) as cm:
+                    mod.all_pushes("git pp origin main", self.work)
+                self.assertIn("could not read git aliases", str(cm.exception))
+                self.assertEqual(mod.all_pushes("git status", self.work), [], label)
+
     def test_push_from_code_is_blocked(self):
         self.gated(['python -c "import subprocess; subprocess.run([\'git\', \'push\', \'origin\', \'main\'])"',
                     "node -e \"require('child_process').execSync('git push origin main')\"",
