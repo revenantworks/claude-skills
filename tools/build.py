@@ -81,6 +81,9 @@ import zipfile
 from datetime import date
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import readme_charts  # noqa: E402  the README chart, a sibling tool
+
 ROOT = Path(__file__).resolve().parent.parent
 PACKS = ROOT / "packs"
 DIST = ROOT / "dist"
@@ -2781,6 +2784,15 @@ def main() -> int:
         # After the pack.md sync, so a featured copy carries the freshly generated manifest.
         n_featured = sync_featured(registry_featured(text), rosters, ROOT, write=not CHECK)
         print(f"featured: {n_featured} one-skill plugin(s)")
+        # The README's skills-per-pack chart is drawn from packs/ (tools/readme_charts.py). Only a
+        # tree whose README shows it is checked, so a test fixture with no README skips it.
+        readme = ROOT / "README.md"
+        if readme.is_file() and readme_charts.STEM in readme.read_text(encoding="utf-8"):
+            for rel in readme_charts.sync(ROOT, write=not CHECK):
+                if CHECK:
+                    fail(f"{rel} drifts from packs/ - run python tools/readme_charts.py")
+                else:
+                    print(f"  ✎ redrew {rel}")
 
     if FOOTPRINT:
         print()
