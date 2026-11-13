@@ -1,5 +1,11 @@
 # Changelog — revenantworks-warden-gatewarden
 
+## [1.0.3] — 2026-11-13
+
+- push_gate resolves git aliases in the folder and git dir a git call really runs with, and refuses a non-builtin subcommand where it cannot know them
+
+2026-11-13 (FIX-GW2, review of a60a0c8): ten shapes let a pushing alias set in another repo (`alias.pp=push` there) reach a push, because the gate read the aliases of the folder the hook started in. `find_pushes` now follows the folder a git call runs in: a subshell `( … )` is its own scope that starts from the outer folder; `cd -P`, `cd -L`, `builtin cd`, `command cd`, a leading control word and redirections after the target are read through; `env -C dir`, `env -Cdir`, `env --chdir=dir`, `env --chdir dir` and `git -C<dir>` move the folder. A cd that may not run (inside if/for/while, after `&&` or `||`, before `||`) leaves the old folder possible too, and the alias must read the same in both. `popd`, `cd -`, a bare `cd`, a cd past a segment's first word, and a target set at run time make the folder untracked. A non-builtin subcommand is refused (the "could not read git aliases (<cause>)" message) in an untracked folder, under `--git-dir`, `--work-tree`, `GIT_DIR`, `GIT_WORK_TREE` or `GIT_COMMON_DIR`, and in inline code that can start a process. Builtins pass in every shape. Tests: `test_hooks_shapes.GW2`, 15 (12 red on a60a0c8).
+
 ## [1.0.2] — 2026-11-13
 
 - public-main refusal and leak checks, ci_stamp step deadline, plugin-id check

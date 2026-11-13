@@ -5,6 +5,12 @@ Every pack, every member and every featured plugin launches at 1.0.0. Each membe
 `<pack>-vX.Y.Z`, member versions move on their own semver, and a featured plugin carries its
 member's version.
 
+## [warden-v1.1.4] - 2026-11-13
+
+### Fixed
+
+- **gatewarden**: push_gate reads git aliases in the folder and git dir each git call really runs with. A pushing alias set in another repo no longer passes through a subshell, `env -C` or `--chdir`, `git -C<dir>`, `cd -P`, `cd -L`, `builtin cd` or `command cd`, a redirection after `cd`, or a `cd` in a loop or branch. A non-builtin subcommand is refused where that folder or git dir cannot be known for sure: `--git-dir`, `--work-tree`, `GIT_DIR`, `GIT_WORK_TREE` or `GIT_COMMON_DIR`, a folder change the gate cannot follow, or a git call in inline code (`python -c`, `node -e`).
+
 ## [hearth-v1.0.2] - 2026-11-13
 
 ### Improved

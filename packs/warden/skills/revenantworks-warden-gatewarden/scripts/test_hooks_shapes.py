@@ -297,6 +297,90 @@ class B5redirect(PushShapeBase):
         self.expect_plain_pushes_pass()
 
 
+class GW2(PushShapeBase):
+    """FIX-GW2 (review of a60a0c8): a pushing alias set in ANOTHER repo (`alias.pp=push` there) reached a
+    push because the gate read the aliases of the folder the hook started in, not the folder or git dir
+    the git call really runs with. Each shape below runs `pp` in the other repo; each must be refused,
+    and the same shape with a builtin must pass. The rule: resolve the alias where git really runs, and
+    refuse a non-builtin subcommand where that folder or git dir cannot be known for sure."""
+
+    PP = f"{G} pp origin main"
+
+    def setUp(self):
+        super().setUp()
+        self.other = os.path.join(self.tmp, "other")
+        git(self.tmp, "clone", self.remote, self.other)
+        git(self.other, "config", "alias.pp", U)
+        # A commit ahead of origin and guard mode, so every push the gate does see in `other` is refused
+        # (no intent); the default nudge refuses only the first and would hide a second miss.
+        git(self.other, "commit", "--allow-empty", "-m", "ahead")
+        self.env["GATEWARDEN_MODE"] = "guard"
+
+    def refused(self, *cmds, tool="Bash"):
+        self.expect(2, list(cmds), tool=tool, reason="push gate")
+
+    def test_01_subshell(self):
+        self.refused(f"(cd ../other && {self.PP})", f"( cd ../other; {self.PP} )")
+
+    def test_02_env_dash_c(self):
+        self.refused(f"env -C ../other {self.PP}")
+
+    def test_03_env_chdir(self):
+        self.refused(f"env --chdir=../other {self.PP}", f"env --chdir ../other {self.PP}")
+
+    def test_04_git_dir_option(self):
+        self.refused(f"{G} --git-dir=../other/.git pp origin main", f"{G} --git-dir ../other/.git pp origin main",
+                     f"{G} --work-tree=../other pp origin main")
+
+    def test_05_git_dir_env(self):
+        self.refused(f"GIT_DIR=../other/.git {self.PP}", f"GIT_WORK_TREE=../other {self.PP}",
+                     f"GIT_COMMON_DIR=../other/.git {self.PP}")
+
+    def test_06_redirection_after_cd(self):
+        self.refused(f"cd ../other 2>/dev/null; {self.PP}", f"cd ../other >/dev/null 2>&1 && {self.PP}")
+
+    def test_07_cd_in_a_loop(self):
+        self.refused(f"for d in ../other; do cd $d; {self.PP}; done")
+
+    def test_08_dash_c_without_a_space(self):
+        self.refused(f"{G} -C../other pp origin main")
+
+    def test_09a_cd_dash_p(self):
+        self.refused(f"cd -P ../other && {self.PP}", f"cd -L ../other && {self.PP}")
+
+    def test_09b_builtin_cd(self):
+        self.refused(f"builtin cd ../other && {self.PP}", f"command cd ../other && {self.PP}")
+
+    def test_10_git_in_inline_code(self):
+        self.refused(f"python -c \"import os; os.chdir('../other'); os.system('{self.PP}')\"",
+                     f"node -e \"require('child_process').execSync('{self.PP}', {{cwd: '../other'}})\"")
+
+    def test_a_literal_cd_in_a_branch_checks_both_folders(self):
+        # The cd may or may not run, so either folder's alias table applies.
+        self.refused(f"if [ -d ../other ]; then cd ../other; fi; {self.PP}", f"cd ../other || true; {self.PP}")
+
+    def test_a_subshell_scope_ends_at_its_paren(self):
+        # The outer folder (work, no alias) applies after the subshell closes.
+        self.expect(0, [f"(cd ../other && {G} status); {G} status"])
+        self.refused(f"(cd .); cd ../other && {self.PP}")
+
+    def test_builtins_still_pass_in_every_shape(self):
+        st = f"{G} status"
+        self.expect(0, [f"(cd ../other && {st})", f"env -C ../other {st}", f"env --chdir=../other {st}",
+                        f"{G} --git-dir=../other/.git status", f"GIT_DIR=../other/.git {st}",
+                        f"cd ../other 2>/dev/null; {st}", f"for d in ../other; do cd $d; {st}; done",
+                        f"{G} -C../other status", f"cd -P ../other && {st}", f"builtin cd ../other && {st}",
+                        f"python -c \"import os; os.chdir('../other'); os.system('{st}')\"",
+                        f"if [ -d ../other ]; then cd ../other; fi; {st}",
+                        f"{G} -C../other log --oneline -1", f"cd ../other && {G} commit --allow-empty -m x"])
+
+    def test_aliases_in_the_folder_git_runs_in_still_resolve(self):
+        # A harmless alias in the other repo passes when the gate reads that repo's table.
+        git(self.other, "config", "alias.st", "status")
+        self.expect(0, [f"cd -P ../other && {G} st", f"(cd ../other && {G} st)", f"env -C ../other {G} st",
+                        f"{G} -C../other st", f"cd ../other 2>/dev/null; {G} st"])
+
+
 DECODE_AND_RUN = "inline code that decodes text and runs it"
 HELLO = "aGVsbG8="  # the base64 of the word hello: a harmless literal
 B64D, SYSTEM = "b64" + "decode", "os." + "system"
