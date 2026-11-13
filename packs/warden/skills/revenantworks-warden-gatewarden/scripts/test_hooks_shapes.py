@@ -455,7 +455,6 @@ class GW2Candidates(PushShapeBase):
         "python -c \"import os; os.system('git verify-tag v1.0')\"",
         "node -e \"require('fs').writeFileSync('x.txt','git hub')\"",
         "python -c \"import subprocess; subprocess.run(['git', 'interpret-trailers', '--parse'])\"",
-        f"(cd sub && {G} filter-repo --analyze)",
         f"{G} --git-dir=.git rerere status",
         f"GIT_DIR=.git {G} status; {G} flow init -d",
         f"export GIT_DIR=.git; {G} log",
@@ -471,7 +470,11 @@ class GW2Candidates(PushShapeBase):
         "python -c \"import subprocess; subprocess.run(['git','fast-export','--all'])\"",
     ]
     EVERYDAY_PS = [f"Set-Location . ; {G} status", f"if (Test-Path x) {{ Set-Location x }}; {G} status",
-                   f"if (Test-Path x) {{ Set-Location x }}; {G} flow init -d", f"Set-Location . ; {G} flow init -d"]
+                   f"Set-Location . ; {G} flow init -d"]
+    # Round 4 (controller): a folder not there now is unreadable whatever else the line runs, so these
+    # two everyday lines are refused again, as on a60a0c8; they name a missing folder (`sub`, `x`).
+    MISSING_FOLDER = [f"(cd sub && {G} filter-repo --analyze)"]
+    MISSING_FOLDER_PS = [f"if (Test-Path x) {{ Set-Location x }}; {G} flow init -d"]
 
     def test_everyday_lines_pass(self):
         # The review's everyday set; `print('git log, git status, git push are commands')` is left out:
@@ -547,6 +550,44 @@ class GW2Literal(PushShapeBase):
     def test_everyday_lines_still_pass(self):
         self.expect(0, GW2Candidates.EVERYDAY)
         self.expect(0, GW2Candidates.EVERYDAY_PS, tool="PowerShell")
+
+
+class GW2ConfigWrites(PushShapeBase):
+    """FIX-GW2 round 4 (re-review of dc7012d): a folder made on the same line (`git -C .. clone -c
+    alias.pp=push`) carries a pushing alias the gate cannot read first, so any named folder that does not
+    exist now refuses a non-builtin, whatever else the line runs. And a line that writes a git config
+    (redirection, copy, `git config` write, an include) may add an alias before git reads it, so it
+    refuses a non-builtin too."""
+
+    PP = GW2.PP
+    refused = GW2.refused
+
+    def setUp(self):
+        GW2.setUp(self)
+
+    def test_c1_clone_with_alias_then_cd(self):
+        self.refused(f"{G} -C .. clone -q -c alias.pp={U} work c3 && cd ../c3 && {self.PP}")
+
+    def test_c2_clone_with_alias_then_dash_c(self):
+        self.refused(f"{G} -C .. clone -q -c alias.pp={U} work c3; {G} -C ../c3 pp origin main")
+
+    def test_c3_alias_appended_to_git_config(self):
+        self.refused(f'echo "[alias] zz = {U}" >> .git/config; {G} zz origin main')
+
+    def test_c4_config_copied_from_another_repo(self):
+        self.refused(f"cp -r ../other/.git/config .git/config && {self.PP}")
+
+    def test_c5_include_path_written(self):
+        self.refused(f"{G} config include.path ../../other/.git/config && {self.PP}")
+
+    def test_missing_folder_lines_are_refused_again(self):
+        self.expect(2, GW2Candidates.MISSING_FOLDER)
+        self.expect(2, GW2Candidates.MISSING_FOLDER_PS, tool="PowerShell")
+
+    def test_config_reads_and_builtins_pass(self):
+        self.expect(0, [f"{G} config user.name; {G} flow init -d", f"{G} config --get user.name && {G} flow init -d",
+                        f"cat .git/config; {G} flow init -d", f"{G} config user.name x && {G} status",
+                        f"echo x >> .git/config; {G} log -1"])
 
 
 DECODE_AND_RUN = "inline code that decodes text and runs it"

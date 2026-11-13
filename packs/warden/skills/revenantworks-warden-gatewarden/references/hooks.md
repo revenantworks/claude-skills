@@ -391,9 +391,12 @@ refused. A folder word counts only when it is a plain literal path that exists n
 a non-builtin ("could not read git aliases (<cause>)"): one set at run time (`$d`, `$(…)`, `{}`), a
 missing one (bare `cd`, `popd`, `cd -`, `pushd +N`), a glob or brace pattern, a quote splice, a
 backslash escape in a POSIX shell, `~`, a drive or provider that is not a drive letter (`QQ:`), and
-a folder that does not exist yet on a line that may create it (any program beyond cd, git, test and
-echo-like words). So does a line that changes how names resolve: CDPATH, OLDPWD, New-PSDrive, subst,
-net use, mklink, `ln -s`. Inline code that starts a process is refused when
+a folder that does not exist now, whatever else the line runs (`git -C .. clone -c alias.pp=push w c3
+&& cd ../c3`; so `(cd sub && git filter-repo)` with no `sub` is refused too). So does a line that
+changes how names resolve (CDPATH, OLDPWD, New-PSDrive, subst, net use, mklink, `ln -s`), and a line
+that writes a git config: a redirection, copy, tee, `sed -i` or script onto a `.git/config`,
+`.gitconfig` or `~/.config/git/config`, or a `git config` write (two values, `--add`, `--file`, `set`,
+an include key). Inline code that starts a process is refused when
 it runs a pushing alias from any candidate, or builds a program name at run time (`'g'+'it'`, an
 empty-separator join, getattr, a decode); text that only names git passes. The builtin list is git's
 whole command list (`git help -a`), so `prune`, `rerere` or `verify-tag` are never read as aliases.

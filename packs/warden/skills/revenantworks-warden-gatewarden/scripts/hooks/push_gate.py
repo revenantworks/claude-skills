@@ -443,10 +443,6 @@ DIR_OPT_ALONE = {"--chdir", "--git-dir", "--work-tree"}
 DIR_ENV = re.compile(r"(?i)^(?:\$env:)?GIT_(?:DIR|WORK_TREE|COMMON_DIR)=(.*)$")
 CODE_DIR = re.compile(r"""(?i)(?:\bcwd\s*[=:]\s*|chdir\s*\(\s*|-workingdirectory\s+)(['"])([^'"\n]{1,300})\1""")
 RUN_TIME_DIR = re.compile(r"[$`]|%[A-Za-z_]\w*%|\{\}")
-# A line that may create the folder it names (`git worktree add ../w && cd ../w && git pp`).
-CREATES = re.compile(r"(?i)(?<![\w-])(?:mkdir|md|new-item|ni|mklink|ln|cp|copy|copy-item|cpi|mv|move|move-item"
-                     r"|rename-item|tar|unzip|expand-archive|7z|rsync|robocopy|xcopy|git(?:\.exe)?\s+(?:-\S+\s+)*"
-                     r"(?:init|clone|worktree|submodule))(?![\w-])")
 # Inline code that builds a program name at run time: a split literal (`'g'+'it'`), an empty-separator
 # join, getattr, a decode. With a process call it may run any git subcommand (FIX-GW2).
 CODE_DYNAMIC = re.compile(r"""(?i)\bgetattr\b|(['"])\1\s*\.\s*join\b|b64decode|frombase64|fromcharcode|\bchr\s*\("""
@@ -460,10 +456,6 @@ SEPARATOR = re.compile(r"^[;&|()<>{}\n]+$")
 # subst, net use, a junction or symlink made on the line. A non-builtin subcommand there is refused.
 NAME_REMAP = re.compile(r"(?i)(?<![\w-])(?:CDPATH|OLDPWD)\s*=|(?<![\w-])(?:new-psdrive|ndr|subst|mklink"
                         r"|net\s+use)(?![\w-])|(?<![\w-])ln\s+(?:-\w*s|--symbolic)")
-# Programs that cannot create a folder: a line that runs only these does not make a missing folder exist.
-NO_CREATE = CD_WORDS | {"git", "test", "[", "[[", "true", "false", ":", "echo", "printf", "test-path", "pwd",
-                        "exit", "return", "write-host", "write-output", "out-null", "export", "set", "fi",
-                        "done", "for", "if", "while", "until", "local", "read", "sleep", "which", "type", "esac"}
 
 
 def dir_words(words: list[str]) -> list[str]:
@@ -550,7 +542,6 @@ def line_dirs(texts: list[str], bases: list[str]) -> tuple[list[str], str]:
             words += dir_words(hl.tokens(seg))
         words += dir_words(re.findall(r"[;&|()<>{}\n]+|[^\s;&|()<>{}\n]+", re.sub(r"['\"]", " ", text)))
         words += [m.group(2) for m in CODE_DIR.finditer(text)]
-    creates = line_creates(texts)
     ps = hl.is_powershell()
     cause = next(("the line changes how folder names resolve (CDPATH, OLDPWD, New-PSDrive, subst, net use, "
                   "mklink, ln -s)" for t in texts if NAME_REMAP.search(t)), "")
@@ -573,26 +564,51 @@ def line_dirs(texts: list[str], bases: list[str]) -> tuple[list[str], str]:
                         p = os.path.dirname(p)
                     if os.path.isdir(p):
                         found.setdefault(os.path.normcase(p), p)
-    if creates and not cause:
+    if not cause:  # round 4: whatever the line runs, a folder not there now may be made before git runs
         for r in raw:
             if not any(os.path.exists(os.path.join(b, r)) for b in list(found.values()) + list(bases)):
-                cause = "a folder that does not exist yet, on a line that may create it"
+                cause = "a folder that does not exist yet"
                 break
-    return list(found.values())[:60], cause
+    return list(found.values())[:60], cause or config_write_cause(texts)
 
 
-def line_creates(texts: list[str]) -> bool:
-    """Whether the line runs anything that may create a folder: a known creator, or any program outside
-    NO_CREATE (`python -c "shutil.copytree(…)"`, `node -e "fs.cpSync(…)"`)."""
-    if any(CREATES.search(t) for t in texts):
-        return True
+GIT_CONFIG_FILE = re.compile(r"(?i)(?:^|[\\/\s'\"=])(?:\.git[\\/]+(?:[\w.-]+[\\/]+)*config(?:\.worktree)?"
+                             r"|\.gitconfig|\.config[\\/]+git[\\/]+config)(?![\w.-])")
+FILE_WRITE = re.compile(r"(?i)>|(?<![\w-])(?:tee|cp|copy|copy-item|cpi|mv|move|move-item|mi|install|ln|sed|perl"
+                        r"|set-content|sc|add-content|ac|out-file|python\w*|py|node|ruby|dd|rsync|robocopy|xcopy)"
+                        r"(?![\w-])")
+CONFIG_WRITE_FLAGS = {"--add", "--unset", "--unset-all", "--replace-all", "--rename-section", "--remove-section",
+                      "--edit", "-e", "--file", "-f", "--blob", "set", "unset", "rename-section", "remove-section",
+                      "edit"}
+
+
+def config_write_cause(texts: list[str]) -> str:
+    """Why the line may change a git config before a later git call reads its aliases, or "" (FIX-GW2
+    round 4): a write to a git config file (redirection, copy, tee, sed -i, Set-Content, a script), or a
+    `git config` write in any form (two values, --add, --file, set, an include key)."""
     for text in texts:
+        if GIT_CONFIG_FILE.search(text) and FILE_WRITE.search(text):
+            return "a git config file written on the same line"
         for seg in hl.segments(text):
-            toks = hl.tokens(seg)
-            k = command_index(toks)
-            if k is not None and hl.prog(toks[k]) not in NO_CREATE and not re.match(r"^[A-Za-z_]\w*=", toks[k]):
-                return True
-    return False
+            toks = [hl.unquote(t) for t in hl.tokens(seg)]
+            for i, t in enumerate(toks):
+                if hl.prog(t) != "git":
+                    continue
+                j = i + 1
+                while j < len(toks) and toks[j].startswith("-"):
+                    j += 2 if toks[j] in GIT_OPTS_WITH_VALUE else 1
+                if j >= len(toks) or toks[j].lower() != "config":
+                    continue
+                rest = toks[j + 1:]
+                if any(a.lower() in CONFIG_READS for a in rest) and not any(a in CONFIG_WRITE_FLAGS for a in rest):
+                    continue
+                pos = [a for a in rest if not a.startswith("-")]
+                if any(a in CONFIG_WRITE_FLAGS for a in rest) or len(pos) >= 2 or \
+                        any(INCLUDE_KEY.match(a) for a in pos):
+                    return "a git config write on the same line"
+    return ""
+
+
 
 
 def alias_pushes(repo: str, name: str) -> bool:
@@ -855,7 +871,6 @@ def find_pushes(command: str, cwd: str, resolve: bool = True, head_moves: bool =
     line_dirs_, line_cause = _LINE.get("dirs"), _LINE.get("cause", "")
     if line_dirs_ is None:
         line_dirs_, line_cause = line_dirs([command], [cwd])
-    creates = bool(_LINE.get("creates", CREATES.search(command)))
     # The repo a plain push is range-checked in: a subshell is its own scope; a cd is followed.
     stack: list[str] = []
     pending = 0
@@ -959,10 +974,8 @@ def find_pushes(command: str, cwd: str, resolve: bool = True, head_moves: bool =
                 if name.lower() in env_table:
                     return env_table[name.lower()]
                 here = os.path.isdir(repo)
-                if not here and (creates or re.search(r"[$`%]", repo)):
-                    return alias_of(repo, name)  # refuses: no such folder yet, or one set at run time
                 check_candidates(name, line_dirs_ + ([repo] if here else []), line_cause)
-                return alias_of(repo, name) if here else None
+                return alias_of(repo, name)  # a repo folder not there now refuses (no such folder)
 
             from_env = False
             expansion = None
@@ -1148,7 +1161,7 @@ def all_pushes(cmd: str, cwd: str, head_moves: bool = True) -> list[dict]:
     # FIX-GW2: every folder the whole line names, nested shells and inline code included.
     texts = [cmd] + [t for t, _ in ex.shells] + [b for b, p in ex.code if not p]
     dirs, cause = line_dirs(texts, [cwd] + [w for _, w in ex.shells if w])
-    _LINE.update(dirs=dirs, cause=cause, creates=any(CREATES.search(t) for t in texts))
+    _LINE.update(dirs=dirs, cause=cause)
     try:
         for text, where in ex.shells:
             head, bodies = split_heredocs(inert_writer_bodies(text))
