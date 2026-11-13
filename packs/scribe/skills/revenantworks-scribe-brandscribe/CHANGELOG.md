@@ -1,6 +1,6 @@
 # Changelog — revenantworks-scribe-brandscribe
 
-## [Unreleased] — staged 2026-11-09 (observation review)
+## [1.0.1] — 2026-11-13
 
 - Marks (observation 0558): definition-schema.md group 6 keeps theme values out of approved art
   (transparent ground, inks from `currentColor` or custom properties; baked hexes listed as frozen

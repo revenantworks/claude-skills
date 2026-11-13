@@ -1,6 +1,6 @@
 # Trigger Evals — 36 queries (18 should / 18 shouldn't)
 
-- Provenance: derived from revenantworks-foundation-agentwright v1.0.0; last re-anchored to v1.0.0, 2026-10-01; 2026-10-04 changes carry no version bump (private-test-phase rule). Full re-anchor history moved to evals/RESULTS.md.
+- Provenance: derived from revenantworks-foundation-agentwright v1.0.0; last re-anchored to v1.0.1, 2026-11-13; 2026-10-04 changes carry no version bump (private-test-phase rule). Full re-anchor history moved to evals/RESULTS.md.
 - Counts: 36 queries (18 should, 18 should-not, 4 pairs), judged cold against name + description only (method notes moved to evals/RESULTS.md).
 - Owed: rows 15, 16, 24-26, 29 and 32 were re-judged by hand against the 2026-10-01 description (security scan moved to gatewarden, vendor targets cut, retired names re-pointed); the cold re-judge of every row is still owed, not claimed.
 

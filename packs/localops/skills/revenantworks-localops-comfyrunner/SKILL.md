@@ -4,7 +4,7 @@ description: Runs image, video and audio generation on a local ComfyUI server an
 license: Apache-2.0
 compatibility: Requires a ComfyUI server reachable over local HTTP (default 127.0.0.1 port 8188). Optional, declared - Python 3 to run scripts/workflow_guard.py, comfy_client.py and gpu_preflight.py (run, not read) and pixelsmith's scripts/pixel_post.py when pixelsmith is installed, and the lms CLI for the LLM unload. Without a shell it hands back curl commands and marks each check NOT-RUN. No packages, no cloud network. Siblings lmstudiorunner and pixelsmith are named, never required.
 metadata:
-  version: "1.0.0"
+  version: "1.0.1"
   profile: standard
   pack: localops
   brand: revenantworks

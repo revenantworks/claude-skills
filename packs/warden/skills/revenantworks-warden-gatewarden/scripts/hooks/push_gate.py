@@ -362,29 +362,51 @@ def arg(tok: str) -> str:
 
 
 _ALIASES: dict[str, dict[str, str]] = {}
+_ALIAS_UNREAD: dict[str, str] = {}  # repo key -> why the alias table could not be read
 
 
 def aliases(repo: str) -> dict[str, str]:
     """Every alias the repo sees, read once per run (V-K8w F5: one git call per word ran past the
-    hook timeout on a long heredoc, and a timeout lets the call through)."""
+    hook timeout on a long heredoc). A table that cannot be read is recorded in _ALIAS_UNREAD, and
+    alias_of() then refuses any non-builtin subcommand: a timeout must not let an alias through."""
     key = os.path.normcase(os.path.abspath(repo or "."))
     if key not in _ALIASES:
         table: dict[str, str] = {}
+        if repo and not os.path.isdir(repo):
+            # No such folder. A line can create it first (`git worktree add ../w && cd ../w && git pp`;
+            # the new worktree shares the repo's aliases), so the table is unreadable and a non-builtin
+            # subcommand is refused. So is a path set at run time (`d=x; cd $d && git pp`): the literal
+            # text names no folder, but the real one may exist and carry aliases (owner ruling 2026-11-13).
+            _ALIAS_UNREAD[key] = "folder set at run time" if re.search(r"[$`%]", repo) else "no such folder"
+            _ALIASES[key] = table
+            return table
         try:
             p = subprocess.run(["git", "config", "--get-regexp", r"^alias\."], cwd=repo or None,
                                capture_output=True, text=True, timeout=hl.budget_timeout(15),
                                creationflags=hl.NO_WINDOW)
-            for line in p.stdout.splitlines() if p.returncode == 0 else []:
-                name, _, value = line.partition(" ")
-                table[name[len("alias."):].lower()] = value
-        except (OSError, subprocess.SubprocessError):
-            pass
+            # Exit 1 with no output is git's "no key matches": an empty table, not a failure.
+            if p.returncode == 0:
+                for line in p.stdout.splitlines():
+                    name, _, value = line.partition(" ")
+                    table[name[len("alias."):].lower()] = value
+            elif not (p.returncode == 1 and not p.stdout.strip() and not p.stderr.strip()):
+                _ALIAS_UNREAD[key] = f"git exited {p.returncode}"
+        except subprocess.TimeoutExpired:
+            _ALIAS_UNREAD[key] = "timeout"
+        except (OSError, subprocess.SubprocessError) as exc:
+            _ALIAS_UNREAD[key] = type(exc).__name__
         _ALIASES[key] = table
     return _ALIASES[key]
 
 
 def alias_of(repo: str, sub: str) -> str | None:
-    return aliases(repo).get(sub.lower())
+    table = aliases(repo)
+    cause = _ALIAS_UNREAD.get(os.path.normcase(os.path.abspath(repo or ".")))
+    if cause and sub.lower() not in BUILTINS:
+        raise PushBlock(f"push gate: could not read git aliases ({cause}); a non-builtin subcommand "
+                        f"(`{sub[:40]}`) cannot be checked, so it may be a pushing alias. Blocked; "
+                        "run the command the alias stands for, or retry.")
+    return table.get(sub.lower())
 
 
 def command_index(toks: list[str]) -> int | None:

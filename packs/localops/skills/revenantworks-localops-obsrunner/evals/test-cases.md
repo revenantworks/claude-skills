@@ -4,7 +4,7 @@
 > mechanical halves of T1-T3, T5-T9, T11, T12, T17 and T21 are also covered by
 > `scripts/test_obsrunner.py` (47 tests, passing 2026-10-01). Assertion-only: each case is an
 > Input plus mechanical checks on the run's output. `Without:` is the expected no-skill
-> behaviour; `Discriminates:` is the assert that behaviour fails. **Re-anchored to v1.0.0, 2026-10-01:** 1.0.0 launch version; suite content unchanged from the build the A6 evals ran against.
+> behaviour; `Discriminates:` is the assert that behaviour fails. **Re-anchored to v1.0.1, 2026-11-13:** 1.0.0 launch version; suite content unchanged from the build the A6 evals ran against.
 
 24 cases: one per entry point (audit, check, set, mark, post, sheet, status/hold, refresh, bare),
 one per parity margin (M1 live-safe, M2 one-GPU lease, M3 fully local), the restraint and

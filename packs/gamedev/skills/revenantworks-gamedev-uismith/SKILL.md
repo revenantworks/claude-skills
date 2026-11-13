@@ -4,7 +4,7 @@ description: Directs screens and proves they fit — game menus and HUD, web das
 license: Apache-2.0
 compatibility: Optional, declared - Python 3 with the Playwright for Python package and its Chromium build runs scripts/probe.py (run, not read; headless). The user installs both; the skill never does. Without them the probe reports NOT-RUN with the install line, and direct and audit work from source, screenshots or a description. Loads the named file or URL plus what that page requests; sends nothing itself. Siblings brandscribe, pixelsmith, godotsmith, commscribe and slicesmith are named, never required.
 metadata:
-  version: "1.1.0"
+  version: "1.1.1"
   profile: standard
   pack: gamedev
   brand: revenantworks

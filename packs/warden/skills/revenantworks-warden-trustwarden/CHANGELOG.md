@@ -1,5 +1,9 @@
 # Changelog — revenantworks-warden-trustwarden
 
+## [1.0.1] — 2026-11-13
+
+- trust_vet compares the licence file at both SHAs
+
 ## [1.0.0] — 2026-10-01
 
 2026-11-03 (false positive found vetting two travel skills): `fetch-pipe-shell` no longer fires on a download piped to `python3 -m json.tool`, which prints the response and runs none of it; a download piped to `python3` alone still fails. Two tests added.

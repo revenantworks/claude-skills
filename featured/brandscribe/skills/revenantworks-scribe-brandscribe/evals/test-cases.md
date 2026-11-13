@@ -1,6 +1,6 @@
 # Test cases — brandscribe
 
-Provenance: written for 0.1.0 (2026-10-01). Status: authored, not run. Assertion-only. Every fixture is an invented, generic brand ("Example", "Example Studio"); no real brand appears here. Native cases run with `claude plugin eval` in two arms (with and without the skill); the `Without:` line says what the no-skill arm is expected to miss. Regex graders use Python `re` syntax (inline `(?i)`). **Re-anchored to v1.0.0, 2026-10-01:** 1.0.0 launch version; suite content unchanged from the build the A6 evals ran against.
+Provenance: written for 0.1.0 (2026-10-01). Status: authored, not run. Assertion-only. Every fixture is an invented, generic brand ("Example", "Example Studio"); no real brand appears here. Native cases run with `claude plugin eval` in two arms (with and without the skill); the `Without:` line says what the no-skill arm is expected to miss. Regex graders use Python `re` syntax (inline `(?i)`). **Re-anchored to v1.0.1, 2026-11-13:** 1.0.0 launch version; suite content unchanged from the build the A6 evals ran against.
 
 ## T1 — no definition, apply asked (native `no-definition-apply`)
 

@@ -1,6 +1,6 @@
 # Test Cases — revenantworks-foundation-rigwright
 
-- Provenance: derived from revenantworks-foundation-rigwright v1.0.0; last re-anchored to v1.0.0, 2026-10-01; 2026-10-04 changes carry no version bump (private-test-phase rule). Full re-anchor history moved to evals/RESULTS.md.
+- Provenance: derived from revenantworks-foundation-rigwright v1.0.0; last re-anchored to v1.0.1, 2026-11-13; 2026-10-04 changes carry no version bump (private-test-phase rule). Full re-anchor history moved to evals/RESULTS.md.
 - Counts: 39 cases, assertion-only (format, coverage and fixture notes moved to evals/RESULTS.md).
 - Executed and passing: 8, 15, 16 (2026-09-08), 17, 18 (2026-09-10). Owed: Cases 19-30 authored at 1.2.0, not executed; every other case authored, not executed. Cases 35-39 (2026-10-08, slim entry; 35-37 carried from the retired tokenwright) authored, not run.
 

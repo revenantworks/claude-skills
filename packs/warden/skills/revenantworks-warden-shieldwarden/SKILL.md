@@ -4,7 +4,7 @@ description: Keeps the user's identity and secrets out of anything public. Trigg
 license: Apache-2.0
 compatibility: Requires git and Python 3 to run the stdlib scripts, never read - shield_scan.py, identity_check.py, signposts.py and warden_private.py (private lists in ~/.warden). Optional, declared - gitleaks (second secret pass, NOT-RUN when absent), git filter-repo (rewrite only), gh (read-only checks), PyYAML for a YAML policy (owner-installed). Cloud surfaces use the session's connected tools. Without a shell each script step is NOT-RUN and the cloud review still runs. No network from the scripts.
 metadata:
-  version: "1.0.0"
+  version: "1.0.1"
   profile: standard
   pack: warden
   brand: revenantworks

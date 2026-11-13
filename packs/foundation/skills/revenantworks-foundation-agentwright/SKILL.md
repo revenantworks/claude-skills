@@ -4,7 +4,7 @@ description: Designs, hardens and audits the system around an agent that runs on
 license: Apache-2.0
 compatibility: Ships no code. Web search verifies refresh; without it refresh reports and does not restamp. File tools deliver a spec or an emitted task definition; without them it is in-chat content to save. Writes only on emit (the target's native task or routine definition) and refresh (references/platform-notes.md). Never schedules, enables or runs what it emits. No packages.
 metadata:
-  version: "1.0.0"
+  version: "1.0.1"
   profile: standalone
   pack: foundation
   brand: revenantworks

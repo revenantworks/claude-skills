@@ -7,7 +7,7 @@ Read each cold against name + description only. Provenance: authored at
 `CHANGELOG.md`. **Re-judged at v1.1.1, 2026-10-01 (pack split P1d)** after the description gained the
 design-and-balance and asset-intake triggers: rows 1 to 23 keep their expected values;
 row 24's note narrows; rows 25 to 30 are new. Hand-judged by the author model only; the run
-record is `RESULTS.md`. **Re-anchored to v1.0.0, 2026-10-01:** 1.0.0 launch version; suite content unchanged from the build the A6 evals ran against.
+record is `RESULTS.md`. **Re-anchored to v1.0.1, 2026-11-13:** 1.0.0 launch version; suite content unchanged from the build the A6 evals ran against.
 
 The hard half is rows 13 to 24 and 28 to 30. godotsmith sits next to things it must not
 absorb: general Godot engine and API work, eval-suite authoring, skill building, ordinary

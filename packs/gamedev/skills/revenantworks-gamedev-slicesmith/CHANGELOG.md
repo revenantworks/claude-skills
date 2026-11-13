@@ -3,6 +3,10 @@
 All notable changes to this skill are recorded here. The format follows Keep a Changelog and the
 version follows Semantic Versioning.
 
+## [1.0.1] — 2026-11-13
+
+- red-for-the-right-reason and plan reference updates
+
 ## [1.0.0] — 2026-10-08
 
 2026-11-09 (weekly observation review, slice b; observations 0494, 0498, 0511, 0513, 0515, 0517, 0522, 0548): `slice-and-test.md` gains "Red for the right reason": a new function is stubbed and run red on its assertion, a new seam lands before the finding's red, a new switch shows a run where flipping it changes the result, a filter's test names what must stay as well as what must go, a direct call to an inner function uses an input its real caller can produce, and a reachability fix is tested to the far end, per branch, with every consumed pool checked for refill. `spec-and-plan.md`: building a planned feature lists the "still planned" asserts it stales, and a design-constant change counts the tests and tools that pin its value before it is sized. SKILL.md unchanged.

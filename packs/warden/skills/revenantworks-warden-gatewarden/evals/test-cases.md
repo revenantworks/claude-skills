@@ -3,7 +3,7 @@
 Provenance: authored against SKILL.md v0.1.0 (2026-10-01) by the build unit. Authored, not run:
 no case below has been executed against a model yet. Cases 1–6 and 8–10 are also covered by the
 script tests (`scripts/test_perm_audit.py`, `scripts/test_hooks.py`, 80 tests, run and passing on
-2026-10-01); those prove the scripts, not the skill's behaviour around them. **Re-anchored to v1.0.1, 2026-11-12:** 1.0.0 launch version; suite content unchanged from the build the A6 evals ran against.
+2026-10-01); those prove the scripts, not the skill's behaviour around them. **Re-anchored to v1.0.2, 2026-11-13:** 1.0.0 launch version; suite content unchanged from the build the A6 evals ran against.
 
 Format: each case is an **Input** and **Assert** lines, checked by inspecting the run's output and
 tool calls. **Without:** what a run with no skill loaded is expected to do; **Discriminates:** the

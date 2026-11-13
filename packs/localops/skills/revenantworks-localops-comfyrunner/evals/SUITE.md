@@ -1,6 +1,6 @@
 # Assertion suite — revenantworks-localops-comfyrunner
 
-Provenance: authored against SKILL.md and the four references at the v1.0.0 build (2026-09-28). Each case states its input, what must be true of the response, and what would falsify it. Run by reading, except where a case names a script selftest. Run record: `RESULTS.md`. **Re-anchored to v1.0.0, 2026-10-01:** provenance only, nothing executed here: `gpu-seam.md` names comfyrunner where it said the planned media runner (D5); the description and body are unchanged.
+Provenance: authored against SKILL.md and the four references at the v1.0.0 build (2026-09-28). Each case states its input, what must be true of the response, and what would falsify it. Run by reading, except where a case names a script selftest. Run record: `RESULTS.md`. **Re-anchored to v1.0.1, 2026-11-13:** provenance only, nothing executed here: `gpu-seam.md` names comfyrunner where it said the planned media runner (D5); the description and body are unchanged.
 
 Counts: A 5 · B 4 · C 6 · D 5 · E 5 · F 5 · G 4 · H 4 · I 3 = 41 ordinary cases, plus 5 claim cases in section K = **46 cases**.
 

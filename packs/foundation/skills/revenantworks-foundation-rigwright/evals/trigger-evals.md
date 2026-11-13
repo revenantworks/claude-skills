@@ -1,6 +1,6 @@
 # Trigger Evals — revenantworks-foundation-rigwright
 
-- Provenance: derived from revenantworks-foundation-rigwright v1.0.0; last re-anchored to v1.0.0, 2026-10-01; 2026-10-04 changes carry no version bump (private-test-phase rule). Full re-anchor history moved to evals/RESULTS.md.
+- Provenance: derived from revenantworks-foundation-rigwright v1.0.0; last re-anchored to v1.0.1, 2026-11-13; 2026-10-04 changes carry no version bump (private-test-phase rule). Full re-anchor history moved to evals/RESULTS.md.
 - Counts: 39 queries (22 should, 17 should-not, 8 pairs), judged cold against name + description only (method notes moved to evals/RESULTS.md).
 - Owed: rows 21-31 not yet judged cold; the 20/20 cold results in RESULTS.md cover rows 1-20 only. Rows 19-31 were re-read by hand against the 2026-10-01 slim description (gatewarden, filewarden and the retired names); the cold re-judge is still owed. 2026-10-08 (no version bump, owner-approved consolidation): tokenwright retired and this skill gained `slim`; rows 18 and 24 flip to should, rows 32-37 added. Authored, not run. Same day (warden 6 → 4): rows 30-31 and the #31 note re-pointed from the retired filewarden to gatewarden.
 

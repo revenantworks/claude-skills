@@ -4,7 +4,7 @@ description: Paces a Claude subscription's usage — how fast to spend this week
 license: Apache-2.0
 compatibility: Ships no code. Reads ~/.claude/usage-windows.json when a statusline writes it; otherwise asks for the reading in one line. Writes three files only — ~/.dispatch/budget-decision.json, ~/.dispatch/usage-calibration.json and the overlay .dispatch/local.yaml; run notes are the controller's; check --dry writes nothing; without file tools it prints the fields. A dispatchwright ledger and rig gate are optional (without the gate, turbo bounds by hand). Web search only for refresh. No packages.
 metadata:
-  version: "1.0.0"
+  version: "1.0.1"
   profile: standalone
   pack: foundation
   brand: revenantworks

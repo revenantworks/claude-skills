@@ -1,6 +1,6 @@
 # Trigger Evals — revenantworks-gamedev-slicesmith
 
-- Provenance: derived from revenantworks-gamedev-slicesmith v1.0.0, 2026-10-08.
+- Provenance: derived from revenantworks-gamedev-slicesmith v1.0.0, 2026-10-08. **Re-anchored to v1.0.1, 2026-11-13:** red-for-the-right-reason and plan reference updates.
 - Counts: 32 queries (17 should, 15 should-not, 8 pairs), judged cold against name + description only. Rows 27–31 added 2026-10-13 (plain lens, fix method, done gate). Row 32 added 2026-10-17 (the test-later trigger, moved here from the behaviour case `behaviour-red-first`, which now names the skill).
 - Owed: every row authored, not run.
 

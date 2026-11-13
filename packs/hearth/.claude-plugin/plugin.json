@@ -1,7 +1,7 @@
 {
   "name": "hearth",
   "displayName": "Revenantworks Hearth",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Skills on the -tender motif (standard profile). Personal and household life skills. First member: faretender, the real cost of a trip and price drops after booking.",
   "experimental": {
     "evals": "pack-evals"

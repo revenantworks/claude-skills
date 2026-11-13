@@ -11,7 +11,7 @@
       "displayName": "Revenantworks Foundation",
       "source": "./packs/foundation",
       "description": "Nine standalone wrights: skillwright (skills & packs, their eval suites, slims and trigger diagnosis), promptwright (prompts & model tiers), grillwright (the interview before any build), agentwright (agent systems), rigwright (standing Claude config), dispatchwright (fan-out dispatch), handoffwright (committed session handoffs), pacewright (usage pacing), scoutwright (Claude platform change watch). Each routes on its own description and works alone.",
-      "version": "1.1.1",
+      "version": "1.1.2",
       "license": "Apache-2.0",
       "category": "productivity",
       "keywords": [
@@ -29,7 +29,7 @@
       "displayName": "Revenantworks Gamedev",
       "source": "./packs/gamedev",
       "description": "Game-development skills on the -smith motif. Five members: pixelsmith (pixel art that reads at several zoom scales), godotsmith (Godot 4.x conventions and proof a build is green), soundsmith (game audio judged by numbers), slicesmith (the test-first coding loop), uismith (menus, HUD and dashboards with a fit probe at every width and theme). Standard-library scripts allowed when declared; Playwright is uismith's one optional package.",
-      "version": "1.2.0",
+      "version": "1.2.1",
       "license": "Apache-2.0",
       "category": "productivity",
       "keywords": [
@@ -49,7 +49,7 @@
       "displayName": "Revenantworks Localops",
       "source": "./packs/localops",
       "description": "Skills for running work on this machine, one program per runner. Seven members: lmstudiorunner (local LM Studio models, verified), comfyrunner (ComfyUI renders behind GPU guards), dockerrunner (Docker Desktop and WSL), duckrunner (DuckDB over a repo's data files), whisperrunner (local transcripts with whisper.cpp), hypervrunner (Hyper-V VMs and Windows Sandbox), obsrunner (OBS Studio, read-only by default, and FFmpeg post-processing). Each routes on its own description and works alone.",
-      "version": "1.0.2",
+      "version": "1.0.3",
       "license": "Apache-2.0",
       "category": "productivity",
       "keywords": [
@@ -74,7 +74,7 @@
       "displayName": "Revenantworks Scribe",
       "source": "./packs/scribe",
       "description": "Skills on the -scribe motif for words and knowledge. Five members: researchscribe (graded research verdicts, playbooks and reports), brandscribe (brand definitions, design systems and voice files), commscribe (messages and docs shaped to their channel, with a fact check), lorescribe (a fiction project's story bible and canon checks), vaultscribe (an LLM-maintained knowledge vault with lint and drift checks). Each routes on its own description and works alone.",
-      "version": "1.1.0",
+      "version": "1.1.1",
       "license": "Apache-2.0",
       "category": "productivity",
       "keywords": [
@@ -94,7 +94,7 @@
       "displayName": "Revenantworks Warden",
       "source": "./packs/warden",
       "description": "Skills that guard what Claude writes or manages. Four members: shieldwarden (leak and injection scans, naming and identity policy, names that advertise secrets, gated history rewrites that never push), trustwarden (pre-install vets of third-party code), keywarden (credential lifecycle, fingerprints only), gatewarden (runtime permission policy, owner-installed hooks, a settings map, and disk space and Claude's reach from evidence). Each routes on its own description and works alone.",
-      "version": "1.1.2",
+      "version": "1.1.3",
       "license": "Apache-2.0",
       "category": "productivity",
       "keywords": [
@@ -111,7 +111,7 @@
       "name": "pacewright",
       "source": "./featured/pacewright",
       "description": "Paces a Claude subscription's usage — how fast to spend this week, what can still run at N% weekly, whether planned work fits before a reset. Reads the 5-hour, weekly, per-model and CI-minutes meters, sets a spend mode (normal, pace, turbo, overnight, work-day, owner-away, reset-eve) and re-cuts waves that don't fit. Also when something ate usage overnight, CI minutes run low, context runs high (compact or clear?), a new model needs a measured baseline, or which skill or subagent used tokens; or say /rw-pacewright (check, mode, fit, context, uba, baseline, spend, refresh). The plan table is dispatchwright's; the handoff, handoffwright's; one artifact's cost, skillwright's slim; the meter statusline, rigwright's; a scheduled check, agentwright's.",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "license": "Apache-2.0",
       "category": "productivity",
       "keywords": [
@@ -126,7 +126,7 @@
       "name": "whisperrunner",
       "source": "./featured/whisperrunner",
       "description": "Transcribes local audio and video to txt, srt, vtt and json with timestamps using whisper.cpp, and proves which backend ran. Trigger to transcribe, caption or subtitle a recording, meeting, podcast or video locally; to pick a Whisper model for this GPU or estimate a batch; when a transcript is empty, cut short or repeating; when Whisper ran on the CPU or a pasted log must prove the GPU ran; when it shares the GPU with LM Studio or ComfyUI; or say /rw-whisperrunner (audit, check, plan, run, status, refresh). Never a cloud API or a download. Voice-overs are comfyrunner's; clips and burned-in captions obsrunner's; game audio soundsmith's; summarising transcripts lmstudiorunner's.",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "license": "Apache-2.0",
       "category": "productivity",
       "keywords": [
@@ -141,7 +141,7 @@
       "name": "trustwarden",
       "source": "./featured/trustwarden",
       "description": "Vets third-party skills, plugins, MCP servers, GitHub Actions and model weights before install, with a verdict (PASS, CONDITIONAL, HOLD, FAIL) and install terms. Trigger on any should-I-install question, even with its files or hooks pasted in or a scan already clean; is this skill safe, vet this MCP server, check this GitHub Action, is this checkpoint safe or commercially usable, what does this installer write, a licence check before a fold-in, what changed in a plugin update; or say /rw-trustwarden (vet, revet, terms, refresh). Uses skillspector, zizmor, pinact and Scorecard when present; lists files no scanner read. Runtime permissions are gatewarden's; secrets shieldwarden's; your own skills skillwright's; sandboxing a download hypervrunner's.",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "license": "Apache-2.0",
       "category": "productivity",
       "keywords": [
@@ -156,7 +156,7 @@
       "name": "brandscribe",
       "source": "./featured/brandscribe",
       "description": "Keeps brand definitions, several side by side, and turns one into a Claude Design System, DESIGN.md, VOICE.md or guide. Trigger to define a brand, palette, type or voice; turn a style guide or site into tokens; make, connect or sync a design system; audit for brand drift (off-palette colours, old names); pass or fail a page against a brand, or apply one to a README or generated output; critique or check a built UI, or a built site (dist/) for UI problems before it ships (hierarchy, spacing, states, generic look); or say /rw-brandscribe (setup, build, export, sync, audit, gate, ui). Microcopy and messages are commscribe's; React libraries design-sync's; charts dataviz's; canon lorescribe's; a pre-build brief, fit across widths and themes, and game UI uismith's; no logos.",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "license": "Apache-2.0",
       "category": "productivity",
       "keywords": [
@@ -219,7 +219,7 @@
       "displayName": "Revenantworks Hearth",
       "source": "./packs/hearth",
       "description": "Personal and household life skills. First member: faretender, the real cost of a trip and price drops after booking.",
-      "version": "1.0.1",
+      "version": "1.0.2",
       "license": "Apache-2.0",
       "category": "productivity",
       "keywords": [

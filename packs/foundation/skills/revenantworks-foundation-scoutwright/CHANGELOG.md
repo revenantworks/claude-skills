@@ -1,5 +1,9 @@
 # Changelog — revenantworks-foundation-scoutwright
 
+## [1.0.1] — 2026-11-13
+
+- bench reference update
+
 ## [1.0.0] — 2026-10-01
 
 2026-10-16 (owner eval run, U38): `output-format.md` keeps the eight change-report headings word for word; a plain-language reply had renamed section 5 and dropped the word "undocumented" (case `docs-page-diff`).

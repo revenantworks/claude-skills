@@ -4,7 +4,7 @@ description: Builds, audits and packages Agent Skills, with their evals. Trigger
 license: Apache-2.0
 compatibility: Ships no code. Web search for research and refresh; file tools for delivery, else in-chat file content to save. Slim counts need a counting method, else counts read unmeasured. A skill scanner runs first in an audit only when installed. Packaging may use an optional shell (zip) and a stdlib-only python3; both skip cleanly when absent. Writes only the package (or a plugin's MCP tool and test files) it builds, ports or fixes on approval, and references/rubrics.md on refresh. No packages.
 metadata:
-  version: "1.0.0"
+  version: "1.0.1"
   profile: standalone
   pack: foundation
   brand: revenantworks

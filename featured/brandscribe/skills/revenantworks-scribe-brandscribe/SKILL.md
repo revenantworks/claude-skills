@@ -4,7 +4,7 @@ description: Keeps brand definitions, several side by side, and turns one into a
 license: Apache-2.0
 compatibility: Works alone. Uses the surface's file tools and, where present, the Artifact tool (Design System type), web fetch and browser tools; without them every deliverable comes back as files in chat. Two optional stdlib Python scripts, scripts/tokens_check.py (contrast, tokens.json check, DTCG conversion) and scripts/ui_check.py (static UI floor on built HTML/CSS); without Python, Claude's code tool computes the figures or they are reported unmeasured. Siblings named are pointers, never required.
 metadata:
-  version: "1.0.0"
+  version: "1.0.1"
   profile: standard
   pack: scribe
   brand: revenantworks

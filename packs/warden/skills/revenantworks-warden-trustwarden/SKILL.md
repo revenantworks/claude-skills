@@ -4,7 +4,7 @@ description: Vets third-party skills, plugins, MCP servers, GitHub Actions and m
 license: Apache-2.0
 compatibility: Python 3 (stdlib) for scripts/trust_vet.py, and git for the scratch clone and revet. Optional and never installed by the skill - skillspector, zizmor, pinact, OpenSSF Scorecard via Docker, cisco skill-scanner; snyk agent-scan opt-in only. The claude CLI for plugin details. Without a shell it walks the vet list by hand and marks every scanner NOT-RUN. Network only to clone the candidate and read its GitHub, Civitai or Hugging Face metadata (read-only). Siblings are named, never required.
 metadata:
-  version: "1.0.0"
+  version: "1.0.1"
   profile: standard
   pack: warden
   brand: revenantworks

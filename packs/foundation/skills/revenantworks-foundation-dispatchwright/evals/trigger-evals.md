@@ -1,6 +1,6 @@
 # Trigger evals — 36 queries (17 should / 17 shouldn't / 2 injection probes)
 
-- Provenance: authored at member version 1.0.0, 2026-08-18; last re-anchored to v1.0.0, 2026-10-01. Full re-anchor history moved to evals/RESULTS.md. 2026-10-08 (no version bump): rows 36-41 added for the per-unit two-stage review, the decision map and the scoutwright `fit` seam; description unchanged; authored, not run.
+- Provenance: authored at member version 1.0.0, 2026-08-18; last re-anchored to v1.0.1, 2026-11-13. Full re-anchor history moved to evals/RESULTS.md. 2026-10-08 (no version bump): rows 36-41 added for the per-unit two-stage review, the decision map and the scoutwright `fit` seam; description unchanged; authored, not run.
 - Counts: 36 queries (17 should, 17 should-not, 4 pairs, 2 injection probes), judged cold against name + description only (method notes moved to evals/RESULTS.md).
 - Judged: re-judged cold at v1.4.0, 2026-09-28 (parity run C3r): 24/26 hold their direction, #14 and #32 ambiguous, 0 wrong. 2026-10-01 (P1, description edited: the plan-table clause gained "meters spent", the pacewright clause now reads "weekly budgets per meter and pacing"): re-checked by hand, #32 and #33 keep their direction with their quotes updated; #34 and #35 are new. Owed: a cold re-judge of all 30.
 

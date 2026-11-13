@@ -4,7 +4,7 @@ description: Proves a Godot 4.x build is actually green and holds its project co
 license: Apache-2.0
 compatibility: Ships one declared stdlib script, scripts/godot_check.py (import, lint, GUT in order; three numbers; --parse-all parses every .gd; run, not read). Where a shell exists it runs that script, the project's own commands, or an adopted runner (godot-skill run_tests.py, godot-mcp) whose JSON is still a summary line. With no shell every check reads committed logs and config and says NOT-RUN. Godot 4.x with GUT is the worked case. No packages, no network.
 metadata:
-  version: "1.0.0"
+  version: "1.0.1"
   profile: standard
   pack: gamedev
   brand: revenantworks

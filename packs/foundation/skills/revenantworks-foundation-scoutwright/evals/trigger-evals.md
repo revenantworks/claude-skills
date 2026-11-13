@@ -2,7 +2,7 @@
 
 Counts: 35 queries (18 should, 17 should-not, 5 pairs)
 
-- Provenance: written for revenantworks-foundation-scoutwright 0.1.0, 2026-10-01 (pack-split build B15). **Re-anchored to v1.0.0, 2026-10-01:** 1.0.0 launch version; suite content unchanged from the build the A6 evals ran against. **Rows 25-30 added 2026-10-08** with the `fit` entry (unit K4b), same 1.0.0. **Rows 32-35 added 2026-10-13** with the `bench` entry, same 1.0.0.
+- Provenance: written for revenantworks-foundation-scoutwright 0.1.0, 2026-10-01 (pack-split build B15). **Re-anchored to v1.0.1, 2026-11-13:** 1.0.0 launch version; suite content unchanged from the build the A6 evals ran against. **Rows 25-30 added 2026-10-08** with the `fit` entry (unit K4b), same 1.0.0. **Rows 32-35 added 2026-10-13** with the `bench` entry, same 1.0.0.
 - Method: read each query cold against name + description only; compare with the Expected column.
 - State: authored, **not yet run** (no cold judge). Rows marked `native:` mirror a case folder that
   `claude plugin eval` runs in the pack's eval pass.
