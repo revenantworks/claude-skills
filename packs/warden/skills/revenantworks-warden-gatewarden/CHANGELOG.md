@@ -3,7 +3,7 @@
 ## [1.0.2] — 2026-11-13
 
 - public-main refusal and leak checks, ci_stamp step deadline, plugin-id check
-- push_gate refuses a non-builtin subcommand when git aliases cannot be read (it failed open on a timeout, an error, or a folder the same line creates)
+- push_gate refuses a non-builtin subcommand when git aliases cannot be read (it failed open on a timeout, an error, a folder the same line creates, or a folder set at run time)
 
 ## [1.0.1] — 2026-11-12
 

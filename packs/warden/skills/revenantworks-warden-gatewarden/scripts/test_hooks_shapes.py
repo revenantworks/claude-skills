@@ -282,8 +282,13 @@ class B5redirect(PushShapeBase):
     def test_config_redirect_on_a_builtin_passes(self):
         self.expect(0, [f"HOME=/tmp/x {G} status", f"GIT_CONFIG_NOSYSTEM=1 {G} log",
                         f"XDG_CONFIG_HOME=x {G} diff", f"GIT_CONFIG_GLOBAL=extra.cfg {G} log --oneline -1",
-                        f"cd $HOME && {G} zz", f'[ "$HOME" == /tmp ] && {G} zz'])
+                        f"cd $HOME && {G} status", f'[ "$HOME" == /tmp ] && {G} zz'])
         self.expect(0, [f"$env:HOME='C:\\tmp\\x'; {G} status"], tool="PowerShell")
+
+    def test_non_builtin_in_a_folder_set_at_run_time_is_refused(self):
+        # Owner ruling 2026-11-13: the alias table of a folder the gate cannot name is unreadable.
+        git(self.work, "config", "alias.pp", "push")
+        self.expect(2, [f"cd $HOME && {G} zz", f"mkdir x; d=x; cd $d && {G} pp origin main"])
 
     def test_redirect_on_a_push_keeps_its_reason(self):
         self.expect(2, [f"HOME=/tmp/x {G} {U} origin main"], reason=REDIRECTED)
