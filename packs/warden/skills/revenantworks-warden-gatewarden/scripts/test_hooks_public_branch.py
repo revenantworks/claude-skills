@@ -82,6 +82,7 @@ class PublicBranchBase(unittest.TestCase):
                      "  fi\n"
                      "done\n"
                      "exit 0\n")
+        os.chmod(os.path.join(self.hooks_dir, "pre-push"), 0o755)  # git ignores a hook without the bit (Linux)
         git(self.work, "config", "core.hooksPath", Path(self.hooks_dir).as_posix())
 
     def env(self):
@@ -307,6 +308,17 @@ class PublicBranchGuardTests(PublicBranchBase):
         self.assertIn("secret-shaped", err)
         self.assertNotIn(token, err + out)
         self.assertFalse(os.path.exists(self.hook_log))  # refused before the hook ran
+
+    @unittest.skipIf(os.name == "nt", "Windows has no executable bit")
+    def test_non_executable_leak_check_is_refused_never_passed(self):
+        self.seed(private=False)
+        os.chmod(os.path.join(self.hooks_dir, "pre-push"), 0o644)
+        self.feature(1)
+        self.ready(1)
+        code, _, err = self.run_hook("git " + "push -u origin feature")
+        self.assertEqual(code, 2, err)
+        self.assertIn("not run", err)
+        self.assertFalse(os.path.exists(self.hook_log))
 
     def test_no_armed_leak_check_is_refused_never_passed(self):
         self.seed(private=False)
