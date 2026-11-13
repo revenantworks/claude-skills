@@ -297,6 +297,299 @@ class B5redirect(PushShapeBase):
         self.expect_plain_pushes_pass()
 
 
+class GW2(PushShapeBase):
+    """FIX-GW2 (review of a60a0c8): a pushing alias set in ANOTHER repo (`alias.pp=push` there) reached a
+    push because the gate read the aliases of the folder the hook started in, not the folder or git dir
+    the git call really runs with. Each shape below runs `pp` in the other repo; each must be refused,
+    and the same shape with a builtin must pass. The rule: resolve the alias where git really runs, and
+    refuse a non-builtin subcommand where that folder or git dir cannot be known for sure."""
+
+    PP = f"{G} pp origin main"
+
+    def setUp(self):
+        PushShapeBase.setUp(self)
+        self.other = os.path.join(self.tmp, "other")
+        git(self.tmp, "clone", self.remote, self.other)
+        git(self.other, "config", "alias.pp", U)
+        # A commit ahead of origin and guard mode, so every push the gate does see in `other` is refused
+        # (no intent); the default nudge refuses only the first and would hide a second miss.
+        git(self.other, "commit", "--allow-empty", "-m", "ahead")
+        self.env["GATEWARDEN_MODE"] = "guard"
+
+    def refused(self, *cmds, tool="Bash"):
+        self.expect(2, list(cmds), tool=tool, reason="push gate")
+
+    def test_01_subshell(self):
+        self.refused(f"(cd ../other && {self.PP})", f"( cd ../other; {self.PP} )")
+
+    def test_02_env_dash_c(self):
+        self.refused(f"env -C ../other {self.PP}")
+
+    def test_03_env_chdir(self):
+        self.refused(f"env --chdir=../other {self.PP}", f"env --chdir ../other {self.PP}")
+
+    def test_04_git_dir_option(self):
+        self.refused(f"{G} --git-dir=../other/.git pp origin main", f"{G} --git-dir ../other/.git pp origin main",
+                     f"{G} --work-tree=../other pp origin main")
+
+    def test_05_git_dir_env(self):
+        self.refused(f"GIT_DIR=../other/.git {self.PP}", f"GIT_WORK_TREE=../other {self.PP}",
+                     f"GIT_COMMON_DIR=../other/.git {self.PP}")
+
+    def test_06_redirection_after_cd(self):
+        self.refused(f"cd ../other 2>/dev/null; {self.PP}", f"cd ../other >/dev/null 2>&1 && {self.PP}")
+
+    def test_07_cd_in_a_loop(self):
+        self.refused(f"for d in ../other; do cd $d; {self.PP}; done")
+
+    def test_08_dash_c_without_a_space(self):
+        self.refused(f"{G} -C../other pp origin main")
+
+    def test_09a_cd_dash_p(self):
+        self.refused(f"cd -P ../other && {self.PP}", f"cd -L ../other && {self.PP}")
+
+    def test_09b_builtin_cd(self):
+        self.refused(f"builtin cd ../other && {self.PP}", f"command cd ../other && {self.PP}")
+
+    def test_10_git_in_inline_code(self):
+        self.refused(f"python -c \"import os; os.chdir('../other'); os.system('{self.PP}')\"",
+                     f"node -e \"require('child_process').execSync('{self.PP}', {{cwd: '../other'}})\"")
+
+    def test_a_literal_cd_in_a_branch_checks_both_folders(self):
+        # The cd may or may not run, so either folder's alias table applies.
+        self.refused(f"if [ -d ../other ]; then cd ../other; fi; {self.PP}", f"cd ../other || true; {self.PP}")
+
+    def test_a_subshell_scope_ends_at_its_paren(self):
+        # The outer folder (work, no alias) applies after the subshell closes.
+        self.expect(0, [f"(cd ../other && {G} status); {G} status"])
+        self.refused(f"(cd .); cd ../other && {self.PP}")
+
+    def test_builtins_still_pass_in_every_shape(self):
+        st = f"{G} status"
+        self.expect(0, [f"(cd ../other && {st})", f"env -C ../other {st}", f"env --chdir=../other {st}",
+                        f"{G} --git-dir=../other/.git status", f"GIT_DIR=../other/.git {st}",
+                        f"cd ../other 2>/dev/null; {st}", f"for d in ../other; do cd $d; {st}; done",
+                        f"{G} -C../other status", f"cd -P ../other && {st}", f"builtin cd ../other && {st}",
+                        f"python -c \"import os; os.chdir('../other'); os.system('{st}')\"",
+                        f"if [ -d ../other ]; then cd ../other; fi; {st}",
+                        f"{G} -C../other log --oneline -1", f"cd ../other && {G} commit --allow-empty -m x"])
+
+    def test_aliases_in_the_folder_git_runs_in_still_resolve(self):
+        # A harmless alias in the other repo passes when the gate reads that repo's table.
+        git(self.other, "config", "alias.st", "status")
+        self.expect(0, [f"cd -P ../other && {G} st", f"(cd ../other && {G} st)", f"env -C ../other {G} st",
+                        f"{G} -C../other st", f"cd ../other 2>/dev/null; {G} st"])
+
+
+class GW2Candidates(PushShapeBase):
+    """FIX-GW2 fix round (adversarial review of 82941fe): stepping through folder changes missed pipes,
+    `&`, a failed cd, nested shells, eval, find -execdir, Start-Process -WorkingDirectory, Bash running
+    PowerShell's cd words, junctions and split names in inline code. The alias check is now
+    order-independent: a non-builtin subcommand that is a pushing alias in ANY folder the line names is
+    refused. Each shape reaches `pp` in `other`; the everyday lines below must still pass."""
+
+    PP = GW2.PP
+    refused = GW2.refused
+
+    def setUp(self):
+        GW2.setUp(self)  # the other repo with its pushing alias, guard mode
+        os.makedirs(os.path.join(self.other, "sub"))
+        link = os.path.join(self.work, "L")  # work/L -> other/sub: logical L/.. = work, physical = other
+        if os.name == "nt":
+            subprocess.run(["cmd", "/c", "mklink", "/J", link, os.path.join(self.other, "sub")],
+                           capture_output=True, creationflags=NO_WINDOW, stdin=subprocess.DEVNULL)
+        else:
+            os.symlink(os.path.join(self.other, "sub"), link)
+
+    def test_r1_cd_piped_to_cat(self):
+        self.refused(f"cd ../other; cd ../work | cat; {self.PP}", f"cd ../other; cd ../work | :; {self.PP}")
+
+    def test_r2_cd_in_the_background(self):  # opened by 82941fe
+        self.refused(f"cd ../other; cd ../work & {self.PP}")
+
+    def test_r3_cd_that_fails_on_a_redirection(self):  # opened by 82941fe
+        self.refused(f"cd ../other; cd ../work < /nonexistent/x; {self.PP}",
+                     f"cd ../other; cd ../work 0</nonexistent; {self.PP}")
+
+    def test_r4_sh_c_after_cd(self):
+        self.refused(f"cd ../other && sh -c '{self.PP}'")
+
+    def test_r5_bash_c_in_a_subshell(self):
+        self.refused(f"(cd ../other && bash -c '{self.PP}')")
+
+    def test_r6_env_chdir_then_sh_c(self):
+        self.refused(f"env -C ../other sh -c '{self.PP}'")
+
+    def test_r7_env_split_string(self):
+        self.refused(f"env -C ../other -S '{self.PP}'")
+
+    def test_r8_eval_cd(self):
+        self.refused(f'eval "cd ../other"; {self.PP}')
+
+    def test_r9_find_execdir(self):
+        self.refused(f"find ../other/.git -maxdepth 0 -execdir {self.PP} \\;")
+
+    def test_r10_start_process_working_directory(self):
+        self.refused(f"Start-Process {G} -ArgumentList 'pp origin main' -WorkingDirectory ../other",
+                     tool="PowerShell")
+
+    def test_r11_powershell_cd_words_in_bash(self):
+        self.refused(f"cd ../other; CD ../work; {self.PP}", f"cd ../other; sl ../work; {self.PP}",
+                     f"cd ../other; chdir ../work; {self.PP}", f"cd ../other; set-location ../work; {self.PP}")
+
+    def test_r12_junction_then_dotdot(self):
+        self.refused(f"cd -P L/.. && {self.PP}", f"{G} -C L/.. pp origin main")
+
+    def test_r13_split_program_name_in_inline_code(self):
+        self.refused("python -c \"import subprocess; subprocess.run(['g'+'it','pp','origin','main'], "
+                     "cwd='../other')\"")
+
+    def test_r14_sudo_chdir(self):
+        self.refused(f"sudo -D ../other {self.PP}")
+
+    EVERYDAY = [
+        "node -e \"const cp=require('child_process'); console.log('use git with care')\"",
+        "python -c \"import subprocess; print(subprocess.run(['git','check-ref-format','refs/heads/x']).returncode)\"",
+        "python -c \"import subprocess; subprocess.run(['git','prune'])\"",
+        "python -c \"import subprocess,sys; sys.exit(subprocess.call(['git','diff','--quiet']))\"",
+        "python -c \"import os; os.system('git verify-tag v1.0')\"",
+        "node -e \"require('fs').writeFileSync('x.txt','git hub')\"",
+        "python -c \"import subprocess; subprocess.run(['git', 'interpret-trailers', '--parse'])\"",
+        f"{G} --git-dir=.git rerere status",
+        f"GIT_DIR=.git {G} status; {G} flow init -d",
+        f"export GIT_DIR=.git; {G} log",
+        f"ROOT=$(cd .. && pwd); {G} flow feature start x",
+        f"{G} -C. flow init -d",
+        f"env -C . {G} flow init -d",
+        f"cd . 2>/dev/null; {G} flow init -d",
+        f"npm test && cd . && {G} flow init -d",
+        f"cd /c/does/not/exist 2>/dev/null || true; {G} status",
+        f"for f in a b; do cd .; {G} log -1; done",
+        f"(cd . && {G} status) && {G} log -1",
+        f"cd -P . && {G} log",
+        "python -c \"import subprocess; subprocess.run(['git','fast-export','--all'])\"",
+    ]
+    EVERYDAY_PS = [f"Set-Location . ; {G} status", f"if (Test-Path x) {{ Set-Location x }}; {G} status",
+                   f"Set-Location . ; {G} flow init -d"]
+    # Round 4 (controller): a folder not there now is unreadable whatever else the line runs, so these
+    # two everyday lines are refused again, as on a60a0c8; they name a missing folder (`sub`, `x`).
+    MISSING_FOLDER = [f"(cd sub && {G} filter-repo --analyze)"]
+    MISSING_FOLDER_PS = [f"if (Test-Path x) {{ Set-Location x }}; {G} flow init -d"]
+
+    def test_everyday_lines_pass(self):
+        # The review's everyday set; `print('git log, git status, git push are commands')` is left out:
+        # it names push beside a process call and was refused before FIX-GW2 too.
+        self.expect(0, self.EVERYDAY)
+        self.expect(0, self.EVERYDAY_PS, tool="PowerShell")
+
+
+class GW2Literal(PushShapeBase):
+    """FIX-GW2 round 3 (re-review of 850eb3b): a folder word counts as a candidate only when it is a plain
+    literal path that exists now. For a non-builtin subcommand the gate refuses a folder word that is
+    missing (bare cd, cd -, pushd +N), holds a glob, brace, quote splice, POSIX backslash escape or `~`,
+    names a drive or provider that is not a drive letter, or names a folder that does not exist yet on a
+    line that may create it; and any line that changes how names resolve (CDPATH, OLDPWD, New-PSDrive,
+    subst, net use, mklink, ln -s). Each shape reaches `pp` in `other` for real (review probe)."""
+
+    PP = GW2.PP
+    refused = GW2.refused
+
+    def setUp(self):
+        GW2.setUp(self)
+
+    def test_s01_cdpath_exported(self):
+        self.refused(f"export CDPATH=..; cd other && {self.PP}")
+
+    def test_s02_cdpath_assigned(self):
+        self.refused(f"CDPATH=.. ; cd other; {self.PP}")
+
+    def test_s03_oldpwd_then_cd_dash(self):
+        self.refused(f"OLDPWD=../other; cd -; {self.PP}")
+
+    def test_s04_glob_star(self):
+        self.refused(f"cd ../oth* && {self.PP}")
+
+    def test_s05_glob_question_mark(self):
+        self.refused(f"cd ../othe? && {self.PP}", f"cd ../{{other,x}} && {self.PP}")
+
+    def test_s06_quote_splice(self):
+        self.refused(f"cd ../ot''her && {self.PP}")
+
+    def test_s07_backslash_escape(self):
+        self.refused(f"cd ../ot\\her && {self.PP}")
+
+    def test_s08_powershell_glob(self):
+        self.refused(f"cd ..\\oth*; {self.PP}", tool="PowerShell")
+
+    def test_s09_powershell_drive(self):
+        self.refused(f"New-PSDrive -Name QQ -PSProvider FileSystem -Root ../other | Out-Null; Set-Location QQ:; "
+                     f"{self.PP}", tool="PowerShell")
+
+    def test_s10_folder_copied_by_python(self):
+        self.refused(f"python -c \"import shutil; shutil.copytree('../other','../cpy')\" && cd ../cpy && {self.PP}")
+
+    def test_s11_folder_copied_by_node(self):
+        self.refused(f"node -e \"require('fs').cpSync('../other','../cpy2',{{recursive:true}})\" && "
+                     f"{G} -C ../cpy2 pp origin main")
+
+    def test_s12_subst_drive(self):
+        self.refused(f"subst Q: ..\\other && cd /q && {self.PP}")
+
+    def test_s13_cd_with_no_literal_folder(self):
+        self.refused(f"cd; {self.PP}", f"cd ~; {self.PP}", f"cd -; {self.PP}", f"pushd +1; {self.PP}")
+
+    def test_builtins_pass_beside_every_new_rule(self):
+        st = f"{G} status"
+        self.expect(0, [f"export CDPATH=..; cd other && {st}", f"cd ../oth* && {st}", f"cd -; {st}", f"cd; {st}",
+                        f"cd ../ot''her && {st}", f"subst Q: ..\\other && cd /q && {st}"])
+
+    def test_literal_existing_folders_still_resolve(self):
+        git(self.other, "config", "alias.st", "status")
+        self.expect(0, [f"cd ../other && {G} st", f"{G} -C ../other st", f"cd \"../other\" && {G} st"])
+
+    def test_everyday_lines_still_pass(self):
+        self.expect(0, GW2Candidates.EVERYDAY)
+        self.expect(0, GW2Candidates.EVERYDAY_PS, tool="PowerShell")
+
+
+class GW2ConfigWrites(PushShapeBase):
+    """FIX-GW2 round 4 (re-review of dc7012d): a folder made on the same line (`git -C .. clone -c
+    alias.pp=push`) carries a pushing alias the gate cannot read first, so any named folder that does not
+    exist now refuses a non-builtin, whatever else the line runs. And a line that writes a git config
+    (redirection, copy, `git config` write, an include) may add an alias before git reads it, so it
+    refuses a non-builtin too."""
+
+    PP = GW2.PP
+    refused = GW2.refused
+
+    def setUp(self):
+        GW2.setUp(self)
+
+    def test_c1_clone_with_alias_then_cd(self):
+        self.refused(f"{G} -C .. clone -q -c alias.pp={U} work c3 && cd ../c3 && {self.PP}")
+
+    def test_c2_clone_with_alias_then_dash_c(self):
+        self.refused(f"{G} -C .. clone -q -c alias.pp={U} work c3; {G} -C ../c3 pp origin main")
+
+    def test_c3_alias_appended_to_git_config(self):
+        self.refused(f'echo "[alias] zz = {U}" >> .git/config; {G} zz origin main')
+
+    def test_c4_config_copied_from_another_repo(self):
+        self.refused(f"cp -r ../other/.git/config .git/config && {self.PP}")
+
+    def test_c5_include_path_written(self):
+        self.refused(f"{G} config include.path ../../other/.git/config && {self.PP}")
+
+    def test_missing_folder_lines_are_refused_again(self):
+        self.expect(2, GW2Candidates.MISSING_FOLDER)
+        self.expect(2, GW2Candidates.MISSING_FOLDER_PS, tool="PowerShell")
+
+    def test_config_reads_and_builtins_pass(self):
+        self.expect(0, [f"{G} config user.name; {G} flow init -d", f"{G} config --get user.name && {G} flow init -d",
+                        f"cat .git/config; {G} flow init -d", f"{G} config user.name x && {G} status",
+                        f"echo x >> .git/config; {G} log -1"])
+
+
 DECODE_AND_RUN = "inline code that decodes text and runs it"
 HELLO = "aGVsbG8="  # the base64 of the word hello: a harmless literal
 B64D, SYSTEM = "b64" + "decode", "os." + "system"

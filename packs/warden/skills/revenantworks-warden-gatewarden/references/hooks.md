@@ -379,6 +379,27 @@ gate reads `remote.<name>.mirror` and `remote.<name>.push` (every remote when th
 each member of a `remotes.<group>`) and refuses a mirror, or a configured refspec starting `+`
 (force) or `:` (delete) when the line names no refspec of its own (K7-4-07). Every hard check runs
 before any range work, and the alias table is read once per run (`git config --get-regexp`).
+Which config a git call reads its aliases from is decided order-independently (FIX-GW2, 2026-11-13):
+stepping through a line's folder changes cannot be exact (subshells, pipes, `&`, a cd that fails,
+eval, nested shells). Every folder or git dir the line names anywhere is a candidate, beside the hook's
+own folder: cd, pushd, Set-Location, sl and chdir targets in any position, `-C dir` and `-C<dir>`,
+`--git-dir`, `--work-tree`, `GIT_DIR`, `GIT_WORK_TREE`, `GIT_COMMON_DIR`, `env -C` and `--chdir`,
+`sudo -D`, `-WorkingDirectory`, find paths, and `cwd=` or `chdir(…)` in inline code, each read
+lexically and through junctions and symlinks (`cd -P L/..`). When the line names more than one folder,
+a non-builtin subcommand that is a pushing alias (or one nested past five levels) in any of them is
+refused. A folder word counts only when it is a plain literal path that exists now; any other refuses
+a non-builtin ("could not read git aliases (<cause>)"): one set at run time (`$d`, `$(…)`, `{}`), a
+missing one (bare `cd`, `popd`, `cd -`, `pushd +N`), a glob or brace pattern, a quote splice, a
+backslash escape in a POSIX shell, `~`, a drive or provider that is not a drive letter (`QQ:`), and
+a folder that does not exist now, whatever else the line runs (`git -C .. clone -c alias.pp=push w c3
+&& cd ../c3`; so `(cd sub && git filter-repo)` with no `sub` is refused too). So does a line that
+changes how names resolve (CDPATH, OLDPWD, New-PSDrive, subst, net use, mklink, `ln -s`), and a line
+that writes a git config: a redirection, copy, tee, `sed -i` or script onto a `.git/config`,
+`.gitconfig` or `~/.config/git/config`, or a `git config` write (two values, `--add`, `--file`, `set`,
+an include key). Inline code that starts a process is refused when
+it runs a pushing alias from any candidate, or builds a program name at run time (`'g'+'it'`, an
+empty-separator join, getattr, a decode); text that only names git passes. The builtin list is git's
+whole command list (`git help -a`), so `prune`, `rerere` or `verify-tag` are never read as aliases.
 A remote ref write through gh skips git push, so three plain shapes are hard refusals too
 (`push_gate.irreversible`, V-K8w2): `gh api -X DELETE` (or `--method DELETE`) on a `git/refs/…`
 endpoint, `gh api -X PATCH` on one with a `force=true` field, and `gh repo sync --force`. A read of a
