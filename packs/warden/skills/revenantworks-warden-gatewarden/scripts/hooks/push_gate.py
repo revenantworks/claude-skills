@@ -609,6 +609,93 @@ def config_write_cause(texts: list[str]) -> str:
     return ""
 
 
+# FIX-GW3 (warden 1.1.5): path text loses to a split string (`'.gi'+'t/config'`), a folder change
+# (`cd .git && … >> config`) or a .NET call, so the same-line config write is now a class. Before a
+# non-builtin subcommand the line is refused when it runs inline code that can write a file or start a
+# process, a .NET or COM write, a PowerShell file writer (any target), a nested shell body that writes,
+# or any write whose target is named like a config or sits in a .git folder. Code that only prints passes.
+CODE_WRITES = re.compile(r"(?i)\bopen\s*\(|\bfopen\b|\b(?:write|append)\w*\s*\(|\.write\b|\bfile_put_contents\b"
+                         r"|\bfs\s*\.|\bfs/promises\b|\bshutil\b|\bos\s*\.\s*(?:rename|replace|link|symlink"
+                         r"|makedirs|mkdir|remove|unlink|truncate|open|write)\b|\bFile\s*\.\s*\w+|\bIO\s*\.\s*\w+"
+                         r"|\bsyswrite\b|\bcopy\w*\s*\(|\brename\s*\(|\bsymlink\s*\(|\btouch\s*\(|\bPath\s*\(|\bpathlib\b"
+                         r"|\bcreateWriteStream\b")
+# A process the code starts, beyond CODE_RUNS: a backtick or qx run (perl, ruby, php).
+CODE_STARTS = re.compile(r"`|\bqx\b|\bsystem\s*\(|\bspawn\w*\s*\(|\bexec\w*\s*\(")
+# A started process whose text writes a file or a git config (`'echo … >> conf'+'ig'`, `'config'`).
+CODE_SHELL_WRITE = re.compile(r"(?i)>|(?<![\w-])config(?![\w-])|(?<![\w-])(?:tee|cp|mv|install|ln|dd|sed|copy"
+                              r"|move|set-content|add-content|out-file)(?=\s|['\"],)")
+# Code whose written path may be a git config even though no literal names it: `.git`, a folder change,
+# or a path built at run time (a concatenation, replace, format, template or decode).
+CODE_PATH_RISK = re.compile(r"""(?i)\.git(?![\w-])|\bconfig\b|\bchdir\b|\bcwd\b|['"`]\s*\+|\+\s*['"`]"""
+                            r"""|\w\s*\+\s*\w|\.\s*(?:replace|format|join|concat)\s*\(|\$\{|\bf['"]|%\s*[(\w]"""
+                            r"""|\bsprintf\b|\bjoin\b|\bpath\b""")
+DOTNET_WRITE = re.compile(r"(?i)\[\s*(?:System\s*\.\s*)?IO\s*\.|New-Object\s+(?:-\w+\s+\S+\s+)*-Com(?:Object)?\b"
+                          r"|(?<![\w-])(?:Set-Content|Add-Content|Out-File|Tee-Object)(?![\w-])")
+WRITE_TO = {"tee", "cp", "mv", "install", "ln", "copy", "move", "copy-item", "cpi", "move-item", "mi", "rsync",
+            "xcopy", "robocopy", "rename-item", "ren", "new-item", "ni", "truncate", "touch", "scp"}
+SHELL_REDIR = re.compile(r"""(?<![<>&\d-])(?:\d*|&)>>?\|?\s*("[^"]*"|'[^']*'|[^\s;|&<>()]+)""")
+NULL_TARGET = re.compile(r"(?i)^(?:/dev/null|\$null|nul|&\d+|&-|/dev/std(?:out|err))$")
+GIT_FOLDER_PART = re.compile(r"(?i)(?:^|[\\/])\.git(?:[\\/]|$)")
+
+
+def _shell_targets(seg: str) -> tuple[list[str], bool]:
+    """(the files a shell segment writes, whether it writes at all): redirections, tee, cp/mv/install/ln
+    and their PowerShell twins (every operand), `dd of=`, `sed -i`/`perl -i` files."""
+    out = [m.group(1) for m in SHELL_REDIR.finditer(seg)]
+    toks = hl.tokens(seg)
+    progs = [hl.prog(t) for t in toks]
+    for k, p in enumerate(progs):
+        rest = toks[k + 1:]
+        if p in WRITE_TO:
+            out += [t for t in rest if not t.startswith("-") and not SEPARATOR.match(t)]
+        elif p == "dd":
+            out += [t[3:] for t in rest if t.startswith("of=")]
+        elif p in ("sed", "perl") and any(re.match(r"^-\w*i|^--in-place", t) for t in rest):
+            out += [t for t in rest[1:] if not t.startswith("-")]
+    out = [t for t in out if t and not NULL_TARGET.match(hl.unquote(t).strip())]
+    return out, bool(out)
+
+
+def _config_target(raw: str, dirs: list[str]) -> str:
+    """Why a written file may be a git config, or "": named config or .gitconfig, inside a .git folder
+    as written or from any folder the line changes into, inside a bare git dir, or named at run time."""
+    u = hl.unquote(raw).strip()
+    if RUN_TIME_ARG.search(u) or RUN_TIME_DIR.search(u) or re.search(r"[*?\[\]'\"]|\{[^}]*,", u):
+        return "a file written on the line whose name is set at run time"
+    name = re.split(r"[\\/]", u.rstrip("\\/"))[-1].lower()
+    if name.endswith("config") or GIT_FOLDER_PART.search(u):
+        return "a git config file written on the same line"
+    for d in dirs:
+        p = os.path.normpath(os.path.join(d, u))
+        folder = os.path.dirname(p)
+        if GIT_FOLDER_PART.search(p) or (os.path.isfile(os.path.join(folder, "HEAD"))
+                                         and os.path.isdir(os.path.join(folder, "objects"))):
+            return "a file inside a .git folder written on the same line"
+    return ""
+
+
+def class_write_cause(shells: list[str], codes: list[str], dirs: list[str], runs: bool = True) -> str:
+    """Why the line may change any git config before a non-builtin subcommand runs (FIX-GW3), or "".
+    `runs=False` is the check for a git call inside the inline code itself: a process the code starts
+    counts only when its text writes or names config, so `exec('git with care')` prose still passes."""
+    for body in codes:
+        starts = bool(CODE_RUNS.search(body) or CODE_STARTS.search(body))
+        if runs and (starts or CODE_WRITES.search(body)) or not runs and (
+                starts and CODE_SHELL_WRITE.search(body) or CODE_WRITES.search(body) and
+                (CODE_PATH_RISK.search(body) or CODE_DYNAMIC.search(body))):
+            return "inline code on the line that can write files or start processes"
+    for k, text in enumerate(shells):
+        if DOTNET_WRITE.search(text):
+            return "a .NET, COM or PowerShell file write on the line"
+        for seg in hl.segments(text):
+            targets, writes = _shell_targets(seg)
+            if writes and k > 0:
+                return "a nested shell (bash -c, sh -c, cmd /c, pwsh -Command) whose body writes a file"
+            for t in targets:
+                why = _config_target(t, dirs)
+                if why:
+                    return why
+    return ""
 
 
 def alias_pushes(repo: str, name: str) -> bool:
@@ -1161,6 +1248,9 @@ def all_pushes(cmd: str, cwd: str, head_moves: bool = True) -> list[dict]:
     # FIX-GW2: every folder the whole line names, nested shells and inline code included.
     texts = [cmd] + [t for t, _ in ex.shells] + [b for b, p in ex.code if not p]
     dirs, cause = line_dirs(texts, [cwd] + [w for _, w in ex.shells if w])
+    shells, codes = [t for t, _ in ex.shells], [b for b, p in ex.code if not p]
+    code_cause = cause or class_write_cause(shells, codes, dirs, runs=False)
+    cause = cause or class_write_cause(shells, codes, dirs)
     _LINE.update(dirs=dirs, cause=cause)
     try:
         for text, where in ex.shells:
@@ -1195,8 +1285,8 @@ def all_pushes(cmd: str, cwd: str, head_moves: bool = True) -> list[dict]:
                                 "cannot be checked for a pushing alias. Blocked; write the command out.")
             for sub in code_git_subs(joined):
                 if sub not in BUILTINS and re.fullmatch(r"[\w.-]+", sub):
-                    if cause:
-                        raise unreadable(cause, sub)
+                    if code_cause:
+                        raise unreadable(code_cause, sub)
                     for d in dirs:
                         if alias_pushes(d, sub):
                             raise PushBlock(f"push gate: inline code runs git `{sub[:40]}`, a git alias that "

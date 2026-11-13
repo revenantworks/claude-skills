@@ -590,6 +590,87 @@ class GW2ConfigWrites(PushShapeBase):
                         f"echo x >> .git/config; {G} log -1"])
 
 
+class GW3ConfigWrites(PushShapeBase):
+    """FIX-GW3 (warden 1.1.5): matching a git config path by its text loses to a split string
+    (`'.gi'+'t/config'`), a folder change (`cd .git && … >> config`) or a .NET call. The rule is now a
+    class: before a non-builtin subcommand, a line that runs inline code able to write files or start
+    processes, a .NET or COM write, a PowerShell file writer (any target), a shell body that writes, or
+    any write whose target is named like a config or sits inside a .git folder is refused. Inline code
+    that only prints, ordinary file writes and every builtin still pass."""
+
+    X = f"{G} x origin main"
+    ALIAS = f"[alias]\\n x = {U}\\n"
+    refused = GW2.refused
+
+    def setUp(self):
+        PushShapeBase.setUp(self)
+        self.env["GATEWARDEN_MODE"] = "guard"
+
+    def test_g1_python_split_path_string(self):
+        self.refused(f"python -c \"p='.git/'+'config'; open(p,'a').write('{self.ALIAS}')\"; {self.X}")
+
+    def test_g2_node_split_path_string(self):
+        self.refused(f"node -e \"require('fs').appendFileSync('.gi'+'t/config','{self.ALIAS}')\"; {self.X}")
+
+    def test_g3_cd_into_git_folder_then_write(self):
+        self.refused(f'cd .git && echo "[alias] x = {U}" >> config; cd ..; {self.X}')
+
+    def test_g4_powershell_dotnet_append(self):
+        self.refused(f"[IO.File]::AppendAllText('.git/config', \"[alias]`n x = {U}`n\"); {self.X}",
+                     tool="PowerShell")
+
+    def test_class_inline_code_that_writes_or_runs(self):
+        self.refused(f"perl -e \"open(F,'>>','.gi'.'t/config'); print F 'x'\"; {self.X}",
+                     f"ruby -e \"File.write('a', 'b')\"; {self.X}",
+                     f"php -r \"file_put_contents('a', 'b');\"; {self.X}",
+                     f"python -c \"import shutil; shutil.copy('a', 'b')\"; {self.X}",
+                     f"python -c \"import subprocess; subprocess.run(['true'])\"; {self.X}",
+                     f"python - <<'EOF'\nopen('a', 'w').write('b')\nEOF\n{self.X}",
+                     f"pwsh -EncodedCommand ZQBjAGgAbwAgAHgAIAA+ACAAeQA=; {self.X}")  # echo x > y
+
+    def test_class_git_call_inside_the_writing_code(self):
+        self.refused("python -c \"import os,subprocess; os.chdir('.git'); open('conf'+'ig','a').write('x'); "
+                     f"os.chdir('..'); subprocess.run(['{G}','x','origin','main'])\"",
+                     "python -c \"import subprocess; subprocess.run('echo y >> .gi''t/conf''ig', shell=True); "
+                     f"subprocess.run(['{G}','x'])\"")
+
+    def test_class_shell_bodies_and_powershell_writers(self):
+        self.refused(f"bash -c 'echo y > somefile'; {self.X}", f"sh -c \"cd .git; echo y >> conf\"; {self.X}")
+        self.refused(f"Set-Content -Path notes.txt -Value y; {self.X}",
+                     f"[System.IO.File]::WriteAllText('a', 'b'); {self.X}",
+                     f"$o = New-Object -ComObject Scripting.FileSystemObject; {self.X}",
+                     f"pwsh -NoProfile -Command \"Add-Content a b\"; {self.X}", tool="PowerShell")
+
+    def test_class_writes_to_a_config_named_or_git_folder_target(self):
+        self.refused(f"echo y | tee -a ../my.gitconfig; {self.X}",
+                     f"sed -i s/a/b/ .git/info/../config; {self.X}",
+                     f"cp a.txt sub/config; {self.X}",
+                     f"mv a.txt ../gitconfig; {self.X}",
+                     f"install -m 644 a.txt .git/hooks/x; {self.X}",
+                     f"dd if=a.txt of=.git/config; {self.X}",
+                     f"ln -f a.txt my.config; {self.X}",
+                     f"cd .git; cp ../a.txt info/exclude; cd ..; {self.X}",
+                     f"t=conf; echo y >> .git/$t'ig'; {self.X}")
+
+    def test_inline_code_that_only_prints_and_ordinary_writes_pass(self):
+        self.expect(0, [f"python -c \"print('.git/' + 'config')\"; {G} flow init -d",
+                        f"node -e \"console.log('[alias] x')\"; {G} flow init -d",
+                        f"echo y > notes.txt; {G} flow init -d",
+                        f"cp a.txt b.txt && {G} flow init -d"])
+
+    def test_builtins_pass_beside_every_new_rule(self):
+        self.expect(0, [f"python -c \"open('.gi'+'t/config','a').write('x')\"; {G} log -1",
+                        f"cd .git && echo y >> config; cd ..; {G} status",
+                        f"bash -c 'echo y > somefile'; {G} status",
+                        f"echo y | tee -a ../my.gitconfig; {G} log -1"])
+        self.expect(0, [f"[IO.File]::AppendAllText('n.txt', 'y'); {G} status",
+                        f"Set-Content -Path notes.txt -Value y; {G} log -1"], tool="PowerShell")
+
+    def test_everyday_lines_still_pass(self):
+        self.expect(0, GW2Candidates.EVERYDAY)
+        self.expect(0, GW2Candidates.EVERYDAY_PS, tool="PowerShell")
+
+
 DECODE_AND_RUN = "inline code that decodes text and runs it"
 HELLO = "aGVsbG8="  # the base64 of the word hello: a harmless literal
 B64D, SYSTEM = "b64" + "decode", "os." + "system"

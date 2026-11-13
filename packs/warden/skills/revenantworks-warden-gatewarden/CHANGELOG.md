@@ -1,5 +1,11 @@
 # Changelog — revenantworks-warden-gatewarden
 
+## [1.0.4] — 2026-11-13
+
+- push_gate refuses a non-builtin subcommand on a line that can change any git config first (inline code that writes or starts a process, a .NET or PowerShell write, a writing nested shell, a write to a config-named or .git target)
+
+2026-11-13 (FIX-GW3, adversarial review of d1acdec): four lines still added a pushing alias before a non-builtin ran, each confirmed for real with a harmless alias: `python -c` with `'.git/'+'config'`, `node -e` with `'.gi'+'t/config'`, `cd .git && echo … >> config`, and PowerShell `[IO.File]::AppendAllText('.git/config', …)`. Path text cannot win against split strings, so the same-line config write is now a class (`class_write_cause`): inline code that can write a file or start a process; a .NET or COM write (`[IO.File]::`, `[System.IO.`, `New-Object -ComObject`); `Set-Content`, `Add-Content`, `Out-File` or `Tee-Object` with any target; a nested shell body that writes (`bash -c`, `sh -c`, `cmd /c`, `pwsh -Command`, `-EncodedCommand`); or a write (`>`, `>>`, tee, cp, mv, install, ln, `dd of=`, `sed -i`) whose target ends in `config`, sits inside a `.git` folder or bare git dir as written or from any folder the line changes into, or is named at run time. A git call inside the writing code itself is refused when that code writes a path that may be built or names `.git` or config, or starts a process whose text writes. Inline code that only prints and ordinary writes pass, and builtins pass in every shape. Tests: `test_hooks_shapes.GW3ConfigWrites`, 11 (8 red on d1acdec; the 3 must-pass controls green on both).
+
 ## [1.0.3] — 2026-11-13
 
 - push_gate resolves git aliases in the folder and git dir a git call really runs with, and refuses a non-builtin subcommand where it cannot know them

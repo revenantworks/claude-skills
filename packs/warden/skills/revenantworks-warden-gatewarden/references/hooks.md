@@ -396,7 +396,16 @@ a folder that does not exist now, whatever else the line runs (`git -C .. clone 
 changes how names resolve (CDPATH, OLDPWD, New-PSDrive, subst, net use, mklink, `ln -s`), and a line
 that writes a git config: a redirection, copy, tee, `sed -i` or script onto a `.git/config`,
 `.gitconfig` or `~/.config/git/config`, or a `git config` write (two values, `--add`, `--file`, `set`,
-an include key). Inline code that starts a process is refused when
+an include key). Path text alone loses to a split string or a folder change, so the config write is
+a class (warden 1.1.5): a non-builtin is refused on a line that runs inline code able to write a file
+or start a process (`python -c`, a `python -` heredoc, `node -e`, `perl -e`, `ruby -e`, `php -r`), a
+.NET or COM write (`[IO.File]::`, `[System.IO.`, `New-Object -ComObject`), a PowerShell file writer
+(`Set-Content`, `Add-Content`, `Out-File`, `Tee-Object`) with any target, a nested shell body that
+writes (`bash -c`, `sh -c`, `cmd /c`, `pwsh -Command` or `-EncodedCommand`), or any write (`>`, `>>`,
+tee, cp, mv, install, ln, `dd of=`, `sed -i`) whose target is named like a config (`config`,
+`*config`, `.gitconfig`), sits inside a `.git` folder or a bare git dir as written or from any folder
+the line changes into (`cd .git && … >> config`), or is named at run time. Inline code that only
+prints, ordinary file writes and every builtin still pass. Inline code that starts a process is refused when
 it runs a pushing alias from any candidate, or builds a program name at run time (`'g'+'it'`, an
 empty-separator join, getattr, a decode); text that only names git passes. The builtin list is git's
 whole command list (`git help -a`), so `prune`, `rerere` or `verify-tag` are never read as aliases.
