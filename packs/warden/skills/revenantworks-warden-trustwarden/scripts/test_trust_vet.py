@@ -552,6 +552,23 @@ class Revet(GitRepo):
         res = tv.revet(root, old, new, tv.DEFAULT_MAX_BYTES)
         self.assertEqual(res["verdict"], "CONDITIONAL")
         self.assertTrue(any(new in t for t in res["terms"]))
+        self.assertEqual(res["licence"]["state"], "same")
+
+    def test_licence_rename_is_reported_and_change_holds(self):
+        # observation 0571: revet promised a licence read and returned none.
+        root, old = self.repo()
+        (root / "LICENSE").rename(root / "LICENSE.txt")
+        mid = self.commit(root)
+        res = tv.revet(root, old, mid, tv.DEFAULT_MAX_BYTES)
+        self.assertEqual(res["licence"]["state"], "renamed")
+        self.assertEqual(res["verdict"], "CONDITIONAL")
+        self.assertTrue(any("renamed" in r for r in res["reasons"]))
+        build(root, {"LICENSE.txt": "Business Source License 1.1\n"})
+        new = self.commit(root)
+        res = tv.revet(root, mid, new, tv.DEFAULT_MAX_BYTES)
+        self.assertEqual(res["licence"]["state"], "changed")
+        self.assertEqual(res["verdict"], "HOLD")
+        self.assertEqual(res["terms"], [])
 
     def test_vet_reads_sha_from_checkout(self):
         root, old = self.repo()

@@ -13,7 +13,7 @@ Summary · Modes: watch, nudge, guard · What the command hooks read · push_gat
 
 | Hook | Matcher | Blocks | Fail mode | Install mode |
 |---|---|---|---|---|
-| `push_gate.py` | `Bash\|PowerShell` (PreToolUse; PostToolUse reports a push that left the remote behind) | a `git push` with no live intent, a HEAD move before the push on one line, a range larger than the intent, no local-CI stamp for the pushed commit, a branch carrying commits not on the remote's main pushed to a public repository; any force, delete, mirror, `--all` or `--tags` push | closed for anything naming `push` | watch; force, delete, mirror, `--all`, `--tags`, an unreadable push and every shape refusal are hard |
+| `push_gate.py` | `Bash\|PowerShell` (PreToolUse; PostToolUse reports a push that left the remote behind) | a `git push` with no live intent, a HEAD move before the push on one line, a range larger than the intent, no local-CI stamp for the pushed commit, a branch carrying commits not on the remote's main pushed to a public repository unless it is a fast-forward that passes the leak checks, a push to main or the default branch of a public repository; any force, delete, mirror, `--all` or `--tags` push | closed for anything naming `push` | watch; force, delete, mirror, `--all`, `--tags`, an unreadable push, a public leak-check hit or not-run, and every shape refusal are hard |
 | `hyperv_lock.py` | `Bash\|PowerShell\|Write\|Edit\|MultiEdit\|NotebookEdit` | Hyper-V restore and remove commands outside hypervrunner's one allowed script for each (`teardown.py` for remove, `cleanroom.py` for restore), the owner's `purge --entry`, writing them into any other script, and a run of those scripts that fails the owner's sha256 pin | closed for anything naming a blocked cmdlet or disk file | hard (guard) |
 | `call_cap.py` | `*`, and `SubagentStop` | a subagent's calls past its cap plus grace; logs warn, cap, block and each subagent's end to a local event log | open | watch |
 | `launch_throttle.py` | `Agent\|Task\|Workflow` | a launch in the stop band, or with `parallel_ceiling` 0 | open, with a "not enforced" note | watch |
@@ -61,7 +61,7 @@ folder name, a 12-character fingerprint of the command, the session id prefix an
 clause with secret shapes masked. Never the command text, never a matched value.
 
 **Rules** are `<hook>` or `<hook>.<rule>`: `push_gate.irreversible`, `push_gate.unreadable`,
-`push_gate.no_intent`, `push_gate.range`, `push_gate.head`, `push_gate.no_ci`, `push_gate.public_branch`, `push_gate.shape`,
+`push_gate.no_intent`, `push_gate.range`, `push_gate.head`, `push_gate.no_ci`, `push_gate.public_branch`, `push_gate.public_main`, `push_gate.public_leak` (hard), `push_gate.shape`,
 `hyperv_lock`, `golive_block`, `heredoc_guard`, `heredoc_guard.stdin`, `heredoc_guard.follow`, `call_cap`, `launch_throttle.ceiling`,
 `launch_throttle.stop`. A hook entry covers its soft rules; a rule entry wins over it.
 
@@ -280,18 +280,30 @@ when the remote cannot be reached). When that count is above zero and the reposi
 rule refuses, before the intent and stamp checks, unless the branch is a fast-forward of the remote's
 main (owner decision 2026-11-04, Lab proposal P-2026-11-04-01): the main tip read from the remote is
 an ancestor of the pushed commit and the range holds no merge commit, so the branch carries only new
-linear work on today's main. That push passes and the cleared note says those commits become public
-now; it then lands through a PR as on any repo, and a push to main itself keeps its own checks. A
+linear work on today's main. That push passes only after the leak checks have read its range
+(`push_gate.public_leak`, hard: a hit or a check that did not run refuses in every mode, since a
+publish cannot be taken back). The gate first reads the range's added lines and commit messages for
+secret shapes (provider token prefixes, a cloud access key id, a private key block, a URL carrying a
+password), never echoing a value; then it runs the repo's armed pre-push hook over the same range
+through `git hook run pre-push` (core.hooksPath honoured: on the rig that is pii_guard, which checks
+author and committer email, user-folder paths, personal emails and the private names list). No armed
+pre-push hook is "not run", never a pass. Then the cleared note says those commits become public now,
+with "leak check passed"; the branch lands through a PR as on any repo, and the intent and stamp are
+still asked for. A
 remote that cannot be reached, a tip missing from the clone, a branch built on an older main, or a
 merge in the range is not a fast-forward. The refusal names the branch, the count, why it is not a
 fast-forward and the fix: rebase onto a fresh main with no merge commits, or push the branch to a
 private remote. Every other check still runs: `pii_guard` at commit, then the intent and CI stamp
 after this rule, as for every push. When the remote's main
 tip is not in the clone (the main moved or was rewritten), it counts every commit the branch holds
-and says to fetch first. Unchanged: a push of `main` or of the remote's default branch, a tag, a
-branch with nothing off main, and every push to a private repository. The rule follows the mode
+and says to fetch first. A push that sends commits to `main` or the remote's default branch of a
+public repository (`git push origin main`, `git push origin feature:main`) is refused under
+`push_gate.public_main` (P-2026-11-04-01: there the PR is the merge path; the merge happens on
+GitHub, not by a push). Force and delete stay hard refusals for every branch. Unchanged: a tag (never
+passed as a branch; out of scope below), a branch with nothing off main, and every push to a private
+repository. The rule follows the mode
 ladder: watch logs, nudge tells Claude once, guard refuses. The owner promotes it with
-`python warden_review.py set push_gate.public_branch guard`.
+`python warden_review.py set push_gate.public_branch guard` (and `push_gate.public_main` likewise).
 
 Visibility is read without a network call where possible. A remote URL on github.com (https, ssh or
 scp form; `pushurl` first, as configured) maps to `owner/repo`. The answer is cached in
@@ -400,8 +412,8 @@ push is refused unread; one written in an earlier call is read when it runs. Enc
 payload forms are covered in the shapes the 2026-10-09 rounds named (piped, and B1, B2, B8 in "What
 the command hooks read"); the matching is on plain substrings, so a decoder or run call spelled some
 other way is not caught. It makes the range and the CI pass explicit and visible; it does not stop a model
-set on getting round it. Scanning the range for secrets before a push to a public repo is
-shieldwarden's.
+set on getting round it. The public-branch leak checks read secret shapes and run the armed pre-push
+hook; a full secret and identity scan of a public repo is shieldwarden's.
 
 **When a refusal looks wrong.** The refusal quotes the flag and the line it read (`a delete
 (`-d`) push is refused, read from: …`), so first compare that line with the command you meant.
@@ -450,6 +462,14 @@ line and to the person watching: "local CI was PARTIAL, not the CI verdict" (obs
 on a noisy machine is not a verdict (observation 0353). Better still, take the verdict from a run in
 the CI container, where the state that failed is the only state.
 
+**Every step has a deadline.** `--step-timeout SECONDS` (default 2700, 45 minutes; `0` turns it
+off). A step past it is killed with its whole process tree (`taskkill /T` on Windows, its process
+group elsewhere), the run fails with exit 124, no stamp is written, and the log and the refusal name
+the step. Without it, one hung test child holds the run silent with no verdict (observation 0560: a
+scanner test globbed up from an inherited, crowded `TEMP` and sat 15 minutes). Raise it for a suite
+known to run longer; never drop it to wait out a hang. A test that scans a temp tree builds its own
+empty temp root, never globs upward from the inherited one.
+
 The command runs with stdin from the null device and `PYTHONUTF8=1`. A no-window child that inherits
 an invalid stdin handle fails every grandchild it spawns with WinError 6 (the handle is invalid), and
 Windows' cp1252 default fails UTF-8 reads that pass on a Linux runner. The combined output goes to
@@ -466,6 +486,18 @@ check that only means something on Linux). Pass each one to the stamp as
 did not cover. Never build a one-off variant at push time: a careless one skips a real failure.
 A summary line that counts zero ("0 skipped, missing none") is not a skip and needs no
 `--excluded` (observation 0546).
+
+**The local-CI script fails on an unlisted skip** (observation 0490). A runner that prints "passed"
+while a test skipped has read one result fewer than it claims. The script prints every skip with its
+reason and exits non-zero on any skip not in its reviewed list. Adding that gate finds old silent
+skips on its first run; triage each one, and treat a skip guarded on a tracked file's presence (or
+absence) as a skip in every clone, hosted CI included. godotsmith makes the same point for GUT
+scripts that fail to parse.
+
+**A local-CI script works in a worktree** (observation 0540). In a linked worktree `.git` is a file,
+so a script that logs to `$repo/.git/<name>.log` fails there and the stamp reads exit 1 while every
+test passed. Resolve the folder with `git rev-parse --git-dir`, or log to an ignored path in the
+tree.
 
 **A repo with no CI.** A repo that tracks no `.github/workflows/*.yml` and no `ci-local` or
 `ci_local` script stamps with `ci_stamp.py run --repo . --no-ci` (observation 0455). That runs the

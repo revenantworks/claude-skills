@@ -5,6 +5,7 @@ Read on every slice and every `fix`.
 ## Contents
 
 - The cycle
+- Red for the right reason
 - The verify ladder
 - Plain lens — TypeScript, Python and any other repo
 - Seams — test where the game really breaks
@@ -40,6 +41,37 @@ Read on every slice and every `fix`.
 
 Code written before step 2 is deleted, not adapted. More than about 100 lines without a test
 run is a red flag: stop and run.
+
+## Red for the right reason
+
+Step 2's red counts only when it fails on the assertion the green will satisfy, for the reason
+the slice or fix addresses. Shapes that look red and prove nothing:
+
+- **A new function** (observation 0511). A test that calls a function that does not exist yet
+  fails at parse time or with a call error, and GDScript drops a script that does not parse, so a
+  one-file run can even exit 0. Write the stub first (the signature and a wrong return, such as
+  `return []`), run the test red on its assertion, then implement. The stub is gone by the done
+  gate's stub check (`verify-and-exit.md`).
+- **A new seam** (observation 0498). When a fix adds a test seam (a dry-run switch, an injectable
+  fake) in the same change, the new tests fail on the old code because the seam is missing. Land
+  the seam first with the old behaviour, show the test red on the finding's own assert, then fix;
+  or name, for each red, the assert line it came from. A reviewer asks "red for the finding's
+  reason?", not "red?".
+- **A new switch** (observation 0494). Its red-first proof includes a run where flipping the
+  switch changes the result. A switch whose on and off runs read the same has no recipe that
+  fires it yet (godotsmith `determinism-and-state.md` section 3a, a control needs teeth).
+- **A filter or sanitiser** (observation 0548). The failing test names what must go and what
+  must stay, on the same output: an absence check alone passes when the code returns nothing.
+- **An input the real caller cannot produce** (observation 0517). A test that calls an inner
+  function directly writes down which caller's state it stands for, and builds the fixture from
+  that caller's own precondition (a gate that sheds a member only at three short days never hands
+  over zero), or drives the behaviour through the real entry point. Otherwise it proves a branch
+  the game cannot reach and misses the one it always takes.
+- **A reachability fix tested to its first step** (observation 0513). For "this can never
+  happen", the test drives the state to the end the finding names, not the first link of the
+  chain; runs once per branch the chain passes (lean and not lean; the actor falls, and lives);
+  and checks every pool the chain consumes refills. When a fix adds a floor, grep every writer
+  that can empty the pool; a test that pins the empty state is a question to re-ask, not a wall.
 
 ## The verify ladder
 

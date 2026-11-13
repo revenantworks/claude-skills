@@ -10,6 +10,7 @@ crash came from.
 Subcommands:
   stats                         /system_stats (VRAM, versions) and /queue counts
   nodes WORKFLOW                every class_type in the workflow checked against /object_info
+  nodes --all --save-info FILE  the server's whole /object_info, for a batch runner guarding many graphs
   submit WORKFLOW --verdict GUARD.json [--confirmed]
                                 POST /prompt; refuses when the queue is busy, and unless GUARD.json
                                 (workflow_guard.py's JSON for this workflow, written after it) reads
@@ -204,7 +205,19 @@ def run(a) -> dict:
         return {"system": s.get("system"), "device": {k: dev.get(k) for k in
                 ("name", "type", "vram_total", "vram_free", "torch_vram_total", "torch_vram_free")},
                 "queue": queue_counts(a)}
+    if a.cmd == "nodes" and getattr(a, "all", False):
+        # The batch path: one full /object_info for a runner that guards many graphs against one file.
+        if a.target:
+            return {"error": "nodes --all takes no workflow: it saves every class the server offers"}
+        if not getattr(a, "save_info", None):
+            return {"error": "nodes --all needs --save-info FILE"}
+        info = call(a, "/object_info") or {}
+        Path(a.save_info).write_text(json.dumps(info, indent=2), encoding="utf-8")
+        return {"classes_saved": len(info), "object_info_saved": a.save_info,
+                "rule": "re-save after every upload or server change"}
     if a.cmd == "nodes":
+        if not a.target:
+            return {"error": "nodes needs a workflow file, or --all --save-info FILE for a batch"}
         wf = json.loads(Path(a.target).read_text(encoding="utf-8"))
         classes = sorted({n.get("class_type") for n in wf.values() if isinstance(n, dict) and n.get("class_type")})
         missing, info = [], {}
@@ -378,6 +391,8 @@ def main() -> int:
     p.add_argument("--purpose")
     p.add_argument("--minutes", type=int, default=60)
     p.add_argument("--save-info", help="nodes: write the /object_info of the workflow's classes to this file")
+    p.add_argument("--all", action="store_true",
+                   help="nodes: save the server's whole /object_info (the batch path; needs --save-info)")
     p.add_argument("--est-vram-gib", type=float, help="lease take: the VRAM estimate (media-budgets.md)")
     p.add_argument("--est-ram-gib", type=float, help="lease take: the system RAM estimate (owner Q24)")
     p.add_argument("--verdict", help="submit: workflow_guard.py's JSON verdict for this workflow (required)")

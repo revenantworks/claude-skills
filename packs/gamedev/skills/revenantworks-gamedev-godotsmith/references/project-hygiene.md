@@ -125,6 +125,14 @@ location runtime state goes.** Writing saves next to the executable works on the
 machine and fails on every platform with a real permissions model, at which point the failure
 is a support ticket rather than a test failure.
 
+**Editor code finds the game's `user://` from the game's configuration** (observation 0554).
+Inside the editor, `ProjectSettings.globalize_path("user://")` names the default
+`app_userdata/<name>` folder even when a worktree's `override.cfg` sets `use_custom_user_dir`:
+the game applies `override.cfg`, the editor never applies it to its own settings. A tool that
+reads what the game wrote reads `res://override.cfg` itself with `ConfigFile` (then
+`OS.get_data_dir()` plus `custom_user_dir_name`), is tested on a worktree whose folder differs
+from the default, and refuses a log older than the last run rather than returning it.
+
 ## 8. Asset intake: import settings and the render precondition
 
 godotsmith owns the step where finished assets meet the project. The directors decide;

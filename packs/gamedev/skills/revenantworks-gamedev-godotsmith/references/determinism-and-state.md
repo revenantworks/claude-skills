@@ -47,6 +47,12 @@ A save must serialise to the same bytes for the same state, every time.
 - **No incidental floats.** A value derived through floating-point accumulation will differ
   in the last bits across platforms. Round at the boundary, or store the integer the float
   was derived from.
+- **Round in the engine before you format** (observation 0478). The platform's printf is not
+  part of the determinism contract: `"%.1f" % 61.25`, an exact binary tie, printed 61.3 on a
+  Windows build and 61.2 on Linux. A float that reaches a pinned or compared string goes
+  through `snappedf(x, 0.1)` (or `roundi` for a percent) first. Review check:
+  `grep -nE '%\.[0-9]f'` in code whose output a test compares exactly; keep the tie value in
+  the test as its positive control.
 
 Without a canonical form, two saves of identical state differ, and a round-trip test cannot
 tell a real serialisation bug from formatting noise.
@@ -91,6 +97,13 @@ Two rules:
   before anyone has acted that day compares defaults with defaults and passes over a dropped
   field. When the round trip differs, a control arm that carries one suspect field across
   the load isolates the cause in a single run.
+- **A same-process round trip proves the bytes, not the world** (observation 0621). Statics
+  and caches outside the save stay warm in the process that saved, so the load passes there
+  while a fresh process takes another branch. Run the load in a fresh process (or force the
+  statics cold), apply a command before the first tick, and as a cheap standing detector cut
+  one run at two different days and compare the end hashes. After a refresh from the clock,
+  compare the refreshed statics with the warm ones field by field and follow each differing
+  field to its readers: a pass inside the tick can clear a flag after the refresh.
 
 **A trajectory fingerprint covers a fixed, named field set.** It lists its fields in the
 test itself and never enumerates a live catalogue: a loop over the goods catalogue adds a
@@ -130,6 +143,10 @@ A **pin round** re-derives the literals a change moved. A **control** is a tests
   doing. Without it, "these rows moved because of my change" is a guess, and the re-pin has to
   happen at once, unit by unit. With it, a stack of units can be built first and re-pinned once
   (slicesmith `spec-and-plan.md`, stacked pin round).
+- **A control needs teeth** (observation 0494). An off-control row that reads the same pins
+  with the switch on and off proves nothing when no recipe fires the feature. The row prints a
+  witness that the switched-on feature acted in at least one recipe (a counter, a record
+  entry); without one, mark it "no teeth" and add a recipe where the feature fires.
 - **The control must return every row, not most of them.** Run it over the whole pin set and
   count: 15 of 15 is a control; 7 of 9 is a leak. The control keeps the base's figures too: a
   constant the change rescaled stays at its base value under the switch, or the pins cannot come

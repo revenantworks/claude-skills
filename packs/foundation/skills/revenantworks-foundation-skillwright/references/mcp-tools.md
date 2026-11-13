@@ -111,7 +111,12 @@ failed the host's output check, and no test called them).
 5. **Run by the repo's plugin test step** (`claude plugin test <plugin>`, or the repo's equivalent
    in CI) on every push that touches the plugin. A plugin the step skips (for example a condition
    that only tests plugins with a hooks file) runs no contract test: fix the condition, or say so.
-6. **Repo green is not install green.** While versions are frozen, a plugin update can report
+6. **Test on the stated minimum, not only the newest** (observation 0609). A run reports the
+   version that ran it, not the oldest version the plugin claims. When the manifest names a
+   minimum Claude Code version, the local test step runs on the version the hosted job pins (read
+   from the workflow file) or on that minimum, and reports NOT-RUN when it is absent; a rig on a
+   newer release passes API use the minimum lacks, and hosted CI fails it after the push.
+7. **Repo green is not install green.** While versions are frozen, a plugin update can report
    "latest" with a stale cache (observation 0376), and a local-path marketplace does not settle
    it: `claude plugin list` read "Read from" the checkout while a desktop-app session ran the
    cache (observation 0420). Before claiming the installed tool works, prove which copy ran by a

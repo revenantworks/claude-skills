@@ -465,6 +465,24 @@ class CiStampTests(unittest.TestCase):
         self.assertIn("line 00", p.stdout)  # the whole run is echoed too
         self.assertFalse(self.stamp_path().exists())
 
+    def test_a_hung_step_fails_at_its_deadline_with_its_children(self):
+        # observation 0560: a hung test child held a run silent with no verdict.
+        script = ("import subprocess, sys, time\n"
+                  "subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(120)'])\n"
+                  "time.sleep(120)\n")
+        started = time.time()
+        p = self.run_stamp(None, script=script, extra=("--step-timeout", "3"))
+        self.assertEqual(p.returncode, 124, p.stdout + p.stderr)
+        self.assertLess(time.time() - started, 60)
+        self.assertIn("deadline", p.stderr)
+        self.assertIn("timed out after 3 s", p.stdout + p.stderr)
+        self.assertFalse(self.stamp_path().exists())
+
+    def test_a_step_inside_its_deadline_stamps(self):
+        p = self.run_stamp(0, extra=("--step-timeout", "60"))
+        self.assertEqual(p.returncode, 0, p.stderr)
+        self.assertTrue(self.stamp_path().exists())
+
     def test_excluded_checks_are_named_in_the_stamp(self):
         p = self.run_stamp(0, extra=("--excluded", "test_crlf: Windows line endings"))
         self.assertEqual(p.returncode, 0, p.stderr)

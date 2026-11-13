@@ -69,6 +69,14 @@ counted in a way C# events are not, so the language you are in changes the rule.
 physics process, input. The engine does real setup in those, and an override that silently
 replaces it produces a node that is subtly not initialised, with no error anywhere.
 
+**A private helper never reuses a name the base class declares** (observation 0549). GDScript
+marks private helpers and engine virtuals with the same leading underscore, so a helper named
+`_run_scene` in an `EditorPlugin` is read as an override with the wrong signature: a parse
+error, and the editor loads the plugin silently disabled. Prefix handlers (`_cmd_`, `_on_`), or
+check `ClassDB.class_get_method_list(<base>)`; `ci-guards.md` section 6 catches the parse
+failure. An end-to-end check that starts an editor captures its output and prints the parse
+errors when a start-up wait times out.
+
 ## 5. Worker threads and the scene tree
 
 Three hard rules, and the first is absolute:

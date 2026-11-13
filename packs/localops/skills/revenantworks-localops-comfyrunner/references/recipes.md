@@ -17,7 +17,8 @@ for another card.
 ## 1. The recipe check
 
 `comfy_client.py nodes WF --save-info INFO.json` reads `/object_info` for every class in the
-workflow and saves it. `workflow_guard.py WF --object-info INFO.json` then refuses, with the
+workflow and saves it; for a batch of graphs, `comfy_client.py nodes --all --save-info INFO.json`
+saves every class the server offers in one file. `workflow_guard.py WF --object-info INFO.json` then refuses, with the
 reason, before anything is submitted:
 
 - a **node class** the server does not have (a custom node not installed);

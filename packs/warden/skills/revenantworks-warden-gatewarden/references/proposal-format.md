@@ -36,4 +36,10 @@ Settings files, CLAUDE.md files, skills, agents, commands, hooks, auto memory, `
 - Interactive or previewing forms first (`--dry-run`, `-Confirm`, `-I`).
 - One target per line; no globs, no recursion over a parent the owner did not name.
 - No elevation: a command that needs an administrator shell is named as such and left to the owner.
+- A finished settings file built "on the live file" takes the live file's rules, never its bytes
+  (observation 0474). The live file holds absolute hook and status-line paths under the user folder;
+  written whole into a tracked config folder, it puts personal data in a repo. So: edit only the
+  `permissions` block of the repo's own staged copy, which keeps `~` forms, or write the live-based
+  file outside every repo (the scratchpad) and point the copy line there. Run the privacy scan on the
+  output before it lands in any repo folder.
 - gatewarden never runs any of these itself, including after the owner says yes; the owner runs them.

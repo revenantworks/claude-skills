@@ -52,6 +52,8 @@ def val(flag):
 base, wav_path = val("-of"), val("-f")
 if "--vad" in args:
     print("fake-vad: " + val("-vm"), file=sys.stderr)
+if "-mc" in args:
+    print("fake-mc: " + val("-mc"), file=sys.stderr)
 with wave.open(wav_path, "rb") as w:
     ms = int(w.getnframes() * 1000 / w.getframerate())
 kind = os.environ.get("FAKE_KIND", "good")
@@ -291,6 +293,30 @@ class RunnerEndToEnd(unittest.TestCase):
         self.assertEqual(r["verdict"], "pass", r)
         self.assertEqual(r["vad"], "off")
         self.assertIn("not found", r["vad_note"])
+
+    def test_no_context_passes_max_context_zero(self):
+        r = self.run_cli(*self.base_args("--no-context"))
+        self.assertEqual(r["verdict"], "pass", r)
+        self.assertIn("fake-mc: 0", self.run_log(r))
+        r2 = self.run_cli(*self.base_args("--overwrite"))
+        self.assertNotIn("fake-mc", self.run_log(r2))
+
+    def test_a_configured_bin_that_is_gone_reads_as_stale_config_not_missing_install(self):
+        gone = Path(self.td.name) / "moved" / "whisper-cli.exe"
+        self.write_config(bin=str(gone))
+        r = self.run_cli("run", str(self.clip), "--model", str(self.model), "--out", str(self.out))
+        self.assertEqual(r["verdict"], "refused", r)
+        joined = " ".join(r["reasons"])
+        self.assertIn("configured bin", joined)
+        self.assertIn("is gone", joined)
+        self.assertIn("--force", joined)
+        self.assertNotIn("install is the user's", joined)
+
+    def test_a_configured_model_that_is_gone_reads_as_stale_config(self):
+        self.write_config(model_gpu=str(Path(self.td.name) / "moved" / "model.bin"))
+        r = self.run_cli("run", str(self.clip), "--bin", str(self.bin), "--out", str(self.out))
+        self.assertEqual(r["verdict"], "refused", r)
+        self.assertTrue(any("configured model_gpu" in x and "is gone" in x for x in r["reasons"]), r)
 
     def test_check_writes_nothing_beside_the_clip(self):
         r = self.run_cli("check", str(self.clip), "--bin", str(self.bin), "--model", str(self.model))

@@ -84,6 +84,14 @@ The verdict follows from the match by the rules below, never from popularity or 
   4. otherwise **build**, "new member". Shipping scripts alone never makes a candidate adopt.
 - **Judged from descriptions only** unless a body was read; the row says which.
 
+**The platform is a candidate too** (observation 0603). Before the third-party legs, bench each
+feature the user's own mods and plugins ship against the platform's built-ins (Claude Code's
+slash commands and diagnostics, as the current docs and release notes list them): does a built-in
+now do this job? The row's repo cell reads `built-in`, and its verdict is one of **keep** (ours
+does something the built-in does not; name it), **delegate** (keep a thin view over the built-in's
+data) or **drop** (the built-in covers it; ours is now a cost). A platform release that ships a
+feature the user built is the find this leg exists for: third-party benches never see it.
+
 ## 5. Verdicts
 
 One verdict per find, never two:
@@ -96,6 +104,9 @@ One verdict per find, never two:
   install.
 - **skip** — with exactly one reason: *covered by `<member>`*, *no need in this setup*, or
   *declined earlier* (with where the decision is recorded).
+
+A `built-in` row (§4, "The platform is a candidate too") judges the user's own feature, not a
+find, so it takes **keep**, **delegate** or **drop** instead, one per row.
 
 Tie-breaks: a capability a member claims, whose candidate adds nothing new or only an extra job
 with no need (noted in the row), is skip *covered by `<member>`*, however popular. A capability no

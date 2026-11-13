@@ -51,7 +51,7 @@ Find FFmpeg and FFprobe (PATH, `--ffmpeg`/`--ffprobe`, `OBSRUNNER_FFMPEG`) and t
 
 ## 2. Read state before acting
 
-`status` gives the OBS version, stream, record and replay state, the record folder and the lease. Read it before `set`, `mark`, a GPU render or `hold`. While the user is live, change nothing unless the user asked for that one change.
+`status` gives the OBS version, stream, record and replay state, the record folder and the lease. Its verdict rests on the required reads only: a replay buffer that is turned off reads `replay_buffer: off` with verdict OK, never an error. Read it before `set`, `mark`, a GPU render or `hold`. While the user is live, change nothing unless the user asked for that one change.
 
 ## 3. Act — one mode per run
 

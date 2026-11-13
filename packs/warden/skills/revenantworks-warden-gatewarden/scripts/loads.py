@@ -259,6 +259,23 @@ def plugin_sources(home: Path, settings: dict, notes: list) -> list[dict]:
     return out
 
 
+def plugin_ids(home: Path, settings: dict) -> dict:
+    """enabledPlugins ids no installed plugin carries, and installed ids enabledPlugins never names.
+
+    A plugin rename leaves the old id in enabledPlugins and the new one out of it, so the new
+    plugin reads as disabled while every check run inside it stays silent (observation 0602).
+    """
+    enabled = settings.get("enabledPlugins") if isinstance(settings.get("enabledPlugins"), dict) else {}
+    data = read_json(home / "plugins" / "installed_plugins.json")
+    plugins = data.get("plugins") if isinstance(data, dict) and isinstance(data.get("plugins"), dict) else None
+    if plugins is None:
+        return {"checked": False, "enabled_not_installed": [], "installed_not_enabled": []}
+    local = {k for k in enabled if not k.endswith("@synced")}
+    return {"checked": True,
+            "enabled_not_installed": sorted(k for k in local if k not in plugins),
+            "installed_not_enabled": sorted(k for k in plugins if k not in enabled)}
+
+
 def overrides(home: Path, projects: list[Path]) -> tuple[dict, dict, dict, dict]:
     """(user settings, user skillOverrides, {key: [files where it is off]}, {key: winning value})."""
     user = read_json(home / "settings.json")
@@ -445,7 +462,9 @@ def main(argv=None) -> int:
     fraction = user_settings.get("skillListingBudgetFraction")
     fraction = fraction if isinstance(fraction, (int, float)) and fraction > 0 else BUDGET_DEFAULT
     listing = listing_cost(uniq, visibility, fraction)
+    ids = plugin_ids(home, user_settings)
     out.update({"counts": counts, "skills_seen": len(by), "listing": listing, "rows": rows, "not_checked": notes,
+                "plugin_ids": ids,
                 "settings_block": block,
                 "settings_note": ("gatewarden never writes settings: the owner puts this complete "
                                   "skillOverrides block in user settings (~/.claude/settings.json); "
@@ -465,6 +484,12 @@ def main(argv=None) -> int:
             print(f"cut at {DESC_CAP} characters in the listing: " + ", ".join(listing["over_cap"]))
         if rows:
             print(table(rows))
+        if ids["enabled_not_installed"]:
+            print("enabledPlugins names a plugin that is not installed (a rename or an uninstall left it): "
+                  + ", ".join(ids["enabled_not_installed"]))
+        if ids["installed_not_enabled"]:
+            print("installed, but enabledPlugins in user settings does not name it (`claude plugin list` "
+                  "may show it disabled): " + ", ".join(ids["installed_not_enabled"]))
         if notes:
             print("not checked: " + "; ".join(notes))
         if block:

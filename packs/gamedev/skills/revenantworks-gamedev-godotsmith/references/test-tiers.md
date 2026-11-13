@@ -55,6 +55,13 @@ T3 runs → the notes and any T3 reds become the next round's rows → build fas
 at T3, not at the merge. Pins taken on named days (a mid-run fingerprint and an end fingerprint)
 keep that cheap: a T3 red still names the switch and the day. Land rules do not change.
 
+**Sharding removes the one-process proof** (observation 0506). A sharded green proves the
+count and each process's correctness, never isolation between tests or scripts: a switch one
+row leaks turns the next row red only when both share a process. A change that parallelises a
+run names the one-process proof it removes and where that proof moves (a per-test reset that
+makes order irrelevant, a checkpoint or scheduled one-process run), in the same commit as the
+land-rule text.
+
 ## 3. A short-run horizon for long trajectory tests
 
 A long trajectory test (a seed run for 120 days, compared with pinned hashes) gains a checkpoint

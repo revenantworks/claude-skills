@@ -43,6 +43,12 @@ and no stamp, not a traceback (observation 0454).
 
 A check known to flake: `--runs N` repeats the whole step list N times and stamps
 only when every run passes. One lucky pass is not a verdict (observation 0353).
+
+Every step has a deadline: `--step-timeout SECONDS` (default 2700, 45 minutes; 0
+turns it off). A step past it is killed with its whole process tree, the run fails
+with exit 124, no stamp is written, and the log and the refusal name the step. A
+hung test child once held a run silent for 15 minutes with no verdict (observation
+0560).
 Stdlib only; no window opens.
 """
 from __future__ import annotations
@@ -62,6 +68,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import hooklib as hl  # noqa: E402
 
 TAIL_LINES = 20
+STEP_TIMEOUT = 2700  # seconds per step; --step-timeout 0 turns it off (observation 0560)
 # A log line that says a check did not run because its tool is missing.
 MISSING_TOOL = re.compile(r"(?im)^.*(?:command not found|is not recognized as an internal or external command"
                           r"|\b(?:skip\w*|not run)\b.*\b(?:not installed|not found|missing)\b).*$")
@@ -144,6 +151,41 @@ def baseline(repo: str) -> int:
     return 1 if failed else 0
 
 
+def kill_tree(p: subprocess.Popen) -> None:
+    """Kill a timed-out step and every process it started."""
+    try:
+        if os.name == "nt":
+            subprocess.run(["taskkill", "/T", "/F", "/PID", str(p.pid)], capture_output=True,
+                           stdin=subprocess.DEVNULL, creationflags=hl.NO_WINDOW)
+        else:
+            import signal
+            os.killpg(p.pid, signal.SIGKILL)
+    except (OSError, ProcessLookupError):
+        pass
+    try:
+        p.kill()
+        p.wait(timeout=10)
+    except (OSError, subprocess.TimeoutExpired):
+        pass
+
+
+def run_step(argv: list[str], repo: str, out, env: dict, timeout: float) -> int:
+    """Run one step with stdin from the null device; 124 when it passes its deadline."""
+    kw = {"cwd": repo, "stdin": subprocess.DEVNULL, "stdout": out, "stderr": subprocess.STDOUT,
+          "env": env, "creationflags": hl.NO_WINDOW}
+    if os.name != "nt":
+        kw["start_new_session"] = True  # one process group, so a timeout kills the whole tree
+    p = subprocess.Popen(argv, **kw)
+    try:
+        return p.wait(timeout=timeout if timeout and timeout > 0 else None)
+    except subprocess.TimeoutExpired:
+        kill_tree(p)
+        out.write(f"\nci_stamp: step timed out after {timeout:g} s and was killed with its children: "
+                  f"{' '.join(argv)}\n".encode())
+        out.flush()
+        return 124
+
+
 def wsl_shim(argv0: str) -> str:
     """The resolved path when a bare shell name would start the Windows WSL launcher, else ""."""
     if os.name != "nt" or os.path.splitext(os.path.basename(argv0))[0].lower() not in ("bash", "sh", "wsl"):
@@ -169,6 +211,8 @@ def main(argv: list[str]) -> int:
     r.add_argument("--covers", metavar="N|all",
                    help="how many of the workflow's run: steps this run covers (default: the step count; "
                         "`all` for a runner generated from the workflow)")
+    r.add_argument("--step-timeout", type=float, default=STEP_TIMEOUT, metavar="SECONDS",
+                   help=f"kill a step past this many seconds and fail the run (default {STEP_TIMEOUT}; 0 = none)")
     r.add_argument("--quiet", action="store_true",
                    help="print the one-line verdict only; the full log stays in ci-last.log")
     r.add_argument("command", nargs=argparse.REMAINDER)
@@ -239,9 +283,8 @@ def main(argv: list[str]) -> int:
                     out.write(f"== ci_stamp: run {n + 1}/{runs}: {' '.join(s)}\n".encode())
                     out.flush()
                 try:
-                    returncode = subprocess.run([resolve_exe(s[0], a.repo), *s[1:]], cwd=a.repo,
-                                                stdin=subprocess.DEVNULL, stdout=out, stderr=subprocess.STDOUT,
-                                                env=env, creationflags=hl.NO_WINDOW).returncode
+                    returncode = run_step([resolve_exe(s[0], a.repo), *s[1:]], a.repo, out, env,
+                                          a.step_timeout)
                 except OSError as exc:
                     out.write(f"ci_stamp: could not start `{s[0]}` ({exc})\n".encode())
                     out.flush()
@@ -259,7 +302,8 @@ def main(argv: list[str]) -> int:
             return returncode
         tail = "\n".join(text.rstrip("\n").splitlines()[-TAIL_LINES:])
         _echo(sys.stderr, f"ci_stamp: last {TAIL_LINES} lines of the run (full log: {log}):\n{tail}\n")
-        print(f"ci_stamp: CI failed (exit {returncode}); no stamp written", file=sys.stderr)
+        why = f" (a step passed its {a.step_timeout:g} s deadline)" if returncode == 124 else ""
+        print(f"ci_stamp: CI failed (exit {returncode}){why}; no stamp written", file=sys.stderr)
         return returncode
     if hl.run_git(a.repo, "rev-parse", "HEAD") != head:
         print("ci_stamp: HEAD moved during the run; no stamp written", file=sys.stderr)

@@ -78,6 +78,7 @@ For each width and theme, after the page settles (load, network quiet for a URL,
 | Past the right edge | each visible element's right edge | it passes the viewport's right edge, outside a container that scrolls or clips sideways on purpose |
 | Off the left edge | each visible element's left edge | it sits left of 0 |
 | Clipped text | a box with text anywhere inside it (its own or a child's, such as a cell's `<span>`) whose content is wider or taller than the box while its overflow is hidden or clipped | text is cut by 1 px sideways or 2 px vertically (a 1 px line-height overhang is not); an ellipsis or a `line-clamp` is reported separately as truncated, a note rather than a finding |
+| Spilled text | a table cell (`td`, `th`) or grid item with text whose content is wider than the box while its overflow is visible, such as a `nowrap` cell in a fixed-layout table | it is wider by 1 px or more: the text paints over its neighbour though nothing scrolls or clips. Listed in the Clipped column as `<selector> spills` |
 | Page errors | every uncaught exception, from before the page loads to the end of the row | any one, however well the page fits |
 | Console errors | every `console.error`, and what the browser logs at that level (a failed request, a blocked script) | any one; warnings and logs are not |
 | Empty sections | each rendered `main`, `section`, `article`, open `details`, `role=main`, `role=region` or `role=tabpanel`, plus each `--section SELECTOR` | it, and everything inside it, draws nothing: no visible text; no visible image, `svg`, `canvas`, video, audio, frame or form control; no background colour or image; no visible border; no `::before` or `::after` content |
@@ -156,6 +157,12 @@ folds; `folds_open` also counts toward the row's `status`.
   where the probe does not wait for the network) is not seen.
 - **An empty section can be on purpose.** A results panel waiting for a search reads as empty; hide
   it until it fills (`hidden`), or name it in the report as intended, never as clean.
+- **Spills are checked in cells and grid items only.** Text that paints out of any other box with
+  visible overflow (a flex child, a plain block) is not reported unless it passes the viewport edge;
+  a positioned child (a tooltip) can widen a cell and read as a spill. Look at the screenshot.
+- **The page's data is the data it was given.** A data-driven page passes here only for the data it
+  loaded; run its script in a test with empty, sparse and real data before it ships, and read each
+  section of the rendered page before calling it done.
 - **A crushed box is not called clipped.** Text in a box with no height or width reports nothing, so an
   overflow-hidden block crushed to zero height passes here. Look at the screenshot.
 - **A drawn box can be empty.** Anything the CSS draws counts as content, so a card with a background

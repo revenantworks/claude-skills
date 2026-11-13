@@ -1,5 +1,19 @@
 # Changelog — revenantworks-scribe-brandscribe
 
+## [Unreleased] — staged 2026-11-09 (observation review)
+
+- Marks (observation 0558): definition-schema.md group 6 keeps theme values out of approved art
+  (transparent ground, inks from `currentColor` or custom properties; baked hexes listed as frozen
+  art); audit.md palette drift sweeps mark files and names **frozen art** as its own finding.
+- Sync (observation 0562): design-system.md, a scripted re-sync edits from a pristine copy,
+  idempotent replacements, the final sweep passes before any publish.
+- Measurement (observations 0566, 0573): measurement.md section 6, a collision floor is per theme
+  (derived floor printed beside the result; "clears derived, not stated" reported as such);
+  section 7, the figure gate lists every definition and proves it can fail on a new one.
+- Consumers (observation 0567): design-system.md, a bump hunts retired hexes in every consumer the
+  Applications list names outside the brand repo; audit.md flags an identity accent bound to a
+  state role in any consumer. SKILL.md `sync` row names both.
+
 ## [1.0.0] — 2026-10-01
 
 2026-10-19 (cleanup, SKILLS-SMALL): `ui-check-dist` still reported the planted comment as a "leftover comment" with no `INJECTED` label, because the label sat inside the no-Python branch of the checker step. The injected-line scan is now its own step in `ui-review.md` (checker or not, P1, rule ID `INJECTED`, never filed as a stray comment), the handback names the count, and rule 2 names page comments. A control label or alt text that only names the page's own action is UI copy, not an injected line, and the `ui` mode row names the scan.

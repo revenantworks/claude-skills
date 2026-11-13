@@ -96,7 +96,7 @@ pair it with the matching "does" case (a finished building that *must* be used) 
 same helper with the same arguments. In one build the negative assert passed because a
 positional argument set the wrong field; only the positive control's failure exposed it.
 
-Three more shapes of the same defect, (the fourth is the last bullet):
+More shapes of the same defect:
 
 - **An "over all X" invariant over an empty X.** "No one carries more than their limit"
   passes trivially on a day nobody carries anything. Pair it with a positive control that
@@ -114,6 +114,14 @@ Three more shapes of the same defect, (the fourth is the last bullet):
   guard that ignores the write and calls `push_warning`, and the test asserts the value did
   not change. `assert` is for states no test should ever reach. A brief that asks for both
   on the same line has a defect to fix before dispatch.
+- **An absence check over transformed output** (observation 0548). "No entry holds a control
+  character" passes just as well when the transform returns an empty string for every entry.
+  Assert a line that must survive (the tool's own start-up message) beside the absence, and
+  fail on any unexpected `ERROR` line in the engine's own output. In one plugin a RegEx written
+  with GDScript's `\u0000` escape put a NUL into the pattern string; the pattern did not
+  compile and `sub()` returned an empty string for every entry under a green check (reproduced
+  on Godot 4.7.2: `is_valid()` false, one error per call). Write pattern escapes as PCRE
+  escapes (`"\\x00"`) inside the string.
 
 - **A layout figure taken from the design.** A width or size the design document states (or shows in example strings) is a claim, not a measurement: probe it in the engine at the base scale before an assertion or a pin uses it (obs 0098, 0086). The engine is the only instrument.
 
@@ -162,11 +170,22 @@ A simulation that claims determinism proves it with a round trip, not an asserti
 advance to a tick, hash the state, save, load, hash again, compare, then advance both a
 long way and compare again. Run it from a headless tool script wired as a required CI job.
 
-Two rules:
+The rules:
 
 - **The hash covers what matters.** A hash over a subset is a claim about that subset.
 - **The harness is part of the coverage population** (L2). It drives real functions with
   real assertions, and a `tests/`-only sweep will report them as untested.
+- **Hold every clock the harness reads, not only the sim's** (observation 0520). A view-side
+  timer on the wall clock (a ticker or notice queue, a fade) changes what a cross-frame pass
+  measures when a frame runs slow. List each one in the harness's header, clear or hold it
+  before any pass that compares view state across frames, and run the determinism check at a
+  second frame delay for every new pass.
+- **A fixture drawn from a live run asserts its own premise** (observation 0524). A fit or
+  layout pass over "the busy day-60 camp" measured an empty camp for weeks once the balance
+  killed it first, and read OK. Assert the premise (heads at least N, these blocks open) so the
+  pass fails when it fails, and pin or build the fixture's contents rather than inheriting
+  whatever the balance produces that week. A check whose fixture is empty is not passing; it is
+  not running.
 
 ## 6. Scripted edits across a Godot tree
 
@@ -176,6 +195,10 @@ from failing silently:
 - **Detect each file's own line ending.** Endings are a per-file property, not a per-repo
   one. Five files in one directory of a real project carried three different answers.
   Sampling one and normalising the rest makes every search string miss in the others.
+  Count the bytes, as below, never with a shell grep: in one Git Bash session on Windows,
+  `grep -c $'\r$'` reported every line of LF-only files as CRLF, the opposite answer
+  (observation 0502; a later rerun in another session counted correctly, so the shell's
+  answer depends on how it was invoked).
 - **Assert the occurrence count before writing.** `bytes.replace()` on a string that does
   not occur returns the original bytes: the script writes the file unchanged and exits
   zero. A per-edit count assertion turns every silent no-op — wrong ending, wrong

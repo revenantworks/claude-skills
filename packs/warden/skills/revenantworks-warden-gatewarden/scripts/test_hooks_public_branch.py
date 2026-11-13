@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """push_gate.public_branch: a branch carrying commits not on the remote's main is not pushed to a
 public repository (observation 0441; owner decision 2026-10-17), unless it is a fast-forward of that
-main with no merge commit (P-2026-11-04-01, owner 2026-11-04).
+main with no merge commit (P-2026-11-04-01, owner 2026-11-04) whose range passes the leak checks
+(push_gate.public_leak, hard). Main itself is not pushed to a public repo (push_gate.public_main):
+the PR is the merge path there.
 
 Fixture repos only, no network: the remote's URL reads as a GitHub repository, and a git
 `insteadOf` rewrite sends every git call to a local bare repo. The visibility lookup is stubbed: a
@@ -28,6 +30,8 @@ NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
 SLUG = "acme/widgets"
 URL = f"https://github.com/{SLUG}.git"
 RULE = "push_gate.public_branch"
+MAIN_RULE = "push_gate.public_main"
+LEAK_RULE = "push_gate.public_leak"
 
 sys.path.insert(0, str(HOOKS))
 import push_gate  # noqa: E402
@@ -64,6 +68,21 @@ class PublicBranchBase(unittest.TestCase):
         git(self.work, "fetch", "origin")
         self.mode = "guard"
         self.gh = os.path.join(self.tmp, "no-such-gh")  # a lookup that fails unless a test stubs one
+        # The repo's pre-push leak check (pii_guard's place on the rig): a stub that refuses an added
+        # line holding LEAKME and records each run, armed repo-locally so no machine hook is read.
+        self.hooks_dir = os.path.join(self.tmp, "githooks")
+        os.makedirs(self.hooks_dir)
+        self.hook_log = os.path.join(self.hooks_dir, "ran.txt")
+        with open(os.path.join(self.hooks_dir, "pre-push"), "w", newline="\n") as fh:
+            fh.write("#!/bin/sh\n"
+                     "echo \"$1\" >> \"$(dirname \"$0\")/ran.txt\"\n"
+                     "while read lref lsha rref rsha; do\n"
+                     "  if git log -p --format= \"$lsha\" \"^$rsha\" | grep -q LEAKME; then\n"
+                     "    echo \"leak check: an added line holds a listed word\" >&2; exit 1\n"
+                     "  fi\n"
+                     "done\n"
+                     "exit 0\n")
+        git(self.work, "config", "core.hooksPath", Path(self.hooks_dir).as_posix())
 
     def env(self):
         return {"GATEWARDEN_STATE": self.state, "GATEWARDEN_MODE": self.mode, "GATEWARDEN_GH": self.gh}
@@ -149,13 +168,56 @@ class PublicBranchGuardTests(PublicBranchBase):
         self.assertIn("1 commit not on origin/main", err)
         self.assertNotIn("intent", err.split("\n")[1])
 
-    def test_main_itself_is_unchanged_on_a_public_repo(self):
+    def test_main_pushed_straight_to_a_public_repo_is_refused(self):
+        # P-2026-11-04-01: the PR is the merge path on a public repo; main itself is never pushed.
         self.seed(private=False)
+        commit(self.work, "b.txt", "1\n")
+        self.ready(1)
+        code, _, err = self.run_hook("git push origin main")
+        self.assertEqual(code, 2, err)
+        self.assertIn("main", err)
+        self.assertIn("PR", err)
+        self.assertEqual([e["outcome"] for e in self.events() if e["rule"] == MAIN_RULE], ["blocked"])
+
+    def test_branch_pushed_onto_the_public_main_is_refused(self):
+        self.seed(private=False)
+        self.feature(1)
+        self.ready(1)
+        code, _, err = self.run_hook("git push origin feature:main")
+        self.assertEqual(code, 2, err)
+        self.assertIn("PR", err)
+
+    def test_private_main_push_is_unchanged(self):
+        self.seed(private=True)
         commit(self.work, "b.txt", "1\n")
         self.ready(1)
         code, out, err = self.run_hook("git push origin main")
         self.assertEqual(code, 0, err)
         self.assertNotIn("public", out)
+
+    def test_force_push_of_a_fast_forward_branch_is_refused(self):
+        self.seed(private=False)
+        self.feature(1)
+        self.ready(1)
+        for cmd in ("git push --force origin feature", "git push origin +feature", "git push -f origin feature"):
+            code, _, err = self.run_hook(cmd)
+            self.assertEqual(code, 2, cmd)
+            self.assertIn("force", err, cmd)
+
+    def test_delete_of_a_public_branch_is_refused(self):
+        self.seed(private=False)
+        code, _, err = self.run_hook("git push origin :feature")
+        self.assertEqual(code, 2, err)
+        self.assertIn("delete", err)
+
+    def test_tag_push_is_never_passed_as_a_fast_forward_branch(self):
+        self.seed(private=False)
+        commit(self.work, "b.txt", "1\n")
+        git(self.work, "tag", "v1")
+        self.ready(1)
+        _, out, _ = self.run_hook("git push origin v1")
+        self.assertNotIn("fast-forward", out)
+        self.assertFalse(os.path.exists(self.hook_log))
 
     def test_private_repo_branch_push_is_unchanged(self):
         self.seed(private=True)
@@ -164,6 +226,7 @@ class PublicBranchGuardTests(PublicBranchBase):
         code, out, err = self.run_hook("git push -u origin feature")
         self.assertEqual(code, 0, err)
         self.assertNotIn("visibility unknown", out)
+        self.assertFalse(os.path.exists(self.hook_log))  # no leak check run on a private push
 
     def test_unknown_visibility_falls_back_and_says_so(self):
         self.feature(2)
@@ -209,7 +272,51 @@ class PublicBranchGuardTests(PublicBranchBase):
         note = json.loads(out)["hookSpecificOutput"]["additionalContext"]
         self.assertIn("fast-forward of origin/main", note)
         self.assertIn("2 new commits become public", note)
+        self.assertIn("leak check passed", note)
         self.assertEqual([e["outcome"] for e in self.events() if e["rule"] == RULE], ["passed"])
+        self.assertEqual(Path(self.hook_log).read_text().split(), ["origin"])  # the hook ran once, before the pass
+
+    def test_leak_in_the_pushed_range_is_refused(self):
+        self.seed(private=False)
+        self.feature(1)
+        commit(self.work, "notes.txt", "LEAKME\n")
+        self.ready(2)
+        code, _, err = self.run_hook("git push -u origin feature")
+        self.assertEqual(code, 2, err)
+        self.assertIn("leak check", err)
+        self.assertIn("pre-push", err)
+        self.assertEqual([e["outcome"] for e in self.events() if e["rule"] == LEAK_RULE], ["blocked"])
+
+    def test_leak_refusal_holds_in_watch_mode(self):
+        self.mode = "watch"
+        self.seed(private=False)
+        self.feature(1)
+        commit(self.work, "notes.txt", "LEAKME\n")
+        self.ready(2)
+        code, _, err = self.run_hook("git push -u origin feature")
+        self.assertEqual(code, 2, err)
+
+    def test_secret_shaped_value_in_the_range_is_refused_unechoed(self):
+        self.seed(private=False)
+        self.feature(1)
+        token = "ghp_" + "Ab3" * 12
+        commit(self.work, "cfg.txt", f"token = {token}\n")
+        self.ready(2)
+        code, out, err = self.run_hook("git push -u origin feature")
+        self.assertEqual(code, 2, err)
+        self.assertIn("secret-shaped", err)
+        self.assertNotIn(token, err + out)
+        self.assertFalse(os.path.exists(self.hook_log))  # refused before the hook ran
+
+    def test_no_armed_leak_check_is_refused_never_passed(self):
+        self.seed(private=False)
+        os.remove(os.path.join(self.hooks_dir, "pre-push"))
+        self.feature(1)
+        self.ready(1)
+        code, _, err = self.run_hook("git push -u origin feature")
+        self.assertEqual(code, 2, err)
+        self.assertIn("not run", err)
+        self.assertEqual([e["outcome"] for e in self.events() if e["rule"] == LEAK_RULE], ["blocked"])
 
     def test_fast_forward_pass_still_asks_for_the_intent_and_stamp(self):
         self.seed(private=False)
@@ -255,12 +362,29 @@ class PublicBranchModeTests(PublicBranchBase):
         self.assertIn("2 commits not on origin/main", json.loads(out)["hookSpecificOutput"]["additionalContext"])
         self.assertEqual([e["outcome"] for e in self.events() if e["rule"] == RULE], ["nudged"])
 
+    def test_public_main_watch_logs_and_lets_the_push_run(self):
+        self.mode = "watch"
+        self.seed(private=False)
+        commit(self.work, "b.txt", "1\n")
+        self.ready(1)
+        code, _, err = self.run_hook("git push origin main")
+        self.assertEqual(code, 0, err)
+        self.assertEqual([e["outcome"] for e in self.events() if e["rule"] == MAIN_RULE], ["logged"])
+
     def test_rule_is_settable_by_the_review_tool(self):
         env = {k: v for k, v in os.environ.items() if not k.startswith("GATEWARDEN_")}
         env["GATEWARDEN_STATE"] = self.state
-        p = subprocess.run([PY, str(HOOKS / "warden_review.py"), "set", RULE, "guard"], capture_output=True,
+        for rule in (RULE, MAIN_RULE):
+            p = subprocess.run([PY, str(HOOKS / "warden_review.py"), "set", rule, "guard"], capture_output=True,
+                               text=True, env=env, creationflags=NO_WINDOW, stdin=subprocess.DEVNULL)
+            self.assertEqual(p.returncode, 0, p.stdout + p.stderr)
+
+    def test_leak_rule_is_hard_and_cannot_be_relaxed(self):
+        env = {k: v for k, v in os.environ.items() if not k.startswith("GATEWARDEN_")}
+        env["GATEWARDEN_STATE"] = self.state
+        p = subprocess.run([PY, str(HOOKS / "warden_review.py"), "set", LEAK_RULE, "watch"], capture_output=True,
                            text=True, env=env, creationflags=NO_WINDOW, stdin=subprocess.DEVNULL)
-        self.assertEqual(p.returncode, 0, p.stdout + p.stderr)
+        self.assertNotEqual(p.returncode, 0, p.stdout + p.stderr)
 
 
 class VisibilityLookupTests(PublicBranchBase):
