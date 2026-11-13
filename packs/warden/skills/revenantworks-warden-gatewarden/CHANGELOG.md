@@ -1,5 +1,9 @@
 # Changelog — revenantworks-warden-gatewarden
 
+## [1.0.2] — 2026-11-13
+
+- public-main refusal and leak checks, ci_stamp step deadline, plugin-id check
+
 ## [1.0.1] — 2026-11-12
 
 - install_hooks.py owner-run installer with downgrade guard; golive_block and push_gate hook fixes

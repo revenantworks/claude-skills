@@ -6,7 +6,7 @@ Counts: 22 queries (11 should, 11 should-not, 2 pairs)
 > **Authored, not run.** Read each query cold against name + description only and route it. The
 > native `claude plugin eval` cases in this folder run two of these rows (Y1
 > `trigger-dropped-frames`, N1 `near-miss-podcast-srt`) plus three behaviour cases from
-> `test-cases.md` (T1, T2/T3, T6). **Re-anchored to v1.0.0, 2026-10-01:** 1.0.0 launch version; suite content unchanged from the build the A6 evals ran against.
+> `test-cases.md` (T1, T2/T3, T6). **Re-anchored to v1.0.1, 2026-11-13:** 1.0.0 launch version; suite content unchanged from the build the A6 evals ran against.
 
 22 queries: 11 should fire, 11 should not.
 

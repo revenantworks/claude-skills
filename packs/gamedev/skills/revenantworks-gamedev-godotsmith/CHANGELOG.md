@@ -1,5 +1,9 @@
 # Changelog — revenantworks-gamedev-godotsmith
 
+## [1.0.1] — 2026-11-13
+
+- reference updates from the 2026-11-09 review
+
 ## [1.0.0] — 2026-10-01
 
 2026-11-09 (weekly observation review, slice b; observations 0478, 0484, 0486, 0493, 0494, 0501, 0502, 0506, 0516, 0520, 0524, 0548, 0549, 0554, 0565, 0599, 0608, 0617, 0621): `gut-traps.md` section 4 says `-gselect` is a substring match (keep the `.gd` suffix) and a one-script run with no summary is no run (the `ClassName.call` parse drop, reproduced on Godot 4.7.2); section 3 excuses a known-red base by test name, never by script, and checks a union-merged `.gd` file for duplicate functions. `gdscript-invariants.md` section 3 pairs an absence check over transformed output with a survivor line (the `\u0000` RegEx trap, reproduced), section 5 holds every clock a harness reads and makes a live-run fixture assert its premise, section 6 counts line endings as bytes, never with a shell grep. `determinism-and-state.md` rounds in the engine before formatting, runs a round trip's load in a fresh process, and gives every control a witness that the feature fired. `systems-and-export.md` keys a view's memory on the game, `lifecycle-and-safety.md` keeps helpers off virtual names, `project-hygiene.md` has editor code read `override.cfg` itself, `ci-guards.md` section 5 makes a local stand-in for a CI step run that step's other commands, `test-tiers.md` names the one-process proof a shard removes, and `probes.md` gains a bot-as-instrument check and sections 6 (a headless editor-side probe) and 7 (a real render on a hidden Windows desktop). SKILL.md unchanged.

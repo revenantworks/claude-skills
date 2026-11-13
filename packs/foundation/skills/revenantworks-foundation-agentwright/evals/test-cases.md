@@ -1,6 +1,6 @@
 # Assertion Suite — agentwright
 
-- Provenance: derived from revenantworks-foundation-agentwright v1.0.0; last re-anchored to v1.0.0, 2026-10-01; 2026-10-04 changes carry no version bump (private-test-phase rule). Full re-anchor history moved to evals/RESULTS.md.
+- Provenance: derived from revenantworks-foundation-agentwright v1.0.0; last re-anchored to v1.0.1, 2026-11-13; 2026-10-04 changes carry no version bump (private-test-phase rule). Full re-anchor history moved to evals/RESULTS.md.
 - Counts: 30 cases live, numbered to 35 (17–20 and 25 retired 2026-10-01 with the scan's move to gatewarden; 33–35 added), assertion-only (format, coverage and fixture notes moved to evals/RESULTS.md).
 - Owed: the authored-not-covered additions named in the moved history (recorded as owed, not claimed); none discharged by later bumps.
 

@@ -1,7 +1,7 @@
 {
   "name": "gamedev",
   "displayName": "Revenantworks Gamedev",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Game-development skills on the -smith motif. Five members: pixelsmith (pixel art that reads at several zoom scales), godotsmith (Godot 4.x conventions and proof a build is green), soundsmith (game audio judged by numbers), slicesmith (the test-first coding loop), uismith (menus, HUD and dashboards with a fit probe at every width and theme). Standard-library scripts allowed when declared; Playwright is uismith's one optional package.",
   "author": {
     "name": "Revenantworks"

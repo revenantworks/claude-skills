@@ -1,5 +1,9 @@
 # Changelog — revenantworks-foundation-pacewright
 
+## [1.0.1] — 2026-11-13
+
+- modes reference update
+
 ## [1.0.0] — 2026-10-01
 
 2026-10-20 (review RV-SKILLS2-WF F2): `modes.md`'s busy-engines row counts leaf engines: an engine with an engine below it (ci_local over its Godot shards) counts none itself, the engines under it one each, and a headless Godot always counts, so a 6-shard walk is 6, as dispatchwright's `rig_gate.py` now reads it.

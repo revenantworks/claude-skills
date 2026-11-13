@@ -4,7 +4,7 @@
 > mechanical halves of T2-T7 are also covered by `scripts/test_whisper_run.py` (20 tests,
 > passing 2026-10-01). Assertion-only: each case is an Input plus mechanical checks on the
 > run's output. `Without:` is the expected no-skill behaviour; `Discriminates:` is the assert
-> that behaviour fails. **Re-anchored to v1.0.0, 2026-10-01:** 1.0.0 launch version; suite content unchanged from the build the A6 evals ran against.
+> that behaviour fails. **Re-anchored to v1.0.1, 2026-11-13:** 1.0.0 launch version; suite content unchanged from the build the A6 evals ran against.
 
 15 cases: one per entry point (audit, check, plan, run, status, refresh, bare), one per parity
 margin (M1 backend proof, M2 lease, M3 transcript check), the restraint and degradation paths,

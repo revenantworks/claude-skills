@@ -1,5 +1,9 @@
 # Changelog — revenantworks-warden-shieldwarden
 
+## [1.0.1] — 2026-11-13
+
+- policy-format and scan-shapes reference updates
+
 ## [1.0.0] — 2026-10-01
 
 2026-10-16 (full observation review, U21): `rewrite-recipes.md` carries a clean start's bindings (secrets, variables, security settings) before the first push and re-points claude.ai connections in After, step 7 (observation 0436); `policy-format.md` says an enforcing hook refuses, never only warns (observation 0434).

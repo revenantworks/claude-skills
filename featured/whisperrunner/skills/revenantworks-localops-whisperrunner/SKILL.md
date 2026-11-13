@@ -4,7 +4,7 @@ description: Transcribes local audio and video to txt, srt, vtt and json with ti
 license: Apache-2.0
 compatibility: Requires whisper-cli from whisper.cpp (a Vulkan build for GPU work; the user builds it once — references/install-walkthrough.md), a GGML model file, FFmpeg for anything other than 16 kHz 16-bit WAV, and Python 3 to run scripts/whisper_run.py, transcript_check.py and the pack-shared gpu_preflight.py (run, not read). Without a shell it hands back the exact commands and marks every check NOT-RUN. No packages, no network. Siblings are named, never required.
 metadata:
-  version: "1.0.0"
+  version: "1.0.1"
   profile: standard
   pack: localops
   brand: revenantworks

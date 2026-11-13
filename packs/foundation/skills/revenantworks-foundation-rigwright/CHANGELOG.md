@@ -1,5 +1,9 @@
 # Changelog — revenantworks-foundation-rigwright
 
+## [1.0.1] — 2026-11-13
+
+- audit-evidence reference gains new checks
+
 ## [1.0.0] — 2026-10-01
 
 2026-10-08 (K8 fix round): the subagent template's `model:` line names the `fable` alias (audit K7-1-23).

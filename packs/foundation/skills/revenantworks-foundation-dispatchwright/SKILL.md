@@ -4,7 +4,7 @@ description: Runs a session's fan-out — splits a large request into tiered, re
 license: Apache-2.0
 compatibility: Ships optional stdlib scripts/suite_slot.py (suite cap) and scripts/rig_gate.py (rig gate). Writes a run ledger and unit briefs (file tools, or in chat). Units commit locally; pushes go to origin only, batched, behind the identity check in section 5. git turns Reconcile into evidence; without it a row reads unverified, never done. Without subagent tools a run ends at the tiered plan. pacewright's budget file is optional data. Two forcing hooks are optional and owner-installed.
 metadata:
-  version: "1.0.0"
+  version: "1.0.1"
   profile: standalone
   pack: foundation
   brand: revenantworks

@@ -1,6 +1,6 @@
 # Assertion suite — revenantworks-warden-shieldwarden
 
-Provenance: authored against SKILL.md at the v1.0.0 build (2026-09-28); re-anchored to v1.0.0, 2026-10-01 (2026-10-01: renamed from shieldrunner, case A10 added for the skipped-file listing).
+Provenance: authored against SKILL.md at the v1.0.0 build (2026-09-28); re-anchored to v1.0.1, 2026-11-13 (2026-10-01: renamed from shieldrunner, case A10 added for the skipped-file listing).
 Each case states its input, what must be true of the response, and what would falsify it.
 Cases in sections A to C are **script** cases: each maps to a named test in
 `scripts/test_shield_scan.py`, which builds its fixtures at runtime from obviously fake

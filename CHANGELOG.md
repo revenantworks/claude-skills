@@ -5,6 +5,53 @@ Every pack, every member and every featured plugin launches at 1.0.0. Each membe
 `<pack>-vX.Y.Z`, member versions move on their own semver, and a featured plugin carries its
 member's version.
 
+## [hearth-v1.0.2] - 2026-11-13
+
+### Improved
+
+- **hearth**: The pack README now points at plugin.json for its version and names faretender as its one skill.
+
+## [warden-v1.1.3] - 2026-11-13
+
+### Improved
+
+- **gatewarden**: A push that sends commits straight to main on a public repository is refused (`push_gate.public_main`); the pull request is the merge path. A branch that goes to a public repository is first read for secret shapes and run through the repo's armed pre-push hook, and a hit, or a check that did not run, refuses in every mode (`push_gate.public_leak`).
+- **gatewarden**: The local-CI stamp script gives every step a deadline (`--step-timeout`, default 45 minutes) and kills a hung step with its children, and `loads` flags a plugin id that settings enable but nothing installs, or the reverse.
+- **gatewarden**: The tests mark the stub pre-push hook executable so Linux CI runs it, with a new test that a non-executable hook is refused.
+- **trustwarden**: The pin check compares the top-level licence file at both SHAs and holds the pin on a changed, added or removed licence.
+- **shieldwarden**: The policy and scan-shape references gain a rule for repos that take writes from outside a machine hook's reach, and a test-output leak shape.
+- **warden**: The pack README points at plugin.json for its version.
+
+## [scribe-v1.1.1] - 2026-11-13
+
+### Improved
+
+- **brandscribe**: Marks keep theme values out of approved art and the audit reports baked hexes as frozen art; a scripted design-system re-sync edits from a pristine copy; collision floors are measured per theme, and a version bump hunts retired hexes in every consumer.
+
+## [localops-v1.0.3] - 2026-11-13
+
+### Improved
+
+- **comfyrunner**: `comfy_client.py nodes --all --save-info FILE` saves the server's whole node list in one call.
+- **whisperrunner**: A configured binary or model path that no longer exists stops with the one command that re-points it; "not found" now names where it looked; `--no-context` is passed through, with advice for synthetic audio and a script-check recipe.
+- **obsrunner**: `status` reads a disabled replay buffer as off and keeps the verdict OK.
+
+## [gamedev-v1.2.1] - 2026-11-13
+
+### Improved
+
+- **godotsmith**: New traps and checks in the GUT, GDScript, determinism, export and CI-guard references: `-gselect` is a substring match, a one-script run with no summary is no run, and more.
+- **slicesmith**: A "red for the right reason" section for new functions, seams, switches and filters, and sharper spec and plan steps.
+- **uismith**: The probe reports spilled text, a cell or grid item wider than its box, in the Clipped column; the old probe passed such a page.
+
+## [foundation-v1.1.2] - 2026-11-13
+
+### Improved
+
+- **dispatchwright**: The unit-brief template, meters and ledger-schema references carry the lessons of recent fan-out runs.
+- **agentwright**, **rigwright**, **skillwright**: New design-checklist, audit-evidence, eval-audit and MCP-tool checks.
+- **pacewright**, **scoutwright**: Mode and bench references updated.
+
 ## [hearth-v1.0.1] - 2026-11-12
 
 ### Improved

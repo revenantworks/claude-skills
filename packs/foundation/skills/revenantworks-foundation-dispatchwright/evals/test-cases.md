@@ -1,6 +1,6 @@
 # Assertion Suite — revenantworks-foundation-dispatchwright
 
-- Provenance: target `revenantworks-foundation-dispatchwright` v1.2.0 (suite authored 2026-09-09); last re-anchored to v1.0.0, 2026-10-01. Full re-anchor history moved to evals/RESULTS.md.
+- Provenance: target `revenantworks-foundation-dispatchwright` v1.2.0 (suite authored 2026-09-09); last re-anchored to v1.0.1, 2026-11-13. Full re-anchor history moved to evals/RESULTS.md.
 - Counts: 35 cases (32–35 added 2026-10-23: tiered checks and the merged head, known reds, short-run switches, no stash in a shared checkout), assertion-only (format, coverage and fixture notes moved to evals/RESULTS.md). Cases 23–26 added 2026-10-01 (P1: meters, run records, replan gate, retriever); Cases 27–29 added 2026-10-04 (observations 0182, 0283, 0285, 0333: land gate and write order, thin pass, adversarial verifier); Cases 30–31 added 2026-10-15 (observations 0432, 0417: pin-arc land cadence, report carrier); authored, not run.
 - Owed: suite authored 2026-09-09 and not executed per this header; the coverage debt from the 1.2.4 re-anchor is in the moved history.
 

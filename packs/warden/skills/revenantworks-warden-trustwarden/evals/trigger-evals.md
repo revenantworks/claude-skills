@@ -4,7 +4,7 @@ Counts: 26 queries (13 should, 13 should-not, 5 pairs)
 
 Provenance: authored against SKILL.md v0.1.0 (2026-10-01), by the unit that wrote the
 description. Judged from **name + description only**, as a cold router would. Not a cold judge —
-the reader wrote the clauses — so a cold re-judge is owed. **Re-anchored to v1.0.0, 2026-10-01:** 1.0.0 launch version; suite content unchanged from the build the A6 evals ran against.
+the reader wrote the clauses — so a cold re-judge is owed. **Re-anchored to v1.0.1, 2026-11-13:** 1.0.0 launch version; suite content unchanged from the build the A6 evals ran against.
 
 Balance: 13 should-fire · 13 should-not (10 near-misses, 3 off-topic) — 26 in all.
 

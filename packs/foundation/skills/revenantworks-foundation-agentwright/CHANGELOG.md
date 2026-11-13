@@ -1,5 +1,9 @@
 # Changelog — revenantworks-foundation-agentwright
 
+## [1.0.1] — 2026-11-13
+
+- design-checklist reference gains new checks
+
 ## [1.0.0] — 2026-10-01
 
 2026-10-16 (full observation review, U21): `design-checklist.md` area 9, audit the grants of an untrusted-input job from its raw config (0374) and read back connector grants after a form save (0386); area 6, dated keys name their time zone (0386) and every external write names the runtime's own tool (0431); area 8, coverage on long walks, null for an uncounted count, one retry rule, fallbacks checked against the schema (0440), and input verified before an unattended prompt edit (0391).

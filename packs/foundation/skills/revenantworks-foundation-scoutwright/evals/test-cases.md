@@ -2,7 +2,7 @@
 
 - Provenance: written for revenantworks-foundation-scoutwright 0.1.0, 2026-10-01 (B15). State:
   authored, not yet run. Native mirrors live in the case folders (`claude plugin eval`, read-only,
-  fixtures under `resources/`, no network). **Re-anchored to v1.0.0, 2026-10-01:** 1.0.0 launch version; suite content unchanged from the build the A6 evals ran against. **C20-C22 added 2026-10-08** with the `fit` entry (unit K4b). **C23-C24 added 2026-10-13** with the `bench` entry; C1 now names eight entries.
+  fixtures under `resources/`, no network). **Re-anchored to v1.0.1, 2026-11-13:** 1.0.0 launch version; suite content unchanged from the build the A6 evals ran against. **C20-C22 added 2026-10-08** with the `fit` entry (unit K4b). **C23-C24 added 2026-10-13** with the `bench` entry; C1 now names eight entries.
 - Format: Input, then mechanical Assert lines. `Without:` says what bare Claude is expected to do,
   so a case that passes both ways is flagged non-discriminating.
 - Margin and *beaten* claims in SOURCES.md name the case that tests them.

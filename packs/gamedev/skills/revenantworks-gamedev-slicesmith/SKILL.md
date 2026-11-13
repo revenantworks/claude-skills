@@ -4,7 +4,7 @@ description: Runs the test-first build loop (spec, plan, thin slices, failing te
 license: Apache-2.0
 compatibility: Ships no code. Needs file tools and, to test and commit, a shell with git and the project's own commands (Godot 4 headless with GUT or gdUnit4; dotnet with xUnit for C#; else the runner the repo's CI names). With no shell it plans and writes slices, marks every verify step NOT-RUN and never claims green. Optional siblings — godotsmith, pixelsmith, soundsmith; grillwright, dispatchwright, handoffwright — each with the fallback the body names. No packages, no network at runtime.
 metadata:
-  version: "1.0.0"
+  version: "1.0.1"
   profile: standard
   pack: gamedev
   brand: revenantworks

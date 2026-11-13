@@ -5,7 +5,7 @@ Counts: 22 queries (11 should, 11 should-not, 3 pairs)
 > Provenance: written for 0.1.0 (2026-10-01) against the description as built. **Authored, not
 > run.** Read each query cold against name + description only and route it. The native
 > `claude plugin eval` cases in this folder run two of these rows (Y1 `trigger-srt-subtitles`,
-> N1 `near-miss-voiceover`) plus three behaviour cases from `test-cases.md` (T2, T3, T8). **Re-anchored to v1.0.0, 2026-10-01:** 1.0.0 launch version; suite content unchanged from the build the A6 evals ran against.
+> N1 `near-miss-voiceover`) plus three behaviour cases from `test-cases.md` (T2, T3, T8). **Re-anchored to v1.0.1, 2026-11-13:** 1.0.0 launch version; suite content unchanged from the build the A6 evals ran against.
 
 22 queries: 11 should fire, 11 should not (Y11 and N11 added in P1e2 for the obsrunner seam).
 

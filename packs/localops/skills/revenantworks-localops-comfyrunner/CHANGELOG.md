@@ -1,6 +1,6 @@
 # Changelog — revenantworks-localops-comfyrunner
 
-## [Unreleased] — staged 2026-11-09 (observation review)
+## [1.0.1] — 2026-11-13
 
 - `comfy_client.py nodes --all --save-info FILE` (observation 0579): the batch path saves the
   server's whole `/object_info` in one call, for a runner that guards many graphs (different

@@ -1,6 +1,6 @@
 # Changelog — revenantworks-localops-whisperrunner
 
-## [Unreleased] — staged 2026-11-09 (observation review)
+## [1.0.1] — 2026-11-13
 
 - Locate (observations 0531, 0607): a configured `bin` or model path that no longer exists stops
   with `configured bin <path> is gone` and the one `configure --root <folder> --force` line,

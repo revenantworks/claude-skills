@@ -4,7 +4,7 @@ description: Drives OBS Studio through its WebSocket, read-only by default, and 
 license: Apache-2.0
 compatibility: Requires OBS Studio 28+ with its WebSocket server on, the obsws-python package (owner-installed, references/install-walkthrough.md) for live OBS modes, FFmpeg and FFprobe for post, and Python 3 to run scripts/obs_ws.py, obs_audit.py, obs_post.py and the pack-shared gpu_preflight.py (run, not read). audit and post work without the package. Without a shell it hands back commands and marks checks NOT-RUN. Loopback only, no cloud. Siblings are named, never required.
 metadata:
-  version: "1.0.0"
+  version: "1.0.1"
   profile: standard
   pack: localops
   brand: revenantworks

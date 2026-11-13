@@ -4,7 +4,7 @@ description: Finds what changed in Claude — docs, release notes, changelogs, G
 license: Apache-2.0
 compatibility: Works alone. Needs web fetch (and search for the community leg); without them it reports what it could not read and stops. Optional, never required — gh CLI for GitHub reads (WebFetch of the public API otherwise); a shell for exact page hashes (an outline fingerprint otherwise); researchscribe for routes to sites that block bots (those sources are listed as not read otherwise). Writes only its reports, adopt rows, fit cards and ledger. Never installs, schedules or holds a key.
 metadata:
-  version: "1.0.0"
+  version: "1.0.1"
   profile: standalone
   pack: foundation
   brand: revenantworks

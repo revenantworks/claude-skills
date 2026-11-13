@@ -1,6 +1,6 @@
 # Changelog — revenantworks-localops-obsrunner
 
-## [Unreleased] — staged 2026-11-09 (observation review)
+## [1.0.1] — 2026-11-13
 
 - `obs_ws.py status` (observation 0615): a replay buffer that is off (obs-websocket code 604)
   reads `replay_buffer: off` and the verdict stays OK; the verdict rests on the required reads

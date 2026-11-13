@@ -4,7 +4,7 @@ description: Decides where a standing rule lives and builds the config Claude re
 license: Apache-2.0
 compatibility: Ships no code. In Claude Code it runs /init, /doctor and /doctor prompt-audit first where they exist; elsewhere it works from the pasted or named config. Writes config files only on build, after the gate; without file tools it delivers pasteable blocks. Web search only for refresh (references/surface-notes.md). No packages.
 metadata:
-  version: "1.0.0"
+  version: "1.0.1"
   profile: standalone
   pack: foundation
   brand: revenantworks

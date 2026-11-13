@@ -1,5 +1,9 @@
 # Changelog — revenantworks-gamedev-uismith
 
+## [1.1.1] — 2026-11-13
+
+- probe reports spilled text; surfaces and probe references updated
+
 ## [1.1.0] — 2026-11-11
 
 New references/artifact-pages.md: the theme and phone pass for published artifact pages, from a pass over 17 live pages. Also: a shared card kit over hand-rolled switches (attributes it owns, never the host's data-theme), tabs (bottom bar on phones, same bar on top elsewhere), freshness stamps, the downloads capability for saves inside claude.ai, and a vetted adopt/reject list from MDN, web.dev, WAI-ARIA APG, GOV.UK and Nielsen Norman Group. Purpose and source first; palettes only from the page's own brand definition; token-ise before theming; a theme watcher that ignores its own writes; new controls in their own class; contrast and 44 px checks per palette and mode; probe traps. Load-budget line added.

@@ -1,5 +1,9 @@
 # Changelog — revenantworks-foundation-skillwright
 
+## [1.0.1] — 2026-11-13
+
+- eval-audit and mcp-tools reference updates from the 2026-11-09 review
+
 ## [1.0.0] — 2026-10-01
 
 2026-10-20 (review RV-SKILLS-WF F15): `pack-registry.md` records the measured bodies after the dispatchwright, godotsmith and slicesmith slims (≈4938, ≈3198, ≈2198), each under its unchanged row.
