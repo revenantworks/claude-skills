@@ -1,7 +1,7 @@
 # foundation pack
 
 **Nine wrights that build, audit and run the work around Claude itself.** On the `-wright` motif,
-standalone profile, version 1.0.0.
+standalone profile. The current version is in `.claude-plugin/plugin.json`.
 
 ```
 /plugin marketplace add revenantworks/claude-skills

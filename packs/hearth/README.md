@@ -1,6 +1,7 @@
 # hearth pack
 
-**Skills for personal and household life.** On the `-tender` motif, standard profile, version 1.0.0.
+**One tender for personal and household life: the real cost of a trip.** On the `-tender` motif,
+standard profile. The current version is in `.claude-plugin/plugin.json`.
 
 ```
 /plugin marketplace add revenantworks/claude-skills

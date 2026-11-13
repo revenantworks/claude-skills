@@ -1,7 +1,7 @@
 # gamedev pack
 
 **Five smiths for game development: pixel art, Godot build proof, game audio, test-first game code and screen direction.** On the `-smith`
-motif, standard profile, version 1.0.0.
+motif, standard profile. The current version is in `.claude-plugin/plugin.json`.
 
 ```
 /plugin marketplace add revenantworks/claude-skills

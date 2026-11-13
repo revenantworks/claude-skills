@@ -1,7 +1,7 @@
 # localops pack
 
 **Seven runners for work that stays on this machine, one program each.** On the `-runner` motif,
-standard profile, version 1.0.0.
+standard profile. The current version is in `.claude-plugin/plugin.json`.
 
 ```
 /plugin marketplace add revenantworks/claude-skills

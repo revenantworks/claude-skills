@@ -3,30 +3,42 @@
 **31 Agent Skills for Claude in six packs, plus optional mods. Each skill does one job, shows its
 evidence, and works alone.**
 
-![skills: 31](https://img.shields.io/badge/skills-31-blue)
-![packs: 6](https://img.shields.io/badge/packs-6-blue)
-![version: 1.0.0](https://img.shields.io/badge/version-1.0.0-informational)
-![mods: optional](https://img.shields.io/badge/mods-optional-lightgrey)
-![licence: Apache-2.0](https://img.shields.io/badge/licence-Apache--2.0-green)
-![Agent Skills: open standard](https://img.shields.io/badge/Agent%20Skills-open%20standard-lightgrey)
+[![skills: 31](https://img.shields.io/badge/skills-31-2a78d6)](#the-packs)
+[![packs: 6](https://img.shields.io/badge/packs-6-2a78d6)](#the-packs)
+[![pack-ci](https://github.com/revenantworks/claude-skills/actions/workflows/pack-ci.yml/badge.svg?branch=main)](https://github.com/revenantworks/claude-skills/actions/workflows/pack-ci.yml)
+[![licence: Apache-2.0](https://img.shields.io/badge/licence-Apache--2.0-green)](LICENSE)
+[![Agent Skills: open standard](https://img.shields.io/badge/Agent%20Skills-open%20standard-lightgrey)](https://agentskills.io/)
 
 This repository is its own Claude Code plugin marketplace. Each pack installs as one plugin, and one
 featured skill from every pack also ships on its own. Every skill follows the
 [Agent Skills open standard](https://agentskills.io/), so it also runs on claude.ai, through the
 Claude API, or in any compatible agent.
 
-> [!NOTE]
-> **New: mods.** [`mods/`](mods/README.md) adds two optional Claude Code plugins: `vigil`, one
-> dashboard that counts how the skills fire, fail and misroute, shows the meters, and suggests
-> what to change (it never builds anything), and `shroud`, which masks secrets before Claude
-> reads them. Installing one is the opt-in; no skill needs one.
+**Start here:** add the marketplace, then install the one pack that matches your work.
 
-> [!TIP]
+```
+/plugin marketplace add revenantworks/claude-skills
+/plugin install foundation@revenantworks
+```
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/skills-per-pack-dark.svg">
+  <source media="(prefers-color-scheme: light)" srcset="docs/assets/skills-per-pack-light.svg">
+  <img alt="Bar chart of skills per pack, with each pack's version. The packs table below lists the same counts." src="docs/assets/skills-per-pack-light.svg" width="720">
+</picture>
+
+> [!NOTE]
+> **New: mods.** [`mods/`](mods/README.md) adds two optional Claude Code plugins. `vigil` is one
+> dashboard that counts how the skills fire, fail and misroute, shows the meters, and suggests
+> what to change (it never builds anything). `shroud` masks secrets before Claude reads them.
+> Installing one is the opt-in; no skill needs one.
+>
 > **Coming soon: Scrubwarden**, an offline PII scanner built on shieldwarden's scan engine. No
 > network, rules only. [More below](#coming-soon-scrubwarden).
 
-[Quick start](#quick-start) · [Packs](#the-packs) · [Featured](#featured-skills) ·
-[Godot tooling](#godot-tooling) · [Mods](#mods) · [Capstones](#capstones) · [How skills route](#how-skills-route) · [Safety](#safety-posture) ·
+**Contents:** [Quick start](#quick-start) · [Packs](#the-packs) · [Featured](#featured-skills) ·
+[Godot tooling](#godot-tooling) · [Mods](#mods) · [Capstones](#capstones) ·
+[How skills route](#how-skills-route) · [Safety](#safety-posture) ·
 [Testing](#testing-and-contributing) · [Coming soon](#coming-soon-scrubwarden) · [Licence](#licence)
 
 ## Quick start
@@ -39,50 +51,40 @@ Claude API, or in any compatible agent.
 
 **2. Then install a skill one way only.** Pick a whole pack *or* a single featured skill.
 
-**Option A: a whole pack**
-
-```
-/plugin install warden@revenantworks
-```
-
-**— or —**
-
-**Option B: one featured skill on its own**
-
-```
-/plugin install trustwarden@revenantworks
-```
+| Option A: a whole pack | Option B: one featured skill on its own |
+|---|---|
+| `/plugin install warden@revenantworks` | `/plugin install trustwarden@revenantworks` |
 
 > [!IMPORTANT]
-> **Load each skill once, and only where you use it.** Every enabled skill lists its name and
-> description in front of Claude on every turn (about 300 tokens each for these skills). That listing
-> gets 1% of the context window. Past that, your least-used skills lose their descriptions and rarely
-> trigger by themselves. A skill loaded twice can also answer from an older copy.
-> - **Never install a featured skill and its own pack.** trustwarden is already inside the warden
->   pack; installing both loads it twice under one name.
-> - **Claude Code: install the packs you work with.** Builds, scans, local programs and repo work run
->   here, where scripts have a shell and your files.
-> - **claude.ai and Cowork: only the skills you use there** (the foundation pack is a good start).
->   warden and localops drive your own machine, so in chat they mostly report NOT-RUN while still
->   costing their description.
-> - **Switch off what you are not using.** `/skill-doctor` shows each skill's cost and last use. On
->   claude.ai use Customize, which also removes the skill from Cowork. In Claude Code use `/skills`;
->   plugin skills switch off by whole plugin in `/plugin`. A switched-off skill costs nothing.
-> - **Still short of room?** Set a skill you only call by name to `"name-only"` in `skillOverrides`, or
->   raise `skillListingBudgetFraction`, which spends more context on every turn.
-> - **Hide synced twins in Claude Code.** A skill uploaded to claude.ai also appears in Claude Code as
->   `anthropic-skills:<name>`. Turn it off with `"skillOverrides": {"anthropic-skills:<name>": "off"}`
->   in `~/.claude/settings.json`, so only your installed copy loads. A plugin synced from claude.ai
->   needs no entry: in a terminal session, your installed plugin of the same name wins.
+> **Load each skill once, and only where you use it.** Every enabled skill puts its name and
+> description in front of Claude on every turn (about 300 tokens each for these skills), and that
+> listing gets 1% of the context window. Past that, your least-used skills lose their descriptions
+> and rarely trigger by themselves. A skill loaded twice can also answer from an older copy.
 >
-> **Check for double loads:** with the warden pack installed, run the gatewarden skill in Claude Code:
->
-> ```
-> /warden:revenantworks-warden-gatewarden loads
-> ```
->
-> It lists every skill that loads twice with the fix for each, wrong-surface skills, and the listing
-> against its budget. It never changes a setting.
+> **Never install a featured skill and its own pack.** trustwarden is already inside the warden
+> pack; installing both loads it twice under one name.
+
+<details>
+<summary><b>Keep the skill listing lean: where to install, what to switch off, how to check</b></summary>
+
+| Situation | What to do |
+|---|---|
+| **Claude Code** | Install the packs you work with. Builds, scans, local programs and repo work run here, where scripts have a shell and your files. |
+| **claude.ai and Cowork** | Upload only the skills you use there (the foundation pack is a good start). warden and localops drive your own machine, so in chat they mostly report NOT-RUN while still costing their description. |
+| **Not using a skill** | Switch it off. `/skill-doctor` shows each skill's cost and last use. On claude.ai use Customize, which also removes the skill from Cowork. In Claude Code use `/skills`; plugin skills switch off by whole plugin in `/plugin`. A switched-off skill costs nothing. |
+| **Still short of room** | Set a skill you only call by name to `"name-only"` in `skillOverrides`, or raise `skillListingBudgetFraction`, which spends more context on every turn. |
+| **Synced twins in Claude Code** | A skill uploaded to claude.ai also appears in Claude Code as `anthropic-skills:<name>`. Turn it off with `"skillOverrides": {"anthropic-skills:<name>": "off"}` in `~/.claude/settings.json`, so only your installed copy loads. A plugin synced from claude.ai needs no entry: in a terminal session, your installed plugin of the same name wins. |
+
+**Check for double loads.** With the warden pack installed, run the gatewarden skill in Claude Code:
+
+```
+/warden:revenantworks-warden-gatewarden loads
+```
+
+It lists every skill that loads twice with the fix for each, wrong-surface skills, and the listing
+against its budget. It never changes a setting.
+
+</details>
 
 | Packs (Option A) | Featured skills (Option B), and the pack that already holds them |
 |---|---|
@@ -143,7 +145,7 @@ Capstones: Hallmark Run (build) and Upkeep Run (maintenance). Featured: **pacewr
 |---|---|---|
 | [skillwright](packs/foundation/skills/revenantworks-foundation-skillwright/) | Builds, audits, ports and packs Agent Skills; writes and audits eval suites, slims a skill package and diagnoses a skill that did not fire | *"Audit this SKILL.md for best practice and security"* |
 | [promptwright](packs/foundation/skills/revenantworks-foundation-promptwright/) | Builds, scores, hardens and red-teams prompts; picks the model tier for a task | *"Red-team this system prompt"* |
-| [grillwright](packs/foundation/skills/revenantworks-foundation-grillwright/) | Interviews any request — code, plan, prompt, skill, agent, document — until nothing essential is left to guess, then hands a settled-decisions record to the builder | *"Grill me on this plan before we start"* |
+| [grillwright](packs/foundation/skills/revenantworks-foundation-grillwright/) | Interviews any request (code, plan, prompt, skill, agent, document) until nothing essential is left to guess, then hands a settled-decisions record to the builder | *"Grill me on this plan before we start"* |
 | [agentwright](packs/foundation/skills/revenantworks-foundation-agentwright/) | Designs and audits the system around an autonomous or scheduled agent: guardrails, kill switches, cadence, failure handling | *"Add a kill switch and retries to this nightly routine"* |
 | [rigwright](packs/foundation/skills/revenantworks-foundation-rigwright/) | Decides where a standing rule lives and builds the config Claude reads: CLAUDE.md, AGENTS.md, rules, Projects | *"My CLAUDE.md rules get ignored"* |
 | [dispatchwright](packs/foundation/skills/revenantworks-foundation-dispatchwright/) | Turns one large request into tiered, recoverable units, dispatches them and reconciles the result | *"Plan this change across six repos and show me the plan table"* |
@@ -268,7 +270,7 @@ until you say yes (`/rw-vigil network on`); the read then runs only when you act
 /plugin install shroud@revenantworks
 ```
 
-[mods/README.md](mods/README.md) covers all 18 features, the commands, the suggestion thresholds,
+[mods/README.md](mods/README.md) covers all 15 features, the commands, the suggestion thresholds,
 the surfaces, and the files the mods write. Each skill a mod feeds carries `references/mods.md`.
 
 ## Capstones
@@ -330,8 +332,8 @@ server."*
 
 ## Testing and contributing
 
-Every pack, skill and featured plugin launched at 1.0.0, and each `CHANGELOG.md` is its 1.0.0
-feature list. Open an issue for a bug or a trigger that misfires. Read
+Every pack, skill and featured plugin launched at 1.0.0. Since then each pack releases on its own
+(`<pack>-vX.Y.Z` tags), and the root [`CHANGELOG.md`](CHANGELOG.md) lists every release. Open an issue for a bug or a trigger that misfires. Read
 [`CONTRIBUTING.md`](CONTRIBUTING.md) before your first commit: it arms the PII barrier, a
 pre-commit hook that blocks personal data (names, home and drive paths, emails, secrets) from
 reaching a commit, in every clone and worktree.
@@ -341,7 +343,7 @@ Before any change, run the checks. CI runs the build check, the tools suite and 
 
 ```bash
 git config core.hooksPath .githooks                 # once per clone: the PII pre-commit hook
-python tools/build.py --check                       # versions, counts, seams, featured copies
+python tools/build.py --check                       # versions, counts, seams, featured copies, README chart
 python -m unittest discover -s tools -p "test_*.py" # the tools suite
 python tools/pii_scan.py --tree                     # the PII barrier over every tracked file
 claude plugin eval <pack>                           # a pack's native eval cases
@@ -364,6 +366,7 @@ tools/build.py                    # registry-derived sync, validation and dist z
 tools/release.py                  # the release loop: bump, build, check, tests, commit, tag, upload list
 tools/name_leak.py                # local, before a push: fails a tracked file holding a name from ~/.warden/wordlist.txt
 tools/pii_scan.py                 # the PII barrier: pre-commit hook (.githooks/) and the pii-scan CI job
+tools/readme_charts.py            # draws docs/assets/skills-per-pack-*.svg from packs/ (build.py --check fails on drift)
 RUNBOOK.md                        # release and sync procedure
 CONTRIBUTING.md                   # contributor setup: arm the PII hook in every clone
 ```
@@ -391,5 +394,5 @@ The repository opens with the first free release. Watch this one for the link.
 
 Apache License 2.0. The root [`LICENSE`](LICENSE) is the verbatim Apache-2.0 text and the root
 [`NOTICE`](NOTICE) carries the attribution notice. Every skill folder carries its own `LICENSE` and a
-`NOTICE` generated from its pack's, so a skill copied on its own keeps both. What ships in 1.0.0 is
-in [`CHANGELOG.md`](CHANGELOG.md).
+`NOTICE` generated from its pack's, so a skill copied on its own keeps both. Every release is listed in
+[`CHANGELOG.md`](CHANGELOG.md).

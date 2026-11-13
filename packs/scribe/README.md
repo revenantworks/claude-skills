@@ -1,7 +1,7 @@
 # scribe pack
 
 **Five scribes for words and knowledge: research verdicts, brands, messages, story canon and knowledge vaults.** On
-the `-scribe` motif, standard profile, version 1.0.0.
+the `-scribe` motif, standard profile. The current version is in `.claude-plugin/plugin.json`.
 
 ```
 /plugin marketplace add revenantworks/claude-skills
