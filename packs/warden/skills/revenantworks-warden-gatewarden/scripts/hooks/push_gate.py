@@ -674,6 +674,84 @@ def _config_target(raw: str, dirs: list[str]) -> str:
     return ""
 
 
+# Fix round 2 (review of dd6af23): an archive, decoder or editor writes through an argument or option
+# value (`tar -C .git`, `unzip -d .git`, `7z -o.git`, `certutil … .git/config`, `ed .git/config`,
+# `Expand-Archive -DestinationPath .git`). So any word on the line that resolves inside a .git folder or
+# to a git config file counts as a write, unless its program is on this short read-only list.
+READ_ONLY = {"cat", "type", "head", "tail", "less", "more", "grep", "egrep", "fgrep", "rg", "findstr",
+             "get-content", "gc", "test", "[", "[[", "ls", "dir", "stat", "wc", "diff", "cmp", "file",
+             "echo", "printf", "write-host", "write-output", "test-path", "get-item", "get-childitem", "gci",
+             "select-string", "sls"} | CD_WORDS
+GIT_READ_VERBS = {"status", "log", "show", "diff", "rev-parse", "ls-files", "ls-tree", "cat-file", "describe",
+                  "grep", "blame", "shortlog", "for-each-ref", "show-ref", "rev-list", "name-rev", "check-ignore",
+                  "check-attr", "merge-base", "version", "help", "var"}
+ASSIGN = re.compile(r"^(?:\$env:)?[A-Za-z_]\w*=")
+
+
+def _word_paths(tok: str) -> list[str]:
+    """The path a shell word may name: itself, an option's value after `=` or `:`, or a short option's
+    joined value (`-o.git`, `-C.git`)."""
+    u = hl.unquote(tok).strip()
+    if not u.startswith("-"):
+        return [u]
+    out = [m.group(1) for m in [re.match(r"^-[^=:]+[=:](.+)$", u)] if m]
+    if re.match(r"^-[A-Za-z]", u) and len(u) > 2 and not u.startswith("--"):
+        out.append(u[2:])
+    return out
+
+
+def _is_git_path(u: str, dirs: list[str]) -> bool:
+    """Whether `u`, resolved from any folder the line names (lexically and by realpath), is inside a .git
+    folder, is a .git folder, or is a git config file (`.gitconfig`, `.config/git/config`, a bare git
+    dir's config)."""
+    if not u or RUN_TIME_ARG.search(u) or RUN_TIME_DIR.search(u):
+        return False  # a run-time word is not resolvable; the write-target rule covers redirections
+    low = u.replace("\\", "/").lower().rstrip("/")
+    if low.endswith(".gitconfig") or low.endswith(".config/git/config"):
+        return True
+    for d in dirs:
+        p = os.path.normpath(os.path.join(d, u))
+        for q in (p, os.path.realpath(p)):
+            if GIT_FOLDER_PART.search(q):
+                return True
+            folder = q if os.path.isdir(q) else os.path.dirname(q)
+            if os.path.isfile(os.path.join(folder, "HEAD")) and os.path.isdir(os.path.join(folder, "objects")) \
+                    and os.path.isfile(os.path.join(folder, "config")):
+                return True
+    return False
+
+
+def git_path_word_cause(seg: str, dirs: list[str]) -> str:
+    """Why a segment may write into a .git folder or a git config through any word, or ""."""
+    toks = hl.tokens(seg)
+    k = 0
+    while k < len(toks) and ASSIGN.match(toks[k]):
+        k += 1
+    if k >= len(toks):
+        return ""
+    p = hl.prog(toks[k])
+    rest = toks[k + 1:]
+    if p in READ_ONLY:
+        return ""
+    if p == "git":
+        j = 0
+        while j < len(rest) and rest[j].startswith("-"):
+            j += 2 if rest[j] in GIT_OPTS_WITH_VALUE or rest[j] in DIR_OPT_ALONE else 1
+        if j < len(rest) and hl.unquote(rest[j]).lower() in GIT_READ_VERBS:
+            return ""
+        # A git dir the line names (`GIT_DIR=.git`, `--git-dir=.git`) is a candidate folder too, but git's
+        # own words are not paths inside it.
+        dirs = [d for d in dirs if not GIT_FOLDER_PART.search(d)]
+    elif any(GIT_FOLDER_PART.search(d) for d in dirs):
+        return f"`{p[:30]}` run on a line that may be inside a .git folder (`cd .git`)"
+    for t in rest:
+        if SEPARATOR.match(t) or ASSIGN.match(t) and p in ("export", "set", "declare", "local"):
+            continue
+        if any(_is_git_path(w, dirs) for w in _word_paths(t)):
+            return f"`{p[:30]}` given a path inside a .git folder or a git config file on the same line"
+    return ""
+
+
 def class_write_cause(shells: list[str], codes: list[str], dirs: list[str], runs: bool = True) -> str:
     """Why the line may change any git config before a non-builtin subcommand runs (FIX-GW3), or "".
     `runs=False` is the check for a git call inside the inline code itself: a process the code starts
@@ -688,6 +766,9 @@ def class_write_cause(shells: list[str], codes: list[str], dirs: list[str], runs
         if DOTNET_WRITE.search(text):
             return "a .NET, COM or PowerShell file write on the line"
         for seg in hl.segments(text):
+            why = git_path_word_cause(seg, dirs)
+            if why:
+                return why
             targets, writes = _shell_targets(seg)
             if writes and k > 0:
                 return "a nested shell (bash -c, sh -c, cmd /c, pwsh -Command) whose body writes a file"

@@ -404,8 +404,24 @@ or start a process (`python -c`, a `python -` heredoc, `node -e`, `perl -e`, `ru
 writes (`bash -c`, `sh -c`, `cmd /c`, `pwsh -Command` or `-EncodedCommand`), or any write (`>`, `>>`,
 tee, cp, mv, install, ln, `dd of=`, `sed -i`) whose target is named like a config (`config`,
 `*config`, `.gitconfig`), sits inside a `.git` folder or a bare git dir as written or from any folder
-the line changes into (`cd .git && … >> config`), or is named at run time. Inline code that only
-prints, ordinary file writes and every builtin still pass. Inline code that starts a process is refused when
+the line changes into (`cd .git && … >> config`), or is named at run time. Past redirections, any
+word on the line (an argument, an option value such as `-C`, `-d`, `-o`, `--output=` or
+`-DestinationPath`) that resolves, lexically or by realpath from any folder the line names, inside a
+`.git` folder or to a git config file counts as a write unless its program only reads (cat, type,
+head, tail, less, more, grep, rg, findstr, Get-Content, a git read verb, test, ls, dir, stat, wc,
+diff, cmp, file, echo, printf, cd): so `tar -C .git`, `unzip -d .git`, `7z -o.git`, `certutil …
+.git/config`, `ed .git/config` and `Expand-Archive -DestinationPath .git` are refused without a list
+of them, and so is any non-git program on a line that may run inside a `.git` folder. Inline code that
+only prints, ordinary file writes and every builtin still pass.
+
+**Limit, stated plainly (config written earlier).** These rules read one line. A git config written in
+an earlier tool call, by a file-edit tool (Write, Edit) or by a script file an interpreter runs
+(`python x.py`) is not seen when it is written. What exists today: every call is checked against the
+config as it stands when that call runs, so on the next call a non-builtin subcommand is looked up in
+the repo's aliases (and every folder the line names); an alias that resolves to a push is checked as a
+push (range, force, delete, mirror, public main and leak checks, and the intent the mode asks for), and
+with more than one candidate folder it is refused. Nothing runs inside git itself: an alias the gate
+reads as harmless is not re-checked when git expands it. Inline code that starts a process is refused when
 it runs a pushing alias from any candidate, or builds a program name at run time (`'g'+'it'`, an
 empty-separator join, getattr, a decode); text that only names git passes. The builtin list is git's
 whole command list (`git help -a`), so `prune`, `rerere` or `verify-tag` are never read as aliases.

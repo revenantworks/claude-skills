@@ -652,6 +652,25 @@ class GW3ConfigWrites(PushShapeBase):
                      f"cd .git; cp ../a.txt info/exclude; cd ..; {self.X}",
                      f"t=conf; echo y >> .git/$t'ig'; {self.X}")
 
+    def test_round2_any_program_given_a_git_folder_path(self):
+        # Fix round 2 (review of dd6af23): an archive, decoder or editor writes into .git through an
+        # argument or option value, not a redirection. Any word that resolves inside a .git folder or to a
+        # git config file counts, unless its program only reads.
+        self.refused(f"tar -xf ../c.tar -C .git; {self.X}",
+                     f"unzip -oq ../c.zip -d .git; {self.X}",
+                     f"certutil -f -decode ../b64 .git/config; {self.X}",
+                     f"printf 'a\\n[alias]\\nx = {U}\\n.\\nw\\n' | ed .git/config; {self.X}",
+                     f"7z x ../c.7z -o.git -y; {self.X}",
+                     f"cd .git && tar -xf ../../c.tar; cd ..; {self.X}")
+        self.refused(f"Expand-Archive ../c.zip -DestinationPath .git -Force; {self.X}", tool="PowerShell")
+
+    def test_round2_read_only_programs_on_git_paths_pass(self):
+        self.expect(0, [f"cat .git/config && {G} flow init -d", f"head -3 .git/HEAD; {G} flow init -d",
+                        f"grep -c alias .git/config; {G} flow init -d", f"ls .git && {G} flow init -d",
+                        f"diff .git/config ../x.cfg; {G} flow init -d",
+                        f"{G} --git-dir=.git rerere status", f"GIT_DIR=.git {G} status; {G} flow init -d"])
+        self.expect(0, [f"Get-Content .git/config; {G} flow init -d"], tool="PowerShell")
+
     def test_inline_code_that_only_prints_and_ordinary_writes_pass(self):
         self.expect(0, [f"python -c \"print('.git/' + 'config')\"; {G} flow init -d",
                         f"node -e \"console.log('[alias] x')\"; {G} flow init -d",
