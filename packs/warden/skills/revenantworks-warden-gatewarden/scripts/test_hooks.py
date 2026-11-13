@@ -915,6 +915,18 @@ class GoLiveBlockTests(unittest.TestCase):
                 code, _, err = run_hook("golive_block.py", bash(cmd, tool=tool))
                 self.assertEqual(code, 0, f"{tool}: {cmd}: {err}")
 
+    def test_inert_literal_regex_does_not_backtrack_exponentially(self):
+        # CodeQL: overlapping branches under * made '"$' + '0$' * n explode. One way to match each char.
+        sys.path.insert(0, str(HOOKS))
+        try:
+            import golive_block
+        finally:
+            sys.path.remove(str(HOOKS))
+        evil = '"$' + "0$" * 25000
+        t = time.monotonic()
+        golive_block.hint_outside_literals(evil)
+        self.assertLess(time.monotonic() - t, 1.0)
+
     def test_hint_word_outside_a_literal_or_in_a_live_literal_still_fails_closed(self):
         req = "Start" + "Stream"
         for cmd in ["& $tool --live stream",

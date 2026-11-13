@@ -84,7 +84,7 @@ CLIENT_RUN = re.compile(r"(?i)(?:obsws|obs[-_]?websocket)[\w.-]*\.(?:py|js|mjs|t
 # inside an inert quoted literal (a -Filter pattern, a file name, a message) runs nothing. A literal that
 # can run code ($( ), backticks) stays in. Request names, the CLI and service.json are still read on the
 # full text (text_hits), quotes and all, so `$r = "<request name>"; & $c $r` keeps failing closed.
-INERT_LITERAL = re.compile(r"'[^'$`]*'|\"(?:[^\"$`\\]|\$(?![({])[\w:]*)*\"")
+INERT_LITERAL = re.compile(r"'[^'$`]*'|\"(?:[^\"$`\\]|\$(?![({]))*\"")
 
 
 def hint_outside_literals(cmd: str) -> bool:
