@@ -94,7 +94,7 @@
       "displayName": "Revenantworks Warden",
       "source": "./packs/warden",
       "description": "Skills that guard what Claude writes or manages. Four members: shieldwarden (leak and injection scans, naming and identity policy, names that advertise secrets, gated history rewrites that never push), trustwarden (pre-install vets of third-party code), keywarden (credential lifecycle, fingerprints only), gatewarden (runtime permission policy, owner-installed hooks, a settings map, and disk space and Claude's reach from evidence). Each routes on its own description and works alone.",
-      "version": "1.1.1",
+      "version": "1.1.2",
       "license": "Apache-2.0",
       "category": "productivity",
       "keywords": [
@@ -219,7 +219,7 @@
       "displayName": "Revenantworks Hearth",
       "source": "./packs/hearth",
       "description": "Personal and household life skills. First member: faretender, the real cost of a trip and price drops after booking.",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "license": "Apache-2.0",
       "category": "productivity",
       "keywords": [

@@ -4,7 +4,7 @@ description: Audits what Claude may do (permission rules, hooks, MCP scope, an a
 license: Apache-2.0
 compatibility: Python 3.9+ (stdlib) runs the scripts, never read - perm_audit, perm_explain, cap_review, settings_layout, scan_tree, footprint, drive_rules, treemap_page, drift, loads and the hooks in scripts/hooks/; git for the push gate. Optional, never installed - jsonschema, duckdb, a WizTree CSV or dust JSON (references/scanner-install.md). The owner installs every hook. On claude.ai it works from pasted files and marks script steps NOT-RUN. Local only, no network. Siblings are named, never required.
 metadata:
-  version: "1.0.0"
+  version: "1.0.1"
   profile: standard
   pack: warden
   brand: revenantworks
