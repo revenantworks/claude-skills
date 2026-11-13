@@ -689,6 +689,15 @@ class GW3ConfigWrites(PushShapeBase):
                      f"Set-Item env:GIT_CONFIG_COUNT 1; Set-Item env:GIT_CONFIG_KEY_0 alias.x; "
                      f"Set-Item env:GIT_CONFIG_VALUE_0 {U}; {self.X}", tool="PowerShell")
 
+    def test_round4_trio_words_that_are_not_plain(self):
+        # Fix round 4 (review of 9d7abb1): a quote splice or an ANSI-C string in a trio word is read by the
+        # shell, not by the gate's literal reading, so it refuses.
+        trio = "GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=alias.x GIT_CONFIG_VALUE_0="
+        self.refused(f"{trio}'pu''sh' {self.X}", trio + "$'\\x70ush' " + self.X,
+                     f"GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0='ali''as.x' GIT_CONFIG_VALUE_0={U} {self.X}",
+                     f"GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=alias.x GIT_CONFIG_VALUE_0=p\\ush {self.X}")
+        self.expect(0, [f"{trio}'pu''sh' {G} status", trio + "$'\\x70ush' " + f"{G} log -1"])
+
     def test_round3_builtins_beside_environment_config_pass(self):
         self.expect(0, [f"GIT_CONFIG_PARAMETERS=\"'core.pager=cat'\" {G} log -1",
                         f"GIT_CONFIG_PARAMETERS=\"'alias.x={U}'\" {G} status",

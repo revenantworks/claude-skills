@@ -972,8 +972,12 @@ INCLUDE_ENV = re.compile(r"""(?i)(?<![\w])GIT_CONFIG_(?:KEY_\d+\s*=\s*['"]?\s*(?
                          r"""|PARAMETERS\s*=[^\n]*?(?:include(?:if)?\.|\$))""")
 # An alias set through the environment (M14e): GIT_CONFIG_KEY_<n>=alias.<name> with GIT_CONFIG_VALUE_<n>,
 # the env twin of `-c alias.<name>=…`. Read line-wide, like INCLUDE_ENV.
-ENV_CONFIG_PAIR = re.compile(r"""(?i)(?<![\w])GIT_CONFIG_(KEY|VALUE)_(\d+)\s*=\s*"""
-                             r"""('[^']*'|"(?:\\.|[^"\\])*"|[^\s;&|)]*)""")
+ENV_CONFIG_PAIR = re.compile(r"""(?i)(?<![\w])GIT_CONFIG_(KEY|VALUE|COUNT)(?:_(\d+))?\s*=\s*"""
+                             r"""((?:'[^']*'|"(?:\\.|[^"\\])*"|[^\s;&|)'"])*)""")
+# FIX-GW3 round 4: a trio word the gate reads literally is a bare word with no quote, backslash, `$` or
+# backtick, or one whole '…' or "…" span with none of those inside. A splice (`'pu''sh'`), an ANSI-C
+# string (`$'\x70ush'`) or an escape cannot be read the way the shell reads it.
+PLAIN_ENV_WORD = re.compile(r"""^(?:[^'"\\$`\s]*|'[^'\\$`]*'|"[^"\\$`]*")$""")
 # A config redirect that swaps the files git reads aliases from (M14e): the gate reads its own.
 CONFIG_HOME_ENV = re.compile(r"(?i)(?<![\w-])(?:GIT_CONFIG_(?:GLOBAL|SYSTEM|NOSYSTEM)|XDG_CONFIG_HOME|HOME)"
                              r"\s*=(?!=)")
@@ -985,16 +989,24 @@ def env_aliases(text: str) -> tuple[dict[str, str], set[str]]:
     substitution) or missing cannot be read; a single-quoted value is literal."""
     keys: dict[str, str] = {}
     vals: dict[str, str] = {}
-    for m in ENV_CONFIG_PAIR.finditer(text):
-        (keys if m.group(1).upper() == "KEY" else vals)[m.group(2)] = m.group(3)
     table: dict[str, str] = {}
     unread: set[str] = set()
+    for m in ENV_CONFIG_PAIR.finditer(text):
+        kind = m.group(1).upper()
+        if kind == "COUNT" or m.group(2) is None:
+            if not PLAIN_ENV_WORD.match(m.group(3)):
+                unread.add("*")  # any alias may be in play: every non-builtin is unread
+            continue
+        (keys if kind == "KEY" else vals)[m.group(2)] = m.group(3)
     for n, raw in keys.items():
+        if not PLAIN_ENV_WORD.match(raw):
+            unread.add("*")
+            continue
         key = hl.unquote(raw).strip()
         if not key.lower().startswith("alias."):
             continue
         name, val = key[len("alias."):].lower(), vals.get(n)
-        if val is None or not val.startswith("'") and (RUN_TIME_ARG.search(val) or "`" in val):
+        if val is None or not PLAIN_ENV_WORD.match(val):
             unread.add(name)
         else:
             table[name] = hl.unquote(val)
@@ -1154,7 +1166,7 @@ def find_pushes(command: str, cwd: str, resolve: bool = True, head_moves: bool =
             def lookup(name: str, repo: str = repo) -> str | None:
                 """An alias the line sets in the environment first (M14e), then the line's candidate
                 folders (FIX-GW2: a pushing alias in any of them is refused), then the repo's own."""
-                if name.lower() in env_unread:
+                if name.lower() in env_unread or "*" in env_unread:
                     raise PushBlock(f"push gate: a git alias set in the environment cannot be read: "
                                     f"`GIT_CONFIG_KEY_<n>=alias.{name[:40]}` has a value set at run time or "
                                     "none. Blocked; run the command the alias stands for.")

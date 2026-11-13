@@ -416,11 +416,15 @@ through the environment refuses a non-builtin too: `GIT_CONFIG_PARAMETERS` (`"'a
 `"'alias.x'='push'"`), `GIT_CONFIG`, `GIT_CONFIG_SYSTEM` or `GIT_CONFIG_GLOBAL` named anywhere on the
 line in any form (a prefix, export, env, declare, set, `$env:`, `Set-Item env:`,
 `[Environment]::SetEnvironmentVariable`, read), and the `GIT_CONFIG_COUNT`/`KEY_<n>`/`VALUE_<n>` trio
-in any form other than a literal `NAME=value` (which is read as an alias, as above). Inline code that
-only prints, a shell redirection or copy to an ordinary file name (`echo hi > out.txt`, `cp a b`), and
-every builtin still pass. Two false refusals are kept on purpose, both only beside a non-builtin
-subcommand: inline code that writes any file (`python -c "open('out.json','w')…"; git lfs pull`),
-and a copy or write to a name that ends in `config` (`cp app.config app.config.bak && git flow init`).
+in any form other than a literal `NAME=value` (which is read as an alias, as above). That literal
+reading takes only plain words: a bare word with no quote, backslash, `$` or backtick, or one whole
+`'…'` or `"…"` span with none of those inside. A quote splice (`'pu''sh'`), an ANSI-C string
+(`$'\x70ush'`), an escape (`p\ush`) or a variable in any COUNT, KEY or VALUE word refuses the
+non-builtin. Inline code that only prints, a shell redirection or copy to an ordinary file name
+(`echo hi > out.txt`, `cp a b`), and every builtin still pass. Two false refusals are kept on
+purpose, both only beside a non-builtin subcommand: inline code that writes any file
+(`python -c "open('out.json','w')…"; git flow init -d`), and a copy or write to a name that ends in
+`config` (`cp app.config app.config.bak && git flow init -d`).
 
 **Limit, stated plainly (config written earlier).** These rules read one line. A git config written in
 an earlier tool call, by a file-edit tool (Write, Edit) or by a script file an interpreter runs
