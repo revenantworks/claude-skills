@@ -609,6 +609,193 @@ def config_write_cause(texts: list[str]) -> str:
     return ""
 
 
+# FIX-GW3 (warden 1.1.5): path text loses to a split string (`'.gi'+'t/config'`), a folder change
+# (`cd .git && … >> config`) or a .NET call, so the same-line config write is now a class. Before a
+# non-builtin subcommand the line is refused when it runs inline code that can write a file or start a
+# process, a .NET or COM write, a PowerShell file writer (any target), a nested shell body that writes,
+# or any write whose target is named like a config or sits in a .git folder. Code that only prints passes.
+CODE_WRITES = re.compile(r"(?i)\bopen\s*\(|\bfopen\b|\b(?:write|append)\w*\s*\(|\.write\b|\bfile_put_contents\b"
+                         r"|\bfs\s*\.|\bfs/promises\b|\bshutil\b|\bos\s*\.\s*(?:rename|replace|link|symlink"
+                         r"|makedirs|mkdir|remove|unlink|truncate|open|write)\b|\bFile\s*\.\s*\w+|\bIO\s*\.\s*\w+"
+                         r"|\bsyswrite\b|\bcopy\w*\s*\(|\brename\s*\(|\bsymlink\s*\(|\btouch\s*\(|\bPath\s*\(|\bpathlib\b"
+                         r"|\bcreateWriteStream\b")
+# A process the code starts, beyond CODE_RUNS: a backtick or qx run (perl, ruby, php).
+CODE_STARTS = re.compile(r"`|\bqx\b|\bsystem\s*\(|\bspawn\w*\s*\(|\bexec\w*\s*\(")
+# A started process whose text writes a file or a git config (`'echo … >> conf'+'ig'`, `'config'`).
+CODE_SHELL_WRITE = re.compile(r"(?i)>|(?<![\w-])config(?![\w-])|(?<![\w-])(?:tee|cp|mv|install|ln|dd|sed|copy"
+                              r"|move|set-content|add-content|out-file)(?=\s|['\"],)")
+# Code whose written path may be a git config even though no literal names it: `.git`, a folder change,
+# or a path built at run time (a concatenation, replace, format, template or decode).
+CODE_PATH_RISK = re.compile(r"""(?i)\.git(?![\w-])|\bconfig\b|\bchdir\b|\bcwd\b|['"`]\s*\+|\+\s*['"`]"""
+                            r"""|\w\s*\+\s*\w|\.\s*(?:replace|format|join|concat)\s*\(|\$\{|\bf['"]|%\s*[(\w]"""
+                            r"""|\bsprintf\b|\bjoin\b|\bpath\b""")
+DOTNET_WRITE = re.compile(r"(?i)\[\s*(?:System\s*\.\s*)?IO\s*\.|New-Object\s+(?:-\w+\s+\S+\s+)*-Com(?:Object)?\b"
+                          r"|(?<![\w-])(?:Set-Content|Add-Content|Out-File|Tee-Object)(?![\w-])")
+WRITE_TO = {"tee", "cp", "mv", "install", "ln", "copy", "move", "copy-item", "cpi", "move-item", "mi", "rsync",
+            "xcopy", "robocopy", "rename-item", "ren", "new-item", "ni", "truncate", "touch", "scp"}
+SHELL_REDIR = re.compile(r"""(?<![<>&\d-])(?:\d*|&)>>?\|?\s*("[^"]*"|'[^']*'|[^\s;|&<>()]+)""")
+NULL_TARGET = re.compile(r"(?i)^(?:/dev/null|\$null|nul|&\d+|&-|/dev/std(?:out|err))$")
+GIT_FOLDER_PART = re.compile(r"(?i)(?:^|[\\/])\.git(?:[\\/]|$)")
+
+
+def _shell_targets(seg: str) -> tuple[list[str], bool]:
+    """(the files a shell segment writes, whether it writes at all): redirections, tee, cp/mv/install/ln
+    and their PowerShell twins (every operand), `dd of=`, `sed -i`/`perl -i` files."""
+    out = [m.group(1) for m in SHELL_REDIR.finditer(seg)]
+    toks = hl.tokens(seg)
+    progs = [hl.prog(t) for t in toks]
+    for k, p in enumerate(progs):
+        rest = toks[k + 1:]
+        if p in WRITE_TO:
+            out += [t for t in rest if not t.startswith("-") and not SEPARATOR.match(t)]
+        elif p == "dd":
+            out += [t[3:] for t in rest if t.startswith("of=")]
+        elif p in ("sed", "perl") and any(re.match(r"^-\w*i|^--in-place", t) for t in rest):
+            out += [t for t in rest[1:] if not t.startswith("-")]
+    out = [t for t in out if t and not NULL_TARGET.match(hl.unquote(t).strip())]
+    return out, bool(out)
+
+
+def _config_target(raw: str, dirs: list[str]) -> str:
+    """Why a written file may be a git config, or "": named config or .gitconfig, inside a .git folder
+    as written or from any folder the line changes into, inside a bare git dir, or named at run time."""
+    u = hl.unquote(raw).strip()
+    if RUN_TIME_ARG.search(u) or RUN_TIME_DIR.search(u) or re.search(r"[*?\[\]'\"]|\{[^}]*,", u):
+        return "a file written on the line whose name is set at run time"
+    name = re.split(r"[\\/]", u.rstrip("\\/"))[-1].lower()
+    if name.endswith("config") or GIT_FOLDER_PART.search(u):
+        return "a git config file written on the same line"
+    for d in dirs:
+        p = os.path.normpath(os.path.join(d, u))
+        folder = os.path.dirname(p)
+        if GIT_FOLDER_PART.search(p) or (os.path.isfile(os.path.join(folder, "HEAD"))
+                                         and os.path.isdir(os.path.join(folder, "objects"))):
+            return "a file inside a .git folder written on the same line"
+    return ""
+
+
+# Fix round 2 (review of dd6af23): an archive, decoder or editor writes through an argument or option
+# value (`tar -C .git`, `unzip -d .git`, `7z -o.git`, `certutil … .git/config`, `ed .git/config`,
+# `Expand-Archive -DestinationPath .git`). So any word on the line that resolves inside a .git folder or
+# to a git config file counts as a write, unless its program is on this short read-only list.
+READ_ONLY = {"cat", "type", "head", "tail", "less", "more", "grep", "egrep", "fgrep", "rg", "findstr",
+             "get-content", "gc", "test", "[", "[[", "ls", "dir", "stat", "wc", "diff", "cmp", "file",
+             "echo", "printf", "write-host", "write-output", "test-path", "get-item", "get-childitem", "gci",
+             "select-string", "sls"} | CD_WORDS
+GIT_READ_VERBS = {"status", "log", "show", "diff", "rev-parse", "ls-files", "ls-tree", "cat-file", "describe",
+                  "grep", "blame", "shortlog", "for-each-ref", "show-ref", "rev-list", "name-rev", "check-ignore",
+                  "check-attr", "merge-base", "version", "help", "var"}
+ASSIGN = re.compile(r"^(?:\$env:)?[A-Za-z_]\w*=")
+
+
+def _word_paths(tok: str) -> list[str]:
+    """The path a shell word may name: itself, an option's value after `=` or `:`, or a short option's
+    joined value (`-o.git`, `-C.git`)."""
+    u = hl.unquote(tok).strip()
+    if not u.startswith("-"):
+        return [u]
+    out = [m.group(1) for m in [re.match(r"^-[^=:]+[=:](.+)$", u)] if m]
+    if re.match(r"^-[A-Za-z]", u) and len(u) > 2 and not u.startswith("--"):
+        out.append(u[2:])
+    return out
+
+
+def _is_git_path(u: str, dirs: list[str]) -> bool:
+    """Whether `u`, resolved from any folder the line names (lexically and by realpath), is inside a .git
+    folder, is a .git folder, or is a git config file (`.gitconfig`, `.config/git/config`, a bare git
+    dir's config)."""
+    if not u or RUN_TIME_ARG.search(u) or RUN_TIME_DIR.search(u):
+        return False  # a run-time word is not resolvable; the write-target rule covers redirections
+    low = u.replace("\\", "/").lower().rstrip("/")
+    if low.endswith(".gitconfig") or low.endswith(".config/git/config"):
+        return True
+    for d in dirs:
+        p = os.path.normpath(os.path.join(d, u))
+        for q in (p, os.path.realpath(p)):
+            if GIT_FOLDER_PART.search(q):
+                return True
+            folder = q if os.path.isdir(q) else os.path.dirname(q)
+            if os.path.isfile(os.path.join(folder, "HEAD")) and os.path.isdir(os.path.join(folder, "objects")) \
+                    and os.path.isfile(os.path.join(folder, "config")):
+                return True
+    return False
+
+
+def git_path_word_cause(seg: str, dirs: list[str]) -> str:
+    """Why a segment may write into a .git folder or a git config through any word, or ""."""
+    toks = hl.tokens(seg)
+    k = 0
+    while k < len(toks) and ASSIGN.match(toks[k]):
+        k += 1
+    if k >= len(toks):
+        return ""
+    p = hl.prog(toks[k])
+    rest = toks[k + 1:]
+    if p in READ_ONLY:
+        return ""
+    if p == "git":
+        j = 0
+        while j < len(rest) and rest[j].startswith("-"):
+            j += 2 if rest[j] in GIT_OPTS_WITH_VALUE or rest[j] in DIR_OPT_ALONE else 1
+        if j < len(rest) and hl.unquote(rest[j]).lower() in GIT_READ_VERBS:
+            return ""
+        # A git dir the line names (`GIT_DIR=.git`, `--git-dir=.git`) is a candidate folder too, but git's
+        # own words are not paths inside it.
+        dirs = [d for d in dirs if not GIT_FOLDER_PART.search(d)]
+    elif any(GIT_FOLDER_PART.search(d) for d in dirs):
+        return f"`{p[:30]}` run on a line that may be inside a .git folder (`cd .git`)"
+    for t in rest:
+        if SEPARATOR.match(t) or ASSIGN.match(t) and p in ("export", "set", "declare", "local"):
+            continue
+        if any(_is_git_path(w, dirs) for w in _word_paths(t)):
+            return f"`{p[:30]}` given a path inside a .git folder or a git config file on the same line"
+    return ""
+
+
+# Fix round 3 (review of b535a60): config injected through the environment. GIT_CONFIG_PARAMETERS
+# (`"'alias.x=push'"` or `"'alias.x'='push'"`), GIT_CONFIG, GIT_CONFIG_SYSTEM and GIT_CONFIG_GLOBAL named
+# anywhere on the line, in any form (prefix, export, env, declare, set, $env:, Set-Item env:,
+# [Environment]::SetEnvironmentVariable, read), refuse a non-builtin. The COUNT/KEY_<n>/VALUE_<n> trio
+# keeps its literal reading (`NAME=value`, M14e: an alias to a builtin passes); any other form of it
+# (SetEnvironmentVariable, Set-Item env:, read) cannot be read and refuses.
+CONFIG_ENV_NAME = re.compile(r"(?i)(?<![A-Za-z0-9_])GIT_CONFIG(?:_PARAMETERS|_SYSTEM|_GLOBAL)?(?![A-Za-z0-9_])")
+CONFIG_ENV_TRIO = re.compile(r"(?i)(?<![A-Za-z0-9_])GIT_CONFIG_(?:COUNT|KEY_\d+|VALUE_\d+)(?![A-Za-z0-9_])(?!\s*=)")
+
+
+def config_env_cause(texts: list[str]) -> str:
+    """Why the line may inject git config through the environment, or "" (FIX-GW3 round 3)."""
+    for text in texts:
+        m = CONFIG_ENV_NAME.search(text) or CONFIG_ENV_TRIO.search(text)
+        if m:
+            return f"git config injected through the environment ({m.group(0)[:30]})"
+    return ""
+
+
+def class_write_cause(shells: list[str], codes: list[str], dirs: list[str], runs: bool = True) -> str:
+    """Why the line may change any git config before a non-builtin subcommand runs (FIX-GW3), or "".
+    `runs=False` is the check for a git call inside the inline code itself: a process the code starts
+    counts only when its text writes or names config, so `exec('git with care')` prose still passes."""
+    for body in codes:
+        starts = bool(CODE_RUNS.search(body) or CODE_STARTS.search(body))
+        if runs and (starts or CODE_WRITES.search(body)) or not runs and (
+                starts and CODE_SHELL_WRITE.search(body) or CODE_WRITES.search(body) and
+                (CODE_PATH_RISK.search(body) or CODE_DYNAMIC.search(body))):
+            return "inline code on the line that can write files or start processes"
+    for k, text in enumerate(shells):
+        if DOTNET_WRITE.search(text):
+            return "a .NET, COM or PowerShell file write on the line"
+        for seg in hl.segments(text):
+            why = git_path_word_cause(seg, dirs)
+            if why:
+                return why
+            targets, writes = _shell_targets(seg)
+            if writes and k > 0:
+                return "a nested shell (bash -c, sh -c, cmd /c, pwsh -Command) whose body writes a file"
+            for t in targets:
+                why = _config_target(t, dirs)
+                if why:
+                    return why
+    return ""
 
 
 def alias_pushes(repo: str, name: str) -> bool:
@@ -785,8 +972,12 @@ INCLUDE_ENV = re.compile(r"""(?i)(?<![\w])GIT_CONFIG_(?:KEY_\d+\s*=\s*['"]?\s*(?
                          r"""|PARAMETERS\s*=[^\n]*?(?:include(?:if)?\.|\$))""")
 # An alias set through the environment (M14e): GIT_CONFIG_KEY_<n>=alias.<name> with GIT_CONFIG_VALUE_<n>,
 # the env twin of `-c alias.<name>=…`. Read line-wide, like INCLUDE_ENV.
-ENV_CONFIG_PAIR = re.compile(r"""(?i)(?<![\w])GIT_CONFIG_(KEY|VALUE)_(\d+)\s*=\s*"""
-                             r"""('[^']*'|"(?:\\.|[^"\\])*"|[^\s;&|)]*)""")
+ENV_CONFIG_PAIR = re.compile(r"""(?i)(?<![\w])GIT_CONFIG_(KEY|VALUE|COUNT)(?:_(\d+))?\s*=\s*"""
+                             r"""((?:'[^']*'|"(?:\\.|[^"\\])*"|[^\s;&|)'"])*)""")
+# FIX-GW3 round 4: a trio word the gate reads literally is a bare word with no quote, backslash, `$` or
+# backtick, or one whole '…' or "…" span with none of those inside. A splice (`'pu''sh'`), an ANSI-C
+# string (`$'\x70ush'`) or an escape cannot be read the way the shell reads it.
+PLAIN_ENV_WORD = re.compile(r"""^(?:[^'"\\$`\s]*|'[^'\\$`]*'|"[^"\\$`]*")$""")
 # A config redirect that swaps the files git reads aliases from (M14e): the gate reads its own.
 CONFIG_HOME_ENV = re.compile(r"(?i)(?<![\w-])(?:GIT_CONFIG_(?:GLOBAL|SYSTEM|NOSYSTEM)|XDG_CONFIG_HOME|HOME)"
                              r"\s*=(?!=)")
@@ -798,16 +989,24 @@ def env_aliases(text: str) -> tuple[dict[str, str], set[str]]:
     substitution) or missing cannot be read; a single-quoted value is literal."""
     keys: dict[str, str] = {}
     vals: dict[str, str] = {}
-    for m in ENV_CONFIG_PAIR.finditer(text):
-        (keys if m.group(1).upper() == "KEY" else vals)[m.group(2)] = m.group(3)
     table: dict[str, str] = {}
     unread: set[str] = set()
+    for m in ENV_CONFIG_PAIR.finditer(text):
+        kind = m.group(1).upper()
+        if kind == "COUNT" or m.group(2) is None:
+            if not PLAIN_ENV_WORD.match(m.group(3)):
+                unread.add("*")  # any alias may be in play: every non-builtin is unread
+            continue
+        (keys if kind == "KEY" else vals)[m.group(2)] = m.group(3)
     for n, raw in keys.items():
+        if not PLAIN_ENV_WORD.match(raw):
+            unread.add("*")
+            continue
         key = hl.unquote(raw).strip()
         if not key.lower().startswith("alias."):
             continue
         name, val = key[len("alias."):].lower(), vals.get(n)
-        if val is None or not val.startswith("'") and (RUN_TIME_ARG.search(val) or "`" in val):
+        if val is None or not PLAIN_ENV_WORD.match(val):
             unread.add(name)
         else:
             table[name] = hl.unquote(val)
@@ -967,7 +1166,7 @@ def find_pushes(command: str, cwd: str, resolve: bool = True, head_moves: bool =
             def lookup(name: str, repo: str = repo) -> str | None:
                 """An alias the line sets in the environment first (M14e), then the line's candidate
                 folders (FIX-GW2: a pushing alias in any of them is refused), then the repo's own."""
-                if name.lower() in env_unread:
+                if name.lower() in env_unread or "*" in env_unread:
                     raise PushBlock(f"push gate: a git alias set in the environment cannot be read: "
                                     f"`GIT_CONFIG_KEY_<n>=alias.{name[:40]}` has a value set at run time or "
                                     "none. Blocked; run the command the alias stands for.")
@@ -1161,6 +1360,10 @@ def all_pushes(cmd: str, cwd: str, head_moves: bool = True) -> list[dict]:
     # FIX-GW2: every folder the whole line names, nested shells and inline code included.
     texts = [cmd] + [t for t, _ in ex.shells] + [b for b, p in ex.code if not p]
     dirs, cause = line_dirs(texts, [cwd] + [w for _, w in ex.shells if w])
+    shells, codes = [t for t, _ in ex.shells], [b for b, p in ex.code if not p]
+    cause = cause or config_env_cause([cmd] + shells)
+    code_cause = cause or class_write_cause(shells, codes, dirs, runs=False)
+    cause = cause or class_write_cause(shells, codes, dirs)
     _LINE.update(dirs=dirs, cause=cause)
     try:
         for text, where in ex.shells:
@@ -1195,8 +1398,8 @@ def all_pushes(cmd: str, cwd: str, head_moves: bool = True) -> list[dict]:
                                 "cannot be checked for a pushing alias. Blocked; write the command out.")
             for sub in code_git_subs(joined):
                 if sub not in BUILTINS and re.fullmatch(r"[\w.-]+", sub):
-                    if cause:
-                        raise unreadable(cause, sub)
+                    if code_cause:
+                        raise unreadable(code_cause, sub)
                     for d in dirs:
                         if alias_pushes(d, sub):
                             raise PushBlock(f"push gate: inline code runs git `{sub[:40]}`, a git alias that "

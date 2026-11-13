@@ -396,7 +396,44 @@ a folder that does not exist now, whatever else the line runs (`git -C .. clone 
 changes how names resolve (CDPATH, OLDPWD, New-PSDrive, subst, net use, mklink, `ln -s`), and a line
 that writes a git config: a redirection, copy, tee, `sed -i` or script onto a `.git/config`,
 `.gitconfig` or `~/.config/git/config`, or a `git config` write (two values, `--add`, `--file`, `set`,
-an include key). Inline code that starts a process is refused when
+an include key). Path text alone loses to a split string or a folder change, so the config write is
+a class (warden 1.1.5): a non-builtin is refused on a line that runs inline code able to write a file
+or start a process (`python -c`, a `python -` heredoc, `node -e`, `perl -e`, `ruby -e`, `php -r`), a
+.NET or COM write (`[IO.File]::`, `[System.IO.`, `New-Object -ComObject`), a PowerShell file writer
+(`Set-Content`, `Add-Content`, `Out-File`, `Tee-Object`) with any target, a nested shell body that
+writes (`bash -c`, `sh -c`, `cmd /c`, `pwsh -Command` or `-EncodedCommand`), or any write (`>`, `>>`,
+tee, cp, mv, install, ln, `dd of=`, `sed -i`) whose target is named like a config (`config`,
+`*config`, `.gitconfig`), sits inside a `.git` folder or a bare git dir as written or from any folder
+the line changes into (`cd .git && … >> config`), or is named at run time. Past redirections, any
+word on the line (an argument, an option value such as `-C`, `-d`, `-o`, `--output=` or
+`-DestinationPath`) that resolves, lexically or by realpath from any folder the line names, inside a
+`.git` folder or to a git config file counts as a write unless its program only reads (cat, type,
+head, tail, less, more, grep, rg, findstr, Get-Content, a git read verb, test, ls, dir, stat, wc,
+diff, cmp, file, echo, printf, cd): so `tar -C .git`, `unzip -d .git`, `7z -o.git`, `certutil …
+.git/config`, `ed .git/config` and `Expand-Archive -DestinationPath .git` are refused without a list
+of them, and so is any non-git program on a line that may run inside a `.git` folder. Git config set
+through the environment refuses a non-builtin too: `GIT_CONFIG_PARAMETERS` (`"'alias.x=push'"` or
+`"'alias.x'='push'"`), `GIT_CONFIG`, `GIT_CONFIG_SYSTEM` or `GIT_CONFIG_GLOBAL` named anywhere on the
+line in any form (a prefix, export, env, declare, set, `$env:`, `Set-Item env:`,
+`[Environment]::SetEnvironmentVariable`, read), and the `GIT_CONFIG_COUNT`/`KEY_<n>`/`VALUE_<n>` trio
+in any form other than a literal `NAME=value` (which is read as an alias, as above). That literal
+reading takes only plain words: a bare word with no quote, backslash, `$` or backtick, or one whole
+`'…'` or `"…"` span with none of those inside. A quote splice (`'pu''sh'`), an ANSI-C string
+(`$'\x70ush'`), an escape (`p\ush`) or a variable in any COUNT, KEY or VALUE word refuses the
+non-builtin. Inline code that only prints, a shell redirection or copy to an ordinary file name
+(`echo hi > out.txt`, `cp a b`), and every builtin still pass. Two false refusals are kept on
+purpose, both only beside a non-builtin subcommand: inline code that writes any file
+(`python -c "open('out.json','w')…"; git flow init -d`), and a copy or write to a name that ends in
+`config` (`cp app.config app.config.bak && git flow init -d`).
+
+**Limit, stated plainly (config written earlier).** These rules read one line. A git config written in
+an earlier tool call, by a file-edit tool (Write, Edit) or by a script file an interpreter runs
+(`python x.py`) is not seen when it is written. What exists today: every call is checked against the
+config as it stands when that call runs, so on the next call a non-builtin subcommand is looked up in
+the repo's aliases (and every folder the line names); an alias that resolves to a push is checked as a
+push (range, force, delete, mirror, public main and leak checks, and the intent the mode asks for), and
+with more than one candidate folder it is refused. Nothing runs inside git itself: an alias the gate
+reads as harmless is not re-checked when git expands it. Inline code that starts a process is refused when
 it runs a pushing alias from any candidate, or builds a program name at run time (`'g'+'it'`, an
 empty-separator join, getattr, a decode); text that only names git passes. The builtin list is git's
 whole command list (`git help -a`), so `prune`, `rerere` or `verify-tag` are never read as aliases.
