@@ -5,6 +5,12 @@ Every pack, every member and every featured plugin launches at 1.0.0. Each membe
 `<pack>-vX.Y.Z`, member versions move on their own semver, and a featured plugin carries its
 member's version.
 
+## [mods: vigil 1.0.2] - 2026-11-14
+
+### Fixed
+
+- **vigil**: The check that a command names no job reads the step word by word. The 1.0.1 pattern could backtrack exponentially on a long run of flags (CodeQL).
+
 ## [mods: vigil 1.0.1, shroud 1.0.1] - 2026-11-14
 
 Mods ship by their marketplace version and carry no tag.

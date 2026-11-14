@@ -2,7 +2,7 @@
   "name": "vigil",
   "displayName": "Revenantworks Vigil",
   "description": "The Revenantworks vigil in VS Code: pace, skills fired and flagged, budget mode and the mods kill switch in the status bar, and a read-only panel over the vigil feed. Reads local files only; never writes, runs a process or contacts a service.",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "publisher": "revenantworks",
   "license": "Apache-2.0",
   "repository": "https://github.com/revenantworks/claude-skills",
