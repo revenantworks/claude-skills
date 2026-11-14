@@ -43,6 +43,18 @@ NOT_RUN = 3
 RAN = re.compile(r"(?m)^Ran (\d+) tests?\b")
 FAILED = re.compile(r"(?m)^FAILED \(([^)]*)\)")
 TAIL = 25
+PIN = re.compile(r"@anthropic-ai/claude-code@(\d+\.\d+\.\d+)")
+SEMVER = re.compile(r"\b(\d+\.\d+\.\d+)\b")
+VERSION_STEP = "claude-version"
+
+
+def pinned_claude(root: Path = ROOT) -> str | None:
+    """The Claude Code version pack-ci's mods job installs, or None without one."""
+    try:
+        m = PIN.search((root / ".github" / "workflows" / "pack-ci.yml").read_text(encoding="utf-8"))
+    except OSError:
+        return None
+    return m.group(1) if m else None
 
 
 @dataclass
@@ -148,6 +160,18 @@ def main(argv: list[str] | None = None, root: Path = ROOT, run: Callable = run_s
     try:
         futures = {s.name: pool.submit(run, s) for s in live}   # submitted in plan order
         failed, not_run = [], []
+        drift: list[str | None] = []   # [note] once asked: asked only after a validate step fails
+
+        def drift_note(cmd: list[str]) -> str | None:
+            """'claude drift: local X, pack-ci pins Y' when the validator is not the pinned one."""
+            if not drift:
+                pin = pinned_claude(root)
+                rc, out = run(Step(VERSION_STEP, [cmd[0], "--version"], root)) if pin else (1, "")
+                m = SEMVER.search(out) if rc == 0 else None
+                drift.append(f"claude drift: local {m.group(1)}, pack-ci pins {pin}"
+                             if m and m.group(1) != pin else None)
+            return drift[0]
+
         for s in chosen:
             if s.name in a.skip:
                 print(f"{s.name}: SKIPPED (--skip)")
@@ -169,7 +193,9 @@ def main(argv: list[str] | None = None, root: Path = ROOT, run: Callable = run_s
             elif s.suite:
                 line += ", 0 tests"
             ok = rc == 0 and not zero
-            print(line + ("" if ok else " -> FAIL" + (" (0 tests)" if zero and rc == 0 else "")))
+            note = drift_note(s.cmd) if not ok and s.name.startswith("validate:") else None
+            print(line + ("" if ok else " -> FAIL" + (" (0 tests)" if zero and rc == 0 else "")
+                          + (f" ({note})" if note else "")))
             if a.verbose or not ok:
                 for ln in out.rstrip().splitlines()[-TAIL if not a.verbose else None:]:
                     print(f"    {ln}")
@@ -180,7 +206,9 @@ def main(argv: list[str] | None = None, root: Path = ROOT, run: Callable = run_s
         pool.shutdown(cancel_futures=True)
     if failed:
         print(f"ci_local: FAIL ({len(failed)}: {', '.join(failed)})"
-              + (f"; NOT-RUN: {', '.join(not_run)}" if not_run else ""))
+              + (f"; NOT-RUN: {', '.join(not_run)}" if not_run else "")
+              + (f"; {drift[0]}: the validate steps ran a different validator than hosted CI"
+                 if drift and drift[0] else ""))
         return 1
     if not_run:
         print(f"ci_local: NOT-RUN ({', '.join(not_run)}); every step that ran passed, not a pass")
