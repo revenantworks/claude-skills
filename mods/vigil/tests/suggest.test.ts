@@ -69,6 +69,15 @@ describe('the same work is one row (bug: 187 open rows, each a chain variant)', 
     expect(coreShape('seq ; for ; grep -q ; done')).toBe('')
     expect(coreShape('npm test ; sleep ; npm test')).toBe('npm test')
   })
+  test('trailing flags and folder setup name no separate job (bug: two unittest cards and a mkdir card)', () => {
+    expect(coreShape('python -m unittest -p -s')).toBe('python -m unittest')
+    expect(coreShape('cd ; mkdir -p ; python -m unittest -v')).toBe('python -m unittest')
+    expect(coreShape('mkdir -p')).toBe('')
+    const c = cands([...cmd('python -m unittest', 130, 9), ...cmd('python -m unittest -p -s', 49, 9), ...cmd('mkdir -p', 49, 9)])
+    expect(c.map(x => [x.key, x.count])).toEqual([['command:python -m unittest', 179]])
+    const stale = ['command:python -m unittest -p -s', 'command:mkdir -p'].map(k => row(k, 'command', 'new', 49))
+    expect(mergeSuggestions(stale, [], NOW + 1000)).toEqual([])
+  })
   test('every variant of a chain counts toward one job', () => {
     const events = [...cmd('cd ; python -m unittest ; tail', 8, 5), ...cmd('python -m unittest ; grep -E', 7, 5), ...cmd('cd ; for ; python -m unittest', 5, 5)]
     const c = cands(events)
@@ -82,7 +91,7 @@ describe('the same work is one row (bug: 187 open rows, each a chain variant)', 
   })
   test('flags alone never name a job, but a module or a named program still does', () => {
     expect(keys(cmd('python -m unittest', 200, 9))).toEqual(['command:python -m unittest'])
-    expect(keys(cmd('npm run build --silent', 200, 9))).toEqual(['command:npm run build --silent'])
+    expect(keys(cmd('npm run build --silent', 200, 9))).toEqual(['command:npm run build'])
     const flagged = row('command:python *.py --head --max --repo', 'command', 'new', 183)
     expect(mergeSuggestions([flagged], [], NOW + 1000)).toEqual([])
     expect(keys(cmd('gitleaks detect', 200, 9))).toEqual(['command:gitleaks detect'])

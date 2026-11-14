@@ -71,6 +71,8 @@ const READ_ONLY = new Set([
   'date', 'for', 'while', 'if', 'seq', 'tr', 'awk', 'which', 'type', 'printf', 'stat', 'file', 'true', 'false',
   'sleep', 'test', 'xargs', 'tee', 'basename', 'dirname',
   'get-content', 'select-string', 'get-childitem', 'select-object', 'write-output', 'measure-object',
+  // Setup that makes a place to work, never the work (bug: "mkdir -p" held a card at 49 runs).
+  'mkdir', 'touch', 'new-item',
 ])
 /** Tools that ask by design (a question to you, a plan to approve): an allow rule never fits. */
 const ASKS_BY_DESIGN = new Set(['askuserquestion', 'exitplanmode', 'enterplanmode'])
@@ -96,8 +98,18 @@ const isGenericStep = (step: string): boolean => {
  * counts once. `cd ; python -m unittest ; tail` and `python -m unittest ; grep -E` are one job. Empty when
  * nothing is left.
  */
+/**
+ * A step without its trailing flags: `python -m unittest -p -s` and `python -m unittest` are one
+ * job (bug: two cards for the same test run). A flag before a word stays (`-m unittest`).
+ */
+const dropTrailingFlags = (step: string): string => {
+  const words = step.split(' ')
+  while (words.length > 1 && words[words.length - 1]!.startsWith('-')) words.pop()
+  return words.join(' ')
+}
+
 export const coreShape = (shape: string): string => {
-  const steps = shape.split(' ; ').map(x => x.trim()).filter(x => {
+  const steps = shape.split(' ; ').map(x => dropTrailingFlags(x.trim())).filter(x => {
     const prog = x.split(' ')[0] ?? ''
     return prog && prog !== 'cd' && !READ_ONLY.has(prog) && !CLOSER.has(prog)
   })
