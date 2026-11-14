@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import json
 import os
-import shutil
 import subprocess
 import sys
 import tempfile
@@ -19,6 +18,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(HERE / "hooks"))
 import cap_review as cr  # noqa: E402
+from _scratch import force_rmtree
 
 PY = sys.executable
 NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
@@ -57,7 +57,7 @@ class Base(unittest.TestCase):
         self.env = {"GATEWARDEN_STATE": str(self.state), "GATEWARDEN_MODE": "guard"}
 
     def tearDown(self):
-        shutil.rmtree(self.tmp, ignore_errors=True)
+        force_rmtree(self.tmp)
 
     def call(self, agent: str, tool: str, ti: dict, atype: str = "worker", session: str = "s1"):
         ev = {"session_id": session, "hook_event_name": "PreToolUse", "tool_name": tool, "tool_input": ti,

@@ -10,12 +10,12 @@ Run: python -m unittest discover -s scripts -p "test_*.py"
 from __future__ import annotations
 
 import json
-import shutil
 import subprocess
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from _scratch import force_rmtree
 
 HERE = Path(__file__).resolve().parent
 PY = sys.executable
@@ -38,7 +38,7 @@ class Base(unittest.TestCase):
         self.tmp = Path(tempfile.mkdtemp(prefix="gw-perm-"))
 
     def tearDown(self):
-        shutil.rmtree(self.tmp, ignore_errors=True)
+        force_rmtree(self.tmp)
 
     def settings(self, data, name="settings.json", text=None):
         d = self.tmp / ".claude"

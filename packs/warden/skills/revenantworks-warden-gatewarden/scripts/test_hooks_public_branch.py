@@ -15,7 +15,6 @@ from __future__ import annotations
 
 import json
 import os
-import shutil
 import subprocess
 import sys
 import tempfile
@@ -35,6 +34,7 @@ LEAK_RULE = "push_gate.public_leak"
 
 sys.path.insert(0, str(HOOKS))
 import push_gate  # noqa: E402
+from _scratch import force_rmtree  # noqa: E402
 
 
 def git(cwd, *args):
@@ -52,7 +52,7 @@ def commit(work, name, text):
 class PublicBranchBase(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.mkdtemp(prefix="gw-public-")
-        self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
+        self.addCleanup(force_rmtree, self.tmp)
         self.state = os.path.join(self.tmp, "state")
         os.makedirs(self.state)
         self.remote = os.path.join(self.tmp, "remote.git")

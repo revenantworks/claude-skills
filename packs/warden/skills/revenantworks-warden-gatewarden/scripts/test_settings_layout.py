@@ -13,7 +13,6 @@ from __future__ import annotations
 import io
 import json
 import os
-import shutil
 import subprocess
 import sys
 import tempfile
@@ -27,6 +26,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
 import settings_layout as sl  # noqa: E402
+from _scratch import force_rmtree  # noqa: E402
 
 CANARY = "CANARY-" + "4b1d" + "77c02"
 NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
@@ -94,7 +94,7 @@ class Layout(unittest.TestCase):
 
     def tearDown(self):
         self.env.stop()
-        shutil.rmtree(self.tmp, ignore_errors=True)
+        force_rmtree(self.tmp)
 
     def layout(self):
         out = self.tmp / "map.json"
