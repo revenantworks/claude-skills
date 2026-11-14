@@ -5,6 +5,12 @@ Every pack, every member and every featured plugin launches at 1.0.0. Each membe
 `<pack>-vX.Y.Z`, member versions move on their own semver, and a featured plugin carries its
 member's version.
 
+## [mods: vigil 1.0.5] - 2026-11-14
+
+### Added
+
+- **vigil**: `/rw-vigil skills dupes accept <skill>` keeps a skill you chose to load twice (a plugin that repeats a built-in, say) out of every warning; `/rw-vigil skills dupes` still lists it as accepted, and `unaccept` brings the warning back. The list is kept across sessions, and only you can change it.
+
 ## [mods: vigil 1.0.4] - 2026-11-14
 
 ### Fixed

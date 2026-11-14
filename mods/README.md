@@ -281,6 +281,7 @@ and times to `health/shroud.json`, never a value.
 | `/rw-vigil` | The board (text where no pane draws) |
 | `/rw-vigil skills` | The skills that fired or failed in 30 days, grouped by source (local, plugin, claude.ai synced, built-in); one line for the rest and one for skills loaded twice |
 | `/rw-vigil skills all` · `skills dupes` | Every skill; the skills loaded from two sources (also a Health item) |
+| `/rw-vigil skills dupes accept <skill>` · `unaccept <skill>` | Keep a skill you chose to load twice without a warning (you only; kept across sessions); unaccept brings the warning back |
 | `/rw-vigil meters` · `health` · `tasks` · `context` · `overview` | One view of the feed |
 | `/rw-vigil suggest` | At most five cards; `accept`, `dismiss` or `snooze <n>` act on one |
 | `/rw-vigil theme` | List, apply (`<name>`) or say the console's background (`background dark\|light\|auto`): [themes](#themes) |

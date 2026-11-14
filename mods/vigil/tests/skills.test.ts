@@ -2,7 +2,7 @@ import { describe, expect, test } from 'claude-code/testing'
 
 import type { Feed, Health, SkillRow } from '../hooks/collector-logic'
 import { NEUTRAL } from '../hooks/theme-logic'
-import { dupesLines, findDupes, healthLines, linesText, skillSource, skillsLines } from '../hooks/view-logic'
+import { acceptedDupes, dupesLines, editAccepted, findDupes, healthLines, linesText, skillSource, skillsLines } from '../hooks/view-logic'
 
 const row = (name: string, over: Partial<SkillRow> = {}): SkillRow => ({
   name, listed: true, firstListed: 0, fires7: 0, fires30: 0, slash30: 0, auto30: 0, failures30: 0, misroutes30: 0, tokens7: 0, turns7: 0, cost7: null, lastFired: null, ...over,
@@ -100,5 +100,29 @@ describe('skills view: duplicates', () => {
     fit80(builtIn)
     expect(linesText(healthLines(H, NEUTRAL))).not.toMatch(/twice/)
     expect(linesText(dupesLines(feedOf([row('solo')]), NEUTRAL))).toMatch(/No skill is loaded twice/)
+  })
+  test('an accepted duplicate is listed as accepted and never warned about', () => {
+    const twice = [row('code-review'), row('engineering:code-review'), row('docx'), row('anthropic-skills:docx')]
+    const src = { 'code-review': 'bundled' }
+    expect(findDupes(twice, src, ['Code-Review']).map(d => d.base)).toEqual(['docx'])
+    expect(acceptedDupes(twice, src, ['code-review']).map(d => d.base)).toEqual(['code-review'])
+    const H: Health = { plugins: {}, drift: [], gatewarden: null }
+    expect(linesText(healthLines(H, NEUTRAL, findDupes([row('code-review'), row('engineering:code-review')], src, ['code-review'])))).not.toMatch(/twice/)
+    expect(linesText(skillsLines(feedOf([row('code-review'), row('engineering:code-review')]), NEUTRAL, { sources: src, accepted: ['code-review'] }))).not.toMatch(/loaded twice/)
+    const dv = linesText(dupesLines(feedOf(twice), NEUTRAL, src, ['code-review']))
+    expect(dv).toMatch(/docx/)
+    expect(dv).toMatch(/Accepted, not warned about:[\s\S]*code-review\s+plugin, built-in/)
+    expect(dv).toMatch(/unaccept <skill>/)
+    fit80(dv)
+  })
+  test('accept and unaccept: only a current duplicate, sorted, no repeats', () => {
+    const current = findDupes([row('code-review'), row('engineering:code-review')])
+    expect(editAccepted([], 'accept', 'Code-Review', current)).toMatchObject({ ok: true, list: ['code-review'] })
+    expect(editAccepted(['code-review'], 'accept', 'code-review', current)).toMatchObject({ ok: true, list: ['code-review'], text: 'Already accepted: code-review.' })
+    expect(editAccepted([], 'accept', 'pdf', current)).toMatchObject({ ok: false, list: [] })
+    expect(editAccepted(['code-review'], 'unaccept', 'code-review', [])).toMatchObject({ ok: true, list: [] })
+    expect(editAccepted([], 'unaccept', 'code-review', current).ok).toBe(false)
+    expect(editAccepted([], 'remove', 'code-review', current).text).toMatch(/^Usage:/)
+    expect(editAccepted([], 'accept', '', current).text).toMatch(/^Usage:/)
   })
 })
