@@ -46,7 +46,7 @@ import {
 } from './tiles-logic'
 
 const PLUGIN = 'vigil'
-const VERSION = '1.0.3'
+const VERSION = '1.0.4'
 const MIN_CLAUDE = '2.1.287'
 const FLUSH_MS = 5 * 60_000
 

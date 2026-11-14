@@ -5,6 +5,12 @@ Every pack, every member and every featured plugin launches at 1.0.0. Each membe
 `<pack>-vX.Y.Z`, member versions move on their own semver, and a featured plugin carries its
 member's version.
 
+## [mods: vigil 1.0.4] - 2026-11-14
+
+### Fixed
+
+- **vigil**: `gh` counts as plumbing like `git`, so routine `gh run` and `gh pr` calls never make a "Claude keeps running" card. Cards already queued for them leave on the next roll.
+
 ## [mods: vigil 1.0.3] - 2026-11-14
 
 ### Fixed

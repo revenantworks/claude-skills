@@ -81,7 +81,7 @@ const CLOSER = new Set(['done', 'fi', 'esac'])
 const INTERPRETER = new Set(['python', 'python3', 'py', 'node', 'bash', 'sh', 'pwsh', 'powershell'])
 const UNNAMED_SCRIPT = /^\*\.\w+$/
 /**
- * A step that names no particular job: `git anything`, a bare interpreter, an unnamed script.
+ * A step that names no particular job: `git` or `gh` anything, a bare interpreter, an unnamed script.
  * Flags name no job either: `python *.py --repo --max` is still an unnamed script (bug: it held
  * the top card at 183 runs). A word that is not a flag (`-m unittest`) still names one.
  * Checked word by word, never by one regex over the step: a regex with nested repeats here
@@ -89,7 +89,8 @@ const UNNAMED_SCRIPT = /^\*\.\w+$/
  */
 const isGenericStep = (step: string): boolean => {
   const [prog = '', ...rest] = step.split(' ')
-  if (prog === 'git') return true
+  // git and gh are the plumbing every land runs (bug: "gh run" and "gh pr" held cards at 100+ runs).
+  if (prog === 'git' || prog === 'gh') return true
   return INTERPRETER.has(prog) && rest.every(w => w.startsWith('-') || UNNAMED_SCRIPT.test(w))
 }
 

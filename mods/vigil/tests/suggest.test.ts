@@ -96,6 +96,12 @@ describe('the same work is one row (bug: 187 open rows, each a chain variant)', 
     expect(mergeSuggestions([flagged], [], NOW + 1000)).toEqual([])
     expect(keys(cmd('gitleaks detect', 200, 9))).toEqual(['command:gitleaks detect'])
   })
+  test('gh is plumbing like git: no card however often it runs (bug: "gh run" and "gh pr" cards)', () => {
+    for (const shape of ['gh run', 'gh pr', 'gh pr checks --watch', 'cd ; gh run list --json ; head']) expect(keys(cmd(shape, 200, 9))).toEqual([])
+    expect(keys(cmd('ghostscript render', 200, 9))).toEqual(['command:ghostscript render'])
+    const stale = ['command:gh run', 'command:gh pr'].map(k => row(k, 'command', 'new', 106))
+    expect(mergeSuggestions(stale, [], NOW + 1000)).toEqual([])
+  })
   test('a long run of flags is checked in linear time (CodeQL: no backtracking)', () => {
     const shape = `py -${' -- -'.repeat(5000)} job`
     const start = Date.now()
