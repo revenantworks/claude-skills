@@ -65,6 +65,12 @@ jobs:
           fi
           bwrap --unshare-all --die-with-parent --ro-bind / / true \
             || { echo "::error::bwrap cannot start a sandbox on this runner: NOT-RUN"; exit 1; }
+      # Each case runs one model sample, so a single off answer used to fail the whole check
+      # (three of ten main runs to 2026-11-13, a different case each time, every one green on
+      # re-run). A case that fails is now run once more and passes only if the second try
+      # passes; the log and step summary mark it "passed on retry" so a flaky case stays
+      # visible. A broken sandbox (grade exit 2) is never retried: it stops the job as before.
+      # A retry spends up to one more case budget (--max-cost-usd 0.6).
       - name: Run the eight shell cases
         run: |
           set +e -u  # every case runs and reports; the job fails at the end if any case did not pass
@@ -84,17 +90,9 @@ jobs:
           mkdir -p "$out"
           status=0
           summary=""
-          while read -r row; do
-            pack="${row%%:*}"
-            name="${row#*:}"
-            echo "::group::$pack / $name"
-            # One --case per name: a brace glob over several names is unconfirmed in the CLI.
-            claude plugin eval "packs/$pack" --case "*${name#*--}" --scaffold --allow-tools Bash \
-              --runs 1 --ablation none --trust-plugin --no-publish -j 1 --max-cost-usd 0.6 --keep-temp \
-              --json "$out/$name.json"
-            rc=$?
-            echo "::endgroup::"
-            line=$(python3 - "$out/$name.json" <<'PY'
+          # grade JSON: prints "P/T passed" or a NOT-RUN line; exit 0 pass, 1 fail, 2 sandbox broken
+          grade() {
+            python3 - "$1" <<'PY'
           import json, sys
           try:
               agg = json.load(open(sys.argv[1], encoding="utf-8"))["aggregates"]
@@ -115,11 +113,39 @@ jobs:
           print(f"{passed}/{total} passed")
           sys.exit(0 if total and passed == total else 1)
           PY
-            )
+          }
+          # run_case PACK NAME JSON: one eval of one case; sets rc (eval exit), line and ok (grade)
+          run_case() {
+            # One --case per name: a brace glob over several names is unconfirmed in the CLI.
+            claude plugin eval "packs/$1" --case "*${2#*--}" --scaffold --allow-tools Bash \
+              --runs 1 --ablation none --trust-plugin --no-publish -j 1 --max-cost-usd 0.6 --keep-temp \
+              --json "$3"
+            rc=$?
+            line=$(grade "$3")
             ok=$?
-            summary="$summary$pack / $name: $line, eval exit $rc"$'\n'
+          }
+          while read -r row; do
+            pack="${row%%:*}"
+            name="${row#*:}"
+            echo "::group::$pack / $name"
+            run_case "$pack" "$name" "$out/$name.json"
+            echo "::endgroup::"
+            note=""
+            if [ "$ok" -ne 2 ] && { [ "$ok" -ne 0 ] || [ "$rc" -ne 0 ]; }; then
+              first="$line, eval exit $rc"
+              echo "::group::$pack / $name (retry after: $first)"
+              run_case "$pack" "$name" "$out/$name.retry.json"
+              echo "::endgroup::"
+              if [ "$ok" -eq 0 ] && [ "$rc" -eq 0 ]; then
+                note=" (passed on retry; first try: $first)"
+                echo "::warning::$pack / $name passed on retry; first try: $first"
+              else
+                note=" (retry also failed; first try: $first)"
+              fi
+            fi
+            summary="$summary$pack / $name: $line, eval exit $rc$note"$'\n'
             if [ "$ok" -ne 0 ] || [ "$rc" -ne 0 ]; then
-              echo "::error::$pack / $name: $line (eval exit $rc)"
+              echo "::error::$pack / $name: $line (eval exit $rc)$note"
               status=1
             fi
             # The sandbox is broken for every case: stop here and spend no more credits.

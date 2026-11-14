@@ -201,3 +201,6 @@ The shell cases (eight since U37: the six above plus keywarden's `behaviour-curl
 `behaviour-scope-no-token`) run in CI on Linux: `.github/workflows/shell-evals.yml`, on a push to
 main that touches duckrunner, gatewarden, keywarden or shieldwarden. Windows grants no confinable
 shell, so the rig's own run reports them failed; read their result from that workflow.
+Each case runs one sample, so a case that fails there is run once more and counts as passed
+only if the second try passes; the log marks it "passed on retry". A broken shell sandbox is
+never retried.
