@@ -9,6 +9,7 @@ Run: python -m unittest discover -s scripts -p "test_*.py"
 """
 from __future__ import annotations
 
+import atexit
 import base64
 import json
 import os
@@ -19,6 +20,7 @@ import tempfile
 import time
 import unittest
 from pathlib import Path
+from _scratch import force_rmtree
 
 HERE = Path(__file__).resolve().parent
 HOOKS = HERE / "hooks"
@@ -27,6 +29,7 @@ NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
 
 
 _STATE = tempfile.mkdtemp(prefix="gw-state-")
+atexit.register(force_rmtree, _STATE)  # one shared state folder per run, removed at exit
 
 
 def run_hook(name: str, event: dict, env: dict | None = None, raw: str | None = None):
@@ -87,7 +90,7 @@ class PushGateTests(unittest.TestCase):
             git(self.work, "commit", "-am", f"change number {i}")
 
     def tearDown(self):
-        shutil.rmtree(self.tmp, ignore_errors=True)
+        force_rmtree(self.tmp)
 
     def intend(self, n, head=None):
         args = [PY, str(HOOKS / "push_gate.py"), "intend", "--repo", self.work, "--max", str(n)]
@@ -429,7 +432,7 @@ class CiStampTests(unittest.TestCase):
         git(self.tmp, "commit", "-m", "one")
 
     def tearDown(self):
-        shutil.rmtree(self.tmp, ignore_errors=True)
+        force_rmtree(self.tmp)
 
     def run_stamp(self, code, script=None, extra=()):
         body = script if script is not None else f"raise SystemExit({code})"
@@ -647,7 +650,7 @@ class HyperVLockTests(unittest.TestCase):
     def setUp(self):
         # A fake hypervrunner tree under a temp cwd; every path in an event stays relative to it.
         self.tmp = tempfile.mkdtemp(prefix="gw-hv-")
-        self.addCleanup(shutil.rmtree, self.tmp, True)
+        self.addCleanup(force_rmtree, self.tmp)
         self.scripts = os.path.join(self.tmp, *self.HV.strip("/").split("/"))
         os.makedirs(self.scripts)
         for name in self.PINNED:
@@ -967,7 +970,7 @@ class CallCapTests(unittest.TestCase):
         self.env = {"GATEWARDEN_STATE": self.state}
 
     def tearDown(self):
-        shutil.rmtree(self.state, ignore_errors=True)
+        force_rmtree(self.state)
 
     def call(self, tool="Read", agent_id="a1", agent_type="worker"):
         ev = {"session_id": "s1", "tool_name": tool, "tool_input": {}}
@@ -1028,7 +1031,7 @@ class ThrottleTests(unittest.TestCase):
         self.env = {"GATEWARDEN_USAGE_FILE": self.usage, "GATEWARDEN_BUDGET_FILE": self.budget}
 
     def tearDown(self):
-        shutil.rmtree(self.tmp, ignore_errors=True)
+        force_rmtree(self.tmp)
 
     def reading(self, seven, five=10.0, age=0):
         Path(self.usage).write_text(json.dumps({
@@ -1331,7 +1334,7 @@ class PushGateBypassTests(unittest.TestCase):
 
     def setUp(self):
         self.tmp = tempfile.mkdtemp(prefix="gw-bypass-")
-        self.addCleanup(shutil.rmtree, self.tmp, True)
+        self.addCleanup(force_rmtree, self.tmp)
         self.remote = os.path.join(self.tmp, "remote.git")
         self.work = os.path.join(self.tmp, "work")
         git(self.tmp, "init", "--bare", "-b", "main", self.remote)
@@ -1492,7 +1495,7 @@ class HyperVBypassTests(unittest.TestCase):
 
     def setUp(self):
         self.tmp = tempfile.mkdtemp(prefix="gw-hvb-")
-        self.addCleanup(shutil.rmtree, self.tmp, True)
+        self.addCleanup(force_rmtree, self.tmp)
         self.scripts = os.path.join(self.tmp, *self.HV.strip("/").split("/"))
         os.makedirs(self.scripts)
         for name in HyperVLockTests.PINNED:
@@ -1562,7 +1565,7 @@ class HyperVBypassTests(unittest.TestCase):
 class GoLiveBypassTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.mkdtemp(prefix="gw-glb-")
-        self.addCleanup(shutil.rmtree, self.tmp, True)
+        self.addCleanup(force_rmtree, self.tmp)
         Path(self.tmp, "go.py").write_text("ws.call('StartStream')\n")
 
     def test_spliced_encoded_and_file_shapes_are_blocked(self):
@@ -1596,7 +1599,7 @@ class ModeTests(unittest.TestCase):
 
     def setUp(self):
         self.tmp = tempfile.mkdtemp()
-        self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
+        self.addCleanup(force_rmtree, self.tmp)
         self.env = {"GATEWARDEN_STATE": self.tmp, "GATEWARDEN_MODE": None}
         self.log = os.path.join(self.tmp, "events.jsonl")
 
@@ -1686,7 +1689,7 @@ HEREDOC_ESC = "cat > fix.py <<'EOF'\nprint('a" + "\\" + "nb')\nEOF"
 class InstallDefaultBase(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.mkdtemp(prefix="gw-default-")
-        self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
+        self.addCleanup(force_rmtree, self.tmp)
         self.state = os.path.join(self.tmp, "state")
         os.makedirs(self.state)
         self.env = {"GATEWARDEN_STATE": self.state, "GATEWARDEN_MODE": None}
@@ -2060,7 +2063,7 @@ class CiStampMaskTests(unittest.TestCase):
 
     def setUp(self):
         self.tmp = tempfile.mkdtemp(prefix="gw-ci-mask-")
-        self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
+        self.addCleanup(force_rmtree, self.tmp)
         git(self.tmp, "init", "-b", "main")
         Path(self.tmp, "f.txt").write_text("x\n")
         git(self.tmp, "add", "f.txt")
@@ -2592,7 +2595,7 @@ class HookBacklogCapTests(unittest.TestCase):
 
     def setUp(self):
         self.state = tempfile.mkdtemp(prefix="gw-cap5-")
-        self.addCleanup(shutil.rmtree, self.state, ignore_errors=True)
+        self.addCleanup(force_rmtree, self.state)
         Path(self.state, "call-caps.json").write_text(json.dumps({"grace": 10, "warn_at": 0.85}))
         self.env = {"GATEWARDEN_STATE": self.state}
 
@@ -2633,7 +2636,7 @@ class HookBacklogStampTests(unittest.TestCase):
 
     def setUp(self):
         self.tmp = tempfile.mkdtemp(prefix="gw-b6-")
-        self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
+        self.addCleanup(force_rmtree, self.tmp)
         self.remote = os.path.join(self.tmp, "remote.git")
         self.work = os.path.join(self.tmp, "work")
         git(self.tmp, "init", "--bare", "-b", "main", self.remote)
@@ -2760,7 +2763,7 @@ def load_ci_stamp():
 class CiStampZeroCountNoCiTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.mkdtemp(prefix="gw-ci-0546-")
-        self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
+        self.addCleanup(force_rmtree, self.tmp)
         self.remote = os.path.join(self.tmp, "remote.git")
         self.work = os.path.join(self.tmp, "work")
         git(self.tmp, "init", "--bare", "-b", "main", self.remote)

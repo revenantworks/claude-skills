@@ -15,12 +15,12 @@ from __future__ import annotations
 
 import json
 import os
-import shutil
 import subprocess
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from _scratch import force_rmtree
 
 HERE = Path(__file__).resolve().parent
 HOOKS = HERE / "hooks"
@@ -56,7 +56,7 @@ class PushShapeBase(unittest.TestCase):
 
     def setUp(self):
         self.tmp = tempfile.mkdtemp(prefix="gw-shapes-")
-        self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
+        self.addCleanup(force_rmtree, self.tmp)
         state = os.path.join(self.tmp, "state")
         os.makedirs(state)
         self.env = {"GATEWARDEN_STATE": state}
@@ -841,7 +841,7 @@ class DirectShapeBase(unittest.TestCase):
 
     def setUp(self):
         self.tmp = tempfile.mkdtemp(prefix="gw-shapes-")
-        self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
+        self.addCleanup(force_rmtree, self.tmp)
         state = os.path.join(self.tmp, "state")
         os.makedirs(state)
         self.env = {"GATEWARDEN_STATE": state}
@@ -1003,7 +1003,7 @@ class UnreadScript(unittest.TestCase):
 
     def setUp(self):
         self.tmp = tempfile.mkdtemp(prefix="gw-unread-")
-        self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
+        self.addCleanup(force_rmtree, self.tmp)
         state = os.path.join(self.tmp, "state")
         os.makedirs(state)
         self.env = {"GATEWARDEN_STATE": state}

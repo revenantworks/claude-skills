@@ -8,7 +8,6 @@ from __future__ import annotations
 import io
 import json
 import os
-import shutil
 import sys
 import tempfile
 import unittest
@@ -25,6 +24,7 @@ import drive_rules  # noqa: E402
 import loads  # noqa: E402
 import scan_tree  # noqa: E402
 import treemap_page  # noqa: E402
+from _scratch import force_rmtree  # noqa: E402
 
 FAKE_KEY = "sk-" + "live" + "A1b2C3d4E5f6G7h8I9j0K1l2"  # built at runtime: a secret shape, not a secret
 
@@ -58,7 +58,7 @@ class Base(unittest.TestCase):
                 if p.is_symlink() or (hasattr(p, "is_junction") and p.is_junction()):
                     os.rmdir(p) if os.name == "nt" else p.unlink()
                     dns.remove(d)
-        shutil.rmtree(self.tmp, ignore_errors=True)
+        force_rmtree(self.tmp)
 
 
 class ScanTreeTests(Base):
