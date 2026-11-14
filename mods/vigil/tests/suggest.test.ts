@@ -85,6 +85,13 @@ describe('the same work is one row (bug: 187 open rows, each a chain variant)', 
     expect(keys(cmd('npm run build --silent', 200, 9))).toEqual(['command:npm run build --silent'])
     const flagged = row('command:python *.py --head --max --repo', 'command', 'new', 183)
     expect(mergeSuggestions([flagged], [], NOW + 1000)).toEqual([])
+    expect(keys(cmd('gitleaks detect', 200, 9))).toEqual(['command:gitleaks detect'])
+  })
+  test('a long run of flags is checked in linear time (CodeQL: no backtracking)', () => {
+    const shape = `py -${' -- -'.repeat(5000)} job`
+    const start = Date.now()
+    expect(keys(cmd(shape, 200, 9))).toEqual([`command:${shape}`])
+    expect(Date.now() - start).toBeLessThan(1000)
   })
   test('the queue the owner saw heals itself: old chain rows leave, settled rows stay', () => {
     const old = ['command:cd ; git add ; git commit -m -q', 'command:cd ; python -m unittest ; tail', 'command:seq ; for ; grep -q', 'allow:bash cd ; sed -n', 'slim:task-observer', 'unused:quiet'].map((k, i) => row(k, 'command', 'new', 100 - i))

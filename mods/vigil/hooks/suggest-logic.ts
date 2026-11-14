@@ -75,12 +75,21 @@ const READ_ONLY = new Set([
 /** Tools that ask by design (a question to you, a plan to approve): an allow rule never fits. */
 const ASKS_BY_DESIGN = new Set(['askuserquestion', 'exitplanmode', 'enterplanmode'])
 const CLOSER = new Set(['done', 'fi', 'esac'])
+/** Interpreters whose bare run, flags or unnamed script name no job. */
+const INTERPRETER = new Set(['python', 'python3', 'py', 'node', 'bash', 'sh', 'pwsh', 'powershell'])
+const UNNAMED_SCRIPT = /^\*\.\w+$/
 /**
  * A step that names no particular job: `git anything`, a bare interpreter, an unnamed script.
  * Flags name no job either: `python *.py --repo --max` is still an unnamed script (bug: it held
  * the top card at 183 runs). A word that is not a flag (`-m unittest`) still names one.
+ * Checked word by word, never by one regex over the step: a regex with nested repeats here
+ * backtracks exponentially on a long run of flags (CodeQL, PR 42).
  */
-const GENERIC_STEP = /^(?:git\b.*|(?:python3?|py|node|bash|sh|pwsh|powershell)(?: -[cIeE]| \*\.\w+)*(?: --?[\w-]+)*)$/
+const isGenericStep = (step: string): boolean => {
+  const [prog = '', ...rest] = step.split(' ')
+  if (prog === 'git') return true
+  return INTERPRETER.has(prog) && rest.every(w => w.startsWith('-') || UNNAMED_SCRIPT.test(w))
+}
 
 /**
  * A chain with its noise taken out: `cd`, read-only steps and block closers go, a repeated step
@@ -96,7 +105,7 @@ export const coreShape = (shape: string): string => {
 }
 
 /** Whether a core shape is a job worth naming: at least one step says what it does. */
-const namesAJob = (core: string): boolean => core.split(' ; ').some(x => x !== '' && !GENERIC_STEP.test(x))
+const namesAJob = (core: string): boolean => core.split(' ; ').some(x => x !== '' && !isGenericStep(x))
 
 const isOpenState = (s: SuggestState) => s === 'new' || s === 'shown'
 
