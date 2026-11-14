@@ -6,7 +6,8 @@
 Runs, in order, the read-only list in CLAUDE.md and the CI workflows' checks:
 build.py --check, the tools suite, warden_suites.py, pii_scan.py --tree, name_leak.py
 (local only), mods/sync_shared.py --check, the VS Code bridge's Python and node tests,
-`claude plugin validate --strict` for every pack and mod plugin, then every other member's
+`claude plugin validate --strict` for every pack and mod plugin, `claude plugin test` for each
+mod pack-ci's mods job tests (hooks, an MCP server, a registered tool or a *.test.ts), every other member's
 script suite (warden's run inside warden_suites). One line per step: name, exit code, tests
 ran and failures where the step prints them. A failed step prints its last lines; every step
 runs and reports. A step whose tool is absent (`claude`, `node`, the name list) prints NOT-RUN,
@@ -87,6 +88,29 @@ def warden_jobs(jobs: int, cpu: int) -> int:
     return 1 if jobs <= 1 else max(1, cpu - (jobs - 1))
 
 
+TOOL_OR_MCP = re.compile(r'tool\.register\s*[<(]|"mcpServers"')
+TYPE_ERROR = re.compile(r"(?m)\berror TS\d+:")
+
+
+def plugin_tested(d: Path) -> bool:
+    """pack-ci's mods-job rule: hooks, an MCP server or a registered tool (outside tests/), or
+    any *.test.ts outside node_modules, and the plugin gets `claude plugin test`."""
+    if (d / "hooks" / "hooks.json").is_file() or (d / ".mcp.json").is_file():
+        return True
+    for f in d.rglob("*"):
+        if not f.is_file() or "node_modules" in f.relative_to(d).parts:
+            continue
+        if f.name.endswith(".test.ts"):
+            return True
+        if "tests" not in f.relative_to(d).parts:
+            try:
+                if TOOL_OR_MCP.search(f.read_text(encoding="utf-8", errors="ignore")):
+                    return True
+            except OSError:
+                continue
+    return False
+
+
 def plan(root: Path = ROOT, which: Callable[[str], str | None] = shutil.which,
          jobs: int | None = None) -> list[Step]:
     tools = root / "tools"
@@ -111,6 +135,9 @@ def plan(root: Path = ROOT, which: Callable[[str], str | None] = shutil.which,
         d = manifest.parent.parent.relative_to(root).as_posix()
         steps.append(Step(f"validate:{d}", [claude or "claude", "plugin", "validate", "--strict", d],
                           root, not_run="" if claude else "claude not on PATH"))
+        if d.startswith("mods/") and plugin_tested(manifest.parent.parent):
+            steps.append(Step(f"test:{d}", [claude or "claude", "plugin", "test", d], root,
+                              suite=True, not_run="" if claude else "claude not on PATH"))
     for sdir in sorted(root.glob("packs/*/skills/*/scripts")):
         if sdir.parts[-4] == "warden" or not any(sdir.glob("test_*.py")):
             continue
@@ -193,7 +220,9 @@ def main(argv: list[str] | None = None, root: Path = ROOT, run: Callable = run_s
             elif s.suite:
                 line += ", 0 tests"
             ok = rc == 0 and not zero
-            note = drift_note(s.cmd) if not ok and s.name.startswith("validate:") else None
+            if not ok and s.name.startswith("validate:") and (n := len(TYPE_ERROR.findall(out))):
+                line += f", {n} type error{'s' if n != 1 else ''}"   # the tail shows only the last few
+            note = drift_note(s.cmd) if not ok and s.name.startswith(("validate:", "test:")) else None
             print(line + ("" if ok else " -> FAIL" + (" (0 tests)" if zero and rc == 0 else "")
                           + (f" ({note})" if note else "")))
             if a.verbose or not ok:
