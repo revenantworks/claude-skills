@@ -199,6 +199,72 @@ class Main(unittest.TestCase):
             self.go(["--jobs", "0"], Fake())
 
 
+class PluginTests(unittest.TestCase):
+    """A mod gets `claude plugin test` where pack-ci's mods job runs it, right after its validate."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self.tmp.name)
+        make_tree(self.root)
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def mod(self, name, files=()):
+        d = self.root / "mods" / name
+        (d / ".claude-plugin").mkdir(parents=True, exist_ok=True)
+        (d / ".claude-plugin" / "plugin.json").write_text("{}")
+        for rel, text in files:
+            (d / rel).parent.mkdir(parents=True, exist_ok=True)
+            (d / rel).write_text(text)
+
+    def plan(self, which=lambda n: n):
+        return {s.name: s for s in ci_local.plan(self.root, which=which)}, \
+            [s.name for s in ci_local.plan(self.root, which=which)]
+
+    def test_each_trigger_adds_the_step_after_validate(self):
+        self.mod("hooked", [("hooks/hooks.json", "{}")])
+        self.mod("mcp", [(".mcp.json", "{}")])
+        self.mod("tooled", [("lib/a.ts", "$.tool.register({})")])
+        self.mod("tested", [("tests/x.test.ts", "")])
+        steps, names = self.plan()
+        for m in ("hooked", "mcp", "tooled", "tested"):
+            s = steps[f"test:mods/{m}"]
+            self.assertEqual(s.cmd, ["claude", "plugin", "test", f"mods/{m}"])
+            self.assertEqual(names.index(f"test:mods/{m}"), names.index(f"validate:mods/{m}") + 1)
+
+    def test_a_plain_mod_gets_no_test_step(self):
+        self.mod("plain", [("README.md", "registers no tool")])
+        self.mod("tool-in-tests", [("tests/helper.ts", "tool.register(")])
+        self.mod("vendored", [("node_modules/x/y.test.ts", "")])
+        _, names = self.plan()
+        for m in ("plain", "tool-in-tests", "vendored"):
+            self.assertNotIn(f"test:mods/{m}", names)
+        self.assertNotIn("test:mods/vigil", names)        # make_tree's vigil holds only a manifest
+
+    def test_mcp_servers_in_the_manifest_counts(self):
+        self.mod("inline", [(".claude-plugin/plugin.json", '{"mcpServers": {}}')])
+        self.assertIn("test:mods/inline", self.plan()[1])
+
+    def test_packs_get_no_test_step(self):
+        (self.root / "packs" / "foundation" / "hooks").mkdir(parents=True)
+        (self.root / "packs" / "foundation" / "hooks" / "hooks.json").write_text("{}")
+        self.assertNotIn("test:packs/foundation", self.plan()[1])
+
+    def test_no_claude_is_not_run(self):
+        self.mod("hooked", [("hooks/hooks.json", "{}")])
+        steps, _ = self.plan(which=lambda n: None if n == "claude" else n)
+        self.assertEqual(steps["test:mods/hooked"].not_run, "claude not on PATH")
+
+    def test_a_failed_validate_counts_its_type_errors(self):
+        log = "x\n  ❯ line 1, column 2: error TS2339: a\n  ❯ line 3, column 4: error TS2322: b\n✘ failed\n"
+        out = io.StringIO()
+        with redirect_stdout(out):
+            ci_local.main(["--only", "validate:mods/vigil"], root=self.root,
+                          run=Fake({"validate:mods/vigil": (1, log)}), which=lambda n: n)
+        self.assertIn("validate:mods/vigil: exit 1, 2 type errors -> FAIL", out.getvalue())
+
+
 class Drift(unittest.TestCase):
     """A validate failure under a Claude Code other than pack-ci's pin names the drift."""
 
