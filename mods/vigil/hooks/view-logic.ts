@@ -88,8 +88,23 @@ export const skillSource = (name: string, hint?: string): SkillSource => {
 }
 
 export type Dupe = { base: string; names: string[]; sources: SkillSource[] }
-/** Skills loaded under two names or from two sources: the same base name more than once. */
-export const findDupes = (rows: readonly SkillRow[], sources: Readonly<Record<string, string>> = {}): Dupe[] => {
+/** A base name as an accept list holds it: trimmed, lower case. */
+export const dupeKey = (base: string): string => base.trim().toLowerCase()
+/**
+ * Skills loaded under two names or from two sources: the same base name more than once. A base in
+ * `accepted` is one the person chose to keep twice (`/rw-vigil skills dupes accept <name>`): it is
+ * left out here, so no view warns about it; `acceptedDupes` lists it.
+ */
+export const findDupes = (rows: readonly SkillRow[], sources: Readonly<Record<string, string>> = {}, accepted: readonly string[] = []): Dupe[] => {
+  const keep = new Set(accepted.map(dupeKey))
+  return allDupes(rows, sources).filter(d => !keep.has(dupeKey(d.base)))
+}
+/** The duplicates the person accepted, still loaded twice. */
+export const acceptedDupes = (rows: readonly SkillRow[], sources: Readonly<Record<string, string>> = {}, accepted: readonly string[] = []): Dupe[] => {
+  const keep = new Set(accepted.map(dupeKey))
+  return allDupes(rows, sources).filter(d => keep.has(dupeKey(d.base)))
+}
+const allDupes = (rows: readonly SkillRow[], sources: Readonly<Record<string, string>>): Dupe[] => {
   const by = new Map<string, string[]>()
   // Only the latest listing counts: a name seen only in older records (a skill renamed by its source,
   // such as a synced skill that gained its anthropic-skills: prefix) is not a second loaded copy.
@@ -170,7 +185,7 @@ export const overviewLines = (args: { live: Live | null; feed: Feed; now: number
  * the rest and one for duplicates. `all` lists every skill; `sources` is the session listing's
  * source per name (the counts file keeps names only).
  */
-export const skillsLines = (feed: Feed, theme: Theme = NEUTRAL, opts: { all?: boolean; sources?: Readonly<Record<string, string>> } = {}): Line[] => {
+export const skillsLines = (feed: Feed, theme: Theme = NEUTRAL, opts: { all?: boolean; sources?: Readonly<Record<string, string>>; accepted?: readonly string[] } = {}): Line[] => {
   const t = theme
   const sources = opts.sources ?? {}
   const active = (s: SkillRow) => s.fires30 > 0 || s.failures30 + s.misroutes30 > 0
@@ -183,25 +198,50 @@ export const skillsLines = (feed: Feed, theme: Theme = NEUTRAL, opts: { all?: bo
   const quiet = feed.skills.filter(s => s.listed && !active(s)).length
   const notes: Line[] = []
   if (!opts.all && quiet) notes.push({ text: `  ${quiet} enabled, never fired${t.glyphs.sep}/rw-vigil skills all`, tone: 'dim' })
-  const dupes = findDupes(feed.skills, sources)
+  const dupes = findDupes(feed.skills, sources, opts.accepted)
   if (dupes.length) notes.push({ text: `  ${t.glyphs.warn} ${plural(dupes.length, 'skill')} loaded twice (${[...new Set(dupes.flatMap(d => d.sources))].join(' + ')}): /rw-vigil skills dupes`, tone: 'warning' })
   if (shown.length) notes.push({ text: '  misr: another skill fired 30 s to 2 min later, or its edit was reverted.', tone: 'dim' }, { text: "  tok 7d: all tokens of the turns it loaded in, not the skill's own size.", tone: 'dim' })
   if (notes.length) out.push(blank, ...notes)
   return out
 }
 
-/** `/rw-vigil skills dupes`: each skill loaded twice, with the sources it comes from. */
-export const dupesLines = (feed: Feed, theme: Theme = NEUTRAL, sources: Readonly<Record<string, string>> = {}): Line[] => {
+/**
+ * `/rw-vigil skills dupes`: each skill loaded twice, with the sources it comes from, then the ones
+ * the person accepted (listed, never warned about).
+ */
+export const dupesLines = (feed: Feed, theme: Theme = NEUTRAL, sources: Readonly<Record<string, string>> = {}, accepted: readonly string[] = []): Line[] => {
   const t = theme
-  const dupes = findDupes(feed.skills, sources)
+  const dupes = findDupes(feed.skills, sources, accepted)
+  const kept = acceptedDupes(feed.skills, sources, accepted)
   const out: Line[] = [head(t, 'Skills loaded twice')]
-  if (dupes.length === 0) return [...out, { text: '  No skill is loaded twice.', tone: 'ok' }]
-  out.push({ text: '  Each copy takes listing room and splits the fire counts.', tone: 'dim' }, blank)
-  const rows = columns([['skill', 'sources'], ...dupes.map(d => [fit(d.base, NAME_W), d.sources.join(', ')])])
-  out.push({ text: rows[0]!, tone: 'dim' })
-  dupes.forEach((d, i) => out.push({ text: rows[i + 1]!, tone: 'warning' }, ...d.names.map(n => ({ text: `      ${fit(n, MAX_COLS - 6)}`, tone: 'dim' as const }))))
-  out.push(blank, { text: '  Keep one copy: remove the local folder or the synced skill.', tone: 'dim' })
+  const table = (ds: readonly Dupe[], tone: Tone): Line[] => {
+    const rows = columns([['skill', 'sources'], ...ds.map(d => [fit(d.base, NAME_W), d.sources.join(', ')])])
+    return [{ text: rows[0]!, tone: 'dim' }, ...ds.flatMap((d, i) => [{ text: rows[i + 1]!, tone }, ...d.names.map(n => ({ text: `      ${fit(n, MAX_COLS - 6)}`, tone: 'dim' as const }))])]
+  }
+  if (dupes.length === 0) out.push({ text: '  No skill is loaded twice.', tone: 'ok' })
+  else {
+    out.push({ text: '  Each copy takes listing room and splits the fire counts.', tone: 'dim' }, blank, ...table(dupes, 'warning'))
+    out.push(blank, { text: '  Keep one copy, or keep both: /rw-vigil skills dupes accept <skill>', tone: 'dim' })
+  }
+  if (kept.length) out.push(blank, { text: '  Accepted, not warned about:', tone: 'dim' }, ...table(kept, 'dim'), { text: '  Undo: /rw-vigil skills dupes unaccept <skill>', tone: 'dim' })
   return out
+}
+
+/**
+ * The accept list after one `accept` or `unaccept`: sorted, no repeats. `ok` is false, with the
+ * reason, when the word or the name is missing, or when the name is no current or accepted duplicate.
+ */
+export const editAccepted = (accepted: readonly string[], act: string, name: string, current: readonly Dupe[]): { ok: boolean; list: string[]; text: string } => {
+  const list = [...new Set(accepted.map(dupeKey))].sort()
+  const k = dupeKey(name)
+  if ((act !== 'accept' && act !== 'unaccept') || !k) return { ok: false, list, text: 'Usage: /rw-vigil skills dupes accept|unaccept <skill>' }
+  if (act === 'accept') {
+    if (list.includes(k)) return { ok: true, list, text: `Already accepted: ${k}.` }
+    if (!current.some(d => dupeKey(d.base) === k)) return { ok: false, list, text: `No skill named ${k} loads twice now. /rw-vigil skills dupes lists them.` }
+    return { ok: true, list: [...list, k].sort(), text: `Accepted: ${k} may load twice; vigil stops warning about it. Undo: /rw-vigil skills dupes unaccept ${k}` }
+  }
+  if (!list.includes(k)) return { ok: false, list, text: `${k} is not on the accepted list.` }
+  return { ok: true, list: list.filter(x => x !== k), text: `Unaccepted: vigil warns about ${k} again if it loads twice.` }
 }
 
 const pct = (n: number): string => `${Math.round(n)}%`.padStart(4)
@@ -339,6 +379,7 @@ export const HELP: readonly string[] = columns([
   ['/rw-vigil suggest', 'what is worth doing, at most five cards'],
   ['/rw-vigil suggest accept|dismiss|snooze <n>', 'take, drop or hide one'],
   ['/rw-vigil skills [all | dupes]', 'fired skills; all; loaded twice'],
+  ['/rw-vigil skills dupes accept|unaccept <skill>', 'keep a skill loaded twice without a warning'],
   ['/rw-vigil meters | context | tasks | health', 'one view'],
   ['/rw-vigil theme [<name> | background <b>]', 'list or apply; dark, light, auto'],
   ['/rw-vigil tiles [build <source>]', 'your own tiles; Claude proposes some'],

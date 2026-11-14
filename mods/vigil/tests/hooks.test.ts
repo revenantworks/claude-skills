@@ -190,6 +190,30 @@ describe('reading and switching', () => {
     const ran = await $.tool.call({ tool: 'mcp__vigil__vigil_read', view: 'meters' })
     expect(typeof (ran as { result?: unknown }).result).toBe('string')
   })
+  test('/rw-vigil skills dupes accept keeps a duplicate quiet across sessions; unaccept brings the warning back', async ($, on) => {
+    const listed: DashEvent = { t: NOW - DAY, s: sessionKey('old-0'), k: 'listed', skills: ['code-review', 'engineering:code-review'] }
+    const files: Record<string, string> = { [SW]: RECORDS, [`${DIR}/events.jsonl`]: serializeEvents([listed]) }
+    const usage: SessionUsage = { ...USAGE, context: { ...USAGE.context, breakdown: { ...USAGE.context.breakdown!, skills: { totalSkills: 2, includedSkills: 2, tokens: 10, skillFrontmatter: [{ name: 'code-review', source: 'built-in', tokens: 5 }, { name: 'engineering:code-review', source: 'plugin', tokens: 5 }] } } } }
+    world(on, files, ['terminal'], {}, {}, { usage })
+    const run = (args: string, kind: 'composer' | 'sdk' = 'composer') => $.command.run(cmd({ command: 'rw-vigil', args, origin: { kind } }))
+    const health = async () => String(((await $.tool.call({ tool: 'mcp__vigil__vigil_read', view: 'health' })) as { result?: unknown }).result)
+    expect(await health()).toMatch(/loads twice/)
+    expect((await run('skills dupes accept code-review', 'sdk')).text).toMatch(/Only you can accept/)
+    expect((await run('skills dupes accept code-review')).text).toMatch(/^Accepted: code-review/)
+    expect(await health()).not.toMatch(/twice/)
+    expect((await run('skills dupes')).text).toMatch(/Accepted, not warned about/)
+    expect((await run('skills dupes unaccept code-review')).text).toMatch(/^Unaccepted/)
+    expect(await health()).toMatch(/loads twice/)
+  })
+  test('an accept list saved by an earlier session keeps the duplicate quiet from the start', async ($, on) => {
+    const listed: DashEvent = { t: NOW - DAY, s: sessionKey('old-0'), k: 'listed', skills: ['code-review', 'engineering:code-review'] }
+    const files: Record<string, string> = { [SW]: RECORDS, [`${DIR}/events.jsonl`]: serializeEvents([listed]) }
+    world(on, files, ['terminal'], {}, {}, { store: { acceptedDupes: ['code-review'] } })
+    on('session.start', async ($, e) => ({ cwd: e.cwd }))
+    await $.session.start({ cwd: '/r', surface: 'terminal', isInteractive: true })
+    const ran = await $.tool.call({ tool: 'mcp__vigil__vigil_read', view: 'health' })
+    expect(String((ran as { result?: unknown }).result)).not.toMatch(/twice/)
+  })
   test('health read before the first listing still knows a built-in skill (bug: it said "local")', async ($, on) => {
     const listed: DashEvent = { t: NOW - DAY, s: sessionKey('old-0'), k: 'listed', skills: ['code-review', 'engineering:code-review'] }
     const files: Record<string, string> = { [SW]: RECORDS, [`${DIR}/events.jsonl`]: serializeEvents([listed]) }

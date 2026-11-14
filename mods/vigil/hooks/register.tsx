@@ -30,7 +30,7 @@ import {
   toneStyle, type ConsoleBg, type ConsoleInfo, type Theme, type ThemeEntry,
 } from './theme-logic'
 import {
-  HELP, head, healthLines, linesText, metersLines, navTabs, overviewLines, panelLines, parseDashArgs, skillsLines, themeApplied, themeLines, dupesLines, findDupes,
+  HELP, head, healthLines, linesText, metersLines, navTabs, overviewLines, panelLines, parseDashArgs, skillsLines, themeApplied, themeLines, dupesLines, findDupes, editAccepted,
   type Line, type Press, type View,
 } from './view-logic'
 import { RW_SKILLS } from './rw-skills'
@@ -46,7 +46,7 @@ import {
 } from './tiles-logic'
 
 const PLUGIN = 'vigil'
-const VERSION = '1.0.4'
+const VERSION = '1.0.5'
 const MIN_CLAUDE = '2.1.287'
 const FLUSH_MS = 5 * 60_000
 
@@ -122,6 +122,8 @@ let dsConsole: ConsoleInfo = consoleBackground(null, null, null)
 let dsThemeBase: Theme = NEUTRAL
 // Each listed skill's source by the engine's word (userSettings, plugin, syncedSkills, built-in), this session only.
 let dsSkillSources: Record<string, string> = {}
+/** Skills the person chose to keep loaded twice (`/rw-vigil skills dupes accept`), kept in $.store. */
+let dsAcceptedDupes: string[] = []
 
 function dsOn(id: string): boolean {
   return isFeatureOn(dsSw, id)
@@ -818,11 +820,11 @@ async function dsLines($: EngineInterface, view: View): Promise<Line[]> {
     }
     case 'tiles': return text('Your tiles', dsTilesText())
     case 'settings': return text('Settings', [...SWITCHES.map(x => `${x.name}: ${dsOn(x.id) ? 'on' : 'off'}`), `Auto spend modes: ${AUTO_MODES.map(m => `${m} ${dsAuto[m] ? 'on' : 'off'}`).join(', ')}`, '/rw-vigil switches lists every feature id.'])
-    case 'skills': return skillsLines(feed, th, { sources: dsSkillSources })
-    case 'skills-all': return skillsLines(feed, th, { all: true, sources: dsSkillSources })
-    case 'dupes': return dupesLines(feed, th, dsSkillSources)
+    case 'skills': return skillsLines(feed, th, { sources: dsSkillSources, accepted: dsAcceptedDupes })
+    case 'skills-all': return skillsLines(feed, th, { all: true, sources: dsSkillSources, accepted: dsAcceptedDupes })
+    case 'dupes': return dupesLines(feed, th, dsSkillSources, dsAcceptedDupes)
     case 'meters': return metersLines(live, feed, now, th)
-    case 'health': return healthLines(feed.health, th, findDupes(feed.skills, dsSkillSources))
+    case 'health': return healthLines(feed.health, th, findDupes(feed.skills, dsSkillSources, dsAcceptedDupes))
     case 'tasks': return dsTaskLines($)
     case 'theme': return themeLines(dsThemes, dsTheme.name, dsTheme, dsThemeErrors, dsConsole)
     case 'context': {
@@ -999,6 +1001,8 @@ async function dsSetup($: EngineInterface): Promise<void> {
   dsSuggest = parseSuggestions(await dsRead($, dsPath('vigil/suggestions.json')))
   dsLayout = parseLayout(await $.store.get('layout'))
   dsBandHidden = (await $.store.get('bandHidden')) === true
+  const accepted = await $.store.get('acceptedDupes')
+  dsAcceptedDupes = Array.isArray(accepted) ? accepted.filter((x): x is string => typeof x === 'string') : []
   await dsLoadTiles($)
   await dsLoadSpend($)
   // Hash keys only: text keys left by an older build are dropped on read and never written back.
@@ -1182,9 +1186,19 @@ async function dsCommand($: EngineInterface, e: CommandRunInput): Promise<Comman
       return { text: await dsSetAuto($, mode, want === 'on') }
     }
     case 'skills': {
-      await dsRoll($)
-      const sub = rest.toLowerCase()
-      return show(sub === 'all' ? 'skills-all' : sub === 'dupes' ? 'dupes' : 'skills')
+      const feed = await dsRoll($)
+      const [sub = '', act = '', ...nameWords] = rest.trim().split(/\s+/)
+      if (sub.toLowerCase() === 'dupes' && act) {
+        if (!isOwner) return { text: 'Only you can accept a skill loaded twice, by typing /rw-vigil skills dupes accept yourself.' }
+        if (Object.keys(dsSkillSources).length === 0) await dsLoadSources($).catch(() => [])
+        const r = editAccepted(dsAcceptedDupes, act.toLowerCase(), nameWords.join(' '), findDupes(feed.skills, dsSkillSources))
+        if (r.ok) {
+          dsAcceptedDupes = r.list
+          await $.store.set('acceptedDupes', r.list)
+        }
+        return { text: r.text }
+      }
+      return show(sub.toLowerCase() === 'all' ? 'skills-all' : sub.toLowerCase() === 'dupes' ? 'dupes' : 'skills')
     }
     case 'meters':
     case 'tasks':
