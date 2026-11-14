@@ -5,6 +5,13 @@ Every pack, every member and every featured plugin launches at 1.0.0. Each membe
 `<pack>-vX.Y.Z`, member versions move on their own semver, and a featured plugin carries its
 member's version.
 
+## [mods: vigil 1.0.3] - 2026-11-14
+
+### Fixed
+
+- **vigil**: Runs of one command that differ only in trailing flags (`python -m unittest -p -s`) count as one job, and making a folder (`mkdir`, `touch`, `New-Item`) is never a job. Cards already queued for either leave on the next roll.
+- **vigil**: A skills, dupes or health read before the session's first skill listing loads the listing first, so a built-in skill is no longer labelled local and the duplicate advice names the plugin side.
+
 ## [mods: vigil 1.0.2] - 2026-11-14
 
 ### Fixed

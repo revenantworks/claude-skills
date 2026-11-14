@@ -46,7 +46,7 @@ import {
 } from './tiles-logic'
 
 const PLUGIN = 'vigil'
-const VERSION = '1.0.2'
+const VERSION = '1.0.3'
 const MIN_CLAUDE = '2.1.287'
 const FLUSH_MS = 5 * 60_000
 
@@ -780,7 +780,26 @@ async function dsPress($: EngineInterface, p: Press): Promise<void> {
   }
 }
 
+/** The session's skill listing: each skill's source by the engine's word, and the names listed. */
+async function dsLoadSources($: EngineInterface): Promise<string[]> {
+  const rows = (await $.session.usage({ breakdown: 'summary' })).context.breakdown?.skills?.skillFrontmatter ?? []
+  dsSkillSources = Object.fromEntries(rows.filter(s => typeof s.source === 'string').map(s => [s.name, s.source]))
+  return rows.map(s => s.name)
+}
+
+/** Views that label a skill by its source. */
+const SOURCE_VIEWS: readonly View[] = ['skills', 'skills-all', 'dupes', 'health']
+
 async function dsLines($: EngineInterface, view: View): Promise<Line[]> {
+  // A read before the session's first listing (bug: a fresh session called a built-in skill "local",
+  // so the duplicate advice said to delete a copy that cannot be deleted): load the sources now.
+  if (SOURCE_VIEWS.includes(view) && Object.keys(dsSkillSources).length === 0) {
+    try {
+      await dsLoadSources($)
+    } catch {
+      // No listing on this host: names fall back to their prefix.
+    }
+  }
   const now = await $.clock.now()
   const feed = dsFeed ?? (await dsRoll($))
   const live = dsLive && now - dsLive.at <= STALE_MS ? dsLive : liveFromMeterFile(await dsRead($, ((await $.env.get('CLAUDE_USAGE_WINDOWS')) ?? `${dsHome}/.claude/usage-windows.json`).replace(/\\/g, '/'))) ?? dsLive
@@ -1424,9 +1443,7 @@ export const register: Register = on => {
       // Skills enabled: the listing's names, once a session.
       dsListed = true
       try {
-        const b = (await $.session.usage({ breakdown: 'summary' })).context.breakdown
-        const names = b?.skills?.skillFrontmatter.map(s => s.name) ?? []
-        dsSkillSources = Object.fromEntries((b?.skills?.skillFrontmatter ?? []).filter(s => typeof s.source === 'string').map(s => [s.name, s.source]))
+        const names = await dsLoadSources($)
         if (names.length) dsPush({ t: now, s: dsSKey, k: 'listed', skills: names })
       } catch {
         // No listing on this host: skills show once they fire.

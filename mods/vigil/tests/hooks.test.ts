@@ -25,7 +25,7 @@ const PATH = '/r/src/billing/secret-plan.ts'
 const key = (p: string) => p.replace(/\\/g, '/').replace(/^[A-Za-z]:/, '')
 type FsX = { list?: (path: string) => FsEntry[]; stat?: (path: string) => FsStat | undefined }
 /** Fixture tasks: the agent list the engine returns, and a tool result per call description. */
-type TaskFx = { store?: Record<string, unknown>; agents?: AgentInfo[]; results?: Record<string, unknown>; brokenStore?: boolean; registered?: string[] }
+type TaskFx = { store?: Record<string, unknown>; agents?: AgentInfo[]; results?: Record<string, unknown>; brokenStore?: boolean; registered?: string[]; usage?: SessionUsage }
 
 // Typed engine inputs and results (obs 0344): no stub casts its shape away, so a stub that drifts
 // from the host's type fails the type check instead of passing a shape the host would refuse.
@@ -62,7 +62,7 @@ const world = (on: On, files: Record<string, string>, surfaces: RenderSurface[] 
   on('session.repo', async () => ({ value: { root: '/r', remote: null, internal: false, name: null } }))
   on('session.surfaces', async () => ({ value: surfaces }))
   on('session.version', async () => ({ value: { version: '2.1.295' } }))
-  on('session.usage', async () => ({ value: USAGE }))
+  on('session.usage', async () => ({ value: fx.usage ?? USAGE }))
   on('fs.read', async ($, e) => {
     const text = files[key(e.path)]
     if (text !== undefined) return { value: text }
@@ -189,6 +189,15 @@ describe('reading and switching', () => {
     world(on, {})
     const ran = await $.tool.call({ tool: 'mcp__vigil__vigil_read', view: 'meters' })
     expect(typeof (ran as { result?: unknown }).result).toBe('string')
+  })
+  test('health read before the first listing still knows a built-in skill (bug: it said "local")', async ($, on) => {
+    const listed: DashEvent = { t: NOW - DAY, s: sessionKey('old-0'), k: 'listed', skills: ['code-review', 'engineering:code-review'] }
+    const files: Record<string, string> = { [SW]: RECORDS, [`${DIR}/events.jsonl`]: serializeEvents([listed]) }
+    const usage: SessionUsage = { ...USAGE, context: { ...USAGE.context, breakdown: { ...USAGE.context.breakdown!, skills: { totalSkills: 2, includedSkills: 2, tokens: 10, skillFrontmatter: [{ name: 'code-review', source: 'built-in', tokens: 5 }, { name: 'engineering:code-review', source: 'plugin', tokens: 5 }] } } } }
+    world(on, files, ['terminal'], {}, {}, { usage })
+    const ran = await $.tool.call({ tool: 'mcp__vigil__vigil_read', view: 'health' })
+    const text = String((ran as { result?: unknown }).result).replace(/\s+/g, ' ')
+    expect(text).toMatch(/1 skill loads twice \(plugin \+ built-in\)\. Fix: disable the plugin that repeats it/)
   })
   test('the switch file changes only through /rw-vigil; any other edit goes through', async ($, on) => {
     const files: Record<string, string> = {}
