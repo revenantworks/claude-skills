@@ -56,7 +56,8 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         # No lockfile in this repo; caching off keeps a poisoned cache out of the tag run.
         with: { node-version: "22", package-manager-cache: false }
-      - run: npm install -g @anthropic-ai/claude-code@2.1.290
+      # tools/ci_local.py reads this pin and names a mismatch with the rig's claude (obs 0682).
+      - run: npm install -g @anthropic-ai/claude-code@2.1.323
       - run: python3 mods/sync_shared.py --check
       # The VS Code extension's own tests (no dependencies; mods/README.md "Testing").
       - run: node --test mods/vscode

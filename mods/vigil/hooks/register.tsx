@@ -1329,11 +1329,11 @@ export const register: Register = on => {
     await dsEnsure($)
     if (e.tool === 'mcp__vigil__vigil_read') {
       if (!dsOn('D4')) return { deny: 'vigil_read is switched off (/rw-vigil on read-tool).' }
-      const view = String((e as { view?: unknown }).view ?? 'overview') as View
+      const view: string = String((e as { view?: unknown }).view ?? 'overview')
       await dsRoll($)
       // An MCP tool result is a string or content blocks; a { text } object fails the host's output check.
       if (view === 'suggest') return { result: linesText(await dsLines($, 'cards')) }
-      return { result: linesText(await dsLines($, ['overview', 'skills', 'meters', 'health', 'tasks'].includes(view) ? view : 'overview')) }
+      return { result: linesText(await dsLines($, (['overview', 'skills', 'meters', 'health', 'tasks'].includes(view) ? view : 'overview') as View)) }
     }
     const shell = dsShell(e)
     const filePath = typeof (e as { file_path?: unknown }).file_path === 'string' ? (e as { file_path: string }).file_path : null

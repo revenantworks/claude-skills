@@ -199,6 +199,68 @@ class Main(unittest.TestCase):
             self.go(["--jobs", "0"], Fake())
 
 
+class Drift(unittest.TestCase):
+    """A validate failure under a Claude Code other than pack-ci's pin names the drift."""
+
+    PIN = "      - run: npm install -g @anthropic-ai/claude-code@2.1.290\n"
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self.tmp.name)
+        make_tree(self.root)
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def pin(self):
+        wf = self.root / ".github" / "workflows"
+        wf.mkdir(parents=True)
+        (wf / "pack-ci.yml").write_text("jobs:\n  mods:\n    steps:\n" + self.PIN)
+
+    def go(self, local):
+        fake = Fake({"validate:mods/vigil": (1, "✘ Validation failed\n"),
+                     ci_local.VERSION_STEP: (0, f"{local} (Claude Code)\n")})
+        out = io.StringIO()
+        with redirect_stdout(out):
+            rc = ci_local.main(["--only", "validate:mods/vigil"], root=self.root, run=fake,
+                               which=lambda n: n)
+        return rc, out.getvalue(), fake
+
+    def test_pinned_claude_reads_pack_ci(self):
+        self.pin()
+        self.assertEqual(ci_local.pinned_claude(self.root), "2.1.290")
+
+    def test_no_pin_file_is_none(self):
+        self.assertIsNone(ci_local.pinned_claude(self.root))
+
+    def test_validate_failure_names_the_drift(self):
+        self.pin()
+        rc, out, _ = self.go("2.1.323")
+        self.assertEqual(rc, 1)
+        self.assertIn("validate:mods/vigil: exit 1 -> FAIL (claude drift: local 2.1.323, "
+                      "pack-ci pins 2.1.290)", out)
+        self.assertIn("claude drift: local 2.1.323, pack-ci pins 2.1.290", out.splitlines()[-1])
+
+    def test_matching_version_is_a_plain_fail(self):
+        self.pin()
+        rc, out, _ = self.go("2.1.290")
+        self.assertEqual(rc, 1)
+        self.assertNotIn("drift", out)
+
+    def test_no_pin_is_a_plain_fail(self):
+        rc, out, _ = self.go("2.1.323")
+        self.assertEqual(rc, 1)
+        self.assertNotIn("drift", out)
+
+    def test_version_is_asked_only_when_a_validate_step_fails(self):
+        self.pin()
+        fake = Fake()
+        with redirect_stdout(io.StringIO()):
+            ci_local.main(["--only", "validate:mods/vigil"], root=self.root, run=fake,
+                          which=lambda n: n)
+        self.assertNotIn(ci_local.VERSION_STEP, fake.calls)
+
+
 class Slow(Fake):
     """A thread-safe fake that sleeps per step and records the most steps at once."""
 
