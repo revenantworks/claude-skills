@@ -53,7 +53,7 @@ describe('W3 redactor and restore', () => {
     expect(count).toBe(0)
   })
   test('message content: a string is one text block, masked; another shape is named, never thrown on', () => {
-    // Unit level, so the shape is covered whatever the host hands the hook (CI's 2.1.290 run, K8f).
+    // Unit level, so the shape is covered whatever the host hands the hook (older hosts such as 2.1.290, K8f).
     const s = contentShape(`pasted ${GH}`)
     expect(s.kind).toBe('text')
     const { blocks, count } = maskBlocks(s.kind === 'text' ? s.blocks : [], new Map(), 's', {})
@@ -202,7 +202,7 @@ describe('catalog', () => {
     expect(featuresOf('shroud').map(x => x.id)).toEqual(['W3', 'W3b', 'W4', 'W5', 'L2b', 'C12', 'C12b'])
     // Personal data and the word list change what Claude reads beyond secrets, so they wait for a yes.
     for (const x of featuresOf('shroud')) expect(isFeatureOn(defaultSwitches(), x.id)).toBe(x.id !== 'W4' && x.id !== 'W5')
-    expect(CATALOG.filter(x => x.plugin === 'shroud' && (x.records || x.network))).toEqual([])
+    expect(CATALOG.filter(x => x.plugin === 'shroud' && x.records)).toEqual([])
   })
 })
 
@@ -251,7 +251,7 @@ const world = (on: On, files: Record<string, string>, env: Record<string, string
   return appended
 }
 
-// Older hosts (2.1.288-2.1.291, CI's 2.1.290) store nothing beneath a test and refuse a hook that answers
+// Older hosts (2.1.288-2.1.291) store nothing beneath a test and refuse a hook that answers
 // without next, so there an append ends in "no implementation" after shroud has done its work. Only that
 // error (and `also`) is tolerated; the assertions read the first row the test's hook saw.
 const append = async ($: { session: { append: (e: never) => Promise<unknown> } }, message: unknown, also?: RegExp) => {

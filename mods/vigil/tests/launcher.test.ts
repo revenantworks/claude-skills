@@ -110,7 +110,7 @@ describe('the short commands', () => {
   test('the long name leaves the typeahead; another command does not', async ($, on) => {
     world(on, {}, [pack(LONG)], [])
     on('command.describe', async ($, e) => ({ description: e.description, isHidden: e.isHidden }))
-    const provider = { plugin: 'foundation', tier: 'plugin' as const }
+    const provider = { plugin: 'foundation', tier: 'user' as const }
     const hidden = await $.command.describe({ command: LONG, description: 'x', isHidden: false, immediate: false, provider })
     expect(hidden.isHidden).toBe(true)
     const kept = await $.command.describe({ command: 'compact', description: 'y', isHidden: false, immediate: false, provider })
@@ -123,7 +123,7 @@ describe('the short commands', () => {
     on('command.describe', async ($, e) => ({ description: e.description, isHidden: e.isHidden }))
     const out = await $.command.run(cmd({ command: 'rw-agentwright', args: '', origin: { kind: 'composer' } }))
     expect(out.text).toContain('Short commands are off')
-    const d = await $.command.describe({ command: LONG, description: 'x', isHidden: false, immediate: false, provider: { plugin: 'foundation', tier: 'plugin' } })
+    const d = await $.command.describe({ command: LONG, description: 'x', isHidden: false, immediate: false, provider: { plugin: 'foundation', tier: 'user' as const } })
     expect(d.isHidden).toBe(false)
   })
 })

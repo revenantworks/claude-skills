@@ -279,6 +279,7 @@ export const valueOf = (spec: TileSpec, r: Reading, now: number): Value => {
     const at = s.match ? (ats.find(t => t >= now - DAY) ?? ats.at(-1)) : ats[0]
     return at === undefined ? { kind: 'none', why: 'no date in the file' } : { kind: 'at', at }
   }
+  if (s.kind === 'size') return { kind: 'none', why: 'a size source reads no field' }
   let doc: unknown
   try {
     doc = JSON.parse(r.text)

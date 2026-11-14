@@ -102,7 +102,7 @@ const session = async ($: Engine) => {
   await $.turn.complete({ answer: 'done', durationMs: 10, isAborted: false, turnId: 't1', reason: 'answer', usage: { input_tokens: 100, output_tokens: 50, cache_read_input_tokens: 900, cache_creation_input_tokens: 0, model: 'm' } })
 }
 
-const BAND_PROPS = { hasSurvey: false, isWorking: false, maxRows: 6, bodyColumns: 100, scroll: SCROLL, view: {} }
+const BAND_PROPS = { hasSurvey: false, isCollapsed: false, isWorking: false, maxRows: 6, bodyColumns: 100, scroll: SCROLL, view: {} }
 const PANE_PROPS = { title: 'vigil', isFocused: true, bodyColumns: 100, placement: 'dock' as const, scroll: SCROLL, view: {} }
 const dashFiles = (files: Record<string, string>) => Object.entries(files).filter(([k]) => k.startsWith(DIR))
 
@@ -334,7 +334,7 @@ describe('drawing', () => {
     await ui.press({ key: 'pin:health' })
     await ui.press({ key: 'collapse:spend' })
     await ui.press({ key: 'arrange-done' })
-    const b = (await $.command.run(cmd({ command: 'rw-vigil', args: 'board', origin: { kind: 'composer' } }))).text
+    const b = (await $.command.run(cmd({ command: 'rw-vigil', args: 'board', origin: { kind: 'composer' } }))).text ?? ''
     const titles = b.split('\n').map(l => /^\s*([A-Z][a-z]+(?: mode)?)(?: \(pinned\))?: /.exec(l)?.[1]).filter(Boolean)
     expect(titles.slice(0, 3)).toEqual(['Health', 'Context', 'Usage'])
     expect(b).toMatch(/Health \(pinned\): /)
@@ -374,7 +374,7 @@ describe('drawing', () => {
     // The engine beneath draws an empty band: a typed RenderElement, not a cast drawing.
     on('ui.render', async () => ({ type: 'Box', props: {} }))
     await $.command.run(cmd({ command: 'rw-vigil', args: 'help', origin: { kind: 'composer' } }))
-    const ui = await $.ui.mount({ plugin: 'vigil', surface: 'terminal', component: 'AbovePrompt', props: { hasSurvey: false, isWorking: false, maxRows: 6, bodyColumns: 100, scroll: SCROLL, view: {} } })
+    const ui = await $.ui.mount({ plugin: 'vigil', surface: 'terminal', component: 'AbovePrompt', props: { hasSurvey: false, isCollapsed: false, isWorking: false, maxRows: 6, bodyColumns: 100, scroll: SCROLL, view: {} } })
     await ui.press({ key: 'ask-on' })
     expect(parseSwitches(files[SW]).features.D1).toBe(true)
     await ui.unmount()
@@ -384,7 +384,7 @@ describe('drawing', () => {
       world(on, {})
       on('ui.render', async () => ({ type: 'Box', props: {} }))
       await $.command.run(cmd({ command: 'rw-vigil', args: 'help', origin: { kind: 'composer' } }))
-      const props = { hasSurvey: false, isWorking: false, maxRows: 6, bodyColumns: 100, scroll: SCROLL, view: {} }
+      const props = { hasSurvey: false, isCollapsed: false, isWorking: false, maxRows: 6, bodyColumns: 100, scroll: SCROLL, view: {} }
       const ui = await $.ui.mount({ plugin: 'vigil', surface, component: 'AbovePrompt', props })
       await ui.press({ key: 'band-hide' })
       expect(await ui.find({ type: 'Button', key: 'band-hide' })).toBeUndefined()
@@ -403,7 +403,7 @@ describe('drawing', () => {
     world(on, {}, ['terminal'], {}, {}, { store: { bandHidden: true } })
     on('ui.render', async () => ({ type: 'Box', props: {} }))
     await $.command.run(cmd({ command: 'rw-vigil', args: 'help', origin: { kind: 'composer' } }))
-    const props = { hasSurvey: false, isWorking: false, maxRows: 6, bodyColumns: 100, scroll: SCROLL, view: {} }
+    const props = { hasSurvey: false, isCollapsed: false, isWorking: false, maxRows: 6, bodyColumns: 100, scroll: SCROLL, view: {} }
     const ui = await $.ui.mount({ plugin: 'vigil', surface: 'terminal', component: 'AbovePrompt', props })
     expect(await ui.find({ type: 'Button', key: 'band-hide' })).toBeUndefined()
     await $.command.run(cmd({ command: 'rw-vigil', args: 'show', origin: { kind: 'composer' } }))
@@ -425,7 +425,7 @@ describe('drawing', () => {
     world(on, {})
     on('ui.render', async () => ({ type: 'Box', props: {} }))
     await $.command.run(cmd({ command: 'rw-vigil', args: 'help', origin: { kind: 'composer' } }))
-    const ui = await $.ui.mount({ plugin: 'vigil', surface: 'terminal', component: 'AbovePrompt', props: { hasSurvey: false, isWorking: false, maxRows: 6, bodyColumns: 100, scroll: SCROLL, view: {} } })
+    const ui = await $.ui.mount({ plugin: 'vigil', surface: 'terminal', component: 'AbovePrompt', props: { hasSurvey: false, isCollapsed: false, isWorking: false, maxRows: 6, bodyColumns: 100, scroll: SCROLL, view: {} } })
     expect(await ui.find({ type: 'Text', text: /keep counts across sessions/ })).toBeDefined()
     await ui.press({ key: 'ask-later' })
     await ui.redraw()
