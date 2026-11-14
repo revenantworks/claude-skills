@@ -5,6 +5,12 @@ Every pack, every member and every featured plugin launches at 1.0.0. Each membe
 `<pack>-vX.Y.Z`, member versions move on their own semver, and a featured plugin carries its
 member's version.
 
+## [mods: vigil 1.0.6] - 2026-11-14
+
+### Fixed
+
+- **vigil**: Copying, moving and deleting files (`cp`, `mv`, `rm` and their PowerShell forms) count as housekeeping like `mkdir`, so they never make a "Claude keeps running" card. Cards already queued for them leave on the next roll.
+
 ## [mods: vigil 1.0.5] - 2026-11-14
 
 ### Added
