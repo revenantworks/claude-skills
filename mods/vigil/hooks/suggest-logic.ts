@@ -65,14 +65,15 @@ const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`
 
 // ---------- what counts as the same work ----------
 
-/** Programs that only read, print or wait: never the work itself. */
+/** Programs that read, print, wait or keep files tidy: never the work itself. */
 const READ_ONLY = new Set([
   'sed', 'grep', 'rg', 'cat', 'head', 'tail', 'cut', 'wc', 'ls', 'echo', 'find', 'pwd', 'sort', 'uniq',
   'date', 'for', 'while', 'if', 'seq', 'tr', 'awk', 'which', 'type', 'printf', 'stat', 'file', 'true', 'false',
   'sleep', 'test', 'xargs', 'tee', 'basename', 'dirname',
   'get-content', 'select-string', 'get-childitem', 'select-object', 'write-output', 'measure-object',
-  // Setup that makes a place to work, never the work (bug: "mkdir -p" held a card at 49 runs).
-  'mkdir', 'touch', 'new-item',
+  // File housekeeping around the work, never the work (bugs: "mkdir -p" held a card at 49 runs,
+  // then "cp" at 36 and "rm" at 29).
+  'mkdir', 'touch', 'new-item', 'cp', 'mv', 'rm', 'copy-item', 'move-item', 'remove-item',
 ])
 /** Tools that ask by design (a question to you, a plan to approve): an allow rule never fits. */
 const ASKS_BY_DESIGN = new Set(['askuserquestion', 'exitplanmode', 'enterplanmode'])

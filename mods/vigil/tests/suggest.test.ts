@@ -78,6 +78,13 @@ describe('the same work is one row (bug: 187 open rows, each a chain variant)', 
     const stale = ['command:python -m unittest -p -s', 'command:mkdir -p'].map(k => row(k, 'command', 'new', 49))
     expect(mergeSuggestions(stale, [], NOW + 1000)).toEqual([])
   })
+  test('copying, moving and deleting files name no job (bug: "cp" and "rm" cards)', () => {
+    for (const shape of ['cp', 'rm', 'mv', 'rm -rf', 'cp -r ; rm -f', 'copy-item', 'remove-item -recurse']) expect(keys(cmd(shape, 200, 9))).toEqual([])
+    expect(coreShape('cp ; npm run build ; rm')).toBe('npm run build')
+    expect(keys(cmd('rmdir-tool sweep', 200, 9))).toEqual(['command:rmdir-tool sweep'])
+    const stale = ['command:cp', 'command:rm'].map(k => row(k, 'command', 'new', 36))
+    expect(mergeSuggestions(stale, [], NOW + 1000)).toEqual([])
+  })
   test('every variant of a chain counts toward one job', () => {
     const events = [...cmd('cd ; python -m unittest ; tail', 8, 5), ...cmd('python -m unittest ; grep -E', 7, 5), ...cmd('cd ; for ; python -m unittest', 5, 5)]
     const c = cands(events)
