@@ -75,8 +75,12 @@ const READ_ONLY = new Set([
 /** Tools that ask by design (a question to you, a plan to approve): an allow rule never fits. */
 const ASKS_BY_DESIGN = new Set(['askuserquestion', 'exitplanmode', 'enterplanmode'])
 const CLOSER = new Set(['done', 'fi', 'esac'])
-/** A step that names no particular job: `git anything`, a bare interpreter, an unnamed script. */
-const GENERIC_STEP = /^(?:git\b.*|(?:python3?|py|node|bash|sh|pwsh|powershell)(?: -[cIeE]| \*\.\w+)*)$/
+/**
+ * A step that names no particular job: `git anything`, a bare interpreter, an unnamed script.
+ * Flags name no job either: `python *.py --repo --max` is still an unnamed script (bug: it held
+ * the top card at 183 runs). A word that is not a flag (`-m unittest`) still names one.
+ */
+const GENERIC_STEP = /^(?:git\b.*|(?:python3?|py|node|bash|sh|pwsh|powershell)(?: -[cIeE]| \*\.\w+)*(?: --?[\w-]+)*)$/
 
 /**
  * A chain with its noise taken out: `cd`, read-only steps and block closers go, a repeated step

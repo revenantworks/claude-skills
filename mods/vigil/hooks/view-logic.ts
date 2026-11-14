@@ -236,9 +236,12 @@ export const dupesHealth = (t: Theme, dupes: number | readonly Dupe[]): Line[] =
   const n = typeof dupes === 'number' ? dupes : dupes.length
   if (!n) return []
   const sources = typeof dupes === 'number' ? [] : [...new Set(dupes.flatMap(d => d.sources))].sort((a, b) => SOURCES.indexOf(a) - SOURCES.indexOf(b))
+  // A built-in copy cannot be deleted, so "delete one copy" would send the person to an impossible step.
   const fix = sources.includes('claude.ai synced')
     ? 'Fix: turn off claude.ai skill sync, or delete the synced copies.'
-    : 'Fix: delete one copy of each (/rw-vigil skills dupes lists them).'
+    : sources.includes('built-in')
+      ? 'Fix: disable the plugin that repeats it (/rw-vigil skills dupes names it).'
+      : 'Fix: delete one copy of each (/rw-vigil skills dupes lists them).'
   const what = `${plural(n, 'skill')} ${n === 1 ? 'loads' : 'load'} twice${sources.length ? ` (${sources.join(' + ')})` : ''}.`
   return [{ text: `  ${t.glyphs.warn} ${what}`, tone: 'warning' }, { text: `    ${fix}`, tone: 'warning' }]
 }

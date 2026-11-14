@@ -5,6 +5,16 @@ Every pack, every member and every featured plugin launches at 1.0.0. Each membe
 `<pack>-vX.Y.Z`, member versions move on their own semver, and a featured plugin carries its
 member's version.
 
+## [mods: vigil 1.0.1, shroud 1.0.1] - 2026-11-14
+
+Mods ship by their marketplace version and carry no tag.
+
+### Fixed
+
+- **vigil**: A script run by an unnamed file with flags (`python *.py --repo`) no longer makes a "Claude keeps running" card; flags name no job. A card already in the queue for one leaves on the next roll.
+- **vigil**: When a skill loads twice because a plugin repeats a built-in skill, the health fix now says to disable the plugin; a built-in copy cannot be deleted.
+- **vigil, shroud**: The Revenantworks wordmark icon and the type fixes for Claude Code 2.1.323's stricter validator now reach installed copies, which only update when the version moves.
+
 ## [warden-v1.1.5] - 2026-11-13
 
 ### Fixed

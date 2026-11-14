@@ -53,7 +53,9 @@ class InstallTest(unittest.TestCase):
         # The legacy and old vigil entries are gone; another publisher's entries stay, even a stale one.
         self.assertEqual(ids, ["someone.other", "someone.gone"])
         self.assertFalse((self.ext / "revenantworks.mods-statusbar-0.3.0").exists())
-        self.assertTrue((self.ext / "revenantworks.vigil-1.0.0" / "extension.js").is_file())
+        # The folder carries the package version, read here so a version bump needs no test edit.
+        version = json.loads((Path(install.__file__).resolve().parent / "package.json").read_text(encoding="utf-8"))["version"]
+        self.assertTrue((self.ext / f"revenantworks.vigil-{version}" / "extension.js").is_file())
 
     def test_the_code_cli_uninstalls_the_legacy_id_first(self) -> None:
         calls: list[list[str]] = []

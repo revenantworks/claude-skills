@@ -14,7 +14,7 @@ import { isFeatureOn, parseSwitches, type Switches } from './lib/switches'
 import { fnv1a, isWindowsEnv, mapStrings, mergeHeartbeat, normPath } from './lib/util'
 
 const PLUGIN = 'shroud'
-const VERSION = '1.0.0'
+const VERSION = '1.0.1'
 
 // Module state. A hot reload starts it over; switches come back from disk.
 let pvSw: Switches = parseSwitches(null)
