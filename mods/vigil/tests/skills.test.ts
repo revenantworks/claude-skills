@@ -94,6 +94,10 @@ describe('skills view: duplicates', () => {
     fit80(h)
     expect(linesText(healthLines(H, NEUTRAL, findDupes([row('a'), row('b:a')]))).replace(/\s+/g, ' ')).toMatch(/1 skill loads twice \(local \+ plugin\)\. Fix: delete one copy of each \(\/rw-vigil skills dupes lists them\)\./)
     expect(linesText(healthLines(H, NEUTRAL, 3)).replace(/\s+/g, ' ')).toMatch(/3 skills load twice\. Fix: delete one copy of each \(\/rw-vigil skills dupes lists them\)\./)
+    // A built-in copy cannot be deleted: the fix names the plugin side.
+    const builtIn = linesText(healthLines(H, NEUTRAL, findDupes([row('code-review'), row('engineering:code-review')], { 'code-review': 'bundled' })))
+    expect(builtIn.replace(/\s+/g, ' ')).toMatch(/1 skill loads twice \(plugin \+ built-in\)\. Fix: disable the plugin that repeats it \(\/rw-vigil skills dupes names it\)\./)
+    fit80(builtIn)
     expect(linesText(healthLines(H, NEUTRAL))).not.toMatch(/twice/)
     expect(linesText(dupesLines(feedOf([row('solo')]), NEUTRAL))).toMatch(/No skill is loaded twice/)
   })

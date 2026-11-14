@@ -76,9 +76,15 @@ describe('the same work is one row (bug: 187 open rows, each a chain variant)', 
     expect(c[0]!.count).toBe(20)
   })
   test('a step that names no job never makes a row, however often it runs', () => {
-    for (const shape of ['cd ; git add ; git commit -m -q', 'cd ; git status --short ; head', 'python *.py', 'python -c', 'cd ; python *.py ; echo', 'cd ; sed -n ; grep -n', 'git status', 'seq ; for ; grep -q']) {
+    for (const shape of ['cd ; git add ; git commit -m -q', 'cd ; git status --short ; head', 'python *.py', 'python -c', 'cd ; python *.py ; echo', 'cd ; sed -n ; grep -n', 'git status', 'seq ; for ; grep -q', 'python *.py --head --max --repo', 'python *.py --repo', 'cd ; python *.py --repo -q ; tail']) {
       expect(keys(cmd(shape, 200, 9))).toEqual([])
     }
+  })
+  test('flags alone never name a job, but a module or a named program still does', () => {
+    expect(keys(cmd('python -m unittest', 200, 9))).toEqual(['command:python -m unittest'])
+    expect(keys(cmd('npm run build --silent', 200, 9))).toEqual(['command:npm run build --silent'])
+    const flagged = row('command:python *.py --head --max --repo', 'command', 'new', 183)
+    expect(mergeSuggestions([flagged], [], NOW + 1000)).toEqual([])
   })
   test('the queue the owner saw heals itself: old chain rows leave, settled rows stay', () => {
     const old = ['command:cd ; git add ; git commit -m -q', 'command:cd ; python -m unittest ; tail', 'command:seq ; for ; grep -q', 'allow:bash cd ; sed -n', 'slim:task-observer', 'unused:quiet'].map((k, i) => row(k, 'command', 'new', 100 - i))
