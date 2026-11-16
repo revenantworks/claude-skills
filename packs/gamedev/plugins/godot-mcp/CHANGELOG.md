@@ -1,5 +1,32 @@
 # Changelog — godot-mcp
 
+## [1.0.1] — 2026-11-16
+
+2026-11-16 (the owner's editor output filled with `WASAPI: GetBufferSize error` and `Current
+output_device invalidated, closing output_device`, over and over, after the Windows sound device
+changed; Godot does not handle that case quietly, godotengine/godot#104837):
+
+- Games played through `godot_run_scene` run with Godot's Dummy audio driver, so a run Claude
+  starts never opens the PC's sound device. `audio: true` on the call, or
+  `GODOT_MCP_RUN_AUDIO=1` for every run, plays with sound. The plugin adds
+  `--audio-driver Dummy` to `editor/run/main_run_args` in memory, waits two frames for the Run
+  Instances dialog to copy it, presses Play and sets the old value back; project.godot is never
+  written. Run arguments that already pick an audio driver win. The owner's own Play button is
+  untouched. The reply's `audio` field says which way the run went.
+- Output is tidied before Claude reads it, on both halves: a message repeated back to back is
+  kept once with a count (`[repeated N times]` in the game log, `repeat` on an editor entry),
+  and a run of the WASAPI pair (input-device twin included) becomes one note, "audio device
+  changed, harmless". The editor's 1,000-entry buffer folds as it records, so a flood can no
+  longer push real errors out of it; the server folds too, for an older addon copy still in a
+  project. Real errors are left as they are. Game logs report `folded`, the lines removed.
+- Tests: 45 unit tests (15 new: the pasted flood, the older two-line form, repeats, untouched
+  real errors, old and new addon entries, the audio argument and its environment default) and
+  48 end-to-end checks (7 new: the Dummy driver on the game's real command line, run arguments
+  restored and project.godot unchanged, `audio: true`, and the folding on real Godot 4.7.2 output
+  from a @tool autoload that prints the pair in the editor and the game). The e2e plays games
+  with the headless display driver instead of `--headless`, which forces the Dummy driver and
+  would hide the change.
+
 ## [1.0.0] — 2026-10-22
 
 2026-10-22 (own Godot MCP server, built step by step with the owner on a game project, then
