@@ -9,6 +9,8 @@ extends EditorPlugin
 ## but the open scene's own file. Editor Settings > claude_mcp/read_only refuses every command
 ## that can write (edits, saves, and runs, since the editor saves before it plays).
 ## A headless editor (`godot --headless --import`, CI) never opens the port.
+## Games Claude plays run with Godot's Dummy audio driver unless a call asks for sound, and the
+## editor messages it keeps fold repeats and known audio-driver noise into one entry each.
 
 const PROTOCOL := 1
 const PORT := 6010                     # first port tried; the next 9 are fallbacks
@@ -20,6 +22,8 @@ const IDLE_MS := 30000                 # an authenticated client idle this long 
 const READ_ONLY_SETTING := "claude_mcp/read_only"
 const WRITE_COMMANDS := ["add_node", "set_property", "save_scene", "run_scene"]
 const NO_RUN_ROOTS := ["res://addons/", "res://tests/", "res://test/"]   # test runners, tools
+const RUN_ARGS := "editor/run/main_run_args"   # extra command-line words for played games
+const SILENT := "--audio-driver Dummy"       # a played game opens no sound device
 
 var _server := TCPServer.new()
 var _peer: StreamPeerTCP               # one client at a time; others wait in the backlog
@@ -31,6 +35,7 @@ var _port := 0
 var _logging := false
 var _capture := _Capture.new()         # keeps the editor's recent messages
 var _last_run_started := 0.0           # when Claude last pressed Play (unix seconds)
+var _busy := false                     # a request is waiting a frame or two (a silent run)
 
 
 # Runs when the plugin is ticked on (or the editor opens with it on).
@@ -109,7 +114,7 @@ func _drop() -> void:
 
 # Runs every editor frame: take the next client when free, read finished lines, answer them.
 func _process(_delta: float) -> void:
-	if _port == 0:
+	if _port == 0 or _busy:
 		return
 	if _peer == null and _server.is_connection_available():
 		_peer = _server.take_connection()
@@ -132,7 +137,11 @@ func _process(_delta: float) -> void:
 		var line := _buf.slice(0, nl).get_string_from_utf8()
 		_buf = _buf.slice(nl + 1)
 		var was_authed := _authed
-		var reply := _handle(line)
+		_busy = true
+		var reply: Dictionary = await _handle(line)
+		_busy = false
+		if _peer == null:
+			return
 		_peer.put_data((JSON.stringify(reply) + "\n").to_utf8_buffer())
 		if reply.get("error_code") == "BAD_TOKEN" or (not was_authed and not _authed):
 			_drop()                          # no good token on the first line ends it
@@ -170,7 +179,7 @@ func _handle(line: String) -> Dictionary:
 	var result
 	match cmd:
 		"status": result = _cmd_status()
-		"run_scene": result = _cmd_run_scene(args)
+		"run_scene": result = await _cmd_run_scene(args)
 		"stop_scene": result = _cmd_stop_scene()
 		"editor_log": result = _cmd_editor_log(args)
 		"scene_tree": result = _cmd_scene_tree(args)
@@ -236,29 +245,60 @@ func _runnable(path: String) -> bool:
 
 
 # scene: "main", "current", or a res:// .tscn path. These are the editor's Play buttons.
+# audio: false (the default) plays the game with the Dummy audio driver, so a run Claude starts
+# never opens the PC's sound device and cannot fill the log with driver errors when that device
+# changes (WASAPI on Windows). The owner's own Play button is not touched.
 func _cmd_run_scene(args: Dictionary):
 	var scene := str(args.get("scene", "main"))
+	var play: Callable
 	if scene == "main":
 		if str(ProjectSettings.get_setting("application/run/main_scene", "")) == "":
 			return "the project has no main scene; pass a res:// scene path"
 		if not _runnable(str(ProjectSettings.get_setting("application/run/main_scene", ""))):
 			return "the main scene sits under addons/ or tests/; it is not played from here"
-		EditorInterface.play_main_scene()
+		play = EditorInterface.play_main_scene
 	elif scene == "current":
 		var root := EditorInterface.get_edited_scene_root()
 		if root == null:
 			return "no scene is open in the editor"
 		if not _runnable(root.scene_file_path):
 			return "scenes under addons/ and tests/ are not played from here"
-		EditorInterface.play_current_scene()
+		play = EditorInterface.play_current_scene
 	elif scene.begins_with("res://") and (scene.ends_with(".tscn") or scene.ends_with(".scn")) \
 			and not ".." in scene and not "\\" in scene and _runnable(scene) \
 			and ResourceLoader.exists(scene):
-		EditorInterface.play_custom_scene(scene)
+		play = EditorInterface.play_custom_scene.bind(scene)
 	else:
 		return "scene must be main, current, or an existing res:// .tscn or .scn path outside addons/ and tests/"
+	var audio: String = await _play(play, bool(args.get("audio", false)))
 	_last_run_started = Time.get_unix_time_from_system()
-	return {"started": scene, "log_seq": _capture.last(), "game_log": _game_log_path()}
+	return {"started": scene, "audio": audio, "log_seq": _capture.last(),
+		"game_log": _game_log_path()}
+
+
+# Presses Play with the Dummy audio driver added to the run's command line, then puts the
+# project's own run arguments back. The editor takes a game's arguments from the Run Instances
+# dialog's Main Run Args field, which copies Project Settings > editor/run/main_run_args when
+# ProjectSettings announces a change, at the end of the frame. So: set the value in memory,
+# wait two frames for the field to copy it, press Play, set the old value back (the field copies
+# that too). Only memory changes: project.godot is never written, and setting the field's text
+# from code does not trigger its own save. A project whose run arguments already pick an audio
+# driver keeps its choice. If the owner is typing in that field at that moment, it keeps their
+# text and the run has sound; the reply cannot tell, so it says what was asked for.
+func _play(play: Callable, audio: bool) -> String:
+	var old := str(ProjectSettings.get_setting(RUN_ARGS, ""))
+	if audio:
+		play.call()
+		return "on"
+	if "--audio-driver" in old:
+		play.call()
+		return "the project's run arguments choose the driver"
+	ProjectSettings.set_setting(RUN_ARGS, (old + " " + SILENT).strip_edges())
+	await get_tree().process_frame
+	await get_tree().process_frame
+	play.call()
+	ProjectSettings.set_setting(RUN_ARGS, old)
+	return "off (Dummy driver)"
 
 
 func _cmd_stop_scene() -> Dictionary:
@@ -450,7 +490,16 @@ func _cmd_save_scene():
 # A Logger (Godot 4.5+) sees every message and error the editor prints. It keeps the last
 # 1,000. Loggers can be called from other threads, hence the mutex. Never print in here:
 # printing calls the logger again.
+#
+# A message repeated back to back is kept once with a "repeat" count, and a run of known
+# driver noise is kept as one "note" entry, so a flood cannot push real errors out of the
+# 1,000. The noise: Windows' audio driver repeats "WASAPI: GetBufferSize error" and "Current
+# output_device invalidated, closing output_device" for as long as the default sound device is
+# changing or gone (a monitor or KVM switch, a headset unplugged, sleep). A folded entry takes
+# a new seq each time it grows, so a reader asking for messages since a run began still sees it.
 class _Capture extends Logger:
+	const NOISE := ["WASAPI: GetBufferSize error", "_device invalidated, closing "]
+	const NOTE := "godot-mcp NOTE: audio device changed, harmless (%d WASAPI driver messages folded)"
 	var _lock := Mutex.new()
 	var _entries: Array[Dictionary] = []
 	var _seq := 0
@@ -458,13 +507,29 @@ class _Capture extends Logger:
 	# PCRE escapes (\\x1b), not GDScript ones: "\u0000" would cut the pattern short.
 	var _codes := RegEx.create_from_string("\\x1b\\[[0-9;?]*[A-Za-z]|[\\x00-\\x08\\x0b-\\x1f]")
 
+	static func _is_noise(text: String) -> bool:
+		for n in NOISE:
+			if text.contains(n):
+				return true
+		return false
+
 	func _push(kind: String, text: String) -> void:
 		_lock.lock()
+		var clean := _codes.sub(text, "", true).strip_edges(false, true)
+		var noise := _is_noise(clean)
 		_seq += 1
-		_entries.append({"seq": _seq, "kind": kind,
-			"text": _codes.sub(text, "", true).strip_edges(false, true)})
-		if _entries.size() > 1000:
-			_entries.pop_front()
+		var last: Dictionary = _entries.back() if not _entries.is_empty() else {}
+		if not last.is_empty() and ((noise and last.kind == "note") \
+				or (not noise and last.kind == kind and last.text == clean)):
+			last.repeat = int(last.get("repeat", 1)) + 1
+			last.seq = _seq
+			if noise:
+				last.text = NOTE % last.repeat
+		else:
+			_entries.append({"seq": _seq, "kind": "note" if noise else kind,
+				"text": NOTE % 1 if noise else clean})
+			if _entries.size() > 1000:
+				_entries.pop_front()
 		_lock.unlock()
 
 	func _log_message(message: String, error: bool) -> void:

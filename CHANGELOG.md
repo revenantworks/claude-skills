@@ -5,6 +5,12 @@ Every pack, every member and every featured plugin launches at 1.0.0. Each membe
 `<pack>-vX.Y.Z`, member versions move on their own semver, and a featured plugin carries its
 member's version.
 
+## [plugins: godot-mcp 1.0.1] - 2026-11-16
+
+### Fixed
+
+- **godot-mcp**: Games Claude runs use Godot's Dummy audio driver unless a call asks for sound (`audio: true` or `GODOT_MCP_RUN_AUDIO=1`), and output folds repeated lines and the Windows audio driver's `WASAPI: GetBufferSize error` / `output_device invalidated` flood into one note, so a sound-device change no longer buries real errors.
+
 ## [mods: vigil 1.0.6] - 2026-11-14
 
 ### Fixed

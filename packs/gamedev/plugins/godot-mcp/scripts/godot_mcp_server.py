@@ -11,7 +11,9 @@ carrying the port and token the plugin wrote to <project>/.godot/claude_mcp/sess
 with the plugin on. With none given, the folder holding project.godot is searched upward from
 CLAUDE_PROJECT_DIR, else the working directory. --read-only (or GODOT_MCP_READ_ONLY=1) hides
 and refuses the four tools that can write (add, set, save, and run, since the editor saves
-before it plays). Python standard library only. stdout carries protocol messages only; notes go
+before it plays). Games it plays get Godot's Dummy audio driver unless the call asks for sound
+(audio=true, or GODOT_MCP_RUN_AUDIO=1 for every run). Logs come back with repeated lines
+collapsed and known driver noise folded into one note. Python standard library only. stdout carries protocol messages only; notes go
 to stderr. Nothing here deletes or writes files, and no text it sends becomes code in Godot.
 """
 from __future__ import annotations
@@ -27,7 +29,7 @@ from pathlib import Path
 from typing import Any
 
 NAME = "godot-mcp"
-VERSION = "1.0.0"
+VERSION = "1.0.1"
 PROTOCOLS = ("2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05")
 PLUGIN_PROTOCOL = 1
 SESSION = Path(".godot") / "claude_mcp" / "session.json"
@@ -39,6 +41,14 @@ JSON_TYPES = {"string": str, "boolean": bool, "integer": int, "number": (int, fl
               "object": dict, "array": list}
 ERROR_STARTS = ("ERROR:", "SCRIPT ERROR:", "USER ERROR:", "WARNING:", "USER WARNING:",
                 "SHADER ERROR:")
+# Known noise: lines Godot repeats for as long as a condition lasts, which say nothing about the
+# game. Windows' audio driver logs this pair over and over when the default output device
+# changes or goes away (a monitor or KVM switch, a headset unplugged, sleep); Godot does not
+# handle that case quietly (godotengine/godot#104837). Matched as plain substrings. Each run of
+# them becomes one NOTE line or entry; every other line is left as it is.
+NOISE = ("WASAPI: GetBufferSize error", "_device invalidated, closing ")
+NOTE_START = "godot-mcp NOTE:"
+NOISE_NOTE = NOTE_START + " audio device changed, harmless ({n} WASAPI driver messages folded)"
 
 
 def _schema(props: dict | None = None, required: list[str] | None = None) -> dict:
@@ -57,9 +67,10 @@ _ANY = {"type": "object"}
 _LOG = {"type": "object", "properties": {
     "path": {"type": "string"}, "written": {"type": "string"}, "stale": {"type": "boolean"},
     "note": {"type": "string"}, "lines": {"type": "array", "items": {"type": "string"}},
-    "omitted": {"type": "integer"}}}
+    "omitted": {"type": "integer"}, "folded": {"type": "integer"}}}
 _ENTRIES = {"type": "array", "items": {"type": "object", "properties": {
-    "seq": {"type": "integer"}, "kind": {"type": "string"}, "text": {"type": "string"}}}}
+    "seq": {"type": "integer"}, "kind": {"type": "string"}, "text": {"type": "string"},
+    "repeat": {"type": "integer"}}}}
 
 TOOLS = [
     {"name": "godot_status", "write": False,
@@ -71,14 +82,16 @@ TOOLS = [
      "description": "Play a scene, like the editor's Play buttons: scene is 'main' (default), "
                     "'current', or a res:// .tscn path outside addons/ and tests/. The editor "
                     "saves open scenes first. Waits capture_seconds (default 3, max 30), then "
-                    "returns the game's log and any new editor errors.",
+                    "returns the game's log and any new editor errors. The game runs silent "
+                    "(Godot's Dummy audio driver) unless audio is true.",
      "inputSchema": _schema({"scene": {"type": "string", "default": "main"},
                              "capture_seconds": {"type": "number", "minimum": 0,
-                                                 "maximum": 30, "default": 3}}),
+                                                 "maximum": 30, "default": 3},
+                             "audio": {"type": "boolean", "default": False}}),
      "annotations": _ann("Run a scene", False),
      "outputSchema": {"type": "object", "properties": {
-         "started": {"type": "string"}, "playing": {"type": "boolean"}, "game_log": _LOG,
-         "editor_errors": _ENTRIES}}},
+         "started": {"type": "string"}, "audio": {"type": "string"},
+         "playing": {"type": "boolean"}, "game_log": _LOG, "editor_errors": _ENTRIES}}},
     {"name": "godot_stop_scene", "write": False,
      "description": "Stop the playing scene (the editor's Stop button).",
      "inputSchema": _schema(), "annotations": _ann("Stop the scene", False, True),
@@ -86,7 +99,8 @@ TOOLS = [
     {"name": "godot_read_output", "write": False,
      "description": "Read the game's log (the running or last run started from the editor) and "
                     "the editor's own messages. errors_only keeps errors and warnings with the "
-                    "lines under them. A log older than the last run returns no lines.",
+                    "lines under them. A log older than the last run returns no lines. Repeated "
+                    "lines come collapsed with a count; audio-driver noise comes as one note.",
      "inputSchema": _schema({"errors_only": {"type": "boolean", "default": False},
                              "max_lines": {"type": "integer", "minimum": 1, "maximum": 1000,
                                            "default": 200}}),
@@ -191,6 +205,68 @@ def ask_editor(project: Path, cmd: str, args: dict | None = None) -> dict:
     return reply.get("result", {})
 
 
+def is_noise(text: str) -> bool:
+    return any(p in text for p in NOISE)
+
+
+def tidy_lines(lines: list[str]) -> tuple[list[str], int]:
+    """Collapse repeats and fold known noise; returns (lines, how many lines were removed).
+
+    A message is its first line plus the indented lines under it ("   at: ..."). A run of
+    noise messages becomes one NOTE line. A message repeated back to back is kept once, its
+    first line ending "[repeated N times]". Everything else passes through untouched."""
+    blocks: list[list[str]] = []
+    for ln in lines:
+        if blocks and ln[:1] in (" ", "\t") and not is_noise(ln):
+            blocks[-1].append(ln)
+        else:
+            blocks.append([ln])
+    out: list[str] = []
+    i = 0
+    while i < len(blocks):
+        b = blocks[i]
+        j = i + 1
+        if is_noise(b[0]):
+            while j < len(blocks) and is_noise(blocks[j][0]):
+                j += 1
+            out.append(NOISE_NOTE.format(n=j - i))
+        else:
+            while b[0].strip() and j < len(blocks) and blocks[j] == b:
+                j += 1
+            out.append(b[0] if j - i == 1 else f"{b[0]} [repeated {j - i} times]")
+            out.extend(b[1:])
+        i = j
+    return out, len(lines) - len(out)
+
+
+def tidy_entries(entries: list) -> list:
+    """The editor log's entries, tidied the same way. The plugin already does this from 1.0.1;
+    this covers an older copy of the addon still sitting in a project."""
+    out: list[dict] = []
+    for e in entries:
+        if not isinstance(e, dict):
+            continue
+        text = str(e.get("text", ""))
+        n = int(e.get("repeat", 1)) if isinstance(e.get("repeat", 1), int) else 1
+        last = out[-1] if out else None
+        noise = is_noise(text) or (e.get("kind") == "note" and text.startswith(NOTE_START))
+        if last is not None and noise and last.get("kind") == "note":
+            last["repeat"] = last.get("repeat", 1) + n
+        elif last is not None and not noise and last.get("kind") == e.get("kind") \
+                and last.get("text") == text:
+            last["repeat"] = last.get("repeat", 1) + n
+        else:
+            out.append(dict(e, kind="note") if noise else dict(e))
+            if n > 1:
+                out[-1]["repeat"] = n
+            continue
+        last["seq"] = e.get("seq", last.get("seq"))
+    for e in out:
+        if e.get("kind") == "note":
+            e["text"] = NOISE_NOTE.format(n=e.get("repeat", 1))
+    return out
+
+
 def read_game_log(path: str, errors_only: bool, max_lines: int, since: float = 0.0) -> dict:
     """The game's own log file. since: the run's start; a log last written before it holds an
     older run's output, and saying so beats showing old errors as new."""
@@ -210,15 +286,25 @@ def read_game_log(path: str, errors_only: bool, max_lines: int, since: float = 0
         lines = lines[1:]                    # the first line read may be cut mid-way
     lines = [ln if len(ln) <= MAX_LINE_CHARS else ln[:MAX_LINE_CHARS] + " [line cut]"
              for ln in lines]
+    lines, folded = tidy_lines(lines)
     if errors_only:
         kept, keep = [], False
         for ln in lines:
-            keep = ln.startswith(ERROR_STARTS) or (keep and ln.startswith((" ", "\t")))
+            keep = ln.startswith(ERROR_STARTS + (NOTE_START,)) or \
+                (keep and ln.startswith((" ", "\t")))
             if keep:
                 kept.append(ln)
         lines = kept
     return {"path": path, "written": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(written)),
-            "lines": lines[-max_lines:], "omitted": max(0, len(lines) - max_lines)}
+            "lines": lines[-max_lines:], "omitted": max(0, len(lines) - max_lines),
+            "folded": folded}
+
+
+def run_audio(a: dict) -> bool:
+    """Sound for a run: the call's audio argument, else GODOT_MCP_RUN_AUDIO=1, else off."""
+    if "audio" in a:
+        return bool(a["audio"])
+    return os.environ.get("GODOT_MCP_RUN_AUDIO") == "1"
 
 
 def call_tool(project: Path, name: str, a: dict, sleep=time.sleep) -> dict:
@@ -227,13 +313,16 @@ def call_tool(project: Path, name: str, a: dict, sleep=time.sleep) -> dict:
     if name == "godot_run_scene":
         wait = max(0.0, min(30.0, float(a.get("capture_seconds", 3))))
         t0 = time.time()
-        started = ask_editor(project, "run_scene", {"scene": str(a.get("scene", "main"))})
+        started = ask_editor(project, "run_scene", {"scene": str(a.get("scene", "main")),
+                                                     "audio": run_audio(a)})
         sleep(wait)
         return {"started": started.get("started", ""),
+                # an addon older than 1.0.1 ignores the audio argument and says nothing
+                "audio": str(started.get("audio", "unknown: update the addon in the project")),
                 "playing": bool(ask_editor(project, "status").get("playing")),
                 "game_log": read_game_log(started.get("game_log", ""), False, 200, since=t0),
-                "editor_errors": ask_editor(project, "editor_log", {
-                    "since": started.get("log_seq", 0), "errors_only": True}).get("entries", [])}
+                "editor_errors": tidy_entries(ask_editor(project, "editor_log", {
+                    "since": started.get("log_seq", 0), "errors_only": True}).get("entries", []))}
     if name == "godot_stop_scene":
         return ask_editor(project, "stop_scene")
     if name == "godot_read_output":
@@ -242,8 +331,8 @@ def call_tool(project: Path, name: str, a: dict, sleep=time.sleep) -> dict:
         st = ask_editor(project, "status")
         return {"game_log": read_game_log(st.get("game_log", ""), errors_only, n,
                                           since=float(st.get("last_run_started", 0))),
-                "editor_log": ask_editor(project, "editor_log", {
-                    "errors_only": errors_only, "limit": n}).get("entries", [])}
+                "editor_log": tidy_entries(ask_editor(project, "editor_log", {
+                    "errors_only": errors_only, "limit": n}).get("entries", []))}
     cmd, keys = PASS_THROUGH[name]
     return ask_editor(project, cmd, {k: a[k] for k in keys if k in a})
 

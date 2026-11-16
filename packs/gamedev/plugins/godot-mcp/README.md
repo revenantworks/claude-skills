@@ -3,7 +3,7 @@
 **A small, security-first Godot MCP server for Claude Code.** Claude runs your scenes, reads their
 output and errors, lists the open scene's nodes, and adds or edits nodes through the editor's own
 undo history. Eight tools, a token lock, nothing destructive. An opt-in plugin beside the gamedev
-pack, like `gdscript-lsp`. Version 1.0.0.
+pack, like `gdscript-lsp`. Version 1.0.1.
 
 It has two halves:
 
@@ -21,7 +21,7 @@ Claude Code --stdio--> godot_mcp_server.py --127.0.0.1 + token--> claude_mcp plu
 | Tool | What it does | Changes the project? |
 |---|---|---|
 | `godot_status` | Godot version, project, main scene, open scene, playing or not, game log path, read-only flag | No |
-| `godot_run_scene` | Plays `main`, `current` or a `res://` scene outside `addons/` and `tests/`, waits `capture_seconds` (default 3), returns the run's log and new editor errors | Runs the game; the editor saves open scenes first |
+| `godot_run_scene` | Plays `main`, `current` or a `res://` scene outside `addons/` and `tests/`, silent unless `audio` is true, waits `capture_seconds` (default 3), returns the run's log and new editor errors | Runs the game; the editor saves open scenes first |
 | `godot_stop_scene` | Stops the playing scene | No |
 | `godot_read_output` | The game's log and the editor's messages; `errors_only` keeps errors and warnings with the lines under them | No |
 | `godot_scene_tree` | The open scene's nodes: name, type, path, script | No |
@@ -70,6 +70,8 @@ stable code Claude can act on: `NO_PROJECT`, `NO_EDITOR`, `BAD_ARGS`, `BAD_TOKEN
 - **No home paths.** Paths in replies name `~`, never the account's own folder.
 - **No stale or giant answers.** A game log written before the last run returns no lines, with a
   note; only the log's last 2 MB is read, and a line over 2,000 characters is cut.
+- **No floods.** Repeated lines come back once with a count, and known driver noise as one note
+  (see Settings), so a burst of the same message cannot bury a real error.
 - **Limits.** Any program running as your user can read the session file, so the token stops other
   users and stray local clients, not your own programs. Windows offers no isolation between local
   accounts beyond file permissions.
@@ -108,6 +110,21 @@ inside a pack, as with `gdscript-lsp`). Its `.mcp.json` is ready for when it is.
 | Projects | `--project-dir` (repeatable), else `CLAUDE_PROJECT_DIR`, else the working directory | — |
 | Read-only server | `--read-only` or `GODOT_MCP_READ_ONLY=1` | off |
 | Read-only plugin | Editor Settings > `claude_mcp/read_only` | off |
+| Sound in runs Claude starts | `audio: true` on `godot_run_scene`, or `GODOT_MCP_RUN_AUDIO=1` in the server's environment for every run | off (Dummy driver) |
+
+**Sound and the WASAPI flood.** On Windows, Godot's audio driver logs `WASAPI: GetBufferSize
+error` and `Current output_device invalidated, closing output_device` over and over while the
+default sound device changes or is gone: a monitor or KVM switch, a headset unplugged, sleep
+(godotengine/godot#104837; harmless, but it buries real errors). So games played through
+`godot_run_scene` use Godot's Dummy audio driver and never open the sound device. Ask Claude to
+"run it with sound" (`audio: true`), or register the server with `-e GODOT_MCP_RUN_AUDIO=1`
+(`claude mcp add --scope local -e GODOT_MCP_RUN_AUDIO=1 godot -- python ...`), to hear the game.
+Your own Play button is untouched. The plugin adds `--audio-driver Dummy` to the run arguments in
+memory for that one Play and sets them back; project.godot is never written, and run arguments
+that already pick a driver win. The editor keeps its own sound, so it can still log the pair:
+those lines, in the editor's messages or a game log, come back as one note, "audio device
+changed, harmless", with a count. If you are typing in Debug > Customize Run Instances > Main Run
+Args at that moment, the editor keeps your text and that run has sound.
 
 **Worktrees and `override.cfg`.** The game obeys `override.cfg` (for example a custom user folder
 per checkout), but the editor does not apply it to its own settings. The plugin reads
@@ -123,8 +140,15 @@ python scripts/e2e_godot.py
 The unit tests use a fake editor on a loopback port; no Godot runs. `e2e_godot.py` builds a
 throwaway project in a temp folder (with an `override.cfg`), starts `godot --headless --editor`
 with no window, calls every tool through the server, probes the socket guards directly, then
-stops the editor and removes the project and its user folders. Games it plays run with
-`--headless`. Exit 3 is NOT-RUN (no Godot on PATH).
+stops the editor and removes the project and its user folders. Games it plays use the headless
+display driver (no window) with their own audio driver, so the silent-run checks mean something;
+a @tool autoload prints the WASAPI pair and a repeated line in the editor and the game. Exit 3 is
+NOT-RUN (no Godot on PATH).
+
+**Trial, 2026-11-16, Godot 4.7.2 on Linux:** 45 unit tests and 48 of 48 end-to-end checks
+passed, twice. The game's own command line (read from `/proc`) carried `--audio-driver Dummy` on
+a default run and did not with `audio: true`; project.godot was unchanged. Not yet run on Windows,
+where the real WASAPI flood happens.
 
 **Trial, 2026-10-22, Godot 4.7.2 on Windows:** 26 unit tests and 22 of 22 end-to-end checks
 passed, including the override.cfg log folder, both socket guards and no unexpected editor errors.

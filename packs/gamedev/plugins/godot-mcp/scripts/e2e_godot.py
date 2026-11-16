@@ -4,7 +4,10 @@
     python e2e_godot.py [--godot BIN] [--keep]
 
 Builds a throwaway project in a temp folder (main scene, the addon, an override.cfg giving the
-game its own user folder, games played with --headless so no window opens), starts
+game its own user folder, games played with the headless display driver so no window opens but
+their audio driver is their own, and a @tool autoload
+that prints the Windows audio driver's noise pair and a repeated line, in the editor and in the
+game, so the folding is checked on real Godot output), starts
 `godot --headless --editor` there with no window, drives every tool through
 godot_mcp_server.py over stdio, probes the socket's guards directly, checks each answer, then
 stops the editor and its children and removes the temp folder and its Godot user folders.
@@ -31,7 +34,15 @@ SERVER = HERE / "godot_mcp_server.py"
 NOT_RUN = 3
 NAME = "godot-mcp-e2e"
 CUSTOM = "godot-mcp-e2e-game"
-KNOWN = ('Parameter "t" is null',)   # dummy renderer, scene thumbnail on a headless save
+# Lines the editor's console may show that are not editor faults: the dummy renderer's scene
+# thumbnail on a headless save; the noise the e2e autoload prints on purpose; and, on Linux and
+# macOS, the played game's own output, which shares the editor's console there. The audio=true
+# run opens a real sound device; on a machine with none, its driver's open error (the line
+# after names drivers/<driver>/) is expected too.
+KNOWN = ('Parameter "t" is null', "WASAPI: GetBufferSize error", "_device invalidated, closing ",
+         "e2e: deliberate error")
+NO_DEVICE = ("drivers/alsa/", "drivers/pulseaudio/", "drivers/coreaudio/", "drivers/wasapi/")
+NOTE = "godot-mcp NOTE: audio device changed, harmless"
 
 PROJECT = f"""config_version=5
 
@@ -42,7 +53,11 @@ run/main_scene="res://main.tscn"
 
 [editor]
 
-run/main_run_args="--headless --quit-after 600"
+run/main_run_args="--display-driver headless --quit-after 600"
+
+[autoload]
+
+E2eNoise="*res://noise_tool.gd"
 
 [editor_plugins]
 
@@ -67,7 +82,35 @@ MAIN_GD = """extends Node2D
 
 func _ready() -> void:
 \tprint("e2e: main ready")
+\t# Engine options never reach get_cmdline_args, so the run's command line is read where the
+\t# OS shows it (/proc on Linux); elsewhere the driver's name is the evidence.
+\tvar cmd := ""
+\tvar proc := "/proc/%d/cmdline" % OS.get_process_id()
+\tif DirAccess.dir_exists_absolute(proc.get_base_dir()):
+\t\tvar out := []
+\t\tOS.execute("sh", ["-c", "tr '\\\\000' ' ' < " + proc], out)
+\t\tcmd = "".join(out)
+\tprint("e2e: audio %s | cmdline %s" % [AudioServer.get_driver_name(), cmd.strip_edges()])
 \tpush_error("e2e: deliberate error")
+"""
+# Prints the pair Windows' audio driver repeats when the sound device changes, five times, and
+# one plain line three times: right away in a played game, and 3 s after start in the editor
+# (by then the plugin's logger is listening).
+NOISE_GD = """@tool
+extends Node
+
+func _ready() -> void:
+\tif Engine.is_editor_hint():
+\t\tget_tree().create_timer(3.0).timeout.connect(_noise.bind("editor"))
+\telse:
+\t\t_noise("game")
+
+func _noise(where: String) -> void:
+\tfor i in 5:
+\t\tpush_error("WASAPI: GetBufferSize error")
+\t\tpush_warning("Current output_device invalidated, closing output_device")
+\tfor i in 3:
+\t\tprint("e2e: same %s line" % where)
 """
 # A @tool script whose _init prints a marker: if any value_godot ever builds it, the marker
 # shows up in the editor's output (the positive control for the object refusal).
@@ -168,6 +211,7 @@ def main(argv: list[str] | None = None) -> int:
     (tmp / "main.tscn").write_text(MAIN_TSCN, encoding="utf-8")
     (tmp / "main.gd").write_text(MAIN_GD, encoding="utf-8")
     (tmp / "evil_tool.gd").write_text(EVIL_GD, encoding="utf-8")
+    (tmp / "noise_tool.gd").write_text(NOISE_GD, encoding="utf-8")
     (tmp / "tests").mkdir()
     (tmp / "tests" / "runner.tscn").write_text(TEST_TSCN, encoding="utf-8")
     shutil.copytree(ADDON, tmp / "addons" / "claude_mcp")
@@ -244,10 +288,27 @@ def main(argv: list[str] | None = None) -> int:
         check("save_scene wrote the new node", ok and 'name="Hero"' in saved
               and "from claude" in saved, sv if not ok else saved)
 
+        project_before = (tmp / "project.godot").read_text(encoding="utf-8")
         ok, run = c.tool("godot_run_scene", scene="main", capture_seconds=6)
         lines = run.get("game_log", {}).get("lines", []) if ok else []
         check("run_scene captured this run's output",
               ok and any("e2e: main ready" in ln for ln in lines), run)
+        args = next((ln for ln in lines if "e2e: audio" in ln), "")
+        proc = args.partition("| cmdline")[2].strip()
+        check("a run is silent by default (the Dummy audio driver)",
+              ok and run.get("audio", "").startswith("off") and "e2e: audio Dummy" in args
+              and (not proc or ("--audio-driver Dummy" in proc and "--quit-after 600" in proc)),
+              [run.get("audio"), args])
+        check("the project's run arguments are back and project.godot is unchanged",
+              (tmp / "project.godot").read_text(encoding="utf-8") == project_before)
+        notes = [ln for ln in lines if ln.startswith(NOTE)]
+        check("the game's audio-driver noise is one note line",
+              len(notes) == 1 and "(10 " in notes[0]
+              and not any("WASAPI" in ln or "invalidated" in ln for ln in lines
+                          if not ln.startswith(NOTE)), notes or lines)
+        check("a repeated game line is kept once with its count",
+              "e2e: same game line [repeated 3 times]" in lines
+              and lines.count("e2e: same game line") == 0, lines)
         ok, out = c.tool("godot_read_output", errors_only=True)
         errs = out["game_log"].get("lines", []) if ok else []
         check("read_output errors_only", ok and any("deliberate error" in ln for ln in errs)
@@ -258,11 +319,30 @@ def main(argv: list[str] | None = None) -> int:
         check("run_scene refuses a scene under tests/", not ok, bad)
         ok, stop = c.tool("godot_stop_scene")
         check("stop_scene", ok, stop)
+        ok, run = c.tool("godot_run_scene", scene="main", capture_seconds=4, audio=True)
+        lines = run.get("game_log", {}).get("lines", []) if ok else []
+        args = next((ln for ln in lines if "e2e: audio" in ln), "")
+        proc = args.partition("| cmdline")[2].strip()
+        # Without /proc (Windows, macOS) only the reply is checked: a PC with no sound device
+        # falls back to Dummy on its own, so the driver's name proves nothing there.
+        check("audio=true plays with the project's own arguments only",
+              ok and run.get("audio") == "on" and "e2e: audio" in args
+              and (not proc or ("--audio-driver" not in proc and "--quit-after 600" in proc)),
+              [run.get("audio"), args])
+        c.tool("godot_stop_scene")
         ok, out = c.tool("godot_read_output")
         entries = out.get("editor_log", []) if ok else []
         check("editor log kept text, no control characters", ok
               and any("Claude MCP: listening" in e["text"] for e in entries)
               and not any(ch < " " and ch not in "\t\n" for e in entries for ch in e["text"]), out)
+        notes = [e for e in entries if e["kind"] == "note"]
+        check("the editor's audio-driver noise is one note entry",
+              len(notes) == 1 and notes[0]["text"].startswith(NOTE) and notes[0].get("repeat") == 10
+              and not any("WASAPI" in e["text"] for e in entries if e["kind"] != "note"),
+              notes or entries[-15:])
+        same = [e for e in entries if e["text"] == "e2e: same editor line"]
+        check("a repeated editor line is one entry with its count",
+              len(same) == 1 and same[0].get("repeat") == 3, same)
 
         bad_token = raw(port, b'{"token":"nope","cmd":"status"}\n')
         check("a wrong token is refused and the socket closed", b"BAD_TOKEN" in bad_token,
@@ -292,8 +372,11 @@ def main(argv: list[str] | None = None) -> int:
         ed_out.flush()
         text = ed_log.read_text(encoding="utf-8", errors="replace")
         check("no object string ran a tool script's _init", "E2E_TOOL_INIT_RAN" not in text)
-        stray = [ln for ln in text.splitlines()
-                 if ("ERROR" in ln or "Parse Error" in ln) and not any(k in ln for k in KNOWN)]
+        con = text.splitlines()
+        stray = [ln for i, ln in enumerate(con)
+                 if ("ERROR" in ln or "Parse Error" in ln) and not any(k in ln for k in KNOWN)
+                 and not ("ERR_CANT_OPEN" in ln and i + 1 < len(con)
+                          and any(d in con[i + 1] for d in NO_DEVICE))]
         check("editor printed no unexpected errors", not stray, stray[:5])
         check("no reply named the home folder", str(Path.home()).replace("\\", "/").lower()
               not in json.dumps(st).replace("\\\\", "/").lower(), st)

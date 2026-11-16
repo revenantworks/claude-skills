@@ -336,6 +336,140 @@ class TestOutput(Base):
         self.assertEqual(r["editor_errors"][0]["text"], "e")
 
 
+class TestNoise(Base):
+    """Repeats collapse and the Windows audio driver's noise folds into one note."""
+    PAIR = ["ERROR: drivers/wasapi/audio_driver_wasapi.cpp:778 - WASAPI: GetBufferSize error",
+            "WARNING: drivers/wasapi/audio_driver_wasapi.cpp:849 - WASAPI: Current output_device "
+            "invalidated, closing output_device"]
+
+    def test_the_pasted_flood_becomes_one_note(self):
+        lines, folded = srv.tidy_lines(["start"] + self.PAIR * 4 + ["ERROR: real", "end"])
+        self.assertEqual(lines, ["start", srv.NOISE_NOTE.format(n=8), "ERROR: real", "end"])
+        self.assertEqual(folded, 7)
+        self.assertIn("audio device changed, harmless", lines[1])
+
+    def test_older_two_line_form_folds_with_its_at_lines(self):
+        log = ["ERROR: WASAPI: GetBufferSize error",
+               "   at: thread_func (drivers/wasapi/audio_driver_wasapi.cpp:778)",
+               "WARNING: Current output_device invalidated, closing output_device",
+               "   at: thread_func (drivers/wasapi/audio_driver_wasapi.cpp:849)",
+               "   GDScript backtrace (most recent call first):"]
+        lines, folded = srv.tidy_lines(log * 3)
+        self.assertEqual(lines, [srv.NOISE_NOTE.format(n=6)])
+        self.assertEqual(folded, 14)
+
+    def test_the_input_device_twin_is_noise_too(self):
+        self.assertTrue(srv.is_noise("Current input_device invalidated, closing input_device"))
+
+    def test_repeats_collapse_and_real_errors_stay_untouched(self):
+        log = ["tick", "tick", "tick", "ERROR: boom", "   at: f (res://a.gd:3)", "ERROR: boom",
+               "   at: f (res://a.gd:3)", "ERROR: boom", "   at: g (res://a.gd:9)", "", "", "x"]
+        lines, folded = srv.tidy_lines(log)
+        self.assertEqual(lines, ["tick [repeated 3 times]", "ERROR: boom [repeated 2 times]",
+                                 "   at: f (res://a.gd:3)", "ERROR: boom",
+                                 "   at: g (res://a.gd:9)", "", "", "x"])
+        self.assertEqual(folded, 4)
+
+    def test_noise_between_real_lines_does_not_join_them(self):
+        lines, _ = srv.tidy_lines(["a", self.PAIR[0], "a"])
+        self.assertEqual(lines, ["a", srv.NOISE_NOTE.format(n=1), "a"])
+
+    def test_a_log_with_nothing_to_fold_is_unchanged(self):
+        self.assertEqual(srv.tidy_lines(TestOutput.LOG), (TestOutput.LOG, 0))
+
+    def test_game_log_folds_before_errors_only_and_the_tail(self):
+        p = self.tmp / "godot.log"
+        p.write_text("\n".join(["hi"] + self.PAIR * 300 + ["ERROR: real"]) + "\n",
+                     encoding="utf-8")
+        r = srv.read_game_log(str(p), True, 5)
+        self.assertEqual(r["lines"], [srv.NOISE_NOTE.format(n=600), "ERROR: real"])
+        self.assertEqual(r["folded"], 599)
+        self.assertEqual(r["omitted"], 0)
+
+    def test_old_addon_entries_are_tidied(self):
+        e = [{"seq": 1, "kind": "message", "text": "Claude MCP: listening"}]
+        for i in range(6):
+            e.append({"seq": 2 + 2 * i, "kind": "error",
+                      "text": "WASAPI: GetBufferSize error (drivers/wasapi/a.cpp:778, f)"})
+            e.append({"seq": 3 + 2 * i, "kind": "warning",
+                      "text": "Current output_device invalidated, closing output_device "
+                              "(drivers/wasapi/a.cpp:849, f)"})
+        e += [{"seq": 20, "kind": "error", "text": "real"}, {"seq": 21, "kind": "error",
+                                                              "text": "real"}]
+        out = srv.tidy_entries(e)
+        self.assertEqual([x["kind"] for x in out], ["message", "note", "error"])
+        self.assertEqual(out[1], {"seq": 13, "kind": "note", "repeat": 12,
+                                  "text": srv.NOISE_NOTE.format(n=12)})
+        self.assertEqual(out[2], {"seq": 21, "kind": "error", "text": "real", "repeat": 2})
+
+    def test_new_addon_entries_pass_through(self):
+        note = {"seq": 9, "kind": "note", "repeat": 40, "text": srv.NOISE_NOTE.format(n=40)}
+        self.assertEqual(srv.tidy_entries([note, "junk"]), [note])
+
+    def test_read_output_tidies_the_editor_log(self):
+        def handler(req):
+            if req["cmd"] == "status":
+                return {"ok": True, "result": {"game_log": "", "last_run_started": 0}}
+            return {"ok": True, "result": {"entries": [
+                {"seq": 1, "kind": "error", "text": "WASAPI: GetBufferSize error (x)"},
+                {"seq": 2, "kind": "warning", "text": "Current output_device invalidated, "
+                                                      "closing output_device (x)"}]}}
+
+        self.editor(handler=handler)
+        r = self.call("godot_read_output")
+        self.assertFalse(r["isError"])
+        self.assertEqual(r["structuredContent"]["editor_log"],
+                         [{"seq": 2, "kind": "note", "repeat": 2,
+                           "text": srv.NOISE_NOTE.format(n=2)}])
+
+
+class TestRunAudio(Base):
+    def run_with(self, args, env=None):
+        sent = []
+
+        def handler(req):
+            if req["cmd"] == "run_scene":
+                sent.append(req["args"])
+                return {"ok": True, "result": {"started": "main", "audio": "off (Dummy driver)",
+                                               "log_seq": 0, "game_log": ""}}
+            return {"ok": True, "result": {"playing": True, "entries": []}}
+
+        self.editor(handler=handler)
+        old = os.environ.pop("GODOT_MCP_RUN_AUDIO", None)
+        if env is not None:
+            os.environ["GODOT_MCP_RUN_AUDIO"] = env
+        try:
+            r = srv.call_tool(self.tmp, "godot_run_scene", args, sleep=lambda s: None)
+        finally:
+            os.environ.pop("GODOT_MCP_RUN_AUDIO", None)
+            if old is not None:
+                os.environ["GODOT_MCP_RUN_AUDIO"] = old
+        return sent[0], r
+
+    def test_runs_are_silent_by_default(self):
+        sent, r = self.run_with({})
+        self.assertEqual(sent, {"scene": "main", "audio": False})
+        self.assertEqual(r["audio"], "off (Dummy driver)")
+
+    def test_the_call_can_ask_for_sound(self):
+        self.assertTrue(self.run_with({"audio": True})[0]["audio"])
+
+    def test_the_environment_flips_the_default_and_the_call_still_wins(self):
+        self.assertTrue(self.run_with({}, env="1")[0]["audio"])
+        self.assertFalse(self.run_with({"audio": False}, env="1")[0]["audio"])
+
+    def test_audio_must_be_a_boolean(self):
+        r = self.call("godot_run_scene", {"audio": "yes"})
+        self.assertTrue(r["isError"])
+        self.assertEqual(r["structuredContent"]["error"]["code"], "BAD_ARGS")
+
+    def test_an_older_addon_says_so(self):
+        self.editor(handler=lambda req: {"ok": True, "result": {"started": "main", "log_seq": 0,
+                                                                "game_log": "", "entries": []}})
+        r = srv.call_tool(self.tmp, "godot_run_scene", {}, sleep=lambda s: None)
+        self.assertIn("update the addon", r["audio"])
+
+
 class TestFindProject(unittest.TestCase):
     def test_searches_upward(self):
         tmp = Path(tempfile.mkdtemp())
