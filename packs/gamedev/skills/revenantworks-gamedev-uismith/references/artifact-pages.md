@@ -6,13 +6,15 @@ Load when the surface is a published artifact page (a claude.ai page, often rebu
 
 1. Purpose first. One sentence: what the page is for, who reads it, when, on what device. Research the best practice for that kind of page (briefing, scoring sheet, review page, dashboard). Cut layout and data that do not serve that use before styling anything. A page that already fits its use gets no cuts; say so.
 2. Find the source. A routine-built page is fixed in its renderer, template or prompt in the repo, never only in the published copy: the next run overwrites it. A page with no source in any repo (published straight from a session, or a Claude Docs document) is reported, not restyled. A page rendered by someone else's skill is out of reach; say whose.
-3. Diff the live page against the repo before republishing. The host wraps the page in its own skeleton (doctype, charset, viewport, a reset style); strip those lines before comparing. A live page that differs from the repo's previous version is a finding to resolve before publishing over it.
+3. Diff the live page against the repo before republishing. The host wraps the page in its own skeleton (doctype, charset, viewport, a reset style); strip those lines before comparing. A live page that differs from the repo's previous version is a finding to resolve before publishing over it. Never publish the repo file over a drifted page: apply the change to the live copy, publish that, and report the drift (2026-11-18: two of eleven pages had drifted, one replaced by a different design outside the repo).
 
 ## Themes
 
 - Palettes come only from the page's own brand definition (light, dark, high-contrast and its light twin where documented). A palette from another brand fails that brand's colour test and any hex scan of rendered pages; where such a gate exists, offer fewer palettes rather than relax it.
 - One kit, never a hand-rolled switch. Where the user keeps a shared kit (one canonical copy, a byte-identical copy in each repo that builds pages), every page uses it: palettes are data in the page's own token names (a `ck-spec` block, or `render()` in a generator), `cardkit.py build` fills marker blocks, `cardkit.py check` fails CI on a stale page, and a test pins the copy's sha256. Five hand-rolled systems across 17 pages were replaced by it on 2026-11-11.
 - The kit owns its own attributes (`data-ck-mode`, `data-ck-pal`) and never writes the host's `data-theme`; plain CSS resolves Auto (host, else device), and forced modes carry `:not(#ck)` so they outrank every Auto rule. No watcher exists to loop.
+- The chosen mode reads at a glance: a tinted pill plus a rim in the page's accent along its lower edge (an inset box-shadow), and the same rim on the active tab. The page names its accent token in the kit's spec; the kit falls back to the text colour.
+- A kit change reaches every copy through one path: copy, re-pin, rebuild the pages, update any prompt that carries the kit CSS verbatim, then republish. Where the user's kit ships a sync command with a consumer list, run it rather than grepping for copies; where it does not, propose one.
 - A brand-owned default stays native: its Auto look stays in the brand CSS its tests measure, and the kit adds only the forced rules.
 - Token-ise before theming. Colour constants baked into CSS, SVG attributes (fill and stroke accept var()) and inline styles become var(--token) first; tests that counted hex values move to counting tokens, never get deleted.
 - Auto, Light, Dark. Auto follows the host's data-theme when it sets one, else prefers-color-scheme. A forced mode holds when the host rewrites the attribute.
@@ -28,7 +30,8 @@ The probe in probe.md covers fit. For a theme pass, also measure, per palette an
 
 - every visible text element against its nearest opaque ancestor (alpha above 0.5): 4.5:1 for text; symbols that act as graphics hold 3:1;
 - every button, select, summary, text input and form label at least 44 px tall; inline links and terms inside running text are exempt;
-- the theme switch: a forced mode holds after a host write; Auto returns to the host value; the stored value survives a reload.
+- the theme switch: a forced mode holds after a host write; Auto returns to the host value; the stored value survives a reload; the chosen mode shows its highlight in every palette;
+- every select: open its list in each mode and read every row (the computed `color` and `background-color` of each option differ); the closed control never shows a blank row.
 
 ## Probe traps
 
