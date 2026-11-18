@@ -45,6 +45,12 @@ Cheap to theme and the most often skipped: the text **selection** colour, the **
 **scrollbar** on themed grounds, the **caret** colour in inputs, and **tabular numerals** for figures
 that line up in tables. R31 checks the first two; the rest is judgment.
 
+The **open list of a native select** is drawn by the browser on its own ground, not the page's.
+Give each `option` the system pair (`color: CanvasText; background-color: Canvas`), which follows
+the page's `color-scheme`. An option left at `color: initial`, or inheriting a light text colour,
+can paint light text on a light list: the row reads as blank. Open the list in every theme to
+check; a screenshot of the closed control never shows it.
+
 ## 4. Motion
 
 - **Duration by consequence:** small feedback (a press, a toggle) about 100-150ms; a state change

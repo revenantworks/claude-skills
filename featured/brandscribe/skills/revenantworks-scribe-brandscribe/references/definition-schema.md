@@ -59,7 +59,10 @@ Every value row carries a `source` cell (section 4).
    `border-lit`, `focus`, `on-accent`, state roles), a value per declared theme (primary ground
    first), and the grounds each text or mark role is read on. Roles, never bare hex: a value with no
    role is asked about, never assigned one by guess. Identity colours and state colours are separate
-   roles.
+   roles. Each surface states its **step from the ground** (a contrast ratio, such as 1.09:1 for a
+   card). On a light theme, a pure-white card on a pale ground reads as glare on a phone at night;
+   a definition that wants it records it as a choice with its ratio, and a reported "too bright"
+   moves the light ground down rather than the card up.
 4. **Type roles and real font files** — display, body, mono (as the brand needs), each with a real
    file or a hosted source, a fallback stack and the sizes it is used at.
 5. **Spacing and radius** — the scale steps the brand uses, with what each is for.
