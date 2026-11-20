@@ -687,7 +687,7 @@ describe('Tasks: finished work shows as done (DM3 bug: 13 items "running" hours 
     expect(r.text).not.toMatch(/running for/)
   })
   test('the agent list: an agent the engine dropped has ended, idle still runs', async ($, on) => {
-    world(on, {}, ['terminal'], {}, {}, { ...fx, agents: [{ id: 'aT', status: 'idle', description: 'teammate', type: 'teammate' }] })
+    world(on, {}, ['terminal'], {}, {}, { ...fx, agents: [{ id: 'aT', status: 'idle', description: 'teammate', type: 'teammate' } as AgentInfo] })
     await $.tool.call({ tool: 'Agent', description: 'M14a build', subagent_type: 'opus-medium', prompt: 'p', run_in_background: true })
     // Same clock: inside the grace window the absent agent is not judged yet.
     const r = (await $.command.run(cmd({ command: 'rw-vigil', args: 'tasks', origin: { kind: 'composer' } }))) as { text: string }
