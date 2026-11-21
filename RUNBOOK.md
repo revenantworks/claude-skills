@@ -110,7 +110,11 @@ blocking; no `ask` rules anywhere in this repo.
    builds `dist/` zips. `--check` = CI mode, writes nothing.
 4. Commit, tag `<pack>-vX.Y.Z`, push branch + tag. Confirm CI attached the
    member zips to the Release. README points installers at Releases, so a
-   tag whose assets lag main ships stale skills. Two closes on this step:
+   tag whose assets lag main ships stale skills. A release is done when each
+   tag has a pack-ci run and a Release with its zips, not when the push
+   succeeded. Push at most three tags per push (one per push is what
+   `tools/release.py` does); GitHub fires no tag event past three, and
+   `.githooks/pre-push` refuses a fourth (#0679). Two closes on this step:
    - **Fetch the tag back**: `git fetch --tags origin`. A release cut with
      `gh release create` tags server-side and the clone never learns it, so
      any local "newest tagged version" check answers one release stale

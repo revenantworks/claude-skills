@@ -1,5 +1,9 @@
 # Changelog — revenantworks-scribe-researchscribe
 
+## [Unreleased]
+
+2026-11-20 (weekly observation review, slice b; observation 0698): `research-mode.md` section 5 (kept out of the every-run `verification.md`, which sits at its budget): workers grade by the act, told in the first brief; one topic per search query; an API read prints the name it resolved to.
+
 ## [1.0.0] — 2026-10-01
 
 2026-11-09 (source routes): the skill was refused or read the wrong page too often. New `references/source-routes.md` (source tiers 1-5, a six-rung fetch ladder, a route table per source family measured with the fetch tool, a stop rule with a host breaker) and `route-health.json`; `scripts/block_log.py` keeps a counts-only log of refusals (date, host, code, count) outside the repo; `scripts/source_eval.py` scores probe files for block rate and tier share and lints the route table. The workflow returns `block_stats` and outcome codes per attempt; archives, caches, mirrors and reader services are never a route. On the 2026-11-09 probe, fetches not read fell from 37.5% (primary pages and well-known APIs first) to 5% (refusals 22.5% to 0%); against search-then-read on the same new questions, tier 1-2 reads rose from 32% to 79% and tier 5 reads fell from 16% to 0%. Cases `stop-on-refusal` and `source-tier-pick` (C26, C27), C28 scripted.

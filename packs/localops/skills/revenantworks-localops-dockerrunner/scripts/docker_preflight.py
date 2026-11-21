@@ -320,6 +320,13 @@ def live_readings(a) -> dict:
                     for r in json_lines(df[1])] if df else None
         mcp = run(["docker", "mcp", "version"])
         rd["mcp"] = bool(mcp and mcp[0] == 0)
+        ps = run(["docker", "ps", "--format", "{{json .}}"])
+        rd["containers"] = json_lines(ps[1]) if ps and ps[0] == 0 else None
+        for c in rd["containers"] or []:
+            pol = run(["docker", "inspect", "--format", "{{.HostConfig.RestartPolicy.Name}}", str(c.get("ID"))])
+            c["RestartPolicy"] = pol[1].strip() if pol and pol[0] == 0 else None
+    appdata = os.environ.get("APPDATA")
+    rd["desktop_settings"] = read_json(Path(appdata) / "Docker" / "settings-store.json") if appdata else None
     sd = state_dir()
     rd["lease"] = read_json(sd / "gpu-lease.json")
     rd["config"] = read_json(sd / "gpu-config.json") or {}
@@ -358,6 +365,40 @@ def foreign_lease(rd: dict, now: datetime) -> dict | None:
             "est_vram_bytes": lease.get("est_vram_bytes")}
 
 
+def up_hours(status) -> float | None:
+    """Hours a container has been up, from `docker ps` Status ("Up 3 days"); None if unreadable."""
+    m = re.match(r"^Up (?:(about an?|an?|\d+) (second|minute|hour|day|week|month|year)s?)",
+                 str(status or ""), re.I)
+    if not m:
+        return None
+    n = 1 if m.group(1).lower().startswith(("a", "an")) else int(m.group(1))
+    per = {"second": 1 / 3600, "minute": 1 / 60, "hour": 1, "day": 24, "week": 168, "month": 720,
+           "year": 8760}[m.group(2).lower()]
+    return n * per
+
+
+def awake_findings(containers, settings) -> list[str]:
+    """What keeps the engine busy (observation 0667): long-lived containers and Desktop's start settings."""
+    out = []
+    for c in containers or []:
+        h = up_hours(c.get("Status"))
+        if h is not None and h >= 24:
+            out.append(f"container {c.get('Names')} has run {c.get('Status')[3:]} (restart policy "
+                       f"{c.get('RestartPolicy') or 'unmeasured'}): any running container keeps the engine "
+                       "awake, so Resource Saver cannot start and the VM never idles. Check its CPU with "
+                       "`docker stats --no-stream`; a listener that waits for work can start on demand "
+                       "instead (start the engine when work is queued; stop it only when this job started it "
+                       "and nothing else runs or is queued)")
+    if isinstance(settings, dict):
+        if settings.get("AutoStart") is True:
+            out.append("Docker Desktop starts at sign-in (settings-store.json AutoStart): the engine runs "
+                       "whether or not any work needs it")
+        if settings.get("UseResourceSaver") is False:
+            out.append("Resource Saver is off (settings-store.json UseResourceSaver): an idle engine keeps "
+                       "its VM's memory")
+    return out
+
+
 def audit(rd: dict, now: datetime) -> dict:
     host = rd.get("host") or {}
     ram = host.get("ram_total")
@@ -391,6 +432,7 @@ def audit(rd: dict, now: datetime) -> dict:
             findings.append(f"low disk: {v['drive_free'] / GIB:.1f} GiB free beside {v['path']}")
     if rd.get("vhdx") == []:
         findings.append("no VHDX found at the default locations: pass --vhdx PATH (Desktop may use a custom folder)")
+    findings += awake_findings(rd.get("containers"), rd.get("desktop_settings"))
     lease = foreign_lease(rd, now)
     return {
         "mode": "audit",
@@ -544,7 +586,7 @@ def status(rd: dict, now: datetime, history: list | None) -> dict:
         r = run(cmd)
         return json_lines(r[1]) if r and r[0] == 0 else []
     running = [{"name": c.get("Names"), "image": c.get("Image"), "status": c.get("Status")}
-               for c in (rd.get("containers") if "containers" in rd else
+               for c in (rd.get("containers") if rd.get("containers") is not None else
                          lines(["docker", "ps", "--format", "{{json .}}"]))]
     stacks = rd.get("stacks")
     if stacks is None:

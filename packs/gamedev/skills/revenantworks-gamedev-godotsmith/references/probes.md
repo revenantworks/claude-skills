@@ -64,6 +64,14 @@ same name.
   that job. In one build a job share counted babies, a column read the row's want instead of
   its holder, and a death column read 0 over 43 logged kills; two "game faults" and a design
   call rested on it. Report the bot as the suspect first.
+- **A bit-equality probe proves its inputs can fail** (observation 0700). Inputs from the
+  engine's ranged random call carry short mantissas, and two formulas that differ only in how
+  many times they round agree on all of them: a million such inputs showed 0 mismatches
+  between two builds whose wrap functions differ, while 2,411 inputs built by multiplication
+  showed 516. Build inputs that exercise rounding (products, sums of irrationals, values
+  from a real run's state dump) plus the edges (range ends, signed zero, several turns out).
+  Plant a deliberately different formula first, and believe a zero only once the same inputs
+  catch it. Report the input recipe beside the count.
 
 ## 6. Editor-side claims with no window
 

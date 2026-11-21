@@ -81,6 +81,7 @@ Any request to set the sound of a game or of one system in it.
 2. **Report** one table: file, each check's status and value, and what was **not** measured (NOT-RUN with its reason). A batch of three or more in one category also gets the spread check.
 3. **Findings** ordered by cheapest fix: an import setting, then an edit to a new file (trim, fade, gain, re-cut), then a regenerate. Regenerating is the last line, never the first.
 4. A clean result names what was clean. It is never "all good": the listen test is still the user's.
+5. **Spoken content** (a voice render checked against its script) goes through whisperrunner's recipe (`checks.md`, Verifying spoken content against a script): VAD on, `--no-context`, every reported drop confirmed by timestamp before it is called a drop. A transcript that repeats one line is a transcriber fault first (observation 0550).
 
 ## Entry — Test
 

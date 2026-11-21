@@ -46,7 +46,8 @@ CRED_DENIES = ["Read(~/.ssh/**)", "Edit(~/.ssh/**)", "Read(~/.aws/**)", "Read(~/
 HOOK_DENIES = ["Edit(~/.claude/hooks/**)"]
 HOOK_SET = [("Bash|PowerShell", "push_gate.py"), ("Bash|PowerShell|Write|Edit|MultiEdit|NotebookEdit", "hyperv_lock.py"),
             ("Bash|PowerShell", "heredoc_guard.py"), ("*", "call_cap.py"), ("Agent|Task|Workflow", "launch_throttle.py"),
-            ("Bash|PowerShell|Read|Write|Edit|MultiEdit|mcp__.*", "golive_block.py")]
+            ("Bash|PowerShell|Read|Write|Edit|MultiEdit|mcp__.*", "golive_block.py"),
+            ("Bash|PowerShell|mcp__.*", "outbound_text_guard.py")]
 
 
 def platform_of(arg: str | None) -> str:
@@ -312,7 +313,7 @@ def main(argv) -> int:
     ap.add_argument("--add-hooks")
     ap.add_argument("--hook-denies", action="store_true",
                     help="add the hooks-folder deny rules without adding hooks (--add-hooks adds them too)")
-    ap.add_argument("--hooks", help="comma list: push_gate,hyperv_lock,heredoc_guard,call_cap,launch_throttle,golive_block (warden_digest is always added)")
+    ap.add_argument("--hooks", help="comma list: push_gate,hyperv_lock,heredoc_guard,call_cap,launch_throttle,golive_block,outbound_text_guard (warden_digest is always added)")
     ap.add_argument("--out-dir")
     args = ap.parse_args(argv)
     platform = platform_of(args.platform)

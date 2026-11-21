@@ -1,5 +1,28 @@
 # Changelog — revenantworks-foundation-dispatchwright
 
+## [Unreleased]
+
+- 2026-11-20 observer review (observations 0613, 0627, 0630, 0637, 0640, 0642, 0671, 0672, 0675,
+  0692, 0702, 0703, 0704, 0706, 0707, 0708, 0709, 0715, 0723): `meters.md` Wave conduct: no
+  controller writes in a shared checkout, re-check a finding before briefing it, a skill's own
+  fan-out is still a dispatch, one account per gh call, a public merge approved per merge, commit
+  messages through a file, reconcile a return against its worktree, check a waiting unit and sweep
+  orphans. `unit-brief-template.md`: re-read the report after a wait, `commit -F <file>`, count a
+  copy against its population, wait on the done-marker, unique worktree folders, no
+  `gh auth switch`, run the fast guards and stage `.uid`. `ledger-schema.md`: a named run's
+  ledger, register an off-tree ledger at plan time, the guard's clock check on `dispatch_ts`,
+  `Unit <id>` binds, model cells carry a version, open status is a bare word. Rig hooks in
+  `.claude/hooks/`: `dispatch_gate.py` ignores harness blocks (task notifications); the ledger
+  guard reads the run a brief names, names failing cells and every v2 problem at once, binds
+  `Unit <id>` at a line start, names a row miss before a rig-gate refusal, and refuses a
+  `dispatch_ts` more than 2 minutes ahead of its clock.
+2026-11-20 (weekly observation review, slice b; observations 0472, 0484, 0486, 0498, 0501, 0504, 0506, 0565, 0617, 0668, 0698): reference files only. `unit-brief-template.md`: known reds named by test, never script; a fix's red counts only for the finding's reason (seam first); a stand-in for a CI step runs the step's other commands; the land projects the hosted run from its cost driver and raises a timeout past 80%; a brief that parallelises names the proof it removes; a land on hosted CI alone runs the walk or names the skip; the wave join checks union merges for duplicate functions and re-runs fit checks after text-length rows; research briefs define grades by the act; a run tip is proven on the rig or marked untested. `meters.md`: a measuring tool's figure gets a raw-log check before it reaches the owner.
+
+- §5 land rules: read checks then merge in two calls (#0691); land branch from origin/main, MCP PR route, `CI unread` (#0651); push-free self-test shape (#0705)
+
+- unit-brief template, Facts: environment facts come from the target's definition (CI file,
+  runner image), never the author's machine; a cross-platform count names its run (#0701).
+
 ## [1.0.1] — 2026-11-13
 
 - unit-brief template, meters and ledger-schema reference updates

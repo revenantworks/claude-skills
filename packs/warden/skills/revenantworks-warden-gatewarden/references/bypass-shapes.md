@@ -50,6 +50,22 @@ routine; the rule rests on a recorded stall. An interactive-only rig may keep `a
 A quoted subcommand (`git 'push'`) and a script file Claude writes and runs are escapes it does not
 model; say so when the question is "can Claude still do X".
 
+**The opposite shape: a deny that matches more than it says** (observation 0660). Claude Code's
+PowerShell matcher reads a path-shaped first word as its program name, so
+`PowerShell(*\.config\gh *)`, written to guard gh's config folder, acted as `PowerShell(gh *)` and
+denied every gh call under the PowerShell tool for 18 days while `perm_explain.py` and the estate's
+checker both said allow. Flag by hand, as `powershell-path-head`, any PowerShell rule whose first
+word is a path ending in a program name; guard the folder with `Read(…)` and `Edit(…)` rules
+instead.
+
+**When the model and the harness disagree, ask the harness.** First read the denied call's
+`permissionDecision` record in the session transcript (source, `reasonCode` such as
+`rule:userSettings`, rule source): it names the layer in one read. Then prove the rule with a
+headless A/B probe that touches only a test settings file:
+`claude -p --setting-sources local --settings <test file> --permission-mode dontAsk "<the call>"`,
+once with the full rule list and once with the suspect rule swapped out; bisect a long list the same
+way. Never conclude "another layer" (an organisation policy, the app's store) from a model alone.
+
 ## What harden changes
 
 Only these, each listed in its output: PowerShell twins (Windows, default on); tracked `ask` → `deny`

@@ -51,6 +51,11 @@ Anchors: **7+ ships · 4-6 needs work · 1-3 broken.** An area the surface does 
 **n/a** (a read surface with no controls has no states to judge) and drops out; the overall is the
 mean of the scored areas, renormalised. Write `n/a` and the reason; never score an empty area 10.
 
+Under Hierarchy and layout, a label row that annotates a fixed-size control (the end words of a
+1-5 scale, a slider's ticks) with its own `max-width` or width is a P2 row: labels take the
+control's geometry, or they drift off the marks they explain (observation 0681; uismith
+`artifact-pages.md` measures it).
+
 ## 3. Severity and the catalog
 
 - **P0**: a task cannot complete, content is invisible, or an asset is broken on a shipped surface.

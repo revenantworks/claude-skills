@@ -1,5 +1,14 @@
 # Changelog — revenantworks-foundation-handoffwright
 
+## [Unreleased]
+
+- 2026-11-20 observer review (observation 0620): `handoff-template.md` Next: a step is listed as
+  owed only after its log or output was read.
+
+- Write step 4: the starter prompt's sha, branch and worktree path are read from git in the
+  repo the file lives in, in the same call as the commit, never copied from the brief's subject
+  (#0684).
+
 ## [1.0.0] — 2026-10-01
 
 2026-10-16 (full observation review, U21): the Excuses table gains the branch-from-local-main row: a hand-over command that creates a branch for a push fetches, checks shared history and branches from `origin/main` (observation 0442, carrier for 0441).

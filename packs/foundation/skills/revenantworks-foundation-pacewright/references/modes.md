@@ -60,6 +60,15 @@ saves the meter (observation 0180):
    no extra review of code a later planned pass covers, no brief written early only because a
    lane is idle. When nothing real is unblocked, the check says "the gap stands until <row>
    lands" and launches nothing. Filler spends the allowance and still reports a success.
+9. **A pace check says where the points went, not only how many** (observation 0488): spend by
+   class (review, tools, fix, build, join) from the ledger's actual cells. Review workflows once
+   took 72% of a build day while game builds took 4%, and nobody saw it until the owner asked.
+10. **The controller's own checks are priced in** (observation 0500). Re-reading the procedure
+    before a push, land or CI dispatch, and reading the outcome back, costs less than one lost CI
+    run. No mode skips them to save the meter.
+11. **One morning file per run** (observation 0473). The run names its morning (or check-in) file
+    once, and every mode appends to it. On a case-insensitive drive, a new name in another case is
+    the same file: writing `MORNING-QUESTIONS.md` replaced the tracked `morning-questions.md`.
 
 The costs that turbo showed were not parallelism (observation 0176): they were relaunches,
 rebases, controller context and design built far ahead of the builds that need it. The base rules
@@ -141,8 +150,8 @@ number above 6. An unattended start takes the
 pick. A later answer from the user replaces it; it is not asked again at each check.
 The entry call carries no `--parallel` unless the user named a lower number: a number copied from
 a normal-mode call shape becomes the "lower number", and every renewal keeps it, because a renewal
-without `--parallel` keeps the file's number and says nothing (observation 0626). To return a
-renewed turbo file to rig-aware, write normal, then turbo again with no `--parallel`.
+without `--parallel` keeps the file's number (observation 0626). The writer prints `carried
+parallel_ceiling N` on such a renewal; to return the file to rig-aware, renew with `--parallel rig`.
 
 **Every launch passes four launch gates:**
 1. **Real work only**: a planned row on the path to a landed row — builds of designed rows first,

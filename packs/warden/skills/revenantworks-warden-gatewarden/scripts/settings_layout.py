@@ -41,9 +41,9 @@ from warden_fs import redact, write_json  # noqa: E402
 
 DAY = 86400.0
 GATEWARDEN_HOOKS = {"push_gate", "ci_stamp", "hyperv_lock", "call_cap", "launch_throttle", "heredoc_guard",
-                    "golive_block", "warden_digest", "warden_review"}
+                    "golive_block", "outbound_text_guard", "warden_digest", "warden_review"}
 DISPATCH_HOOKS = {"dispatch_gate", "dispatch_ledger_guard"}
-HARD = {"push_gate.irreversible", "push_gate.unreadable", "golive_block", "hyperv_lock"}
+HARD = {"push_gate.irreversible", "push_gate.unreadable", "golive_block", "hyperv_lock", "outbound_text_guard"}
 CRED = re.compile(r"(?i)(\.ssh|\.aws|\.gnupg|\.npmrc|\.netrc|\.env\b|credentials|\.docker/config|secrets?)")
 SCRIPT = re.compile(r"""([^\s"'\\/]+\.(?:py|sh|ps1|js|mjs|ts|cmd|bat))\b""", re.I)
 SCOPE_ORDER = ("managed", "local", "project", "user", "given")

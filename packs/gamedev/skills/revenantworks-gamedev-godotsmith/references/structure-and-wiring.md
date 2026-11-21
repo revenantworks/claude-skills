@@ -150,6 +150,15 @@ a green suite plus keep-neutral pins that never build the new kind will ship the
 - **A headless render smoke check** places one finished instance of every kind and draws
   one frame of each view. It compares no pixels (section 6 of `lifecycle-and-safety.md`
   still holds); it exists to execute every draw-path table lookup once.
+- **A test pins a kind by name or by its own recorded index, never by distance from the end**
+  (observations 0479, 0527). `KW.WEIR == size() - 11` moves with every append, and its file is
+  never touched by the unit that appends, so the red sits outside every "scripts the merge
+  touched" list. Where a pin must use `size()`, one guard test lists every such pin. After
+  composing enum or table appends, grep the whole test tree for both shapes, `size() - N` and
+  `size() == N`, and run those scripts: two appends once shifted pins in 9 untouched scripts.
+- **A new script's `.uid` is committed with it** (observation 0707): import, then stage the
+  `.uid` beside the `.gd`. A lane that committed a test without its `.uid` was caught at the
+  join.
 - **An enum walked as a priority order is policy.** Name it as such at the declaration,
   and test the tail (the lowest-priority member is still reached). When a member is retired,
   list every reader of the order, including test fixtures, before removing it.

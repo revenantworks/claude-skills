@@ -1,5 +1,16 @@
 # Changelog — revenantworks-warden-gatewarden
 
+## Unreleased
+
+- ci_stamp: Windows backslash steps keep their paths (0688); a step Git Bash rewrote is refused naming `MSYS_NO_PATHCONV=1` (0693); a tree dirty only in git's stat cache gets the `git add --` no-op fix (0677); every verdict is the last line of ci-last.log and a missing-tool refusal names its log lines (0695). Tests: 6 in `test_hooks.CiStampTests`
+- loads: MCP twin pass, kind 8 (0689); test in `test_reach.LoadsTests`
+- docs: ci_stamp and push_gate paths (0629); stamp-failure triage across windows (0718); a denied stamp is a stop (0694); merge is not gated, read checks then merge in two calls (0691); push-free self-test shape (0705); `permissionDecision` first and `powershell-path-head` (0660); `CLAUDE_PROJECT_DIR` hook paths (0656); whole-file settings hand-over diff (0661)
+- launch_throttle: with a live budget decision that names a mode, the slow-band note defers to
+  that decision's lane count instead of saying "one unit at a time"; the stop band still blocks
+  (#0712).
+- loads: the kind-5 synced-plugin fix points at a built claude.ai zip, not a hand-stripped
+  archive (#0690).
+
 ## [1.0.4] — 2026-11-13
 
 - push_gate refuses a non-builtin subcommand on a line that can change any git config first (inline code that writes or starts a process, a .NET or PowerShell write, a writing nested shell, a write to a config-named or .git target)

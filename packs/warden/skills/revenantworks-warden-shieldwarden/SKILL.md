@@ -74,7 +74,7 @@ mods: `references/mods.md`, only when their data is present.
 | `check` | Text, a staged diff, a draft or PR text, a commit range or branch names against one surface of the policy |
 | `identity` | Which identity the next commit uses and the config source that decides it; `--range` for every commit, author, committer and trailers; `--root` for every repo under a folder; a no-change score of an existing setup |
 | `signposts [path]` | Files and folders whose **names** advertise secrets, who can open them, one owner-run proposal each |
-| `ready` | Go-public gate: history scan, files that must not ship, licence, internal references, CI reachable by strangers; READY or NOT READY (`references/go-public.md`) |
+| `ready` | Go-public gate, and the whole-tree names scan before any release tag (#0646): history scan, files that must not ship, licence, internal references, CI reachable by strangers; READY or NOT READY (`references/go-public.md`) |
 | `refresh` | Re-check `references/tool-surface.md`, `references/git-identity.md` and `SOURCES.md` against current releases and docs |
 
 ## Scan — steps

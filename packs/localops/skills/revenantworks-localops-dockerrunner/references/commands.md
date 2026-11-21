@@ -58,6 +58,15 @@ leads straight to an action without saying so first.
 `check --need-ram-gb N --need-disk-gb N` runs before `up` when the user gives sizes or the file
 sets `mem_limit` / `deploy.resources.limits.memory`.
 
+**An entrypoint that backgrounds its worker restores its signals** (observation 0669). A
+non-interactive shell starts a `&` job with SIGINT and SIGQUIT ignored, and the child cannot undo
+an inherited ignore. A runner entrypoint that moved `./run.sh` from `exec` to a background job
+under a watch loop left every CI job deaf to Ctrl-C and cancel. Launch the worker through
+`env --default-signal=INT,QUIT` (coreutils 8.31+) and keep a test where the worker signals
+itself and must exit 130. Moving from `exec` to `&` changes signal behaviour, not only the
+process tree; rebuild the image and exercise it when the script changes, since a container that
+outlives its image's source hides the change until the next rebuild.
+
 ## 3. Running a command inside a container
 
 `docker exec <container> <command>` — show the command first, run it on the user's yes in

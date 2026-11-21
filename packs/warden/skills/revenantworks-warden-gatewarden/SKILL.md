@@ -88,7 +88,10 @@ owner; do not run it. A granted-never-reached row from `footprint` is evidence f
 ask, then allow, first match wins; a Bash or PowerShell line is split and each part decided. When a
 deny looks like it should match and does not, it names the shape (`absolute-path`,
 `git-global-option`, `shell-wrapper`). It models the documented rules; the harness is the
-authority, and the answer says so.
+authority, and the answer says so. For a call that was denied, read the transcript's
+`permissionDecision` record (source, reason code, rule source) before modelling anything, and
+prove the deciding rule with a headless A/B probe (`bypass-shapes.md`, "Explain shapes"): a model
+said allow for 18 days while one PowerShell deny refused every gh call (observation 0660).
 
 **`gatewarden scan <agent>`** — what an autonomous agent is permitted to do when it runs: tool-grant
 scope, untrusted-content flow, guardrails and kill switches, credentials, failure and retry as
@@ -102,12 +105,15 @@ rewrites; one gate for any fix, and "apply all" skips it.
 `push_gate.py` (a push with no recorded intent, a larger range than named, no local-CI stamp; any
 force, delete, mirror, `--all` or `--tags` push), `call_cap.py`, `launch_throttle.py`,
 `hyperv_lock.py` (the second lock behind hypervrunner's), `heredoc_guard.py` (also refuses
-`python -` and `python /dev/stdin`, which hang on an empty heredoc) and `golive_block.py`.
+`python -` and `python /dev/stdin`, which hang on an empty heredoc), `golive_block.py` and
+`outbound_text_guard.py` (a names-list entry in PR, issue or comment text, #0561).
 **They install in watch:** a rule logs what it would stop and the work runs; only hard rules (a
 force or delete push, a push the gate cannot read, a Hyper-V destroy, an OBS go-live, Python
 reading stdin) refuse in every mode, and no modes entry relaxes them. A weekly session-start line
 counts the suggestions; only the owner's `warden_review.py set` moves a soft rule (`hooks.md`,
-"Modes"). The command hooks unwrap wrappers and fail closed on what they cannot read. Before Claude
+"Modes"). The command hooks unwrap wrappers and fail closed on what they cannot read. Both scripts
+live in `scripts/hooks/` here and run from the installed copy, `~/.claude/hooks/gatewarden/`; a
+bare `ci_stamp.py` path fails (observation 0629). Before Claude
 pushes with the gate installed: `python push_gate.py intend --repo . --max <N>`, then
 `python ci_stamp.py run --repo . -- <the repo's CI command>`, or one `--step "<command>"` per CI
 step (never `bash -c`); a log that says a check was skipped writes no stamp unless `--excluded`

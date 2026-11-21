@@ -48,8 +48,11 @@ const pack = (name: string): CommandInfo => ({ name, description: '', source: 'p
 
 describe('the short-command logic', () => {
   test('every rostered skill has a short name, and none repeats', () => {
+    // No roster count here: build.py --check pins rw-skills.ts to the registry, and a literal
+    // count broke main when a new member merged (observation 0644).
     const shorts = RW_SKILLS.map(s => s.short)
-    expect(shorts.length).toBe(31)
+    expect(shorts.length).toBeGreaterThan(0)
+    expect(shorts.every(s => s.length > 0)).toBe(true)
     expect(new Set(shorts).size).toBe(shorts.length)
   })
   test('a skill is found by short name, /rw- form or member name', () => {

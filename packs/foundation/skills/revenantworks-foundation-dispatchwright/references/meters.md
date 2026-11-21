@@ -128,7 +128,10 @@ SKILL.md §6 states these in one line each; the rules in full:
   taken from another check is re-measured first. Questions a prep brief depends on are asked
   before it is written; with the user away, those sections are conditional, each option with its
   delta. Launch every launchable row before any blocking question (No blocking question, above);
-  in work day, questions go to the check-in file.
+  in work day, questions go to the check-in file. **A figure from a measuring tool (a census bot,
+  a probe) reaches the owner only after one raw-log sanity check** (observation 0617; godotsmith
+  `probes.md` section 5), and a fault it names is relayed with the tool as the first suspect: a
+  bot's job-share bug went to the owner twice as a game fault, and a design call rested on it.
 - **Meters in the plan.** The plan names every meter its units will spend — the Claude windows
   and top-tier allowance, CI minutes per repo pushed to, the GitHub API rate limit, any paid API —
   and says which are free; the cheapest route per meter, the brake under the user's floor and the
@@ -173,6 +176,38 @@ SKILL.md §6 states these in one line each; the rules in full:
 - **The same refusal in every lane at once is an event** (observation 0610). Compare timing across
   lanes before asking the owner whether they denied something; an interrupt reaches each background
   unit as a refusal. Resume each lane from its commits.
+- **The controller never writes in a shared checkout** (observations 0630, 0637, 0671). One writer
+  per repo binds every session, not only the units this run dispatched: another live session can
+  switch, reset or stash the main checkout under you. At plan time the controller makes its own
+  worktree off `origin/main` for run records and lands, and names it in the ledger header. Before
+  every commit, `git branch --show-current` equals the expected branch in the same command. Never
+  stash, switch or check out a branch in a clone whose uncommitted changes you did not make. Two
+  controller commits once landed on another session's branch, and a stash moved another session's
+  edit out from under it.
+- **Re-check a finding before briefing it** (observation 0672). A finding is a claim about an
+  earlier tree. Before a brief is written from one (a sweep's carried finding above all), grep or
+  read `origin/main` for it, seconds each, and drop or narrow the unit. Three units and an owner
+  question once went to work already merged days before.
+- **A skill's own fan-out is still a dispatch** (observation 0715). When another skill's
+  procedure launches agents (a review skill's parallel reviewers), each still gets a ledger row
+  before launch and a named report path in its brief. These rules outrank the skill's own steps.
+- **One account per gh call** (observation 0640). `gh auth switch` changes one setting for every
+  process on the machine. Units never run it; a step that needs another account goes back to the
+  controller. Every controller `gh` call that names a repo switches to that repo's owner in the same
+  command, and a landing script stops on an empty PR URL or merge sha.
+- **A public-repo merge is approved per merge** (observation 0692). The owner's yes covers the
+  release it named. Each later merge in a public repo asks again, with the PR number and a one-line
+  effect, unless the owner's message in that turn names that release.
+- **Commit messages go through a file** (observation 0703): write the message with the Write tool
+  and run `git commit -F <file>`. PowerShell passes a here-string after `-F -` as an argument, not
+  on stdin, and git read the message as pathspecs. Units get the same line in their brief.
+- **Reconcile a return against its worktree** (observation 0706). Before closing a row, read the
+  unit's wave report and `git log <base>..` in its worktree. A return that says "no edits" with a
+  new commit on the branch is a cut-context return: the commits are the record, not the message.
+- **A "waiting on its own background work" return gets a check from the controller** (observation
+  0708). Schedule a read of the unit's done-markers at its estimate; a nohup'd run does not wake
+  the unit. At each return and before each land, list engine processes (headless Godot) whose
+  parent is gone and stop the ones this run's units started: one orphaned shard ran 18 h on a core.
 
 ## Liveness in an unattended stretch
 

@@ -57,6 +57,10 @@ treats it as a claim to confirm, not a decision (observation #0173).>
    Done when: <a portable command, or an observable result anyone can check>.
 2. ...
 
+<A step goes here only after its log, output file or done-marker was read and shows it unfinished;
+name that evidence. A "still to do" list is a claim like "done": a pause handoff once listed a
+census and a test sweep as owed after both had ended green (observation 0620).>
+
 ## Questions for the user (only if any are genuinely open)
 
 1. <A decision only the user can make, with the options named.>

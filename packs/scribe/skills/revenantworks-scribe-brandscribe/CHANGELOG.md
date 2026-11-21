@@ -1,5 +1,9 @@
 # Changelog — revenantworks-scribe-brandscribe
 
+## [Unreleased]
+
+2026-11-20 (weekly observation review, slice b; observation 0681): `ui-review.md`: a label row with its own width over a fixed-size control is a P2 row.
+
 ## [1.0.1] — 2026-11-13
 
 - Marks (observation 0558): definition-schema.md group 6 keeps theme values out of approved art

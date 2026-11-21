@@ -42,4 +42,11 @@ Settings files, CLAUDE.md files, skills, agents, commands, hooks, auto memory, `
   `permissions` block of the repo's own staged copy, which keeps `~` forms, or write the live-based
   file outside every repo (the scratchpad) and point the copy line there. Run the privacy scan on the
   output before it lands in any repo folder.
+- A whole-file settings replacement installs every difference between the staged copy and live,
+  not only the reported one (observation 0661: a two-rule fix carried an unreported
+  `blockWritesOutsideWorkingDirectories: true` and re-encoded escapes). At hand-over, diff the staged
+  file against live as it is now (`git diff --no-index`, after any placeholder substitution) and
+  list every semantic difference in the report; refuse to hand over while one is unreported. For a
+  small fix, prefer a targeted in-place swap command with a backup and a count guard, so drift
+  elsewhere in the file cannot ride along.
 - gatewarden never runs any of these itself, including after the owner says yes; the owner runs them.

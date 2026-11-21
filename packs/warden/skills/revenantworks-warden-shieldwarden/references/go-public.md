@@ -1,7 +1,7 @@
 # Go-public readiness — the `ready` pass
 
 Loaded for `ready` only: a repo is about to become public (a visibility flip, a first push to a
-public host, a mirror, a release archive). The pass answers one question, **what would the world
+public host, a mirror, a release archive), or any repo is about to tag a release. The pass answers one question, **what would the world
 see the moment it flips**, and ends in READY or NOT READY with one line per blocker. shieldwarden
 never changes visibility, never pushes and never edits a host setting: the user flips it.
 
@@ -26,6 +26,13 @@ goes to the rewrite (`plan`) **before** the flip: while the repo is private, no 
 hold the old commits yet, which makes this the cheapest moment to rewrite. A secret is rotated
 first, whatever the rewrite does (keywarden's runbook). `owner-name: NOT-RUN` is a blocker, never a
 pass. The `exposure` rules (secrets reaching logs and dumps) are blockers in code that ships.
+
+**Every release runs the tree scan too, public repo or not** (#0646). The pii_guard hook reads the
+diff of each commit, so text that came in before the hook, around it or under an accepted path
+sits in the tree unseen, and a hosted self-scan without the private list passes it. A names-list
+entry sat in a tracked doc on main for weeks and surfaced only at release prep. Before a release
+tag or a source archive, run `shield_scan.py scan <repo>` over the whole tracked tree with the
+names list loaded; a hit blocks the tag, and `owner-name: NOT-RUN` is a blocker, as above.
 
 ## 2. Files a public repo must not carry
 

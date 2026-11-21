@@ -7,7 +7,7 @@ inside subagents), never the owner's own terminal.
 
 ## Contents
 
-Summary · Modes: watch, nudge, guard · What the command hooks read · push_gate · ci_stamp · hyperv_lock · call_cap · launch_throttle · heredoc_guard · golive_block · The settings block
+Summary · Modes: watch, nudge, guard · What the command hooks read · push_gate · ci_stamp · hyperv_lock · call_cap · launch_throttle · heredoc_guard · golive_block · outbound_text_guard · Mods that stand in for these hooks · The settings block
 
 ## Summary
 
@@ -19,6 +19,7 @@ Summary · Modes: watch, nudge, guard · What the command hooks read · push_gat
 | `launch_throttle.py` | `Agent\|Task\|Workflow` | a launch in the stop band, or with `parallel_ceiling` 0 | open, with a "not enforced" note | watch |
 | `heredoc_guard.py` | `Bash\|PowerShell` | a heredoc that feeds Python code holding a backslash escape; Python told to read its program from stdin (`python -`, `python /dev/stdin`) or started with no script and no input; `node`, a shell or `pwsh` left on stdin with nothing feeding it; a follow with no end (`tail -f`/`-F`/`--follow` without `--pid`, `Get-Content -Wait`) | open; the stdin rule fails closed | watch; the stdin and follow rules are hard |
 | `golive_block.py` | `Bash\|PowerShell\|Read\|Write\|Edit\|MultiEdit\|mcp__.*` | OBS go-live and stream-key requests from any tool call, and reading an OBS profile's `service.json` | closed for anything naming a blocked request or `service.json` | hard (guard) |
+| `outbound_text_guard.py` | `Bash\|PowerShell\|mcp__.*` | an entry of the private names list in a PR, issue, comment or release text sent through `gh`, or in a GitHub MCP tool that writes text or files | closed for a hit; open with a warning when the names list is missing | hard (guard) |
 
 Exit 2 blocks and the reason goes to Claude on stderr. A cleared push prints its range to Claude
 (`additionalContext`) and to the person watching (`systemMessage`).
@@ -63,7 +64,7 @@ clause with secret shapes masked. Never the command text, never a matched value.
 **Rules** are `<hook>` or `<hook>.<rule>`: `push_gate.irreversible`, `push_gate.unreadable`,
 `push_gate.no_intent`, `push_gate.range`, `push_gate.head`, `push_gate.no_ci`, `push_gate.public_branch`, `push_gate.public_main`, `push_gate.public_leak` (hard), `push_gate.shape`,
 `hyperv_lock`, `golive_block`, `heredoc_guard`, `heredoc_guard.stdin`, `heredoc_guard.follow`, `call_cap`, `launch_throttle.ceiling`,
-`launch_throttle.stop`. A hook entry covers its soft rules; a rule entry wins over it.
+`launch_throttle.stop`, `outbound_text_guard` (hard). A hook entry covers its soft rules; a rule entry wins over it.
 
 **Precedence:** hard (guard, always) › rule entry › hook entry › a live snooze (watch) ›
 `GATEWARDEN_MODE` › the file's `default` › watch. An entry is a mode string, or
@@ -473,6 +474,19 @@ other way is not caught. It makes the range and the CI pass explicit and visible
 set on getting round it. The public-branch leak checks read secret shapes and run the armed pre-push
 hook; a full secret and identity scan of a public repo is shieldwarden's.
 
+**The gate does not see a merge.** push_gate reads pushes; `gh pr merge` and the MCP merge tools
+pass it. A land once read `gh pr checks` and merged in one Bash call, so a failing CodeQL summary
+check printed after the merge was queued, and `--watch` had exited 0 because every job passed
+(observation 0691). Read the checks in one call, row by row (no `fail`, `pending` or `cancelled`),
+and merge in the next. A merge gate hook is a build row, not yet shipped.
+
+**A script that pushes behind a branch is refused whole.** The gate expands a script and refuses it
+when its code can push, even when the run asked for (`-SelfTest`, a dry run) cannot reach the push
+(observation 0705). The sanctioned shape: the guards live in a push-free module the self-test
+imports, and the push is a plain literal line in its own small file the gate can read. Design it
+that way when the script is written; a split made after a refusal reads as evasion to the
+classifier, and the self-test then goes to the owner.
+
 **When a refusal looks wrong.** The refusal quotes the flag and the line it read (`a delete
 (`-d`) push is refused, read from: …`), so first compare that line with the command you meant.
 A `#` comment never reaches the gate; an apostrophe inside one used to merge the lines after it
@@ -505,8 +519,19 @@ the push but says so in its note and the owner's line, like an `--excluded` chec
 Never wrap them in `bash -c '... && ...'`: on Windows a bare `bash` from Python resolves to
 `bash.exe` in the Windows `System32` folder, the WSL launcher, and with no working distro the run "fails" with
 `execvpe(/bin/bash)` and writes no stamp (observation 0346). `run` refuses a bare `bash`, `sh` or
-`wsl` that resolves there and names the `--step` form. Write step paths with forward slashes (each
-step is split like a shell line).
+`wsl` that resolves there and names the `--step` form. Each step is split like a shell line; on
+Windows a step that holds a backslash is split without escapes, so `<drive>:\x\check.py` stays a path
+(observation 0688: it once reached python as `V:xcheck.py`). `push_gate.py preflight --step` hands
+its steps to the same split.
+
+**From Git Bash, turn path conversion off.** Git Bash rewrites an argument that looks like a POSIX
+path list before Python sees it: a `--step` holding `<drive>:/...` arrived as `<drive>;<Git install folder>\...`
+and the step failed to start with exit 127 (observation 0693). `run` refuses such a step and names
+the fix. The Git Bash form is
+`MSYS_NO_PATHCONV=1 python "$USERPROFILE/.claude/hooks/gatewarden/ci_stamp.py" run --repo . --step "..."`,
+with the script's own path in Windows form (`~` inside a backgrounded call resolved to `<drive>:\c\Users\...`);
+PowerShell needs neither. A backgrounded call piped through `tail` exits with `tail`'s code, so read
+the verdict line, never the exit code of the pipe.
 
 **A skipped check is not a pass.** When a run exits 0 but its log says a check did not run (`command
 not found`, `is not recognized as an internal or external command`, or a skip or "not run" line that
@@ -514,6 +539,31 @@ names a tool not installed, not found or missing), no stamp is written unless th
 `--excluded`. A stamp with `--excluded` is marked `partial`, and the push gate says so in the range
 line and to the person watching: "local CI was PARTIAL, not the CI verdict" (observation 0354: a
 69-commit batch went red on main on the lint step the local run had skipped).
+The refusal names each matched line by its number in `ci-last.log`. A line that is a test fixture's
+own printed output, not a tool the run needed, is a false match: report it with the line, never
+`--excluded` a check that ran (observation 0695).
+
+**The verdict is in the log.** Every run ends `ci-last.log` with `ci_stamp verdict: passed`,
+`failed (exit N)` or `refused: <why>`. A refusal once reached only the caller's console, so a later
+session read a clean log with no stamp (observation 0695).
+
+**A dirty tree that is not dirty.** `run` refuses uncommitted changes. When every listed file still
+hashes to its committed blob, only git's stat cache is stale (a build tool that rewrites every asset
+leaves this); the refusal says so and gives the no-op fix, `git add -- <paths>`, which stages no
+change (observation 0677).
+
+**A stamped run fails tests that pass when run directly** (observation 0718). Two failures inside
+one window share the machine's state and count as one sample. Before blaming ci_stamp's environment,
+or proposing to drop tests from the stamp, run the exact stamp command again at a clearly later time,
+and read the rig's event logs for the failing window. Run the failing tests directly in that window
+too: a direct run that also fails is a rig state, not a stamp cause. Only a failure that repeats
+across separate windows reproduces under ci_stamp. Never weaken the stamp on one sample.
+
+**A denied stamp run is a stop** (observation 0694). When the permission layer or the auto-mode
+classifier refuses a `ci_stamp.py run`, retry once at most, unchanged. Reshaped retries read as
+gate-gaming and harden the refusal ("Undermining Oversight"). Hand the owner the one stamp command
+and push on their reply; the owner may also choose an allow rule for `ci_stamp.py run` in user
+settings, which gatewarden stages and never installs.
 
 **A check that flakes.** When a land report names a check as intermittent, stamp with `--runs N`
 (three is a fair floor): every step runs N times and the stamp needs every run green. One lucky pass
@@ -787,6 +837,28 @@ such as an ad-hoc one-liner or an installed OBS MCP server.
 **Limit, stated plainly:** it binds Claude's tool calls, not the owner's. A request name built at run
 time inside a script file the hook never saw is outside its reach; obsrunner's allow-list covers its own.
 
+## outbound_text_guard
+
+The pii_guard git hook reads commits only. A PR title or body, an issue, a comment or release notes
+go out through `gh` or a GitHub MCP tool and never meet it, and GitHub keeps a body's edit history,
+so a scrub after posting undoes nothing (observation 0561: a harness attribution template put the
+owner's display name and login into a PR body). This hook refuses, in every mode, a call whose text
+holds an entry of the private names list (`WARDEN_NAMES_FILE`, else `~/.warden/wordlist.txt`, the
+list pii_guard reads; whole word, any case):
+
+- a shell line with `gh pr|issue create|edit|comment|review`, `gh release create|edit` or `gh api`:
+  the whole line, heredoc bodies included, and the file a `--body-file`, `--notes-file` or `-F`
+  names;
+- a GitHub MCP tool that writes text or files (`create_pull_request`, `update_pull_request`,
+  `add_issue_comment`, `issue_write`, `update_issue_comment`, `add_reply_to_pull_request_comment`,
+  `add_comment_to_pending_review`, `pull_request_review_write`, `create_or_update_file`,
+  `push_files`, `create_repository`): every string in its input. The two file tools commit on the
+  host, so pii_guard never sees them either.
+
+The refusal never prints the entry it matched. A missing names list allows the call with a warning
+that it was not checked. **Limit:** text built at run time inside a script file is out of reach;
+the release-time whole-tree scan (shieldwarden) is the later layer.
+
 ## Mods that stand in for these hooks
 
 None, since 2026-10-08. The two mods (`vigil` and `shroud`) never block, so no mod stands in for a
@@ -811,7 +883,8 @@ gets its own `Edit(<folder>/**)` rule (a Windows path in POSIX form, `//d/rig/ho
   {"matcher": "Bash|PowerShell", "hooks": [{"type": "command", "command": "python \"<dir>/heredoc_guard.py\"", "timeout": 30}]},
   {"matcher": "*", "hooks": [{"type": "command", "command": "python \"<dir>/call_cap.py\"", "timeout": 30}]},
   {"matcher": "Agent|Task|Workflow", "hooks": [{"type": "command", "command": "python \"<dir>/launch_throttle.py\"", "timeout": 30}]},
-  {"matcher": "Bash|PowerShell|Read|Write|Edit|MultiEdit|mcp__.*", "hooks": [{"type": "command", "command": "python \"<dir>/golive_block.py\"", "timeout": 30}]}
+  {"matcher": "Bash|PowerShell|Read|Write|Edit|MultiEdit|mcp__.*", "hooks": [{"type": "command", "command": "python \"<dir>/golive_block.py\"", "timeout": 30}]},
+  {"matcher": "Bash|PowerShell|mcp__.*", "hooks": [{"type": "command", "command": "python \"<dir>/outbound_text_guard.py\"", "timeout": 30}]}
  ],
  "PostToolUse": [
   {"matcher": "Bash|PowerShell", "hooks": [{"type": "command", "command": "python \"<dir>/push_gate.py\"", "timeout": 30}]}

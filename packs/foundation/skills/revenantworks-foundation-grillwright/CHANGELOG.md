@@ -3,6 +3,11 @@
 All notable changes to this skill are recorded here. The format follows Keep a Changelog and the
 version follows Semantic Versioning.
 
+## [Unreleased]
+
+- 2026-11-20 observer review (observation 0528): `record.md` Rules: a decision that promises an
+  outcome carries its bar as a figure.
+
 ## [1.0.0] — 2026-10-08
 
 2026-10-08 (K8 fix round): states why it stays model-invocable (audit K7-1-14).

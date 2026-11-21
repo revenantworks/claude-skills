@@ -75,7 +75,7 @@ Re-read what changed: `ps` after `up`, the audit after a cap change, `df` and th
 
 ## Entry points
 
-- **`dockerrunner audit`** — the full read in step 1, plus findings (no cap set, cap above half of RAM, `autoMemoryReclaim` disabled, sparse VHD off, low disk). Changes nothing.
+- **`dockerrunner audit`** — the full read in step 1, plus findings (no cap set, cap above half of RAM, `autoMemoryReclaim` disabled, sparse VHD off, low disk, and what keeps the engine busy: a container up a day or more with its restart policy, Desktop starting at sign-in, Resource Saver off). Changes nothing. A running container keeps Resource Saver from ever starting, so the audit names it, not only the memory it costs (observation 0667).
 - **`dockerrunner check`** — step 2 for a stated job; pass or fail with reasons.
 - **`dockerrunner up <file>` / `down <file>`** — step 4.
 - **`dockerrunner prune`** — step 5; the list and the user's one command.

@@ -157,6 +157,7 @@ Run `python dispatch_ledger_guard.py --selftest` to exercise the flag logic,
 the ledger currency rule, the cell validators, and the real exit codes of all
 four defects against temp fixtures. Stdlib only.
 """
+import calendar
 import csv
 import hashlib
 import io
@@ -881,7 +882,8 @@ def collision_units(path: Path, repo: str | None = None) -> list:
 # The rig-aware turbo (owner 2026-10-20, observation 0470; pacewright modes.md, Turbo).
 # ---------------------------------------------------------------------------
 EST_COLUMNS = ("estimated_tokens", "est. tokens", "est_tokens", "est tokens")
-ROW_COLUMNS = ("status", "surface", "repo", "worktree", "files_allowed", "lane", "notes") + EST_COLUMNS
+ROW_COLUMNS = ("status", "surface", "repo", "worktree", "files_allowed", "lane", "notes",
+               "dispatch_ts") + EST_COLUMNS
 LEADING_NUMBER_RE = re.compile(r"^\s*\d[\d,]*(?:\.\d+)?\s*[kKmM]?(?![A-Za-z0-9])")
 
 
@@ -2950,7 +2952,110 @@ def v2_row_problems(path: Path) -> list:
                 for col in ("harness_tokens", "done_ts"):
                     if row.get(col, "") in V2_EMPTY:
                         problems.append(f"{uid}: closed row has no {col}")
-    return problems
+    return v2_missing_columns(path) + problems
+
+
+# Observation 0642: a hand-written v2 ledger with no `status` column took five launches to pass,
+# one rule per refusal. A missing required column is named with the header to copy.
+V2_HEADER_LINE = ("| unit_id | task | class | model | effort | surface | repo | worktree/branch | "
+                  "files_allowed | call_cap | expected_artifacts | estimated_tokens | actual | rework | "
+                  "dispatch_ts | commit_sha | remote_sha | status |")
+
+
+def v2_missing_columns(path: Path) -> list:
+    """One line per row table of a v2 ledger that lacks a required column, with the v2 header line."""
+    if ledger_version(path) != 2:
+        return []
+    out = []
+    for header, _rows_ in _row_tables(path):
+        missing = sorted((V2_REQUIRED_VALUED | V2_REQUIRED_NUMBER) - set(header))
+        if missing:
+            out.append(f"the row table has no {', '.join(missing)} column (the v2 header is: {V2_HEADER_LINE})")
+    return out
+
+
+def untiered_cells(path: Path, limit: int = 3) -> list:
+    """Observation 0675: for a refusal, the rows whose model, effort or surface cell fails, and why."""
+    try:
+        text = path.read_text(encoding="utf-8", errors="replace")
+    except Exception:
+        return []
+    out = []
+    for r in _table_rows(text, path.suffix.lower(), ("model", "effort", "surface")):
+        bad = []
+        for name, check in CELL_CHECKS.items():
+            if name not in r:
+                bad.append(f"no {name} column")
+            elif not check(r[name]):
+                why = {"model": "needs a version or a second word, e.g. `Opus 5.5`",
+                       "effort": "is not an effort word (low, medium, high, xhigh, max)",
+                       "surface": "is a placeholder or under four characters"}[name]
+                bad.append(f"{name} {r[name]!r} {why}")
+        if bad:
+            out.append(f"{r.get('unit_id') or '?'}: " + "; ".join(bad))
+        if len(out) >= limit:
+            break
+    return out
+
+
+# Observation 0709 (second instance of 0343): a typed dispatch_ts ran ahead of the clock. The bound
+# row's stamp may not be more than this far in the future of the hook's own clock.
+DISPATCH_TS_AHEAD_S = 120
+
+
+def dispatch_ts_problem(row: dict | None, v2: bool, now: float | None = None) -> str | None:
+    """Why the launch's own row's dispatch_ts is not a clock reading, or None."""
+    if row is None or "dispatch_ts" not in row:
+        return None
+    v = row["dispatch_ts"].replace("`", "").strip()
+    if v in V2_EMPTY:
+        return "its dispatch_ts is empty" if v2 else None
+    if not TIMESTAMP_RE.match(v):
+        return None  # the v2 format check owns a malformed stamp
+    try:
+        ts = calendar.timegm(time.strptime(v, "%Y-%m-%d %H:%MZ"))
+    except Exception:
+        return None
+    now = time.time() if now is None else now
+    if ts - now > DISPATCH_TS_AHEAD_S:
+        return (f"its dispatch_ts {v} is {int((ts - now) // 60)} min ahead of the clock "
+                f"({time.strftime('%Y-%m-%d %H:%MZ', time.gmtime(now))}): a typed time, not a clock read")
+    return None
+
+
+# Observation 0675: the guard resolved the cwd's newest run, an unrelated one, and said "no row".
+# A brief that names its run's folder by path is read from that run's ledger.
+_RUN_PATH_RE = re.compile(r"((?:[A-Za-z]:)?[\\/][^\s\"'`<>|]*?)[\\/]\.dispatch[\\/]runs[\\/]([A-Za-z0-9._-]+)")
+_RUN_NAME_RE = re.compile(r"(?i)\bof\s+run\s+`?(\d{4}-\d{2}-\d{2}[A-Za-z0-9._-]*)`?")
+
+
+def named_run(data: dict) -> tuple:
+    """(run id, that run's ledger path or None) the launch's brief names; (None, None) when none."""
+    ti = data.get("tool_input")
+    if not isinstance(ti, dict):
+        return None, None
+    texts = [t for t in [ti.get("prompt")] + [v for k, v in ti.items() if k != "prompt"] if isinstance(t, str)]
+    for text in texts:
+        m = _RUN_PATH_RE.search(text)
+        if m:
+            run_dir = Path(m.group(1)) / ".dispatch" / "runs" / m.group(2)
+            for name in ("ledger.md", "ledger.csv"):
+                if (run_dir / name).is_file():
+                    return m.group(2), run_dir / name
+            return m.group(2), None
+    for text in texts:
+        m = _RUN_NAME_RE.search(text)
+        if m:
+            return m.group(1).rstrip("._-"), None
+    return None, None
+
+
+def wrong_ledger_note(run_id: str | None, ledger: Path | None) -> str:
+    if not run_id or ledger is None or ledger.parent.name == run_id:
+        return ""
+    return (f" Wrong ledger? The brief names run {run_id}, and the guard read {ledger}. Name the run's "
+            "ledger path in the brief, set CLAUDE_DISPATCH_LEDGER, or write a .dispatch/ledger-path "
+            "pointer (read any old one first) (observation 0675).")
 
 
 def ledger_warnings(path: Path) -> list:
@@ -2997,6 +3102,9 @@ UNIT_ID_PATTERNS = (
     re.compile(r"(?i)\byou\s+are\s+(?:the\s+)?(?:dispatched\s+)?unit\s+" + _UNIT_TOKEN),
     re.compile(r"(?i)\bdispatched\s+unit\s+" + _UNIT_TOKEN),
     re.compile(r"(?i)\bunit\s+" + _UNIT_TOKEN + r"\s+of\s+(?:the\s+)?run\b"),
+    # Observation 0627: a prompt opening `Unit W2-KES (read-only ...)` bound no row and was refused
+    # as heavy. `Unit <id>` at the start of a line is an anchor too.
+    re.compile(r"(?im)^\s*unit\s+" + _UNIT_TOKEN),
 )
 # The pre-F1 shape (up to three letters, then a digit). A token of this shape, or one with no
 # lowercase letter (HUT-F), names a unit even when the ledger has no row for it, and so is refused
@@ -3104,7 +3212,11 @@ def unit_row_problem(path: Path, unit: str) -> str | None:
     if any(_norm(r.get("status", "")) == "dispatched" for r in mine):
         return None
     states = ", ".join(sorted({r.get("status", "").strip() or "(blank)" for r in mine}))
-    return f"has a row for unit {unit}, but its status is {states}, not dispatched"
+    hint = ""
+    if any(_norm(r.get("status", "")).startswith("dispatched") for r in mine):
+        hint = ("; write the bare word `dispatched` and put a qualifier (unfitted, owner go) in the "
+                "window or notes cell (observation 0702)")
+    return f"has a row for unit {unit}, but its status is {states}, not dispatched{hint}"
 
 
 def launches_path() -> Path:
@@ -3179,7 +3291,15 @@ def _guard(data: dict) -> int:
         return 0  # dispatch mode is not active for this session
 
     cwd = data.get("cwd") or os.getcwd()
-    ledger = find_ledger(cwd, session_id)
+    # Observation 0675: a brief that names its run folder by path is checked against that run's
+    # ledger, not the cwd's newest run. CLAUDE_DISPATCH_LEDGER (or --ledger) still wins outright.
+    run_id, named_ledger = named_run(data)
+    ledger = None
+    if (named_ledger is not None and not (_argv_path("--ledger") or os.environ.get("CLAUDE_DISPATCH_LEDGER"))
+            and ledger_is_current(named_ledger, session_id)):
+        ledger = named_ledger
+    if ledger is None:
+        ledger = find_ledger(cwd, session_id)
     if ledger is None:
         stale_seen = [str(p) for p in ledger_candidates(cwd)]
         extra = (
@@ -3200,11 +3320,17 @@ def _guard(data: dict) -> int:
         return 2
 
     if not ledger_has_populated_row(ledger):
+        # Observations 0642, 0675: name every failing cell and every v2 problem in one refusal.
+        cells = untiered_cells(ledger)
+        more = v2_row_problems(ledger)
         print(
             f"dispatch_ledger_guard: {ledger} carries no row that names a model, an effort, and a "
             "surface. Placeholders such as TBD, ?, x or a dash do not count. Tier the unit from "
             "dispatchwright's own tier table first and write the real row before dispatching it."
-            + row_table_note(ledger),
+            + row_table_note(ledger)
+            + (f" Failing cells: {' | '.join(cells)}." if cells else "")
+            + (f" Also fix (ledger v2): {'; '.join(more[:8])}." if more else "")
+            + wrong_ledger_note(run_id, ledger),
             file=sys.stderr,
         )
         return 2
@@ -3231,7 +3357,16 @@ def _guard(data: dict) -> int:
                 f"dispatch_ledger_guard: this launch's brief names unit {unit}, and {ledger} {problem}. "
                 "Another unit's open row does not cover it. Write this unit's row with status "
                 "`dispatched` first, in its own call, and check that the write landed before the launch "
-                "(references/ledger-schema.md, Writing the ledger).",
+                "(references/ledger-schema.md, Writing the ledger)." + wrong_ledger_note(run_id, ledger),
+                file=sys.stderr,
+            )
+            return 2
+        ts_problem = dispatch_ts_problem(launch_row(ledger, unit), ledger_version(ledger) == 2)
+        if ts_problem:
+            print(
+                f"dispatch_ledger_guard: unit {unit}'s row in {ledger}: {ts_problem}. Write the stamp from "
+                "a clock call in the same command that writes the row (`date -u +\"%Y-%m-%d %H:%MZ\"`), "
+                "never typed (references/ledger-schema.md, Timestamps; observations 0343, 0709).",
                 file=sys.stderr,
             )
             return 2
@@ -3339,8 +3474,13 @@ def _guard(data: dict) -> int:
             g_code, g_text = run_rig_gate(gate, launch_kind(row), fixer_of(row))
             if g_code != 0:
                 refusals = [ln for ln in g_text.splitlines() if ln.startswith("REFUSED")] or [g_text[-400:]]
+                # Observation 0627: a lookup miss falls to the strictest branch, so say so first.
+                miss = ("" if row is not None else
+                        "dispatch_ledger_guard: no ledger row matched this launch (anchors: `Ledger row <id>`, "
+                        "`Unit <id>` at the start of a line or `Unit <id> of run`, `You are unit <id>`), so it "
+                        "is treated as heavy. ")
                 print(
-                    "dispatch_ledger_guard: the rig gate refuses this heavy turbo launch -- "
+                    miss + "dispatch_ledger_guard: the rig gate refuses this heavy turbo launch -- "
                     + "; ".join(refusals)
                     + ". A stall behind a closed gate is not a failure: hold the row and launch a light lane "
                     "(pacewright modes.md, Turbo).",

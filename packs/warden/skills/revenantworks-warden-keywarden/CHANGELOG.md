@@ -1,5 +1,12 @@
 # Changelog — revenantworks-warden-keywarden
 
+## Unreleased
+
+- scope-recipes: a permission named in an owner step is checked against GitHub's fine-grained
+  list first; check runs are out of a fine-grained token's reach (#0662). gh's active account is
+  global across sessions, a private-repo 404 is an account check first, and `GH_CONFIG_DIR` per
+  account routes calls without the switch (#0721).
+
 ## [1.0.0] — 2026-10-01
 
 First public release. Knows where every credential on a Windows dev machine lives, what each one

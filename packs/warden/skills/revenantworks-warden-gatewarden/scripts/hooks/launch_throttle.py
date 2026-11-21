@@ -17,7 +17,8 @@ Decision, per launch:
   - parallel_ceiling 0 in a live budget decision -> block;
   - either window at or above the stop band (default 95) -> block;
   - either window at or above the slow band (default 80) -> allow with a note
-    (one unit at a time, cheaper tier);
+    (one unit at a time, cheaper tier); with a live budget decision that names a mode,
+    the note defers to that decision's lane count instead (observation 0712);
   - otherwise allow silently.
 
 Fail mode: open, and it says so. A missing reading, or one older than
@@ -70,7 +71,7 @@ def main() -> None:
         usage_path = os.environ.get("GATEWARDEN_USAGE_FILE") or os.path.join(home, ".claude", "usage-windows.json")
         budget_path = os.environ.get("GATEWARDEN_BUDGET_FILE") or os.path.join(home, ".dispatch", "budget-decision.json")
         max_age = float(os.environ.get("GATEWARDEN_USAGE_MAX_AGE", "900"))
-        slow, stop, ceiling = DEFAULT_SLOW, DEFAULT_STOP, None
+        slow, stop, ceiling, mode = DEFAULT_SLOW, DEFAULT_STOP, None, None
         try:
             bd = hl.load_json(budget_path)
             if iso_to_epoch(bd.get("expires_at")) > time.time():
@@ -78,6 +79,7 @@ def main() -> None:
                 if not isinstance(bands, dict):
                     bands = {}
                 ceiling = bd.get("parallel_ceiling")
+                mode = bd.get("mode") if isinstance(bd.get("mode"), str) else None
                 stop = band_value(bands.get("stop"), DEFAULT_STOP)
                 slow = band_value(bands.get("slow"), DEFAULT_SLOW)
         except Exception:
@@ -114,6 +116,12 @@ def main() -> None:
             hl.block(f"launch throttle: stop band ({stop:g}%) reached ({text}). Nothing new launches; "
                      "running writers commit and stop.", rule="launch_throttle.stop")
         if any(v >= slow for v in readings.values()):
+            if mode:
+                # One verdict for one meter (observation 0712): below the stop band a live pacing
+                # decision governs, so this note names it instead of contradicting it.
+                hl.allow(context=f"launch throttle: slow band ({slow:g}%) reached ({text}). The live "
+                                 f"budget decision (mode {mode}, ceiling {ceiling}) governs below the "
+                                 f"stop band ({stop:g}%): launch to its lane count, not past it.")
             hl.allow(context=f"launch throttle: slow band ({slow:g}%) reached ({text}). "
                              "Launch one unit at a time, on a cheaper tier.")
         hl.allow()

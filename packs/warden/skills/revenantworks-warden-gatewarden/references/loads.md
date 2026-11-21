@@ -25,7 +25,7 @@ The skill name is the SKILL.md `name:` field, else the folder name. Anthropic's 
 | 2 | Synced, no local copy: a user-created synced skill nothing local carries | Listed as `review` for the owner to judge (a claude.ai-only companion is fine). A name passed with `--retired` gets the same override, plus "delete it on claude.ai by hand". |
 | 3 | Plugin plus a local folder, or two plugins carrying one skill (a featured plugin plus its pack) | `skillOverrides` does not reach plugin skills: `claude plugin uninstall <id>` for one copy, the owner's choice. Two unrelated plugins can share a generic name; the bodies column tells. |
 | 4 | User scope plus project scope, or two folders whose SKILL.md `name:` is the same | Personal wins over project. Keep one copy; which one is the owner's call (skills are never proposed for removal). |
-| 5 | Stale twin: the copies' SKILL.md hashes differ, so one surface runs an older version | A synced twin: re-upload the current zip on claude.ai by hand (Cowork and routines still run the old body even when the twin is off here). A synced plugin (kind 6): update it on claude.ai. Two local copies: `drift.py --pair` names the files. |
+| 5 | Stale twin: the copies' SKILL.md hashes differ, so one surface runs an older version | A synced twin: re-upload the current zip on claude.ai by hand (Cowork and routines still run the old body even when the twin is off here). A synced plugin (kind 6): update it on claude.ai from a built zip, never a hand-stripped archive (in the claude-skills repo, `python tools/claude_ai_zip.py <pack> --compare <previous zip>`; #0690). Two local copies: `drift.py --pair` names the files. |
 | 6 | One plugin both installed and synced from claude.ai under one manifest name | Not a double load: Claude Code loads the other copy and reports the synced one as not loaded. Never an uninstall, which removes the working install. Alone it reads `handled`; with kind 5 it reads `stale`. To silence it here: `claude plugin disable <name>@synced`. |
 | 7 | A skill from a machine-driving pack (`warden`, `localops`) on claude.ai, as a skill or a synced plugin | The owner's choice, so it never fails the run. In chat it mostly reports NOT-RUN while still costing its description; Cowork loads more of a plugin (hooks, agents, local MCP on your computer), so check there first. Switch it off in Customize only if neither uses it. |
 
@@ -38,6 +38,22 @@ so `claude plugin list` shows the renamed plugin disabled while every check that
 silent, because it never loaded (observation 0602). A rename ends with a `loads` run; the fix is the
 owner's: `claude plugin enable <new id>`, and the old key removed from user settings. `@synced` keys
 are not compared.
+
+## MCP twins (kind 8)
+
+A double load is not only a skill. Every run also compares the MCP servers registered outside a
+plugin (user and local scope in `.claude.json`, each project's `.mcp.json`) with each installed
+plugin's servers (`.mcp.json` and `mcpServers` in `plugin.json`), and flags a server that runs the
+same script, matched on the script's last two path parts (`scripts/godot_mcp_server.py`) (observation
+0689: a local-scope `godot` server pointed at the gamedev pack's own server script beside the
+plugin's `godot` server, eight tools twice, found by eye). Generic names (`index.js`, `server.py`)
+count only when the server names match too. The fix is the owner's: `claude mcp remove <name> -s
+<scope>`. A missing `.claude.json` is listed under `not_checked`. An MCP twin exits 1. Hooks are not
+compared yet.
+
+A mod or pack whose files changed with no `plugin.json` version bump keeps a stale plugin cache:
+`claude plugin update` says "already at the latest version" and the desktop app may load the old
+hooks. Bump the version with every content change (skillwright's build owns that check).
 
 ## Status per row
 

@@ -4,7 +4,7 @@
 Usage:
     python probe.py <file-or-url> [--widths 320,375,768,1024,1440] [--themes auto]
                     [--theme-attr data-theme] [--theme-class dark] [--vscode]
-                    [--section SELECTOR ...] [--out DIR] [--height 900] [--json]
+                    [--section SELECTOR ...] [--out DIR] [--height 900] [--json] [--bare]
 
 Loads one local HTML file or one URL the user names, in a headless Chromium (never a window),
 at each width and theme. Chromium also fetches whatever that page itself requests and follows
@@ -329,6 +329,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--out", default=None, help="screenshot folder (default: a fresh temp folder, printed)")
     p.add_argument("--height", type=int, default=900, help="viewport height in CSS px (default 900)")
     p.add_argument("--json", action="store_true", help="print the report as JSON")
+    p.add_argument("--bare", action="store_true",
+                   help="a local file with no doctype is probed as it is, without the host skeleton")
     return p
 
 
@@ -369,6 +371,38 @@ def parse_target(text: str) -> tuple[str, Path | None]:
         raise UsageError(f"{text!r} is neither an http(s) URL nor an existing file")
     path = path.resolve()
     return path.as_uri(), path
+
+
+_DOCTYPE = re.compile(r"^\s*(?:<!--.*?-->\s*)*<!doctype\s", re.I | re.S)
+SKELETON_NAME = "_host-skeleton.html"
+
+
+def host_skeleton(html: str, folder_uri: str) -> str | None:
+    """The page with the host's skeleton in front, or None when it already has a doctype.
+
+    claude.ai serves an artifact inside its own skeleton (doctype, charset, viewport). A saved
+    page without one renders in quirks mode at desktop width with mojibake (observation 0657,
+    three hits), so the probe measures what the host would serve. <base> keeps relative links.
+    """
+    if _DOCTYPE.match(html.lstrip("﻿")):
+        return None
+    return ('<!doctype html>\n<meta charset="utf-8">\n'
+            '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
+            f'<base href="{folder_uri}/">\n' + html.lstrip("﻿"))
+
+
+def prepare_target(url: str, path: Path | None, out_dir: Path, bare: bool) -> tuple[str, str | None]:
+    """Return (url to load, note or None). A local page with no doctype gets the host skeleton."""
+    if path is None or bare:
+        return url, None
+    text = path.read_bytes().decode("utf-8", errors="replace")
+    wrapped = host_skeleton(text, path.parent.as_uri())
+    if wrapped is None:
+        return url, None
+    copy = out_dir / SKELETON_NAME
+    copy.write_text(wrapped, encoding="utf-8")
+    return copy.as_uri(), ("no doctype: probed a copy with the host skeleton (doctype, charset, viewport) "
+                           f"at {copy}; --bare probes the file as it is")
 
 
 def default_out_dir() -> Path:
@@ -716,7 +750,7 @@ def main(argv: list[str] | None = None) -> int:
         args = build_parser().parse_args(argv)
         parse_widths(args.widths)
         parse_themes(args.themes)
-        url, _ = parse_target(args.target)
+        url, path = parse_target(args.target)
         if args.height < 1:
             raise UsageError("height must be at least 1 CSS px")
     except UsageError as err:
@@ -728,6 +762,9 @@ def main(argv: list[str] | None = None) -> int:
         return EXIT_MISSING
     out_dir = Path(args.out) if args.out else default_out_dir()
     out_dir.mkdir(parents=True, exist_ok=True)
+    url, skeleton_note = prepare_target(url, path, out_dir, args.bare)
+    if skeleton_note:
+        print(f"uismith probe: {skeleton_note}", file=sys.stderr)
     code, text = run(args, sync_api, url, out_dir)
     print(text, file=sys.stderr if code == EXIT_MISSING else sys.stdout)
     return code

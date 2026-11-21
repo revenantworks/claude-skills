@@ -49,6 +49,11 @@ Outcome: <Clear | Open MUST: <areas> | Not worth building: <reason>>
   (a recommendation accepted without an explicit yes, or a MAY closed on assumption).
 - **Done means** is never empty for a Clear outcome. If PROOF was never answered, Outcome is not
   Clear.
+- **A decision that promises an outcome carries its bar as a figure** (observation 0528):
+  "reachable", "in year one" or "every season" is settled only with a number beside it ("about
+  30 heads", "by day 60"). Ask for the number before the row is Settled. An approval for a
+  "reachable" goal with no figure was built three ways, each faithful to the text, and landed back
+  at the 40-head cliff it meant to remove.
 - **Log** is append-only. A changed decision gets a new log line; the Settled row is edited and
   the old value is not deleted from the log.
 - **Hand-off line** closes the reply, not the file:
