@@ -1,10 +1,12 @@
 {
-  "note": "Pack-shared sources. Edit the file here, never a member's copy; tools/build.py writes every holder's copy and --check fails on drift (owner Q2, 2026-10-01). The private-file convention: owner 2026-10-02. warden_fs.py (path redaction and link helpers) is shared since 2026-10-08, when gatewarden's map and shieldwarden's signposts scan both came to need it.",
+  "note": "Pack-shared sources. Edit the file here, never a member's copy; tools/build.py writes every holder's copy and --check fails on drift (owner Q2, 2026-10-01). The private-file convention: owner 2026-10-02. warden_fs.py (path redaction and link helpers) is shared since 2026-10-08, when gatewarden's map and shieldwarden's signposts scan both came to need it. _scratch.py (test-folder removal that clears git's read-only object files) is shared since 2026-11-21, when shieldwarden's and trustwarden's suites were found leaking folders on Windows the way gatewarden's did before 2026-11-13.",
   "files": {
     "references/private-files.md": ["shieldwarden"],
     "scripts/warden_private.py": ["shieldwarden"],
     "scripts/test_warden_private.py": ["shieldwarden"],
     "scripts/warden_fs.py": ["gatewarden", "shieldwarden"],
-    "scripts/test_warden_fs.py": ["gatewarden", "shieldwarden"]
+    "scripts/test_warden_fs.py": ["gatewarden", "shieldwarden"],
+    "scripts/_scratch.py": ["gatewarden", "shieldwarden", "trustwarden"],
+    "scripts/test_scratch.py": ["gatewarden", "shieldwarden", "trustwarden"]
   }
 }

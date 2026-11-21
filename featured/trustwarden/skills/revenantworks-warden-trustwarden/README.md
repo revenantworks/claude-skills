@@ -47,7 +47,8 @@ revenantworks-warden-trustwarden/
 │   └── pack.md                 # warden roster, generated
 ├── scripts/
 │   ├── trust_vet.py            # stdlib; vet, revet and licence; JSON verdict
-│   └── test_trust_vet.py
+│   ├── _scratch.py             # pack-shared: tests remove their temp folders, read-only git files too
+│   └── test_trust_vet.py  test_scratch.py
 └── evals/                      # hand-run suites + native claude plugin eval cases
 ```
 

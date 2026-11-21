@@ -8,7 +8,6 @@ live in a temp folder with no remote, so the machine hook leaves them alone.
 import atexit
 import json
 import os
-import shutil
 import subprocess
 import sys
 import tempfile
@@ -16,6 +15,8 @@ import unittest
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE))
+from _scratch import force_rmtree  # noqa: E402  (pack-shared: clears git's read-only objects)
 SCRIPT = HERE / "shield_scan.py"
 SKILL = HERE.parent
 
@@ -34,7 +35,7 @@ RAW_VALUES = (SEG, EMAIL, TOKEN, NAME)
 # The home folder every run sees: an empty temp folder, so the real warden private folder
 # (~/.warden) is never read. A test that wants a default list writes it here.
 HOME = Path(tempfile.mkdtemp(prefix="shf-home-"))
-atexit.register(shutil.rmtree, HOME, True)
+atexit.register(force_rmtree, HOME)  # git's read-only objects too (_scratch)
 
 
 def run(*args, env=None):
@@ -66,7 +67,7 @@ class Fixture(unittest.TestCase):
         self.outside.mkdir()
 
     def tearDown(self):
-        shutil.rmtree(self.tmp, ignore_errors=True)
+        force_rmtree(self.tmp)
 
     def write(self, rel, text, commit=True, env=None):
         p = self.repo / rel
@@ -178,7 +179,7 @@ class TestTree(Fixture):
             self.assertIn("owner-name", self.rules(doc))
             self.assertFalse(any(n.startswith("owner-name") for n in doc["not_run"]))
         finally:
-            shutil.rmtree(folder, ignore_errors=True)
+            force_rmtree(folder)
 
     def test_named_list_missing_is_refused(self):
         code, out = run("scan", str(self.repo), "--names-file", str(self.outside / "nope.txt"), "--gitleaks", "off")

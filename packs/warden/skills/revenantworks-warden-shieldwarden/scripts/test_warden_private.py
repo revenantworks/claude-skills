@@ -9,7 +9,6 @@ from __future__ import annotations
 import contextlib
 import io
 import os
-import shutil
 import subprocess
 import sys
 import tempfile
@@ -19,6 +18,7 @@ from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import warden_private as wp  # noqa: E402
+from _scratch import force_rmtree  # noqa: E402  (pack-shared: clears git's read-only objects)
 
 ENTRY = "Zorblat" + " Quixfield"
 
@@ -35,7 +35,7 @@ class Base(unittest.TestCase):
 
     def tearDown(self):
         self.env.stop()
-        shutil.rmtree(self.tmp, ignore_errors=True)
+        force_rmtree(self.tmp)
 
     def run_main(self, *argv):
         out = io.StringIO()
