@@ -7,7 +7,6 @@ from __future__ import annotations
 import io
 import json
 import os
-import shutil
 import sys
 import tempfile
 import unittest
@@ -19,6 +18,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
 import signposts  # noqa: E402
+from _scratch import force_rmtree  # noqa: E402  (pack-shared: clears git's read-only objects)
 from warden_fs import USERS, redact  # noqa: E402
 
 
@@ -57,7 +57,7 @@ class Base(unittest.TestCase):
                 if p.is_symlink() or (hasattr(p, "is_junction") and p.is_junction()):
                     os.rmdir(p) if os.name == "nt" else p.unlink()
                     dns.remove(d)
-        shutil.rmtree(self._base, ignore_errors=True)
+        force_rmtree(self._base)
 
 
 ICACLS_SAMPLE = (

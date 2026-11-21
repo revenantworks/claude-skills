@@ -4,7 +4,9 @@
 Run: python3 -m unittest discover -s tools -p "test_*.py"
 Stdlib only; every fixture lives in a temp directory.
 """
+import atexit
 import json
+import shutil
 import tempfile
 import unittest
 import xml.etree.ElementTree as ET
@@ -13,8 +15,22 @@ from pathlib import Path
 import readme_charts as rc
 
 
+# Every fixture folder this module makes is removed when the run ends (2026-11-21: a run left
+# its folders in the temp root, and on the rig that is Claude's scratch root).
+_MADE: list = []
+
+
+def _tmp() -> Path:
+    d = Path(tempfile.mkdtemp())
+    _MADE.append(d)
+    return d
+
+
+atexit.register(lambda: [shutil.rmtree(d, ignore_errors=True) for d in _MADE])
+
+
 def tree(packs):
-    root = Path(tempfile.mkdtemp())
+    root = _tmp()
     for name, (version, members) in packs.items():
         p = root / "packs" / name
         (p / ".claude-plugin").mkdir(parents=True)
