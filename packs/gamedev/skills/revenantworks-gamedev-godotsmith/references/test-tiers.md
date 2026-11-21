@@ -34,6 +34,12 @@ script, and per row for any script whose rows are long. Keep one table per CI pl
   them a second pass can only estimate from the code.
 - **A figure from a loaded rig is an estimate.** One script read 824 s on one day and 329 s on
   another. Label which figures are measured, which recorded, and which estimated.
+- **Process spawns per test are a cost class of their own** (#0568). A test that starts a git
+  repo, a shell or a Python child per case runs several times slower on Windows than on Linux: one
+  hook suite took 657 s on the rig against about 110 s hosted. A hosted Linux time is no guide to
+  the local stamp's time. Sharding stops paying near the point where process creation is the
+  bottleneck; the lasting fix is fewer spawns per test (a shared fixture per class, a pure-function
+  layer tested without a process, one end-to-end spawn test per rule).
 
 ## 2. The three tiers
 

@@ -1,5 +1,9 @@
 # Changelog — revenantworks-gamedev-uismith
 
+## [Unreleased]
+
+2026-11-20 (weekly observation review, slice b; observations 0657, 0658, 0681): `probe.py` probes a local file with no doctype through a host-skeleton copy (`--bare` opts out; two tests). `artifact-pages.md`: resolve each page's link before a republish; measure label-to-mark alignment on scales and sliders. `probe.md` section 1 names the skeleton. SKILL.md unchanged.
+
 ## [1.1.1] — 2026-11-13
 
 - probe reports spilled text; surfaces and probe references updated

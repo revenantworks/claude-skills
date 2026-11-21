@@ -1,5 +1,16 @@
 # Changelog — revenantworks-gamedev-godotsmith
 
+## [Unreleased]
+
+- 2026-11-20 observer review (observations 0465, 0467, 0479, 0485, 0509, 0527, 0707, 0723):
+  `gut-traps.md` §4: the per-worktree user folder, keyed uniquely, and `--headless` does not
+  stop `OS.alert`; `ci-guards.md`: a sha-skip guard needs a fast-forward, and a font-width
+  constant states its platform; `structure-and-wiring.md` §8: pin enum kinds by name, grep both
+  `size()` pin shapes after an append, commit a new script's `.uid`.
+2026-11-20 (weekly observation review, slice b; observations 0639, 0668, 0696, 0697, 0700): `ci-guards.md` section 2 takes an exact check's expected total from the base tree, never a floored doc line; section 4 adds a retry on toolchain fetches and the per-platform fixture pair. `determinism-and-state.md` covers every native float builtin and diffs the hashed state before estimating. `probes.md` makes a bit-equality probe prove its inputs can fail. SKILL.md unchanged.
+
+- test-tiers §1: process spawns per test as a cost class on Windows (#0568); ci-guards §3: a new skip gate finds old silent skips, a skip guarded on a tracked file skips everywhere (#0490)
+
 ## [1.0.1] — 2026-11-13
 
 - reference updates from the 2026-11-09 review

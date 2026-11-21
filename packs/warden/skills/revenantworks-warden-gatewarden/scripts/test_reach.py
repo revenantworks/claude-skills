@@ -433,6 +433,26 @@ class LoadsTests(Base):
         self.assertEqual(d["plugin_ids"]["enabled_not_installed"], [])
         self.assertEqual(d["plugin_ids"]["installed_not_enabled"], [])
 
+    def test_a_local_mcp_server_running_a_plugin_servers_script_is_a_twin(self):
+        # observation 0689: a local-scope `godot` server ran the pack's own script beside the plugin's.
+        home = self.surface_home("wright", "same", "same")
+        inst = home / "plugins" / "cache" / "mk" / "pack" / "1.0.0"
+        (inst / ".mcp.json").write_text(json.dumps({"mcpServers": {"godot": {
+            "command": "python", "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/godot_mcp_server.py"]}}}),
+            encoding="utf-8")
+        _, d = self.loads_json(home)
+        self.assertEqual(d["mcp_twins"], [])
+        self.assertTrue([n for n in d["not_checked"] if ".claude.json" in n])
+        (home / ".claude.json").write_text(json.dumps({
+            "mcpServers": {"other": {"command": "node", "args": ["/x/dist/index.js"]}},
+            "projects": {"/some/repo": {"mcpServers": {"godot": {
+                "command": "python", "args": ["/checkout/packs/gamedev/plugins/godot-mcp/scripts/godot_mcp_server.py"]
+            }}}}}), encoding="utf-8")
+        code, d = self.loads_json(home)
+        self.assertEqual(code, 1)
+        self.assertEqual([(t["name"], t["scope"], t["plugin"], t["fix"]) for t in d["mcp_twins"]],
+                         [("godot", "local", "pack@mk", "claude mcp remove godot -s local")])
+
     def test_installed_and_synced_plugin_same_body_is_handled(self):
         code, d = self.loads_json(self.surface_home("wright", "same", "same"))
         self.assertEqual(d["rows"][0]["kinds"], [6])

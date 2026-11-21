@@ -1,5 +1,11 @@
 # Changelog — revenantworks-foundation-pacewright
 
+## [Unreleased]
+
+- 2026-11-20 observer review (observations 0473, 0488, 0500): `modes.md` shared base 9-11: a
+  pace check reports spend by class, the controller's own checks are priced into every mode, one
+  morning file per run.
+
 ## [1.0.1] — 2026-11-13
 
 - modes reference update

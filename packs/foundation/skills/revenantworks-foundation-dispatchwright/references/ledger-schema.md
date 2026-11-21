@@ -68,6 +68,13 @@ first of:
 4. Pinned roots named in `CLAUDE_DISPATCH_ROOTS` — for a session whose working directory sits
    outside the run's repo.
 
+A launch prompt that names its run folder by path (`<repo>/.dispatch/runs/<run-id>/brief.md`)
+is checked against that run's ledger before this order (observation 0675); only
+`CLAUDE_DISPATCH_LEDGER` outranks it. **A ledger kept anywhere the order would not find it** (a
+notes worktree, another repo) **is registered at plan time, not at the first refusal**
+(observation 0702): set `CLAUDE_DISPATCH_LEDGER` or write the pointer then, read any existing
+pointer first, and record its old value in the ledger header.
+
 `dispatch_ledger_guard.py` (the PreToolUse hook, an optional rig install kept in the
 `claude-skills` repo under `.claude/hooks/`) follows the same order, prints every directory it
 searched when it refuses, and warns (never blocks) when the ledger is git-ignored or a closed row
@@ -134,7 +141,11 @@ is refused: it is exactly the guess the ledger exists to replace. **The controll
 time** (observation 0343): not a planned launch time ("dispatched 15:40Z" written at 15:29Z), not a
 placeholder ("pushed 17:2xZ"). The stamp comes from the same command that launches, commits or
 pushes — `git push origin main && date -u +"%Y-%m-%d %H:%MZ"` — or from a writer that reads the
-clock itself, such as the rig's `dispatch_budget_write.py` for the budget file.
+clock itself, such as the rig's `dispatch_budget_write.py` for the budget file. The Edit tool
+cannot read a clock, so a row is written or closed by a shell command that stamps it. Since a
+rule sentence did not hold (observation 0709, the second instance of 0343), the guard refuses a
+launch whose own row's `dispatch_ts` runs more than 2 minutes ahead of its clock, or is empty in
+a v2 ledger.
 
 ## Header blocks
 
@@ -271,6 +282,13 @@ two rows is refused, and the guard warns with their line numbers, so a re-run ta
 `kind:`, `fixer-of:`, `lane`, `owner-called` and the read-only test reach the rig gate and the
 writer cap through that row, and a launch that binds no row is gated as a heavy writer build.
 So a brief names its own unit, and only its own, with `Ledger row <id>` in its prompt.
+`Unit <id>` at the start of a line binds too (observation 0627: `Unit W2-KES (read-only ...)`
+bound no row and was refused as a heavy build). A launch that binds no row is refused with that
+miss named before any rig-gate reason. The model cell names a model with its version, as the
+tier table does (`Opus 5.5`, not `opus`); a refused tier check names each failing cell, and a v2
+refusal lists every malformed cell and missing column at once, with the header to copy
+(observations 0642, 0675). An open `status` cell is the bare word too (`dispatched`); a
+qualifier such as `unfitted, owner go` goes in the `window` or notes cell (observation 0702).
 
 **Never edit tracked run records while that repo's local CI runs** (observation 0364). A local
 CI script that ends by resetting the tree (`git checkout -- .`, as hosted CI does) discards every

@@ -36,8 +36,8 @@ The manual route, if you prefer it:
 New-Item -ItemType Directory -Force "$HOME\.claude\hooks\gatewarden" | Out-Null; Copy-Item "<skill>\scripts\hooks\*.py" "$HOME\.claude\hooks\gatewarden\"
 ```
 
-- **Verify:** `Get-ChildItem "$HOME\.claude\hooks\gatewarden" -Name` lists eleven files:
-  `call_cap.py ci_stamp.py follow_sweep.py golive_block.py heredoc_guard.py hooklib.py hyperv_lock.py launch_throttle.py push_gate.py warden_digest.py warden_review.py`.
+- **Verify:** `Get-ChildItem "$HOME\.claude\hooks\gatewarden" -Name` lists thirteen files:
+  `call_cap.py ci_stamp.py follow_sweep.py golive_block.py heredoc_guard.py hooklib.py hyperv_lock.py launch_throttle.py outbound_text_guard.py push_gate.py warden_digest.py warden_review.py work_guard.py`.
 - **Rollback:** `Remove-Item -Recurse "$HOME\.claude\hooks\gatewarden"`.
 
 **Pin hypervrunner's scripts** (only if you install `hyperv_lock`). The lock lets Claude run
@@ -78,6 +78,8 @@ $h = "$HOME\.claude\hooks\gatewarden"
 '{"tool_name":"Bash","tool_input":{"command":"python send.py StartStream"}}' | python "$h\golive_block.py"; $LASTEXITCODE       # 2
 '{"tool_name":"Bash","tool_input":{"command":"python obs_ws.py classify StartStream"}}' | python "$h\golive_block.py"; $LASTEXITCODE  # 0
 '{"tool_name":"mcp__obs__start_stream","tool_input":{}}' | python "$h\golive_block.py"; $LASTEXITCODE                         # 2
+'{"tool_name":"Bash","tool_input":{"command":"sed -i s/a/b/ x.txt"},"cwd":"."}' | python "$h\work_guard.py"; $LASTEXITCODE     # 2 (hard: use the Edit tool)
+'{"tool_name":"Bash","tool_input":{"command":"git commit -m \"never sed -i\""},"cwd":"."}' | python "$h\work_guard.py"; $LASTEXITCODE    # 0 (a message is data)
 ```
 
 - **Verify:** the exit codes match the comments. A different code means stop here.
@@ -90,7 +92,7 @@ Back up the live file, then let `harden` write a finished copy beside it. It mer
 into what you already have and changes nothing else unless you add flags.
 
 ```powershell
-Copy-Item "$HOME\.claude\settings.json" "$HOME\.claude\settings.json.bak-gatewarden"; python "<skill>\scripts\perm_audit.py" harden --settings "$HOME\.claude\settings.json" --add-hooks "$HOME/.claude/hooks/gatewarden" --hooks push_gate,hyperv_lock,heredoc_guard,call_cap,launch_throttle,golive_block
+Copy-Item "$HOME\.claude\settings.json" "$HOME\.claude\settings.json.bak-gatewarden"; python "<skill>\scripts\perm_audit.py" harden --settings "$HOME\.claude\settings.json" --add-hooks "$HOME/.claude/hooks/gatewarden" --hooks push_gate,hyperv_lock,heredoc_guard,call_cap,launch_throttle,golive_block,outbound_text_guard,work_guard
 ```
 
 Drop names from `--hooks` to install fewer. On Windows `harden` also adds the PowerShell twin of each

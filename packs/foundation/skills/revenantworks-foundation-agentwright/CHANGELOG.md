@@ -1,5 +1,15 @@
 # Changelog — revenantworks-foundation-agentwright
 
+## [Unreleased]
+
+- 2026-11-20 observer review (observation 0466): `design-checklist.md`: a scheduled-task
+  definition ships with an import line proven in the owner's shell (the UTF-8/UTF-16 swap).
+
+- design-checklist: a new schedule is the last resort, an existing routine's step first (#0653);
+  an unattended task gets its own worktree or a precondition that tells leftover state from live
+  work (#0722); a Code routine update replaces `job_config` whole, so send the full object and
+  compare the prompt after (#0710).
+
 ## [1.0.1] — 2026-11-13
 
 - design-checklist reference gains new checks

@@ -36,6 +36,12 @@ fast-forward-only update of the local one), failing closed when the fetch fails 
 behind and cannot fast-forward. The job also reports ahead/behind at start. A second breach made
 this a pre-step in the run script, not a sentence in the prompt.
 
+**A new schedule is the last resort** (added 2026-11-20, observation #0653). When a routine
+cannot reach what a job needs, list the routines and tasks that already run near that time on a
+surface that has the access, and propose a step in one of them first. Say the constraint (the
+routine cannot read this machine) to the user before building around it. A new scheduled task
+only when no existing one has the access or the cadence, and only with the user's yes.
+
 **Scheduled platform sweeps** (added 2026-10-08). A scheduled currency or research sweep runs scoutwright `since`, then scoutwright `fit` on each new model and each added feature, inside a stated budget (scoutwright's own cap per fit card and cards per run). Trials `fit` proposes are reported for the user's yes, never run unattended.
 
 ## 2. Guardrail tiers — soft vs hard
@@ -57,6 +63,8 @@ this a pre-step in the run script, not a sentence in the prompt.
 Two minimum: **soft** — a phrase or message the agent honors immediately ("STOP" halts all action this run and future runs until cleared); **hard** — a mechanism the agent cannot override (disconnect the MCP/connector, disable the schedule, revoke the credential). The spec names both, who can pull each, and — by the lift-path rule in area 2 — who lifts each and where.
 
 **Cancelling is two acts, in one order** (added 2026-09-13, observation #0051). Stop whatever can relaunch the work — the supervising agent, the parked unit, the scheduler entry, a watchdog — before stopping the work itself. A survivor still holding "resume when this finishes" reads the missing job as *not started* rather than *cancelled*, and does the diligent thing: it starts a fresh one. Nothing announces that. The spec names both acts, their order, and the verification: re-read the evidence the work leaves behind — a process list, the artefact it writes, the run log — a minute after the stop, because a stop command returning success proves only that one thing ended. A kill switch that halts the work and leaves its owner running is not a kill switch.
+
+**A scheduled-task definition ships with an import line proven on the target machine** (observation 0466). The register or import command handed to the owner is run once, in the owner's shell, before hand-over, and its output goes in the report; one that could not be run says "NOT RUN: why". A Windows Task Scheduler XML declared UTF-8 fails `Register-ScheduledTask -Xml (Get-Content -Raw <file>)` with "unable to switch the encoding", because a PowerShell string is UTF-16: the proven line swaps the declaration (`-replace 'encoding="UTF-8"','encoding="UTF-16"'`), or the file is written UTF-16. A line tested only in Git Bash failed in the owner's PowerShell.
 
 **Retiring a schedule retires every instruction that can re-create it** (added 2026-10-16, observation 0413). Unregistering the task and marking its registry row retired is half the act. In the same commit, grep the whole estate for the task's exact name — READMEs, script help blocks, comments, the handbook — and remove or rewrite every register or remove block. A register block left for a retired task names the job's new owner instead. One retirement left a working `Register-ScheduledTask` command in a README and a script header; following the docs would have revived a second daily run racing its successor.
 
@@ -83,6 +91,17 @@ repeat the repo's deny rules as absolute paths (`//<drive>/...` matches on Windo
 the launch folder itself, write the prompt's paths as absolute, and strip from the env whatever a
 child `claude -p` must not inherit. Check what a scheduled run actually loads before designing it.
 
+**An unattended task gets its own working copy** (added 2026-11-20, observation #0722). A local
+task that runs in the clone interactive sessions use inherits whatever they leave: one session
+left a clean, already-merged branch checked out, the task's "not on main, stop" precondition
+fired, and a weekly run produced nothing. Run the task from a dedicated worktree on the default
+branch (`git worktree add ../<repo>-tasks main`, created once), so a branch switch elsewhere never
+reaches it. Where it must share the clone, the precondition tells leftover state from live work:
+a clean tree whose branch has no commits outside the remote default by patch (`git cherry
+origin/main HEAD` prints no `+` line) switches to main and continues; only a dirty tree or
+unlanded commits stop the run. An audit flags any scheduled task whose working folder is a clone
+an interactive session also works in.
+
 **A narrow push is checked against the ref, not the commit** (added 2026-10-16, observation 0412). A push sends a ref, so "this script pushes one file" holds only while the branch is one commit ahead. A carve-out that commits one tracked file and then runs `git push origin HEAD:main` also sends every local commit other sessions made. The spec's push step checks `git rev-list --count origin/main..HEAD` equals 1 before pushing; otherwise it commits locally and logs "deferred". The pushed path goes into the workflow's `paths-ignore`, or the commit carries `[skip ci]` where the repo allows it, so the push starts no CI run. Review a push scope by reading what the push command sends.
 
 ## 5. Handoff schemas
@@ -100,6 +119,14 @@ What a run emits, where, in what shape — subject-line format, sections, requir
 **The run record is part of the contract** (added 2026-09-11, observation #0017). A run session is a record, not a workspace: the spec states that follow-up work continues in a new session started from the repo, never in the routine's own session, and that any liveness check reads the fire's **first** result event rather than the last. A log is evidence only while it contains one run — anything appended after the routine's result turns the record into a workspace and the routine's duration, cost and history into something no check can read.
 
 **The follow-up surface is specified, or closed** (added 2026-10-16, observation 0404). Where the user may reply inside a fired session (a phone reply to a routine's result is the common case), the spec carries a `follow-up surface:` field: whether replies are allowed, what they may do (ask about the result, log a fill, nothing that writes or pushes beyond that), and that everything else goes to a new session. Those replies run under a different permission layer from the scheduled fire — in a cloud routine, the auto-mode classifier, which reads the session's first message and the repo's CLAUDE.md and does not read a project `permissions.allow` list. So the allowed list goes in the prompt itself, where that layer reads it. Owner follow-ups in one routine's session drew eleven classifier refusals of ledger writes and pushes; widening the repo's allow list changed nothing. An audit flags a routine whose run log shows owner turns after the result event and whose spec names no follow-up surface.
+
+**A task that commits names its lander** (added 2026-11-20, observation 0628). A scheduled task
+that commits to a repo but may not push leaves its commits on a local trunk that drifts from the
+host with every fire. Two studio tasks sat ahead 3 and behind 11 for ten days, found only when the
+user noticed. The spec names who lands each commit: the task itself (branch, push, PR, merge, then a
+fast-forward of the local trunk), a named follow-up task that lands `git rev-list
+origin/main..main`, or a dedicated branch plus a visible flag per commit. The task starts from a
+fetched remote trunk (area 1). Audit flags a commit-but-never-push task with no named lander.
 
 **A dated output key names its time zone** (added 2026-10-16, observation 0386). A first run at 10:40 PM ET keyed its output by the UTC date, a day ahead; every prompt that writes dated output says which zone the date is in.
 
@@ -155,6 +182,15 @@ Per failure class: tool error (retry once, narrower; then report), data absent (
   task prompt before and after, and report the platform churn in one line.
 - **A model or other nested-config change** is an owner step in the claude.ai form unless a tool
   can send the body from a file.
+
+**A Code routine's update replaces `job_config` whole too** (added 2026-11-20, observation
+#0710). The tool calls it a partial update, but that holds at the top level only. A body that
+carried `job_config.ccr` with just `environment_id` and `session_context`, meant to clear one
+outcome branch, was accepted and emptied the routine's prompt and its event list until a second
+call sent the whole object back. Any update that touches `job_config` sends the whole object from
+a fresh `get` (events included), changed only at the target path, then runs a `get` that compares
+the prompt byte for byte. Prefer a helper that does get, patch one path, update, compare, so the
+full body is never retyped.
 
 **A scheduler's restart setting is not a supervisor** (added 2026-11-09, observation 0487). A
 supervising task that loses its console (a crash wave, a headless console host) can leave a child

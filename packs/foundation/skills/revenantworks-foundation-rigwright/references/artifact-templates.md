@@ -186,6 +186,8 @@ if __name__ == "__main__":
 
 Four properties are not optional. **Exit codes:** 0 allows, 2 blocks and feeds stderr to Claude; any other code is a non-blocking error, so a crash never blocks. **Timeout:** set on the entry, sized to the script's slowest honest run. **Evidence location:** read from `${CLAUDE_PROJECT_DIR}`, an env var or a pinned path, never the cwd; a session that enters a worktree keeps the variable pointing at the original root, so the script states which root it means. **Failure mode:** the docstring says fail-open or fail-closed and why, and the refusal text names what it checked and where, so a false block can be diagnosed from the message alone.
 
+**A moved session keeps the old `CLAUDE_PROJECT_DIR`** (observation 0656). A session that starts in one folder and moves into the project mid-session still holds the first folder in the variable, so a command built on it finds no script, exits non-zero and refuses every matched call. Where the hook can, fall back to the input's `cwd` or `git rev-parse --show-toplevel`, and make a missing script fail with a message that names the variable it read. gatewarden's hook review flags the shape.
+
 **Controls file** (`.claude/hooks/<name>.controls.json`), run by the repo's own check, never by the live hook:
 
 ```json

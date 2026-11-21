@@ -91,6 +91,16 @@ raise it to.
 Pick `SLACK_MAX` from how fast the suite grows. Ten is right for a suite adding a few tests
 a week; smaller for a stable one.
 
+**A floor lets the documented figure lag, so an exact check never takes it as its baseline**
+(observation 0697). Where a pull request may add tests without moving the floor or the doc's
+count line, the expected total for an exact check (a land walk, a count sync) comes from the
+tree at its base: a static count of test functions (`git grep -c '^func test_' <base> --
+tests/`) or a baseline run, never the doc line or a remembered number. Run that count first,
+before anything long: a 103-minute walk once ran green on both platforms and failed on its
+last line, 6811 against an expected 6809 taken from a doc that lagged main by two. A tool
+that takes an expected total compares it with the static count at start and exits at once on
+a mismatch, naming both figures.
+
 ## 3. The honest-red pattern
 
 A check that fails because the game genuinely fails is information. Keep it running and
@@ -123,7 +133,9 @@ removes it.** A tolerance with no comment becomes permanent, and a permanent one
 as deleting the check with extra steps. The same holds for every other way of turning a
 failure into a note: a skipped test, a quarantined case, an expected-failure marker, a
 known-issue line in a status file. Each carries the failure's signature, not just its
-existence.
+existence. A local-CI runner fails on any skip not in its reviewed list; adding that gate
+finds old silent skips on its first run, and a skip guarded on a tracked file's presence
+skips in every clone, hosted CI included (#0490; gatewarden's ci_stamp holds the stamp side).
 
 A design that depends on a measurement names the harness by **file and function**, never by
 a label ("the tool policy"). When that harness goes known red, the design's measurement row
@@ -167,6 +179,20 @@ Never soften the bar itself. A survival floor lowered until the check passes is 
   one tool that sets it. `test-tiers.md` section 7.
 - **A lint or parse step with a folder list.** A helper script outside the list can stay broken
   across many commits, each unit calling the error older than its own change. Section 6.
+- **A toolchain fetch with no retry** (observation 0639). The engine download (and any other
+  network fetch in an install step) carries a bounded retry before its checksum check:
+  `curl -fL --retry 4 --retry-delay 5 --connect-timeout 20 -o godot.zip <url>` (curl's
+  `--retry` covers timeouts and 408, 429 and 5xx). The retry sits before the integrity check,
+  never in place of it. One HTTP 504 from the release host once failed a main run in 9 s,
+  before any check ran. When two reds arrive together, read each run's log on its own before
+  naming one cause.
+- **A per-platform fixture changed on one platform only** (observation 0668). A check that
+  reads `*_linux.txt` on CI and `*_windows.txt` on the rig holds a pair. A commit that re-takes
+  one side re-takes the other or names it as owed, and a guard (CI or pre-push) fails when one
+  side of a pair changes alone. Twenty-two pull requests once landed on Linux CI alone: three
+  re-took only the Linux HUD dumps, the Windows walk on main stayed red for days, and nobody saw
+  it until a land needed that walk. A platform whose only verdict is a step some lands skip
+  rots silently.
 
 ## 5. What "green" means
 
@@ -209,6 +235,17 @@ The consequences:
   commit them on the branch, and let the branch go green. `main` fast-forwards only to the
   green commit, so it never goes red. Landing on `main` and re-pinning afterwards spends the
   green base every later merge depends on.
+- **A guard that skips a branch-tested sha works only with a fast-forward** (observation 0467).
+  A CI file whose main job skips a sha that already has a green run saves the suite only when
+  `main` moves to that same sha. A PR merge commit is a new sha, so the full suite runs again
+  on `main`. Read the workflow's triggers, guards and dispatch paths before a land rule adds a
+  run.
+- **A check that compares a measured font width to a constant states the constant's platform**
+  (observation 0509). Fonts measure differently on Linux and Windows: a HUD check equal on the
+  Windows walk failed in the Linux CI job after hours of test jobs. Store the constant per
+  platform or compare with a tolerance. A test that fakes the platform stubs the module's own
+  `os` object, never the global `os.name`: patching it to `"nt"` built a `WindowsPath` on the
+  Linux runner.
 - **Code that talks to the operating system needs each CI platform's proof before the land**
   (observation 0447). `OS.is_process_running`, `OS.kill`, file locks, absolute paths, line
   endings and cleanup on quit behave differently across platforms: on Linux,

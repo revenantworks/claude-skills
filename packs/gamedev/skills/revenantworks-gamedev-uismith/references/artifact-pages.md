@@ -7,6 +7,8 @@ Load when the surface is a published artifact page (a claude.ai page, often rebu
 1. Purpose first. One sentence: what the page is for, who reads it, when, on what device. Research the best practice for that kind of page (briefing, scoring sheet, review page, dashboard). Cut layout and data that do not serve that use before styling anything. A page that already fits its use gets no cuts; say so.
 2. Find the source. A routine-built page is fixed in its renderer, template or prompt in the repo, never only in the published copy: the next run overwrites it. A page with no source in any repo (published straight from a session, or a Claude Docs document) is reported, not restyled. A page rendered by someone else's skill is out of reach; say whose.
 3. Diff the live page against the repo before republishing. The host wraps the page in its own skeleton (doctype, charset, viewport, a reset style); strip those lines before comparing. A live page that differs from the repo's previous version is a finding to resolve before publishing over it. Never publish the repo file over a drifted page: apply the change to the live copy, publish that, and report the drift (2026-11-18: two of eleven pages had drifted, one replaced by a different design outside the repo).
+4. Resolve each page's link before any republish (observation 0658). List the user's artifacts, match the title (prefer the pinned one) and publish with that link. A publish by file path alone updates in place only where this session published that path before; elsewhere it makes a second page. A "Version 1" result on a page that should already exist is a failed republish: stop, find the real link, publish there, and ask the user before deleting the stray copy.
+5. Read the store before reshaping a page that keeps data (#0577). A page with a shared database whose new version reads or writes documents in a new shape is a migration: list each collection first, and where documents exist in the old shape the new page reads them, carries their fields forward in every whole-document write, and shows them. A claim about what a store holds ("it is empty") comes from a read in the same turn, never from memory of an earlier publish. One reshaped picker page, told to the user as empty, would have overwritten seven saved picks on the first tap.
 
 ## Themes
 
@@ -31,13 +33,14 @@ The probe in probe.md covers fit. For a theme pass, also measure, per palette an
 - every visible text element against its nearest opaque ancestor (alpha above 0.5): 4.5:1 for text; symbols that act as graphics hold 3:1;
 - every button, select, summary, text input and form label at least 44 px tall; inline links and terms inside running text are exempt;
 - the theme switch: a forced mode holds after a host write; Auto returns to the host value; the stored value survives a reload; the chosen mode shows its highlight in every palette;
-- every select: open its list in each mode and read every row (the computed `color` and `background-color` of each option differ); the closed control never shows a blank row.
+- every select: open its list in each mode and read every row (the computed `color` and `background-color` of each option differ); the closed control never shows a blank row;
+- every scale, slider or segmented track with end or step labels (observation 0681): each end label's outer edge sits within 1 px of the first and last mark's outer edge, and no label box intersects a marker box, at every width and mode. Labels share the track's geometry (the same grid, or the same width tokens), never a fixed width of their own: three hard-coded label widths against one 276 px track put the high end under dot 3 or 4, and every fit, target and contrast probe passed.
 
 ## Probe traps
 
 - Transitions. A colour read right after a theme switch can be mid-transition and fail falsely. Inject a style that turns transitions off on every element before measuring, or re-read.
 - Hidden pane. A hidden browser pane throttles timers; a probe that awaits setTimeout hangs. Use microtask awaits or synchronous reads.
-- Local copies. A saved artifact page previewed locally needs the host skeleton (charset and viewport meta), or it renders at desktop width with mojibake.
+- Local copies. A saved artifact page previewed locally needs the host skeleton (charset and viewport meta), or it renders at desktop width with mojibake. `scripts/probe.py` adds it to any local file with no doctype (probe.md section 1); a hand-rolled probe serves a skeleton copy too.
 - Side effects. A renderer's build() may write the committed report as well as return HTML; revert that file and let the routine regenerate it.
 - Shell traps. PowerShell variable names are case-insensitive ($S overwrites $s); stray __pycache__ folders from compileall can break manifest tests.
 - Load-sensitive tests. A timing test that fails while another suite loads the machine is re-run on an idle machine; a second failure there is red.

@@ -17,10 +17,19 @@ marked partial: the push gate then says loudly that the local verdict is not the
 verdict (observation 0354).
 
 Several CI steps: repeat `--step`, one command line each, split like a shell line
-(no shell runs; write paths with forward slashes). They run in order and the first
-failure stops the run. Never wrap the steps in `bash -c`: on Windows a bare `bash`
-can resolve to the System32 WSL launcher instead of Git Bash, and `run` refuses it
-(observation 0346).
+(no shell runs). On Windows a step that holds a backslash is split without escapes,
+so a backslash drive path stays a path (observation 0688). They run in order and
+the first failure stops the run. Never wrap the steps in `bash -c`: on Windows a
+bare `bash` can resolve to the System32 WSL launcher instead of Git Bash, and `run`
+refuses it (observation 0346). A step Git Bash's path conversion rewrote (`<drive>:/x`
+turned into `<drive>;<Git install folder>/x`, with backslashes) is refused with the fix,
+`MSYS_NO_PATHCONV=1` (observation 0693).
+
+A dirty tree is refused. When every listed file still hashes to its committed
+content, the refusal says so and gives the no-op fix, `git add -- <paths>`: only
+git's stat cache was stale (observation 0677). Every verdict (passed, failed,
+refused) is also the last line of ci-last.log, so a later reader of the log sees
+it (observation 0695).
 
 A missing tool is not a pass. When a passing run's log says a check was skipped or
 not run because its tool is missing, or a command was not found, no stamp is
@@ -83,6 +92,10 @@ HAS_CI = re.compile(r"(?i)^\.github/workflows/[^/]+\.ya?ml$|(?:^|/)ci[-_]local(?
 TOKEN_SHAPE = re.compile(r"(?<![A-Za-z0-9])(?:ghp_|gho_|ghs_|ghu_|ghr_|github_pat_|glpat-|sk-|xox[abprs]-|AKIA)"
                          r"[A-Za-z0-9_\-]{16,}")
 EMPTY_TREE = "4b825dc642cb6eb9a060e54bf8d69288fbee4904"
+# Git Bash (MSYS) rewrites an argument that looks like a POSIX path list before Python sees it:
+# `<drive>:/x` became `<drive>;<Git install folder>\x` (observation 0693). Only a word that starts with the
+# one-letter drive and `;` matches, so a PATH-style list (`<drive>:\a;<drive>:\b`) does not.
+MSYS_MANGLED = re.compile(r"(?<![^\s\"'=])[A-Za-z];[A-Za-z]:[\\/]")
 
 
 def missing_tools(text: str) -> list[str]:
@@ -100,6 +113,57 @@ def resolve_exe(argv0: str, repo: str) -> str:
         cand = os.path.abspath(os.path.join(repo, argv0))
         return (shutil.which(cand) or cand) if os.path.exists(cand) or shutil.which(cand) else argv0
     return (shutil.which(argv0) or argv0) if os.name == "nt" else argv0
+
+
+def split_step(step: str, nt: bool = os.name == "nt") -> list[str]:
+    """One --step line split like a shell line. On Windows a backslash is a path separator, not an
+    escape, so a step that holds one is split without escapes and keeps its paths (observation 0688:
+    `V:\\x\\check.py` reached python as `V:xcheck.py`). One pair of outer quotes is removed per word."""
+    if not (nt and "\\" in step):
+        return shlex.split(step)
+    words = shlex.split(step, posix=False)
+    return [w[1:-1] if len(w) >= 2 and w[0] == w[-1] and w[0] in "\"'" else w for w in words]
+
+
+def msys_mangled(words: list[str]) -> str:
+    """The first word Git Bash's path conversion rewrote, or "" (observation 0693)."""
+    return next((w for w in words if MSYS_MANGLED.search(w)), "")
+
+
+def stat_only(repo: str, porcelain: str) -> tuple[list[str], bool]:
+    """(modified paths whose working file hashes to its index blob, whether any other change is listed).
+
+    Such a path is dirty only in git's stat cache; `git add -- <path>` refreshes its entry and stages
+    nothing (observation 0677: a build tool rewrote 27 unchanged SVGs)."""
+    cands, other = [], False
+    for line in porcelain.splitlines():
+        code, path = line[:2], line[3:]
+        if code == " M" and path and '"' not in path and " -> " not in path:
+            cands.append(path)
+        elif line.strip():
+            other = True
+    if not cands:
+        return [], other
+    try:
+        work = hl.run_git(repo, "hash-object", "--", *cands).split()
+        index = {}
+        for row in hl.run_git(repo, "ls-files", "-s", "--", *cands).splitlines():
+            meta, _, p = row.partition("\t")
+            index[p] = meta.split()[1] if len(meta.split()) > 1 else ""
+    except (RuntimeError, OSError, subprocess.SubprocessError):
+        return [], True
+    same = [p for p, h in zip(cands, work) if index.get(p) == h]
+    return same, other or len(same) < len(cands)
+
+
+def verdict(log: str, line: str) -> None:
+    """Append the run's verdict to ci-last.log, so a later reader of the log sees why no stamp exists
+    (observation 0695: a refusal went to the caller's console only)."""
+    try:
+        with open(log, "a", encoding="utf-8") as fh:
+            fh.write(f"\nci_stamp verdict: {line}\n")
+    except OSError:
+        pass
 
 
 def ci_files(repo: str) -> list[str]:
@@ -235,7 +299,14 @@ def main(argv: list[str]) -> int:
             print("no CI stamp", file=sys.stderr)
             return 1
     cmd = a.command[1:] if a.command[:1] == ["--"] else a.command
-    steps = ([cmd] if cmd else []) + [shlex.split(s) for s in a.step]
+    bent = msys_mangled(cmd + a.step)
+    if bent:
+        print(f"ci_stamp: `{bent}` looks rewritten by Git Bash's path conversion (a drive path turned into "
+              "`X;C:\\...`), so the step would not start. Put MSYS_NO_PATHCONV=1 in front of the call, and "
+              "write ci_stamp.py's own path in Windows form (C:/...), or run it from PowerShell.",
+              file=sys.stderr)
+        return 2
+    steps = ([cmd] if cmd else []) + [split_step(s) for s in a.step]
     steps = [s for s in steps if s]
     if a.no_ci:
         if steps:
@@ -262,7 +333,16 @@ def main(argv: list[str]) -> int:
     except (OSError, ValueError) as exc:
         print(f"ci_stamp: --workflow/--covers could not be read ({exc})", file=sys.stderr)
         return 2
-    if hl.run_git(a.repo, "status", "--porcelain", "--untracked-files=no"):
+    dirty = hl.run_git(a.repo, "status", "--porcelain", "--untracked-files=no")
+    if dirty:
+        same, real = stat_only(a.repo, dirty)
+        if same and not real:
+            shown = " ".join(same[:10]) + (f" (and {len(same) - 10} more)" if len(same) > 10 else "")
+            print(f"ci_stamp: the tree reads dirty, but all {len(same)} listed file(s) match their committed "
+                  "content: only git's stat cache is stale (a tool rewrote them unchanged). "
+                  f"`git add -- {shown}` refreshes the entries and stages no change; then run again.",
+                  file=sys.stderr)
+            return 2
         print("ci_stamp: the tree has uncommitted changes; commit first so the stamp names a commit",
               file=sys.stderr)
         return 2
@@ -297,22 +377,30 @@ def main(argv: list[str]) -> int:
     if not a.quiet:
         _echo(sys.stdout, text)
     if returncode != 0:
+        why = f" (a step passed its {a.step_timeout:g} s deadline)" if returncode == 124 else ""
+        verdict(log, f"failed (exit {returncode}){why}; no stamp written")
         if a.quiet:
             print(f"ci_stamp: CI failed (exit {returncode}); no stamp written; log: {log}", file=sys.stderr)
             return returncode
         tail = "\n".join(text.rstrip("\n").splitlines()[-TAIL_LINES:])
         _echo(sys.stderr, f"ci_stamp: last {TAIL_LINES} lines of the run (full log: {log}):\n{tail}\n")
-        why = f" (a step passed its {a.step_timeout:g} s deadline)" if returncode == 124 else ""
         print(f"ci_stamp: CI failed (exit {returncode}){why}; no stamp written", file=sys.stderr)
         return returncode
     if hl.run_git(a.repo, "rev-parse", "HEAD") != head:
+        verdict(log, "refused: HEAD moved during the run; no stamp written")
         print("ci_stamp: HEAD moved during the run; no stamp written", file=sys.stderr)
         return 2
     missing = missing_tools(text)
     if missing and not a.excluded:
+        lines = text.splitlines()
+        where = [next((str(i + 1) for i, ln in enumerate(lines) if m in ln), "?") for m in missing[:5]]
+        verdict(log, "refused: exit 0, but the log says a check did not run (log line "
+                + ", ".join(where) + "); no stamp written")
         _echo(sys.stderr, "ci_stamp: the run exited 0, but its log says a check did not run:\n  "
-              + "\n  ".join(missing[:5]) + "\nA skipped check is not a pass; no stamp written. Install the "
-              "tool, or name the check with --excluded \"NAME: REASON\" so the stamp says partial.\n")
+              + "\n  ".join(f"line {w}: {m}" for w, m in zip(where, missing[:5]))
+              + "\nA skipped check is not a pass; no stamp written. Install the tool, or name the check with "
+              "--excluded \"NAME: REASON\" so the stamp says partial. If a line is text a test printed (a "
+              "fixture's own output), not a tool the run needed, report it as a gatewarden false match.\n")
         return 3
     stamp = {
         "head": head, "passed_at": time.time(), "seconds": round(time.time() - started, 1),
@@ -323,7 +411,8 @@ def main(argv: list[str]) -> int:
     if workflow:
         stamp.update(workflow=workflow[0], workflow_steps=workflow[1], steps_covered=workflow[2])
     hl.write_json_atomic(path, stamp)
-    cover = f"; covers {workflow[2]} of {workflow[1]} run: steps in {workflow[0]}" if workflow else ""
+    verdict(log, f"passed for {head[:12]}; stamp written" + (" (PARTIAL)" if a.excluded else ""))
+    cover =f"; covers {workflow[2]} of {workflow[1]} run: steps in {workflow[0]}" if workflow else ""
     print(f"ci_stamp: {'no-CI baseline' if a.no_ci else 'CI'} passed for {head[:12]}" + (f" ({runs} runs)" if runs > 1 else "") + "; stamp written"
           + cover + (" (PARTIAL: " + "; ".join(a.excluded) + ")" if a.quiet and a.excluded else ""))
     if not a.quiet:

@@ -81,6 +81,40 @@ class Arguments(unittest.TestCase):
                 a.rmdir()
                 b.rmdir()
 
+    def test_has_doctype_is_linear_on_a_comment_run(self):
+        # positive control: the run that backtracked exponentially under the old regex
+        self.assertFalse(probe.has_doctype("<!--" + "--><!--" * 5000))
+        self.assertTrue(probe.has_doctype("<!-- a --> <!-- b -->\n<!DOCTYPE html>"))
+        self.assertFalse(probe.has_doctype("<!-- open <!doctype html>"))
+        self.assertFalse(probe.has_doctype("<!doctypehtml>"))
+
+    def test_host_skeleton_only_without_a_doctype(self):
+        self.assertIsNone(probe.host_skeleton("<!DOCTYPE html><p>x</p>", "file:///d"))
+        self.assertIsNone(probe.host_skeleton("﻿ <!-- a --> <!doctype html>", "file:///d"))
+        out = probe.host_skeleton("﻿<style>p{}</style><p>café</p>", "file:///d")
+        self.assertTrue(out.startswith("<!doctype html>"))
+        for part in ('<meta charset="utf-8">', 'name="viewport"', '<base href="file:///d/">',
+                     "<p>café</p>"):
+            self.assertIn(part, out)
+        self.assertNotIn("﻿", out)
+
+    def test_prepare_target_wraps_a_bare_local_page_unless_told_not_to(self):
+        with tempfile.TemporaryDirectory() as d:
+            out = Path(d) / "out"
+            out.mkdir()
+            bare = Path(d) / "page.html"
+            bare.write_bytes("<p>café</p>".encode("utf-8"))
+            url, note = probe.prepare_target(bare.as_uri(), bare, out, bare=False)
+            self.assertEqual(url, (out / probe.SKELETON_NAME).as_uri())
+            self.assertIn("host skeleton", note)
+            self.assertIn("<p>café</p>", (out / probe.SKELETON_NAME).read_text(encoding="utf-8"))
+            self.assertEqual(probe.prepare_target(bare.as_uri(), bare, out, bare=True), (bare.as_uri(), None))
+            full = Path(d) / "full.html"
+            full.write_text("<!doctype html><p>x</p>", encoding="utf-8")
+            self.assertEqual(probe.prepare_target(full.as_uri(), full, out, bare=False), (full.as_uri(), None))
+            self.assertEqual(probe.prepare_target("http://localhost:1/", None, out, bare=False),
+                             ("http://localhost:1/", None))
+
     def test_usage_error_exits_3_not_2(self):
         err = io.StringIO()
         with redirect_stderr(err):

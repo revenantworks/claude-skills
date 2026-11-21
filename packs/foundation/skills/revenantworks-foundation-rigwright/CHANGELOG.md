@@ -1,5 +1,9 @@
 # Changelog — revenantworks-foundation-rigwright
 
+## Unreleased
+
+- hook template: a moved session keeps the old `CLAUDE_PROJECT_DIR`; fall back to the input's `cwd` (observation 0656)
+
 ## [1.0.1] — 2026-11-13
 
 - audit-evidence reference gains new checks

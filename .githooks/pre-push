@@ -1,10 +1,22 @@
 #!/bin/sh
 # pre-push - chains the machine-wide privacy guard (owner 2026-10-15).
+# git hands the refs on stdin once; read it here and pass it to each check.
+input=$(cat)
+
+# GitHub creates no push event for any tag when more than three arrive in one push, so a
+# release pushed that way gets no tag CI, no Release and no zips (observations 0618, 0679).
+# tools/release.py pushes one tag per push; this refuses the hand-typed batch.
+tags=$(printf '%s\n' "$input" | awk '$1 ~ /^refs\/tags\// && $2 !~ /^0+$/' | wc -l)
+if [ "$tags" -gt 3 ]; then
+  echo "pre-push: $tags tags in one push; GitHub fires no tag event past three. Push each tag by its own ref (git push origin refs/tags/<tag>), or run tools/release.py." >&2
+  exit 1
+fi
+
 # Machine-wide privacy guard (owner 2026-10-15): a repo-local core.hooksPath skips the
 # global hooks, so call the guard here. Absent on a machine without it: nothing to do.
 g=$(git config --global --get core.hooksPath)
 if [ -n "$g" ] && [ -f "$g/pii_guard.py" ]; then
   PY=$(command -v python || command -v python3 || command -v py)
-  if [ -n "$PY" ]; then "$PY" "$g/pii_guard.py" pre-push || exit 1; fi
+  if [ -n "$PY" ]; then printf '%s\n' "$input" | "$PY" "$g/pii_guard.py" pre-push || exit 1; fi
 fi
 exit 0

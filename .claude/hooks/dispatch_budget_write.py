@@ -27,7 +27,9 @@ limit, so this writer refuses every turbo file that could stand for "no cap":
     rig gate bounds each heavy launch. A number stays 0 to 12, and in turbo
     (the "lower number" answer) 0 to 6. Entering turbo with no `--parallel`
     drops a number kept from the old file (a pace `--parallel 2` once capped
-    turbo at 6); a turbo renewal keeps the user's own lower number.
+    turbo at 6); a turbo renewal keeps the user's own lower number and prints
+    that it carried it. `--parallel rig` clears a kept number in turbo
+    (observation 0626).
   - A turbo `--ttl` is at most 2 h (one check interval); other modes keep 5 h.
   - A turbo file never expires past the next Overnight start (22:00
     user-local) and is not written inside Overnight (22:00-09:00), unless
@@ -176,8 +178,17 @@ def build(existing: dict, args: argparse.Namespace, now: float, notes: list | No
             raise ValueError(f"--mode {args.mode!r}: one of {', '.join(MODES)}")
         d["mode"] = args.mode
     turbo = d.get("mode") == "turbo"
-    if args.parallel is not None:
-        word = str(args.parallel).strip().lower()
+    word = str(args.parallel).strip().lower() if args.parallel is not None else None
+    if word == "rig":
+        # The explicit rig-aware answer (observation 0626): drop any number, in turbo only.
+        if not turbo:
+            raise ValueError("--parallel rig is the rig-aware turbo answer; outside turbo give a number "
+                             f"0 to {CEILING_LIMIT}")
+        if "parallel_ceiling" in d:
+            notes.append(f"cleared parallel_ceiling {d['parallel_ceiling']!r}: turbo is rig-aware "
+                         "(writers 6, all units 12)")
+        d.pop("parallel_ceiling", None)
+    elif args.parallel is not None:
         if word in REFUSED_WORDS:
             raise ValueError(f"--parallel {args.parallel}: there is no no-cap file (owner 2026-10-20). "
                              "Rig-aware turbo writes no number (writers 6, all units 12, every heavy "
@@ -198,6 +209,11 @@ def build(existing: dict, args: argparse.Namespace, now: float, notes: list | No
         # from the old file would cap turbo at 6 (RV-SKILLS-WF F10). A renewal keeps the user's own
         # lower number.
         d.pop("parallel_ceiling", None)
+    elif turbo and d.get("parallel_ceiling") is not None:
+        # A renewal keeps the number, and says so: a silent carry made "omit it for the
+        # rig-aware default" untrue (observation 0626).
+        notes.append(f"carried parallel_ceiling {d['parallel_ceiling']!r} from the previous file; "
+                     "pass --parallel rig to clear it")
     if "parallel_ceiling" in d and d["parallel_ceiling"] is None:
         del d["parallel_ceiling"]   # an old no-cap file: readers fall back to their default
     if args.basis is not None:
@@ -573,6 +589,20 @@ def selftest() -> int:
         if code != 0 or d.get("parallel_ceiling") != 3:
             problems.append(f"R9 control: a turbo renewal dropped the user's lower number 3 ({d.get('parallel_ceiling')!r}, "
                             f"exit {code}: {out[:160]})")
+        # R11 (observation 0626): a renewal that carries a number says so, and --parallel rig clears it.
+        code, out, err = turbo(["--mode", "turbo", "--ttl", "2h", "--landed", "1", "--owner-reading", "40"],
+                               now_=day + 1200)
+        if code != 0 or "carried parallel_ceiling 3" not in err:
+            problems.append(f"R11: a turbo renewal carried the number 3 silently (exit {code}: {err[:160]})")
+        code, out, err = turbo(["--mode", "turbo", "--ttl", "2h", "--landed", "1", "--owner-reading", "40",
+                                "--parallel", "rig"], now_=day + 1800)
+        d = load(t)
+        if code != 0 or "parallel_ceiling" in d or "cleared parallel_ceiling" not in err:
+            problems.append(f"R11: --parallel rig did not clear the kept number ({d.get('parallel_ceiling')!r}, "
+                            f"exit {code}: {out[:160]})")
+        code, out, _ = turbo(["--mode", "pace", "--ttl", "2h", "--parallel", "rig", "--dry-run"])
+        if code != 2 or "outside turbo" not in out:
+            problems.append(f"R11: --parallel rig outside turbo was accepted (exit {code}: {out[:160]})")
         # R10 (F16): the turbo answer is "rig-aware, or a lower number": n <= 6. Other modes keep 0..12.
         t.unlink(missing_ok=True)
         code, out, _ = turbo(["--mode", "turbo", "--ttl", "2h", "--parallel", "8", "--dry-run"])
@@ -595,7 +625,8 @@ def selftest() -> int:
           "--landed and a reading under 15 min and two 0-landed checks drop to normal, R5 the top "
           "tier opens only on --top-open --owner-word, R6 unknown keys dropped and named, R7 stop "
           "band above 95 refused, R8 writer id and content hash; RV-SKILLS-WF: R9 turbo entry drops a kept "
-          "number and a renewal keeps the user's, R10 a turbo number at most 6; each with its control)")
+          "number and a renewal keeps the user's, R10 a turbo number at most 6; R11 a carried number "
+          "is printed and --parallel rig clears it; each with its control)")
     return 0
 
 

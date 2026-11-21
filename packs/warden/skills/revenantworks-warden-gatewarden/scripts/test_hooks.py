@@ -580,6 +580,60 @@ class CiStampTests(unittest.TestCase):
         self.assertIn("uncommitted", p.stderr)
         self.assertFalse(self.stamp_path().exists())
 
+    def test_a_tree_dirty_only_in_the_stat_cache_names_the_no_op_fix(self):
+        # observation 0677: files that hash to HEAD still read modified; the refusal names `git add --`.
+        sys.path.insert(0, str(HOOKS))
+        import ci_stamp
+        same, real = ci_stamp.stat_only(self.tmp, " M f.txt\n")
+        self.assertEqual((same, real), (["f.txt"], False))
+        Path(self.tmp, "f.txt").write_text("dirty\n")
+        same, real = ci_stamp.stat_only(self.tmp, " M f.txt\n")
+        self.assertEqual((same, real), ([], True))
+        p = self.run_stamp(0)
+        self.assertEqual(p.returncode, 2)
+        self.assertIn("uncommitted", p.stderr)
+        self.assertNotIn("stat cache", p.stderr)
+
+    def test_the_verdict_is_the_last_line_of_the_log(self):
+        # observation 0695: a refusal reached only the caller's console; the log read like a clean run.
+        log = lambda: Path(git(self.tmp, "rev-parse", "--absolute-git-dir"), "gatewarden", "ci-last.log")
+        p = self.run_steps("--", PY, "-c", "print('Lint not run: gdlint is not installed')")
+        self.assertEqual(p.returncode, 3)
+        self.assertIn("line 1:", p.stderr)
+        self.assertIn("ci_stamp verdict: refused", log().read_text().strip().splitlines()[-1])
+        p = self.run_stamp(0)
+        self.assertEqual(p.returncode, 0, p.stderr)
+        self.assertIn("ci_stamp verdict: passed", log().read_text().strip().splitlines()[-1])
+        p = self.run_stamp(4)
+        self.assertEqual(p.returncode, 4)
+        self.assertIn("ci_stamp verdict: failed (exit 4)", log().read_text().strip().splitlines()[-1])
+
+    def test_fixture_output_naming_a_missing_file_is_not_a_skipped_tool(self):
+        # observation 0695: a listings test printed its fixture's own `missing: file not found`.
+        script = "print('FAIL gone.md'); print('     missing: file not found'); print('OK')"
+        p = self.run_steps("--", PY, "-c", script)
+        self.assertEqual(p.returncode, 0, p.stderr)
+        self.assertTrue(self.stamp_path().exists())
+
+    def test_a_step_rewritten_by_git_bash_path_conversion_is_refused(self):
+        # observation 0693: MSYS turned `<drive>:/x` into `<drive>;<Git install folder>\x`; the step could not start.
+        c = "C" + ":"  # built at run time: the public repo's path test refuses a literal drive path
+        p = self.run_steps("--step", "py -m tool --words V;" + c + "\\Program Files\\Git\\Claude\\words.txt")
+        self.assertEqual(p.returncode, 2)
+        self.assertIn("MSYS_NO_PATHCONV=1", p.stderr)
+        self.assertFalse(self.stamp_path().exists())
+
+    def test_windows_step_keeps_backslash_paths(self):
+        # observation 0688: `<drive>:\x\check.py` reached python as `V:xcheck.py`.
+        v, c, d = "V" + ":", "C" + ":", "D" + ":"  # literal drive paths fail the public path test
+        sys.path.insert(0, str(HOOKS))
+        import ci_stamp
+        self.assertEqual(ci_stamp.split_step("py " + v + r'\a\check.py "' + c + r'\x y\z.md" --k=1', nt=True),
+                         ["py", v + r"\a\check.py", c + r"\x y\z.md", "--k=1"])
+        self.assertEqual(ci_stamp.split_step("py -m unittest 'a b'", nt=True), ["py", "-m", "unittest", "a b"])
+        self.assertEqual(ci_stamp.split_step(r"py a\b", nt=False), ["py", "ab"])
+        self.assertEqual(ci_stamp.msys_mangled([c + r"\a;" + d + r"\b", v + "/x"]), "")
+
 
 # ---------------------------------------------------------------- Hyper-V lock
 
@@ -1064,6 +1118,16 @@ class ThrottleTests(unittest.TestCase):
         code, out, _ = self.launch()
         self.assertEqual(code, 0)
         self.assertIn("slow band", out)
+
+    def test_slow_band_defers_to_a_live_pacing_decision(self):
+        # Observation 0712: pacewright said FILL while this note said "one unit at a time".
+        self.reading(89)
+        Path(self.budget).write_text(json.dumps({
+            "schema": 1, "expires_at": "2999-01-01T00:00:00Z", "mode": "reset-eve", "parallel_ceiling": 5}))
+        code, out, _ = self.launch()
+        self.assertEqual(code, 0)
+        self.assertIn("mode reset-eve", out)
+        self.assertNotIn("one unit at a time", out)
 
     def test_stale_reading_fails_open_and_says_so(self):
         self.reading(99, age=3600)
@@ -1907,10 +1971,20 @@ class VerifierPushTests(InstallDefaultBase):
                         f"Start-Process {G} -ArgumentList '{U} -f origin main'"], tool="PowerShell")
 
     def test_long_prose_heredoc_then_force_push_refuses_fast(self):  # F5
+        # Observation 0726: a wall-clock bar of 10 s sat at 86% of the unloaded time (8.6 s) and went red
+        # under ci_local's parallel shards (13.7 s) with no change. What F5 guards is that the hook reads
+        # the line and refuses it for the force push, not that it runs out of its time budget and fails
+        # closed. So the reason is asserted, under the default budget (20 s), and the wall bar only
+        # catches a hang.
         body = PROSE * (100 * 1024 // len(PROSE))
+        self.env.pop("GATEWARDEN_BUDGET", None)
         start = time.time()
-        self.expect(2, ["cat > notes.md <<'EOF'\n" + body + f"EOF\n{G} {U} --force origin main"])
-        self.assertLess(time.time() - start, 10)
+        code, _, err = self.hook("push_gate.py", "cat > notes.md <<'EOF'\n" + body + f"EOF\n{G} {U} --force origin main",
+                                 cwd=self.work)
+        self.assertEqual(code, 2, err)
+        self.assertNotIn("time budget", err)
+        self.assertNotIn("in time", err)
+        self.assertLess(time.time() - start, 60)
 
     def test_time_budget_fails_closed_on_a_push_line(self):  # F5
         body = PROSE * (200 * 1024 // len(PROSE))

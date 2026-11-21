@@ -65,7 +65,12 @@ another unit's report or the controller's own reading — is written "verify, do
 its scope: at the shipped base, or after a named change, and under which landing order
 (observation 0103). A default in this brief may be overturned by the measurement
 it asks for, and states its bar in figures (observation 0182). Before calling a behaviour a bug,
-the controller searched the decision log for it (observation 0173); say which log. Every figure
+the controller searched the decision log for it (observation 0173); say which log. An
+environment fact (the OS, shell, image and tools a step runs on) is read from the target's own
+definition, the CI file and the runner's image or Dockerfile, never from the machine the brief is
+written on: a brief once prescribed robocopy and a Windows zip for a runner that is a Linux
+container with no pwsh. A count claimed across platforms or engines names the run that produced
+it (#0701). Every figure
 cites its source `file:line`, never a remembered number: briefs have cited a decision range that
 lived in another file and a 3,000-token budget the registry set at 2,500. **Cite the record,
 never the plan** (observation 0526): a line that rests on another unit's output names the file
@@ -173,8 +178,12 @@ HEAD -- <the files this unit edits>` must be empty; if either fails, stop and re
 other file this unit's correctness depends on in that diff. Never whole-tree HEAD equality
 (observation #0083). Test ancestry with `git merge-base --is-ancestor <base> HEAD`, never with
 `git cat-file -e`: after a history rewrite the old object still exists locally (observation 0338).
-**Known reds and pin moves at this base** (observation 0483): the scripts and rows already red
-at the base, from the latest join or unit reports, each marked "not yours: do not diagnose";
+**Known reds and pin moves at this base** (observation 0483): the tests already red at the base,
+from the latest join or unit reports, each marked "not yours: do not diagnose". **Name each red
+by test, never by script** (observation 0501): `script::test` plus the script's red count. A
+unit A/Bs any red in a listed script against the base by test name; a test green at the base
+and red at its head is its own. Two new reds once hid inside a script already on the list, and
+only the join's base-versus-merge run caught them;
 and any pin move pending on it (a re-pin in flight, landing at `<sha>`). Launch on the re-pinned
 head when one is coming; otherwise list the rows it will move as known reds. Two units once spent
 their calls proving the same three base reds were not theirs, and a third spent its build check
@@ -206,13 +215,21 @@ In a chain of units, write the total as `base at <commit> + N`, with N derived b
 build order, and re-derive version and hash preconditions at each re-chain (observation 0269).
 **The stated delta equals the numbered test list** (observation 0339): a brief that says `+9` lists
 nine named tests. The brief author counts them before launch; a mismatch is a brief defect, fixed
-before the unit runs, never a short total at Reconcile.]
+before the unit runs, never a short total at Reconcile. **A red-first test that touches the
+environment runs on a stub** (#0476): red-first makes the failure message the planned path, and
+`assertIn(key, env)` on a copy of `os.environ` printed a token and the machine's name into tool
+output. Build the env under test from a stub dict with no real values, or assert membership as
+`assertTrue(key in env, "<fixed message>")`; never hand a real or copied environment to an
+assertion that prints its container.]
 
 **Verification list (if this repo has CI):** [every step the CI file runs, in its own commands, and
 the file's path — derived by reading that file now, never from memory (observation #0087).
 **Generate the local stand-in, never hand-list it** (observation 0367): a script reads the CI file
 and runs each `run:` step, printing every step it skips; a hand-picked list certifies the subset,
-and a stamp tool records whatever command it was given. **A host version the CI file pins** is part
+and a stamp tool records whatever command it was given. A stand-in that replaces one step with
+its own run (a sharded test run for the Tests step) still runs that step's other command lines
+and reports each (observation 0565): a tool test on the same step never ran, local read green,
+and the branch failed four minutes in (godotsmith `ci-guards.md` section 5). **A host version the CI file pins** is part
 of the definition (observation 0368): when it is older than the rig's, run the plugin tests on the
 kept binaries that bracket it (`~/.local/share/claude/versions/<version>`, by path) and name the
 versions used; a test that passed on the rig's newer host once failed on the pin's. After a
@@ -322,7 +339,12 @@ path.]
   the target under git, or copy it aside, before a bulk edit.
 - **A fix unit proves its new test fails on the unfixed code** before it applies the fix, and
   reports that failing run. Never delete a test or edit an existing assert unless this brief names
-  it (observation 0183).
+  it (observation 0183). **The red counts only when it fails for the finding's reason**
+  (observation 0498): report the assert line each red came from. Where the fix adds the seam its
+  tests call (a dry-run switch, an injectable fake), land the seam first with the old behaviour,
+  then show the red. Twelve of twelve tests once went red on old code only because the new
+  `-DryRun` switch was refused there. A checking agent's brief asks "red for the finding's
+  reason?", not "red?".
 - If a step needs a large fetched document, write it once to `[shared fetch cache path]` with its
   source URL and fetch time, and read it from there again.
 - If you must escalate — a failed check, a failed test, a contract violation, a verifier's
@@ -343,8 +365,17 @@ path.]
   NTFS, `MORNING-QUESTIONS.md` is the tracked `morning-questions.md`, and Write replaced 41 lines
   of answered owner questions while reporting "created". Append to an existing morning or
   check-in file; never replace it.
+- **After a long wait or a reset, re-read your wave report and `git log` before you write the
+  return** (observation 0706). A unit compacted mid-run handed back "I made no edits" with its
+  build committed. Write the report after each finished piece (sha, what it does, tests), so the
+  file holds what the context lost.
 - **Commit each green piece at once**, by path. A green fix left uncommitted while anything
-  waits is lost at a reset.
+  waits is lost at a reset. Write the message with the Write tool and run `git commit -F <file>`;
+  never `-F -` from a PowerShell here-string, which git reads as pathspecs (observation 0703).
+- **A copy step names its population and counts against it** (observation 0704): list the source
+  with `git ls-tree -r <ref>` and check the copy's count against that list, never against the
+  tool that made the copy. `git archive` honours `export-ignore` and once dropped 13 of 35 files;
+  a check built on the same archive matched 22 of 22.
 - **Use the repo's own worktree tool where it has one** (an Evolution run's `new_worktree.py`
   writes the per-worktree engine user folder). A bare `git worktree add` skips that safety step.
   **Never point a repo's tool at another kind of repo** (observation 0485): a game repo's
@@ -376,6 +407,9 @@ path.]
   never end your turn on "waiting": the controller sees a finished unit with an empty report.
   When the log is the evidence, it must hold each child's output (a child with inherited stdout
   wrote nothing into a redirected log), so read the lines that prove the step ran.
+  **The wait reads the run's done-marker** (observation 0708): a Monitor until-loop on the marker
+  where the surface has one, else bounded reads as above. A nohup'd run is not a harness task and
+  never wakes you; a unit slept 1 h 40 min past its finished runs.
 - **A tool that answers "a land holds the rig" (or any distinct can't-start code) ends the
   unit's step** (observation 0503): stop clean and report it. Never retry or poll the flag.
 - **A heavy step reads the rig-hold state just before it starts** (observation 0569): a
@@ -431,7 +465,13 @@ path.]
   resolve paths from the checkout's location: `<scratch>/<unit_id>/<repo-name>`, never
   `<scratch>/wt-<unit_id>`. A test that reads its parent folder's name, or counts sibling
   worktrees as extra clones, fails in every copy but the original. Where the brief cannot avoid
-  such a location, it lists those tests as known location failures with the reason.
+  such a location, it lists those tests as known location failures with the reason. **Each
+  worktree's `<unit_id>` folder is unique, and a tool that keys out-of-tree state on the folder
+  name is checked for it** (observation 0723): a worktree tool that named the engine user folder
+  after the last path part gave ~25 lanes made as `<scratch>/<lane>/evolution` one shared folder.
+- **Never run `gh auth switch`** (observation 0640): it flips the active account for every
+  process on the machine, the controller's included. A step that needs another account is
+  returned to the controller.
 - **"Fails on base too" is checked where the base normally runs** (observation 0424): in the main
   checkout, or in a worktree with the same folder name — never only in the worktree under test.
   A base re-run in the same unusual place proves the place, not the base; one such re-run logged
@@ -493,7 +533,11 @@ path.]
   0433). Write the land commit (counts, docs, CI literals) first; then run the local CI once
   through the stamp tool (`ci_stamp.py run -- <ci command>`) on that head; then any platform pin
   measure; then record the push intent in its own call (the push hook reads the whole command
-  before the intent runs); then push. A suite run bare, or before the land commit, is not the
+  before the intent runs); then push. After the merge on the host, the land ends with `git fetch
+  --prune` and a fast-forward-only update of the local trunk (`git merge --ff-only origin/<trunk>`
+  on a clean trunk): lands merge on the host, so a local trunk nobody moves sat 261 commits
+  behind, and a scheduled job that read it tested a stale tree (#0469). A suite run bare, or
+  before the land commit, is not the
   verdict, and a 55-minute suite once ran twice for it. **The brief carries the stamp form
   verbatim** (observation 0584): `python <hooks>/ci_stamp.py run --repo <wt> --workflow
   <wt>/.github/workflows/ci.yml --covers all -- <the walk command>`. A land brief copied with the
@@ -508,11 +552,30 @@ path.]
   (observation 0499): to race a slow run, push the same commit to a second branch and dispatch
   there; before replacing a slow run on purpose, record which step it was in and for how long;
   report a race only once both runs read in progress.
+- **Project the hosted run before a land** (observation 0472). Fit each long step's wall time to
+  its real cost driver, from the CI API's step start and end times over several runs (godotsmith
+  `gate-doctrine.md` section 3), never to the test count when one test class dominates. When the
+  land's projection passes 80% of the step's `timeout-minutes`, raise the timeout in the land's
+  own commit. A count-based projection once said 116 of 150 minutes; the driver fit said about
+  190 for the next land.
+- **A brief that parallelises a test run names the proof it removes** (observation 0506): the
+  one-process run, or whatever isolation the serial run gave, and where that proof moves (a
+  per-test reset, a checkpoint run), in the same commit as the land-rule text. A shard plan that
+  passed all its count checks left no one-process run on the land path while the land rule still
+  called the hosted step "the one-process proof" (godotsmith `test-tiers.md` section 2).
+- **A land on hosted CI alone still runs the local walk, or its record names the skipped walk**
+  (observation 0668). Hosted CI may cover one platform; the walk covers the other. Twenty-two
+  pull requests once landed on Linux CI alone, and the Windows walk on main sat red for days
+  until a land needed it.
 - **The local walk mirrors every CI job on each platform it runs** (observation 0509): a job
   whose harness steps run on Windows while only the test runner runs in the Linux container
   leaves every Linux-only harness red to hosted CI, after the long jobs have spent their time.
   Run each job's steps in the platform's container, or list the uncovered steps as
   `partial: <step> skipped`.
+- **A lane runs the repo's fast guards before its last commit** (observation 0707): the brief
+  names every step of CI's checks job that takes under about 10 s (input-site and isolation guard
+  scripts, for example), not only lint and the touched tests. A new Godot script is imported and
+  its `.uid` staged with it. Two lanes once reported green and failed a guard script at the join.
 - **Code that talks to the operating system lands on every CI platform's proof** (observation
   0447): a row whose diff touches processes or pids, file locks, paths, line endings or exit
   cleanup runs its tests on each platform the CI file runs before the land (the repo's local
@@ -622,6 +685,14 @@ Add the block that matches the unit's job; leave the others out.
   with an owner; a unit never reports them NOT RUN as owed with no owner.
 - **Research brief** (observation 0265): grep the spec for every proposed name and quote the spec
   event behind any rule. A rule with no spec event is an owner question, not a finding.
+  **Evidence grades are defined by the act that earns them, in the brief's first version**
+  (observation 0698): the top grade needs a fetched page with the figure read there, or a
+  repository or registry API read; a search summary alone never earns it, and a fetch summary is
+  itself a second reader (researchscribe `verification.md` section 4, `research-mode.md` section
+  5). Name the downgrade path
+  for a primary the fetch tool refuses, and one topic per search query. A grade defined by
+  outcome ("verified") was applied differently by each unit of one run until the controller
+  corrected it after the first wave.
 - **Join-check row** (observation 0263): after a wave of parallel briefs, one row greps the shared
   literals and symbols, the writers and readers of each saved field, the pin chains, any ruling
   made after the briefs, and the counts — before the first build launches. Registry or routing
@@ -645,6 +716,13 @@ Add the block that matches the unit's job; leave the others out.
   repo selects test rows by tracing helpers, run the selector read-only for each new switch
   before the gate file, and stop when one switch selects more than about a third of the rows:
   a one-switch helper called from a stack helper once selected 72 rows instead of 8.
+  **A union resolution in a source file lists duplicate function names before the run**
+  (observation 0486; godotsmith `gut-traps.md` section 3): two sides that each added an
+  `after_each` left two, the script failed to parse, and GUT dropped it with lint green. A
+  duplicate fails the chain; it is never a printed note. **A row that changes UI text length, a
+  font size or a fold width puts the fit checks (the HUD check, the fit test at every size) on
+  the join's list at the merged head** (observation 0504): one row lengthened words and another
+  tightened fold widths, each passed on its own base, and the union overflowed by 9 px.
 - **A brief that adds an environment switch or a short-run mode** (observation 0553) lists every
   launcher in the tree that builds a child's environment (grep for the inherited environment near
   the engine launch) and gives each one a line: sets it, clears it, or refuses it. Every tool
@@ -697,7 +775,11 @@ Add the block that matches the unit's job; leave the others out.
   test counts as deltas, bases by ancestry). One join check of ten briefs found wrong
   facts about code that had since changed, and a later one fixed 46 findings, four of them
   blocking. A brief is not edited while its unit runs; a correction is written into the brief file
-  and the unit is told to re-read it; the file wins over any prompt.
+  and the unit is told to re-read it; the file wins over any prompt. **A run tip the controller
+  adds to a live template or brief** (how to run, narrow or time something) is proven by one run
+  on the rig first, with its output cited, or marked `untested` (observation 0484): a one-file
+  test command written from general knowledge reached five briefs and three running units, then
+  ran the whole suite and lost a unit's call at the time limit.
 
 ### Observations — return them, do not log them
 

@@ -125,6 +125,16 @@ portability. Before pinning such a literal, decide which kind it is:
 - **Or assert the property instead**: identical across two runs, across a save and load,
   across a season. A property holds on every platform and needs no table.
 
+**A deterministic maths layer covers every native float builtin the sim reaches, not only the
+trig** (observation 0696). List each one reachable from sim code (`wrapf`, `fposmod`,
+`snappedf`, `lerp_angle`, `sin`, `cos`, `atan2`, `pow`, `exp`, `log`) and route it through the
+project's module or prove it equal across builds. One sim sent its trig through a GDScript
+module but still called native `wrapf` for headings; another engine build wrote headings 1-2
+ulp apart and 11 hash pins failed. **When a hash pin fails across builds or platforms, dump
+the hashed state as text on both sides and diff it before estimating anything.** A hash says
+only "different"; the diff names the field and the size. That diff took under an hour where
+the first estimate, "trajectory drift", priced one to three days.
+
 Literals derived from integers, and hashes over committed bytes, are exempt — they are the
 same everywhere. The doctrine says which kind a new literal is *before* it is pinned, because
 the alternative is finding out from a CI run that reaches the test step days later.

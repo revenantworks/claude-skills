@@ -3,6 +3,10 @@
 All notable changes to this skill are recorded here. The format follows Keep a Changelog and the
 version follows Semantic Versioning.
 
+## [Unreleased]
+
+2026-11-20 (weekly observation review, slice b; observation 0674): `slice-and-test.md`, Fix step 2: a reproduction that passes on unfixed code is a broken test; a timing bug's inputs straddle the code's own windows, over several seeds. SKILL.md unchanged.
+
 ## [1.0.1] — 2026-11-13
 
 - red-for-the-right-reason and plan reference updates

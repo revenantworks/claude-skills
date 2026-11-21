@@ -1,5 +1,9 @@
 # Changelog — revenantworks-gamedev-soundsmith
 
+## [Unreleased]
+
+2026-11-20 (weekly observation review, slice b; observation 0550): Audit step 5 sends a voice render's spoken-content check through whisperrunner's recipe.
+
 ## [1.0.0] — 2026-10-01
 
 First public release. Game audio direction judged by numbers. It never generates or processes audio.

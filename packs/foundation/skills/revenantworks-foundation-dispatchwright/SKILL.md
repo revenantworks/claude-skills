@@ -195,6 +195,17 @@ it is durable, not when it is written.**
 - **Merge only onto a green base** (#0077); a check that fails on any run of the tree is red, never
   a flake (#0353). A land's commit takes the suite's own exit code:
   `<suite> && git commit`, no pipe or `;` between (#0285).
+- **Read hosted checks in one call, merge in the next** (#0691). Read each row of `gh pr checks
+  <n>` (no `fail`, `pending` or `cancelled`), never a `--watch` exit code: a CodeQL summary check
+  failed while every job passed. A merge chained after the read runs before anyone sees it; the
+  push gate does not see merges.
+- **Cut the land branch from `origin/main`** (#0651), never from local main, which may carry other
+  sessions' unpushed commits; stamp that commit once. When gh's active account cannot see the repo,
+  open the PR through the GitHub MCP. When no tool can read the hosted run, the row reads
+  `CI unread` and the land stays open, never green.
+- **A self-test of a script that also pushes is shaped in the plan** (#0705): the guards go in a
+  push-free module the self-test imports and the push stays a literal line in its own file, or the
+  self-test goes to the owner up front. A split made after the push gate refuses reads as evasion.
 - **A scripted multi-file edit asserts each match count**, keeps each file's line ending, and
   opens a file for write only after its new bytes are built and checked (#0283); an exit code
   proves nothing (#0058).

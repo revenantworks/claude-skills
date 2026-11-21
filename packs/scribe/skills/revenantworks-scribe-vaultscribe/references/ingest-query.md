@@ -60,6 +60,11 @@ Never delete the older claim, never pick a winner, and never average. The user d
 ## Index and log lines
 
 - `index.md`: one line per page, `- [[name]] one-line summary`, under its group's heading.
+- **An ingest adds index lines; it never rewrites the others** (observation 0678). Where the vault
+  has an index builder, use the mode that keeps every existing line and writes only new pages (a
+  full rebuild only when the user asks for one). After any generator run, diff `index.md` and keep
+  only the lines for pages added or removed: a builder that regenerates each line from the page's
+  first sentence reverted hand-tuned summaries twice while lint stayed at 0.
 - `log.md` (append-only): `## YYYY-MM-DD ingest | <source path>`, then one line per page touched. The same shape for `query`, `lint` and `refresh` entries.
 - A hub page gets `- [[name]] one-line summary` for each page in its folder.
 

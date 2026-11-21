@@ -23,6 +23,12 @@ page itself requests (scripts, web fonts, images, frames, analytics, from any ho
 followed, just as a browser would); it adds no request and sends no data of its own. A local file
 that links a web font or a CDN script reaches the network for it.
 
+A local file with no doctype (a saved artifact page: the host adds the skeleton) is probed through a
+copy in the output folder with the host skeleton in front (doctype, UTF-8 charset, viewport meta, a
+`<base>` back to the file's folder), and the report's stderr says so. `--bare` probes the file as it
+is. Bare pages rendered at desktop width with mojibake in three probe passes before the probe did
+this itself (observation 0657).
+
 A page built by a generator (a dashboard script, a static-site build, an artifact made from a
 template) is rebuilt from the generator at the current commit, into a scratch folder, and that build
 is probed. A committed copy older than its generator is reported **stale** with both commits; its

@@ -244,8 +244,11 @@ class HardenTests(Base):
         self.assertIn("Read(~/.ssh/**)", data["permissions"]["deny"])
         cmds = json.dumps(data["hooks"])
         for hook in ("push_gate.py", "hyperv_lock.py", "call_cap.py", "launch_throttle.py",
-                     "heredoc_guard.py", "golive_block.py"):
+                     "heredoc_guard.py", "golive_block.py", "outbound_text_guard.py", "work_guard.py"):
             self.assertIn(hook, cmds)
+        # Observations 0563, 0632, 0671, 0711: work_guard reads shell lines only.
+        self.assertEqual([e["matcher"] for e in data["hooks"]["PreToolUse"] if "work_guard.py" in json.dumps(e)],
+                         ["Bash|PowerShell"])
         self.assertIn("Bash|PowerShell|Read|Write|Edit|MultiEdit|mcp__.*", cmds)
         self.assertIn("call_cap.py", json.dumps(data["hooks"]["SubagentStop"]))
         # Observation 0399: push_gate also checks after the push that the remote moved.
@@ -272,7 +275,7 @@ class HardenTests(Base):
         p.write_text(h.read_text())
         run("perm_audit.py", "harden", "--settings", str(p), "--add-hooks", "~/h")
         data = json.loads(h.read_text())
-        self.assertEqual(len(data["hooks"]["PreToolUse"]), 6)
+        self.assertEqual(len(data["hooks"]["PreToolUse"]), 8)
         self.assertEqual(data["permissions"]["deny"].count("Edit(~/.claude/hooks/**)"), 1)
 
     # Owner HV2 / warden audit G-2: installing the hooks also denies Claude's writes to them.

@@ -230,7 +230,12 @@ not a commit: it stays out of the fix commit unless the repo keeps such notes.
    video time, frames, play-log lines, seg/tick and the save) is the starting reproduction: load
    its save, step to its tick, and confirm the symptom before step 2.
 2. **Failing test.** Write a test that reproduces it through the path the player or user hit.
-   Run it and watch it fail with the bug's own symptom.
+   Run it and watch it fail with the bug's own symptom. **A reproduction that passes on the
+   unfixed code is a broken test, not a missing bug** (observation 0674). For a timing or
+   concurrency bug, take the input pacing from the code's own windows (debounce, write latency,
+   echo delay) so the inputs straddle them, and run several seeds of a seeded random delay.
+   Eight clicks 250 ms apart once fell inside a 600 ms save debounce, merged into one write and
+   passed on the buggy page; clicks 650-1000 ms apart failed on 4 of 5 seeds.
 3. **List hypotheses.** Before touching code, write each candidate cause with the evidence for
    it and the one probe that would refute it. Most likely first.
 4. **One at a time, bounded probe.** Test one hypothesis per probe: a log line, an assert, a

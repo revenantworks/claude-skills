@@ -21,6 +21,7 @@ shows no dialog at all. So a committed hook is code the repo ships. Review it as
 | `| sh`, `| bash`, `iex`, `Invoke-Expression`, `npx`, `uvx`, `pip install` | runs code it did not ship | `hook-fetch-exec` |
 | `printenv`, `$env:`, `os.environ`, `/proc/self/environ` | tokens live in the environment | `hook-env-read` |
 | a command path outside the repo or the user hooks folder, or unpinned | the reviewed file is not the one that runs | by hand |
+| a script path that rests only on `$CLAUDE_PROJECT_DIR` | a session moved to another folder keeps the old value, so the guard cannot find its script; a non-zero exit then refused every Write and Edit for the rest of the session and the edit-time guard was off without anyone choosing that (observation 0656). Resolve the repo from the hook input's `cwd` or `git rev-parse --show-toplevel` as a fallback, and make a missing script say which variable it read | by hand |
 | no timeout, or a fail mode nobody stated | a hung hook stalls every call; a crash may fail open | by hand |
 | exit 1 used to block | exit 1 is non-blocking; only exit 2 blocks a PreToolUse call | by hand |
 | a hook that writes into `~/.claude`, `CLAUDE.md` or another hook | persistence | by hand |

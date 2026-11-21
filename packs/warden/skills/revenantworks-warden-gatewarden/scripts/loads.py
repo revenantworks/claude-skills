@@ -21,12 +21,13 @@ Kinds: 1 claude.ai sync twin (synced plus another copy) · 2 synced, no local co
 4 user plus project scope, or two folders with one SKILL.md name · 5 stale twin (bodies
 differ by hash) · 6 one plugin both installed and synced (the install wins, not a double
 load) · 7 a machine-driving skill on claude.ai (a review row, the owner's choice). A twin
-already set to "off" in skillOverrides reads `handled`.
+already set to "off" in skillOverrides reads `handled`. 8 MCP twin: a user, local or project MCP
+server that runs the same script as an installed plugin's server (`mcp_twins`; observation 0689).
 
 Output: names, redacted paths and SKILL.md hashes only; no file content is printed. The
 fix is a proposal: a complete skillOverrides block or one command. Applying a settings
 block is the owner's (rigwright places config); gatewarden never writes it.
-Exit codes: 0 nothing open, 1 a finding or a stale twin, 2 input error.
+Exit codes: 0 nothing open, 1 a finding, a stale twin or an MCP twin, 2 input error.
 """
 from __future__ import annotations
 
@@ -276,6 +277,77 @@ def plugin_ids(home: Path, settings: dict) -> dict:
             "installed_not_enabled": sorted(k for k in plugins if k not in enabled)}
 
 
+SCRIPT_EXT = (".py", ".js", ".mjs", ".cjs", ".ts", ".ps1", ".sh")
+GENERIC_SCRIPTS = {"index.js", "index.mjs", "main.py", "server.py", "server.js", "__main__.py", "cli.js"}
+
+
+def _servers(block) -> dict:
+    """{name: server} from an mcpServers block, or from a .mcp.json that holds one."""
+    if isinstance(block, dict) and isinstance(block.get("mcpServers"), dict):
+        block = block["mcpServers"]
+    return {k: v for k, v in block.items() if isinstance(v, dict)} if isinstance(block, dict) else {}
+
+
+def _script_tails(server: dict) -> set[str]:
+    """The last two parts of each script path a server runs (`scripts/godot_mcp_server.py`)."""
+    args = server.get("args") if isinstance(server.get("args"), list) else []
+    tails = set()
+    for w in [str(server.get("command") or "")] + [str(x) for x in args]:
+        parts = [p for p in w.replace("\\", "/").split("/") if p]
+        if len(parts) >= 2 and parts[-1].lower().endswith(SCRIPT_EXT):
+            tails.add("/".join(parts[-2:]).lower())
+    return tails
+
+
+def mcp_twins(home: Path, projects: list[Path], notes: list) -> list[dict]:
+    """MCP servers registered outside a plugin that run the same script as an installed plugin's
+    server (kind 8): the same tools load twice. Observation 0689: a local-scope `godot` server
+    pointed at the gamedev pack's own server script beside the plugin's `godot` server."""
+    plugin_side = []
+    data = read_json(home / "plugins" / "installed_plugins.json")
+    plugins = data.get("plugins") if isinstance(data, dict) and isinstance(data.get("plugins"), dict) else {}
+    for pid, installs in sorted(plugins.items()):
+        pname, _, market = pid.partition("@")
+        for inst in installs if isinstance(installs, list) else []:
+            if not isinstance(inst, dict):
+                continue
+            path = Path(str(inst.get("installPath") or ""))
+            if not str(inst.get("installPath") or "") or not path.is_dir():
+                path = home / "plugins" / "cache" / market / pname / str(inst.get("version", ""))
+            path = in_place_path(home, market, pname) or path
+            meta = read_json(path / ".claude-plugin" / "plugin.json")
+            found = _servers(read_json(path / ".mcp.json"))
+            found.update(_servers(meta.get("mcpServers") if isinstance(meta, dict) else None))
+            plugin_side += [(pid, n, s) for n, s in found.items()]
+    cfg = next((p for p in ([home / ".claude.json"] + ([home.parent / ".claude.json"] if home.name == ".claude"
+                                                       else [])) if p.is_file()), None)
+    own = []
+    state = read_json(cfg) if cfg else None
+    if not isinstance(state, dict):
+        notes.append("MCP servers in .claude.json")
+    else:
+        own += [("user", n, s) for n, s in _servers(state.get("mcpServers")).items()]
+        projs = state.get("projects") if isinstance(state.get("projects"), dict) else {}
+        for entry in projs.values():
+            if isinstance(entry, dict):
+                own += [("local", n, s) for n, s in _servers(entry.get("mcpServers")).items()]
+    for proj in projects:
+        own += [("project", n, s) for n, s in _servers(read_json(proj / ".mcp.json")).items()]
+    twins, seen = [], set()
+    for scope, name, server in own:
+        tails = _script_tails(server)
+        for pid, pname, pserver in plugin_side:
+            shared = tails & _script_tails(pserver)
+            shared = {t for t in shared if t.rsplit("/", 1)[-1] not in GENERIC_SCRIPTS or name == pname}
+            if shared and (scope, name, pid) not in seen:
+                seen.add((scope, name, pid))
+                twins.append({"name": name, "scope": scope, "plugin": pid, "plugin_server": pname,
+                              "script": sorted(shared)[0],
+                              "fix": f"claude mcp remove {name} -s {scope}" if scope != "project"
+                              else f"remove `{name}` from the project's .mcp.json"})
+    return twins
+
+
 def overrides(home: Path, projects: list[Path]) -> tuple[dict, dict, dict, dict]:
     """(user settings, user skillOverrides, {key: [files where it is off]}, {key: winning value})."""
     user = read_json(home / "settings.json")
@@ -463,8 +535,9 @@ def main(argv=None) -> int:
     fraction = fraction if isinstance(fraction, (int, float)) and fraction > 0 else BUDGET_DEFAULT
     listing = listing_cost(uniq, visibility, fraction)
     ids = plugin_ids(home, user_settings)
+    twins = mcp_twins(home, projects, notes)
     out.update({"counts": counts, "skills_seen": len(by), "listing": listing, "rows": rows, "not_checked": notes,
-                "plugin_ids": ids,
+                "plugin_ids": ids, "mcp_twins": twins,
                 "settings_block": block,
                 "settings_note": ("gatewarden never writes settings: the owner puts this complete "
                                   "skillOverrides block in user settings (~/.claude/settings.json); "
@@ -490,13 +563,16 @@ def main(argv=None) -> int:
         if ids["installed_not_enabled"]:
             print("installed, but enabledPlugins in user settings does not name it (`claude plugin list` "
                   "may show it disabled): " + ", ".join(ids["installed_not_enabled"]))
+        for t in twins:
+            print(f"MCP twin (kind 8): `{t['name']}` ({t['scope']} scope) runs {t['script']}, as plugin "
+                  f"{t['plugin']}'s `{t['plugin_server']}` does; its tools load twice. Fix: {t['fix']}")
         if notes:
             print("not checked: " + "; ".join(notes))
         if block:
             print("\nProposed user settings block (complete skillOverrides, existing entries kept):")
             print(json.dumps(block, indent=2))
             print(out["settings_note"])
-    return 1 if counts["finding"] or counts["stale"] else 0
+    return 1 if counts["finding"] or counts["stale"] or twins else 0
 
 
 if __name__ == "__main__":

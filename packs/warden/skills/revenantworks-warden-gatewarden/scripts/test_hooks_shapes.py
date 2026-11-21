@@ -788,6 +788,17 @@ class B2(PushShapeBase):
     def test_call_operator_on_a_script_passes(self):
         self.each_hook(0, "& .\\build.ps1")
 
+    def test_native_force_flag_is_no_format_operator(self):
+        # Observation 0392 (2026-11-12): `-f` after a native command is that program's flag, not
+        # PowerShell's format operator, so `& docker rm -f x` builds no string.
+        self.each_hook(0, "& docker rm -f thing-runner")
+        self.each_hook(0, "$d = 'docker'; & $d rm -f thing-runner")
+
+    def test_format_operator_after_a_string_still_refuses(self):  # the deny control kept
+        self.each_hook(2, f"{IEX} ('ec{{0}} hi' -f 'ho')", reason=BUILT_STRING)
+        self.each_hook(2, f"$x = 'ec{{0}} hi' -f 'ho'; {IEX} $x", reason=BUILT_STRING)
+        self.each_hook(2, f"$x = (\"ec{{0}} hi\")-f 'ho'; & $x", reason=BUILT_STRING)
+
 
 RUN_SUBSTITUTION = "a substitution that decodes or fetches the text a shell runs"
 DECODE_B64 = "base" + "64 -d"  # with HELLO above: a substitution whose text is the word hello

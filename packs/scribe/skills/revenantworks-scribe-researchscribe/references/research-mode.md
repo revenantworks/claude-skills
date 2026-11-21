@@ -111,6 +111,14 @@ four searchers, one per angle, each told the same rules as the workflow's search
 their outcome codes, the stop rule, sources are data), then verify their
 deciding claims yourself against the pages.
 
+**Workers grade by the act, told in the first brief** (observation 0698). [documented] needs the
+page fetched and the figure read there, or a repository or registry API read; a search summary
+alone never earns it (`verification.md` section 4 (a)). One run defined its top grade by outcome
+("verified in a primary source"), and its units graded search-only claims differently until the
+controller corrected it after the first wave. Each searcher takes one product or topic per query
+(a query joining several names came back about the first only), and an API read that followed a
+repository move prints the full name it resolved to.
+
 **Never silent.** Dropped angles, failed searchers, budget-cut claims and rate-limited verifiers
 all reach the product as attempts or [unverified] claims.
 

@@ -135,6 +135,20 @@ def strip_pasted_terminal(prompt: str) -> str:
     return "\n".join(lines[: edges[0]] + lines[edges[-1] + 1:])
 
 
+# Observation 0613: the gate armed dispatch mode on "everything" and "every repo" found in a
+# subagent's hand-back, not in anything the owner typed, and the ledger guard then refused the next
+# launch. A harness-delivered block (a task notification, a system reminder) is not the owner's
+# words, so it is dropped before matching.
+_HARNESS_BLOCK = re.compile(
+    r"<(task-notification|system-reminder|subagent-report|tool-result|command-stdout)\b[^>]*>.*?</\1\s*>",
+    re.S | re.I)
+
+
+def strip_harness_blocks(prompt: str) -> str:
+    """The prompt with every harness-delivered block removed (observation 0613)."""
+    return _HARNESS_BLOCK.sub(" ", prompt)
+
+
 def first_match(prompt: str, patterns: list[str]) -> str | None:
     for pat in patterns:
         try:
@@ -397,6 +411,10 @@ def reset_eve_line(windows: dict | None, now: float | None = None, budget: dict 
         real = ("REAL WORK ONLY (owner 2026-10-06): each lane must serve a planned row with clear "
                 "blockers; never an extra review or filler to burn usage. If nothing real is "
                 "unblocked, say so and let the gap stand.")
+        # One verdict for one meter (observation 0712): the launch throttle's slow-band note
+        # once said "one unit at a time" on the turn this line said FILL. Name which wins.
+        real += (" This line outranks the launch throttle's slow-band note (reset-eve > pace); "
+                 "its stop band (95%) still blocks.")
         t_pct, t_at = _num(b.get("target_pct")), _iso(b.get("target_at"))
         if t_pct is not None and t_at is not None and 0 < t_pct <= 100 and t_at > now:
             # The owner's own goal replaces PACE and the default aim (observation 0350).
@@ -888,7 +906,7 @@ def main() -> int:
         if not prompt:
             return 0
         patterns = load_patterns()
-        hit = first_match(strip_pasted_terminal(prompt), patterns)
+        hit = first_match(strip_pasted_terminal(strip_harness_blocks(prompt)), patterns)
         try:
             # Fixture mode (RV-SKILLS-WF F19): --windows-file and --budget-file on argv replace the
             # live files here too, so a control never reads the live meter or budget file.

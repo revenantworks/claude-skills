@@ -45,7 +45,9 @@ swap) is keywarden's runbook; shieldwarden names it and keeps the rotation-first
     git -C <repo> bundle create <outside>/pre-rewrite.bundle --all
     git -C <repo> bundle verify <outside>/pre-rewrite.bundle
 
-The bundle is the undo. Keep it until `after` closes, then the user decides.
+The bundle is the undo. Keep it until `after` closes, then the user decides. Record each
+branch's origin tip now (`git -C <repo> ls-remote origin <branch>`) as `<base-sha>`: the land
+step leases on it.
 
 ## Emit the inputs
 
@@ -69,12 +71,19 @@ never paste them anywhere.
       --replace-message <outside>/filters/replace-message.txt \
       --mailmap <outside>/filters/mailmap.txt
 
-**Published mode** (every ref that carries the leak):
+**Published mode** (every ref that carries the leak), from the parent of the first commit that
+added the leaking blob:
 
-    git -C <outside>/clone filter-repo \
+    git -C <outside>/clone filter-repo --refs <first-leak-commit>^..<branch> \
       --replace-text <outside>/filters/replace-text.txt \
       --replace-message <outside>/filters/replace-message.txt \
       --mailmap <outside>/filters/mailmap.txt
+
+Range it by default (#0687). filter-repo drops the `gpgsig` header of every commit it
+re-exports, so a whole-history run gives every signed commit (host web merges, bots) a new id
+with identical files, and every descendant follows: one rewrite changed 874 ids where the leak
+touched 408. Before the force push, compare the commit map's changed count with
+`git rev-list --count <first-leak-commit>^..<branch>`; more changed ids than that is a stop.
 
 Add `--sensitive-data-removal` when the installed filter-repo supports it (see
 `tool-surface.md`); it reports the first changed commits and what the host must purge. To
@@ -132,12 +141,21 @@ per-file limit (100 MB on GitHub) stops the push here and not at the host:
 
 It lists the five largest new blobs and the total, and exits 1 when one is over the limit.
 
-**Published mode.** Hand the user one block, branches and tags by name, never `--mirror`:
+**Published mode.** Hand the user one block, branches and tags by name, never `--mirror`.
+Each lease names the origin sha the clone was built from (`<base-sha>`, recorded at Gate 1), so
+the push refuses when anyone landed on that branch since the prep:
 
     cd <outside>/clone
     git remote add origin <remote-url>
-    git push --force-with-lease origin <branch-1> <branch-2>
+    git push --force-with-lease=<branch-1>:<base-sha-1> origin <branch-1>
     git push --force-with-lease origin <tag-1> <tag-2>
+
+**The freeze must reach every writer** (#0686). A `PAUSED` file stops routines only; an
+interactive session merged a pull request onto a frozen repo hours after the prep, and the
+planned push would have dropped it. Between prep and push: tell the user to hold merges on that
+repo in every open session; right before the push, run `git ls-remote origin <branch>` and
+compare it with `<base-sha>`. Any difference is a stop: re-run the prep from Gate 1 on the new
+tip, never push the old clone. The named lease above is the barrier when the check is skipped.
 
 **Clean start: carry the bindings before the first push** (observation 0436). Rebuilding a repo
 under its old name (rename the old one to `<name>-old`, create a new one) moves everything bound
@@ -151,7 +169,10 @@ first push without it.
 ## After
 
 1. Re-clone every copy of the repo: the rig checkout, worktrees, other machines, cloud
-   routine clones. An old clone pushes the leak straight back.
+   routine clones. An old clone pushes the leak straight back. A checkout re-synced in place
+   (`git reset --hard origin/<branch>`) is first read with `git status --porcelain`: a modified
+   tracked file is shown and committed or saved before the reset, never counted and then
+   overwritten (#0687).
 2. Owner steps at the host: ask support to purge cached views and pull-request refs that
    still reference old commits; review forks; turn on the email-privacy setting that keeps
    a private address out of web commits; confirm push protection is on.

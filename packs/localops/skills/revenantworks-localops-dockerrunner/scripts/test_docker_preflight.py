@@ -92,6 +92,34 @@ class Audit(unittest.TestCase):
         rep = dp.audit(readings(engine={"answers": False, "error": "pipe not found"}), NOW)
         self.assertTrue(any("not answering" in f for f in rep["findings"]))
 
+    def test_uptime_parse(self):
+        self.assertEqual(dp.up_hours("Up 3 days"), 72)
+        self.assertEqual(dp.up_hours("Up 47 hours (healthy)"), 47)
+        self.assertEqual(dp.up_hours("Up About an hour"), 1)
+        self.assertEqual(dp.up_hours("Up 2 weeks"), 336)
+        self.assertIsNone(dp.up_hours("Exited (0) 2 days ago"))
+        self.assertIsNone(dp.up_hours(None))
+
+    def test_long_lived_container_keeps_the_engine_awake(self):
+        """Observation 0667: the audit names what keeps the engine busy, not only how much it uses."""
+        rd = readings(containers=[
+            {"ID": "a1", "Names": "rig-ci-runner", "Status": "Up 3 days", "RestartPolicy": "unless-stopped"},
+            {"ID": "b2", "Names": "scratch", "Status": "Up 5 minutes", "RestartPolicy": "no"}],
+            desktop_settings={"AutoStart": True, "UseResourceSaver": False})
+        found = dp.audit(rd, NOW)["findings"]
+        awake = [f for f in found if "keeps the engine awake" in f]
+        self.assertEqual(len(awake), 1, found)
+        self.assertIn("rig-ci-runner", awake[0])
+        self.assertIn("unless-stopped", awake[0])
+        self.assertTrue(any("AutoStart" in f for f in found))
+        self.assertTrue(any("UseResourceSaver" in f for f in found))
+
+    def test_short_lived_containers_and_default_settings_add_nothing(self):
+        rd = readings(containers=[{"ID": "b2", "Names": "scratch", "Status": "Up 23 hours"}],
+                      desktop_settings={"AutoStart": False, "UseResourceSaver": True})
+        found = dp.audit(rd, NOW)["findings"]
+        self.assertFalse([f for f in found if "awake" in f or "AutoStart" in f or "Resource Saver" in f])
+
 
 class Check(unittest.TestCase):
     LEASE = {"holder": "comfyrunner", "purpose": "video render", "expires": "2026-10-01T14:00:00Z",

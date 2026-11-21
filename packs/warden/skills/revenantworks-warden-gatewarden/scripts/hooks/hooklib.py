@@ -762,7 +762,10 @@ def _inline_code(code: str, out: "Expanded") -> None:
 # V-K8w2 B2: a PowerShell segment whose command word is `iex`, `Invoke-Expression`, `&` or `.` runs a string
 # the hook never sees when its argument text, or the value set on the same line for the variable it names,
 # builds that string. Plain substrings, matched without case; nothing is evaluated.
-STRING_BUILDERS = ("frombase64string", "-join", "-f ", "[char]")
+STRING_BUILDERS = ("frombase64string", "-join", "[char]")
+# PowerShell's format operator takes a string on its left: a quote or a closing bracket right before `-f`.
+# After a native command's word (`& docker rm -f x`) `-f` is that program's flag (observation 0392).
+FORMAT_OP = re.compile(r"""['")\]]\s*-f(?=[\s('"$])""", re.I)
 STRING_RUN_WORD = re.compile(r"(?i)^\s*(?:iex|invoke-expression|&|\.)(?=[\s(\"'$]|$)")
 BUILT_STRING = "a PowerShell run of a string built from encoded or joined parts"
 
@@ -777,7 +780,7 @@ def _built_string_run(seg: str, segs: list[str], out: "Expanded") -> None:
     for name in re.findall(r"\$([A-Za-z_][\w:]*)", arg):
         assign = re.compile(r"(?i)^\s*\$" + re.escape(name) + r"\s*=(?!=)(.*)$", re.S)
         texts += [a.group(1) for a in (assign.match(s) for s in segs) if a]
-    if any(b in t.lower() for t in texts for b in STRING_BUILDERS):
+    if any(b in t.lower() for t in texts for b in STRING_BUILDERS) or any(FORMAT_OP.search(t) for t in texts):
         out.unread_code.append(BUILT_STRING)
         out.unread.append(BUILT_STRING)
 

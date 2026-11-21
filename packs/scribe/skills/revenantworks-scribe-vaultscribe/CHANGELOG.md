@@ -2,6 +2,10 @@
 
 All notable changes to this skill. Format: Keep a Changelog; versions follow SemVer.
 
+## [Unreleased]
+
+2026-11-20 (weekly observation review, slice b; observation 0678): `ingest-query.md`: an ingest adds index lines and never rewrites the others; diff the index after any generator run.
+
 ## [1.0.0] — 2026-11-09
 
 First release. Sets up, runs and keeps honest an LLM-maintained knowledge vault (the LLM wiki

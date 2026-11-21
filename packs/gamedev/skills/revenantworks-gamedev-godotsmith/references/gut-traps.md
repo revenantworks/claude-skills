@@ -193,7 +193,16 @@ clean file), then run that script alone and read `Scripts 1`.
   project's name, not its folder, so every worktree of one project writes the same place. A
   suite is proof only if no other run of the same project ran at the same time, or the tests
   write under a per-process root; one docs-only branch failed a key-bindings test because a
-  second worktree's suite wrote the same `user://` file at once (observation 0438).
+  second worktree's suite wrote the same `user://` file at once (observation 0438). The fix is
+  a per-worktree user folder (a gitignored `override.cfg` with `config/use_custom_user_dir`),
+  written by the repo's worktree tool, and the suite runner refuses a worktree without one
+  (observation 0465). Its key is unique per worktree: a tool that named the folder after the
+  path's last part gave every `<lane>/evolution` worktree one shared folder (observation 0723).
+  Check with `test -f override.cfg` in each worktree and read the folder it names.
+- **Whether Godot may start in this folder at all.** `--headless` does not suppress `OS.alert`:
+  Godot run in a folder with no `project.godot` raised a native "no main scene" box on the
+  owner's screen and hung the call (observation 0485). A tool checks for `project.godot` before
+  it starts the engine.
 - **Whether an assert was meaningful.** 324,558 asserts and a suite that never exercises
   the branch you changed are perfectly compatible.
 - **Whether a test file exists that nobody wired in.** A file outside the `-gdir` tree, or
