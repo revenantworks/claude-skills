@@ -1971,10 +1971,20 @@ class VerifierPushTests(InstallDefaultBase):
                         f"Start-Process {G} -ArgumentList '{U} -f origin main'"], tool="PowerShell")
 
     def test_long_prose_heredoc_then_force_push_refuses_fast(self):  # F5
+        # Observation 0726: a wall-clock bar of 10 s sat at 86% of the unloaded time (8.6 s) and went red
+        # under ci_local's parallel shards (13.7 s) with no change. What F5 guards is that the hook reads
+        # the line and refuses it for the force push, not that it runs out of its time budget and fails
+        # closed. So the reason is asserted, under the default budget (20 s), and the wall bar only
+        # catches a hang.
         body = PROSE * (100 * 1024 // len(PROSE))
+        self.env.pop("GATEWARDEN_BUDGET", None)
         start = time.time()
-        self.expect(2, ["cat > notes.md <<'EOF'\n" + body + f"EOF\n{G} {U} --force origin main"])
-        self.assertLess(time.time() - start, 10)
+        code, _, err = self.hook("push_gate.py", "cat > notes.md <<'EOF'\n" + body + f"EOF\n{G} {U} --force origin main",
+                                 cwd=self.work)
+        self.assertEqual(code, 2, err)
+        self.assertNotIn("time budget", err)
+        self.assertNotIn("in time", err)
+        self.assertLess(time.time() - start, 60)
 
     def test_time_budget_fails_closed_on_a_push_line(self):  # F5
         body = PROSE * (200 * 1024 // len(PROSE))

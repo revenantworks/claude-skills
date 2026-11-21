@@ -1,13 +1,13 @@
 # The shipped hooks
 
-Six PreToolUse hooks, one SessionStart digest and two helpers, all Python 3 stdlib, in `scripts/hooks/`. They share
+Eight PreToolUse hooks, one SessionStart digest and two helpers, all Python 3 stdlib, in `scripts/hooks/`. They share
 `hooklib.py`, which must sit in the same folder. gatewarden **never installs** any of them: the
 owner does, by `install-walkthrough.md`. Each one binds the tool calls Claude makes (including
 inside subagents), never the owner's own terminal.
 
 ## Contents
 
-Summary · Modes: watch, nudge, guard · What the command hooks read · push_gate · ci_stamp · hyperv_lock · call_cap · launch_throttle · heredoc_guard · golive_block · outbound_text_guard · Mods that stand in for these hooks · The settings block
+Summary · Modes: watch, nudge, guard · What the command hooks read · push_gate · ci_stamp · hyperv_lock · call_cap · launch_throttle · heredoc_guard · golive_block · outbound_text_guard · work_guard · Mods that stand in for these hooks · The settings block
 
 ## Summary
 
@@ -20,6 +20,7 @@ Summary · Modes: watch, nudge, guard · What the command hooks read · push_gat
 | `heredoc_guard.py` | `Bash\|PowerShell` | a heredoc that feeds Python code holding a backslash escape; Python told to read its program from stdin (`python -`, `python /dev/stdin`) or started with no script and no input; `node`, a shell or `pwsh` left on stdin with nothing feeding it; a follow with no end (`tail -f`/`-F`/`--follow` without `--pid`, `Get-Content -Wait`) | open; the stdin rule fails closed | watch; the stdin and follow rules are hard |
 | `golive_block.py` | `Bash\|PowerShell\|Read\|Write\|Edit\|MultiEdit\|mcp__.*` | OBS go-live and stream-key requests from any tool call, and reading an OBS profile's `service.json` | closed for anything naming a blocked request or `service.json` | hard (guard) |
 | `outbound_text_guard.py` | `Bash\|PowerShell\|mcp__.*` | an entry of the private names list in a PR, issue, comment or release text sent through `gh`, or in a GitHub MCP tool that writes text or files | closed for a hit; open with a warning when the names list is missing | hard (guard) |
+| `work_guard.py` | `Bash\|PowerShell` | `git stash` in a checkout with more than one worktree; `sed -i`; a git hook skip (`--no-verify`, commit `-n`, `-c core.hooksPath=`) with no recorded owner word; a commit after another session switched the branch; `gh pr merge` on the line that read the checks | open | hard (guard) |
 
 Exit 2 blocks and the reason goes to Claude on stderr. A cleared push prints its range to Claude
 (`additionalContext`) and to the person watching (`systemMessage`).
@@ -64,7 +65,8 @@ clause with secret shapes masked. Never the command text, never a matched value.
 **Rules** are `<hook>` or `<hook>.<rule>`: `push_gate.irreversible`, `push_gate.unreadable`,
 `push_gate.no_intent`, `push_gate.range`, `push_gate.head`, `push_gate.no_ci`, `push_gate.public_branch`, `push_gate.public_main`, `push_gate.public_leak` (hard), `push_gate.shape`,
 `hyperv_lock`, `golive_block`, `heredoc_guard`, `heredoc_guard.stdin`, `heredoc_guard.follow`, `call_cap`, `launch_throttle.ceiling`,
-`launch_throttle.stop`, `outbound_text_guard` (hard). A hook entry covers its soft rules; a rule entry wins over it.
+`launch_throttle.stop`, `outbound_text_guard` (hard), `work_guard.stash`, `work_guard.sed_inplace`,
+`work_guard.no_verify`, `work_guard.branch_moved`, `work_guard.merge_chain` (all hard). A hook entry covers its soft rules; a rule entry wins over it.
 
 **Precedence:** hard (guard, always) › rule entry › hook entry › a live snooze (watch) ›
 `GATEWARDEN_MODE` › the file's `default` › watch. An entry is a mode string, or
@@ -160,9 +162,10 @@ fetched or evaluated.
   (`x=$(curl …)`, `echo $(curl …)`).
 - **B2, a PowerShell run of a built string:** a segment whose command word is `iex`,
   `Invoke-Expression`, `&` or `.` whose argument, or the value set on the same line for the variable
-  it names, holds `FromBase64String`, `-join`, `-f ` or `[char]`: `iex ([Text.Encoding]::…
+  it names, holds `FromBase64String`, `-join`, `[char]`, or the format operator `-f` right after a
+  string or a closing bracket (`'ec{0}' -f 'ho'`): `iex ([Text.Encoding]::…
   FromBase64String('…'))`, `$x = (…) -join ''; iex $x`. Allow controls: `iex (Get-Content .\setup.ps1
-  -Raw)` and `& .\build.ps1`.
+  -Raw)`, `& .\build.ps1`, and `& docker rm -f x`, where `-f` is the program's own flag (observation 0392).
 - **B8, inline code that decodes and runs:** `python -c`, `node -e` or `pwsh -c` code that names both
   a decode call (`b64decode`, `base64.decode`, `FromBase64String`, or `Buffer.from` with `base64`)
   and a run call (`os.system`, `subprocess`, `exec(`, `eval(`, `execSync`, `child_process`,
@@ -859,6 +862,40 @@ The refusal never prints the entry it matched. A missing names list allows the c
 that it was not checked. **Limit:** text built at run time inside a script file is out of reach;
 the release-time whole-tree scan (shieldwarden) is the later layer.
 
+## work_guard
+
+Five command shapes that each broke a written rule twice or more, so the rule became a barrier
+(observations 0563, 0632, 0671, 0711, 0691). Every rule is hard: guard in every mode.
+
+| Rule | Refuses | Fix it names |
+|---|---|---|
+| `work_guard.stash` | `git stash` with any subcommand but `list` and `show`, when `git worktree list` for the repo shows more than one worktree (a checkout units and controllers share) | a WIP commit on your own branch, or `git worktree add --detach <path>` |
+| `work_guard.sed_inplace` | `sed -i`, `-i.bak`, `-Ei`, `--in-place`, also after `xargs` or `find -exec` | the Edit tool, or `sed ... src > new` then Edit or Write |
+| `work_guard.no_verify` | `git commit --no-verify` or `-n` (in a cluster such as `-anm`), `--no-verify` on push, merge, rebase or am, and `git -c core.hooksPath=...` on those | fix what the hook refuses; or record the owner's words first |
+| `work_guard.branch_moved` | `git commit`, `merge` or `cherry-pick` when the checkout's branch differs from the one this session saw at its last commit there, and this session ran no checkout, switch, rebase, bisect or worktree call there since | commit from your own worktree, or `git switch <branch>` in its own call |
+| `work_guard.merge_chain` | `gh pr merge` after a checks read on the same line (`gh pr checks`, `gh run view/watch/list`, a `statusCheckRollup` view, a check-runs API read) | read the checks in one call, merge in the next |
+
+**The owner's word for a hook skip** is recorded the way push intent is, before the call, and expires
+(900 s by default). It lives in `<git dir>/gatewarden/owner-ok.json`:
+
+```
+python work_guard.py owner-ok --repo <repo> --said "<the owner's own words>" [--ttl 900]
+```
+
+**Branch memory.** `branch_moved` keeps one row per session and repo top folder in
+`branch-seen.json` in the state folder (rows older than seven days drop). A session's first commit
+in a repo only learns the branch; an event with no session id is never tracked.
+
+**Data, not commands (observation 0392).** Only a program-position word counts. A heredoc body is
+blanked unless a shell reads it (`bash <<'EOF'` is read, two levels deep), and a quoted string is one
+word, so `git commit -m "never git stash"`, `grep -n "sed -i" notes.md` and a brief written with
+`cat > x.md <<'EOF'` pass. The suite (`test_hooks_work_guard.py`) runs most cases in-process through
+`work_guard.check()`, with no Python spawn per case (observation 0725).
+
+**Limits, stated plainly:** a command built at run time, a script file's text and a `bash -c '...'`
+string are not read. Fail mode: open on an unreadable event or a crash; the permission layer and
+push_gate stay the other layers.
+
 ## Mods that stand in for these hooks
 
 None, since 2026-10-08. The two mods (`vigil` and `shroud`) never block, so no mod stands in for a
@@ -884,7 +921,8 @@ gets its own `Edit(<folder>/**)` rule (a Windows path in POSIX form, `//d/rig/ho
   {"matcher": "*", "hooks": [{"type": "command", "command": "python \"<dir>/call_cap.py\"", "timeout": 30}]},
   {"matcher": "Agent|Task|Workflow", "hooks": [{"type": "command", "command": "python \"<dir>/launch_throttle.py\"", "timeout": 30}]},
   {"matcher": "Bash|PowerShell|Read|Write|Edit|MultiEdit|mcp__.*", "hooks": [{"type": "command", "command": "python \"<dir>/golive_block.py\"", "timeout": 30}]},
-  {"matcher": "Bash|PowerShell|mcp__.*", "hooks": [{"type": "command", "command": "python \"<dir>/outbound_text_guard.py\"", "timeout": 30}]}
+  {"matcher": "Bash|PowerShell|mcp__.*", "hooks": [{"type": "command", "command": "python \"<dir>/outbound_text_guard.py\"", "timeout": 30}]},
+  {"matcher": "Bash|PowerShell", "hooks": [{"type": "command", "command": "python \"<dir>/work_guard.py\"", "timeout": 30}]}
  ],
  "PostToolUse": [
   {"matcher": "Bash|PowerShell", "hooks": [{"type": "command", "command": "python \"<dir>/push_gate.py\"", "timeout": 30}]}
