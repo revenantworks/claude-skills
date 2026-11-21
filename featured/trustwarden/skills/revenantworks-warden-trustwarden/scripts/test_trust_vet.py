@@ -18,6 +18,7 @@ from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import trust_vet as tv  # noqa: E402
+from _scratch import force_rmtree  # noqa: E402  (pack-shared: clears git's read-only objects)
 
 SHA = "a" * 40
 CLEAN = {"name": "skillspector", "status": "RUN", "exit": 0, "hits": 0}
@@ -43,7 +44,7 @@ class Base(unittest.TestCase):
         self.tmp = Path(tempfile.mkdtemp(prefix="trustvet-"))
 
     def tearDown(self):
-        shutil.rmtree(self.tmp, ignore_errors=True)
+        force_rmtree(self.tmp)
 
     def vet(self, files, kind="auto", sha=SHA, scanners=None, max_bytes=tv.DEFAULT_MAX_BYTES):
         root = build(self.tmp / "cand", files)
@@ -418,7 +419,7 @@ class NetworkClasses(Base):
 
     def test_loopback_address_forms_are_internal(self):
         for target in ("http://127.0.0.1:9000/x", "http://[::1]:9000/x", "http://0.0.0.0:80/"):
-            shutil.rmtree(self.tmp / "cand", ignore_errors=True)
+            force_rmtree(self.tmp / "cand")
             code = f"fetch('{target}')\n"
             res = self.vet({"SKILL.md": SKILL, "LICENSE": LICENSE_MIT, "lib/run.js": code}, scanners=[CLEAN])
             self.assertEqual(self.rules(res) & {"network-internal", "network-external"}, {"network-internal"},

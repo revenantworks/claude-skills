@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import os
-import shutil
 import subprocess
 import sys
 import tempfile
@@ -11,6 +10,8 @@ import unittest
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE))
+from _scratch import force_rmtree  # noqa: E402  (pack-shared: clears git's read-only objects)
 TOOL = HERE / "rewrite_tools.py"
 NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
 
@@ -45,7 +46,7 @@ class RepointTests(unittest.TestCase):
         (self.runs / "odd.md").write_bytes(f"dropped {OLD_C[:7]}; shared {OLD_D[:7]}\n".encode())
 
     def tearDown(self):
-        shutil.rmtree(self.tmp, ignore_errors=True)
+        force_rmtree(self.tmp)
 
     def test_dry_run_counts_and_writes_nothing(self):
         before = (self.runs / "ledger.md").read_bytes()
@@ -84,7 +85,7 @@ class RestoreAndSizeTests(unittest.TestCase):
         git(self.repo, "tag", "pre-rewrite")
 
     def tearDown(self):
-        shutil.rmtree(self.tmp, ignore_errors=True)
+        force_rmtree(self.tmp)
 
     def test_restore_brings_back_stripped_files_and_counts(self):
         # The rewrite's checkout removed the stripped files from disk (observation 0360).

@@ -1,5 +1,6 @@
 """Tests for claude_ai_zip.py: one plugin.json per zip, sub-plugin servers kept at the root (#0690)."""
 import json
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -24,6 +25,7 @@ def put(root, rel, data):
 class ClaudeAiZipTests(unittest.TestCase):
     def setUp(self):
         self.root = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.root, True)
         git(self.root, "init", "-q")
         base = "packs/gd"
         put(self.root, f"{base}/.claude-plugin/plugin.json", {"name": "gd", "version": "1.2.1"})
