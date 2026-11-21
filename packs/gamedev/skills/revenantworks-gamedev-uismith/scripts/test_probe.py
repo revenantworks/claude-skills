@@ -81,6 +81,13 @@ class Arguments(unittest.TestCase):
                 a.rmdir()
                 b.rmdir()
 
+    def test_has_doctype_is_linear_on_a_comment_run(self):
+        # positive control: the run that backtracked exponentially under the old regex
+        self.assertFalse(probe.has_doctype("<!--" + "--><!--" * 5000))
+        self.assertTrue(probe.has_doctype("<!-- a --> <!-- b -->\n<!DOCTYPE html>"))
+        self.assertFalse(probe.has_doctype("<!-- open <!doctype html>"))
+        self.assertFalse(probe.has_doctype("<!doctypehtml>"))
+
     def test_host_skeleton_only_without_a_doctype(self):
         self.assertIsNone(probe.host_skeleton("<!DOCTYPE html><p>x</p>", "file:///d"))
         self.assertIsNone(probe.host_skeleton("﻿ <!-- a --> <!doctype html>", "file:///d"))

@@ -373,7 +373,24 @@ def parse_target(text: str) -> tuple[str, Path | None]:
     return path.as_uri(), path
 
 
-_DOCTYPE = re.compile(r"^\s*(?:<!--.*?-->\s*)*<!doctype\s", re.I | re.S)
+_DOCTYPE = re.compile(r"<!doctype\s", re.I)
+
+
+def has_doctype(html: str) -> bool:
+    """True when a doctype opens the page, after any leading comments and whitespace.
+
+    A loop, not one regex: `(?:<!--.*?-->\\s*)*` backtracks exponentially on a run of
+    `--><!--` with no doctype after it (CodeQL, PR 51). Each comment ends at its first `-->`.
+    """
+    rest = html.lstrip()
+    while rest.startswith("<!--"):
+        end = rest.find("-->", 4)
+        if end < 0:
+            return False
+        rest = rest[end + 3:].lstrip()
+    return _DOCTYPE.match(rest) is not None
+
+
 SKELETON_NAME = "_host-skeleton.html"
 
 
@@ -384,7 +401,7 @@ def host_skeleton(html: str, folder_uri: str) -> str | None:
     page without one renders in quirks mode at desktop width with mojibake (observation 0657,
     three hits), so the probe measures what the host would serve. <base> keeps relative links.
     """
-    if _DOCTYPE.match(html.lstrip("﻿")):
+    if has_doctype(html.lstrip("﻿")):
         return None
     return ('<!doctype html>\n<meta charset="utf-8">\n'
             '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
