@@ -108,7 +108,8 @@ force, delete, mirror, `--all` or `--tags` push), `call_cap.py`, `launch_throttl
 `python -` and `python /dev/stdin`, which hang on an empty heredoc), `golive_block.py` and
 `outbound_text_guard.py` (a names-list entry in PR, issue or comment text, #0561) and
 `work_guard.py` (stash in a shared checkout, `sed -i`, a git hook skip, a branch switched under
-the session, a merge chained after a checks read; all hard, #0563 #0632 #0711 #0671 #0691).
+the session, a merge chained after a checks read; all hard, #0563 #0632 #0711 #0671 #0691) and
+`compact_gate.py` (a subagent's write to a file it has not read since its context was compacted, #0730).
 **They install in watch:** a rule logs what it would stop and the work runs; only hard rules (a
 force or delete push, a push the gate cannot read, a Hyper-V destroy, an OBS go-live, Python
 reading stdin) refuse in every mode, and no modes entry relaxes them. A weekly session-start line
