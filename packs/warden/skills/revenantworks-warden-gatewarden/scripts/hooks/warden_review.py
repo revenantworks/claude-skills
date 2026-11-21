@@ -34,7 +34,7 @@ KNOWN = {
     "push_gate.no_intent": False, "push_gate.range": False, "push_gate.head": False,
     "push_gate.public_branch": False, "push_gate.public_main": False, "push_gate.public_leak": True,
     "push_gate.no_ci": False, "push_gate.shape": True, "heredoc_guard": False, "heredoc_guard.stdin": True,
-    "call_cap": False, "launch_throttle.ceiling": False, "launch_throttle.stop": False,
+    "call_cap": False, "launch_throttle.ceiling": False, "launch_throttle.stop": False, "compact_gate": False,
 }
 HOOKS = {r.split(".", 1)[0] for r in KNOWN}
 SET_DAYS, MAX_DAYS = 30.0, 90.0

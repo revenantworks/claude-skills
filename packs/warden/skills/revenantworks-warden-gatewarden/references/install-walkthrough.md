@@ -36,8 +36,8 @@ The manual route, if you prefer it:
 New-Item -ItemType Directory -Force "$HOME\.claude\hooks\gatewarden" | Out-Null; Copy-Item "<skill>\scripts\hooks\*.py" "$HOME\.claude\hooks\gatewarden\"
 ```
 
-- **Verify:** `Get-ChildItem "$HOME\.claude\hooks\gatewarden" -Name` lists thirteen files:
-  `call_cap.py ci_stamp.py follow_sweep.py golive_block.py heredoc_guard.py hooklib.py hyperv_lock.py launch_throttle.py outbound_text_guard.py push_gate.py warden_digest.py warden_review.py work_guard.py`.
+- **Verify:** `Get-ChildItem "$HOME\.claude\hooks\gatewarden" -Name` lists fourteen files:
+  `call_cap.py ci_stamp.py compact_gate.py follow_sweep.py golive_block.py heredoc_guard.py hooklib.py hyperv_lock.py launch_throttle.py outbound_text_guard.py push_gate.py warden_digest.py warden_review.py work_guard.py`.
 - **Rollback:** `Remove-Item -Recurse "$HOME\.claude\hooks\gatewarden"`.
 
 **Pin hypervrunner's scripts** (only if you install `hyperv_lock`). The lock lets Claude run

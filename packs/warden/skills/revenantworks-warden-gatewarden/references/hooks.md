@@ -1,13 +1,13 @@
 # The shipped hooks
 
-Eight PreToolUse hooks, one SessionStart digest and two helpers, all Python 3 stdlib, in `scripts/hooks/`. They share
+Nine PreToolUse hooks, one SessionStart digest and two helpers, all Python 3 stdlib, in `scripts/hooks/`. They share
 `hooklib.py`, which must sit in the same folder. gatewarden **never installs** any of them: the
 owner does, by `install-walkthrough.md`. Each one binds the tool calls Claude makes (including
 inside subagents), never the owner's own terminal.
 
 ## Contents
 
-Summary · Modes: watch, nudge, guard · What the command hooks read · push_gate · ci_stamp · hyperv_lock · call_cap · launch_throttle · heredoc_guard · golive_block · outbound_text_guard · work_guard · Mods that stand in for these hooks · The settings block
+Summary · Modes: watch, nudge, guard · What the command hooks read · push_gate · ci_stamp · hyperv_lock · call_cap · launch_throttle · heredoc_guard · golive_block · outbound_text_guard · work_guard · compact_gate · Mods that stand in for these hooks · The settings block
 
 ## Summary
 
@@ -21,6 +21,7 @@ Summary · Modes: watch, nudge, guard · What the command hooks read · push_gat
 | `golive_block.py` | `Bash\|PowerShell\|Read\|Write\|Edit\|MultiEdit\|mcp__.*` | OBS go-live and stream-key requests from any tool call, and reading an OBS profile's `service.json` | closed for anything naming a blocked request or `service.json` | hard (guard) |
 | `outbound_text_guard.py` | `Bash\|PowerShell\|mcp__.*` | an entry of the private names list in a PR, issue, comment or release text sent through `gh`, or in a GitHub MCP tool that writes text or files | closed for a hit; open with a warning when the names list is missing | hard (guard) |
 | `work_guard.py` | `Bash\|PowerShell` | `git stash` in a checkout with more than one worktree; `sed -i`; a git hook skip (`--no-verify`, commit `-n`, `-c core.hooksPath=`) with no recorded owner word; a commit after another session switched the branch; `gh pr merge` on the line that read the checks | open | hard (guard) |
+| `compact_gate.py` | `Write\|Edit\|MultiEdit\|NotebookEdit` | a subagent's write to an existing file when its context was compacted after it last read that file | open | watch |
 
 Exit 2 blocks and the reason goes to Claude on stderr. A cleared push prints its range to Claude
 (`additionalContext`) and to the person watching (`systemMessage`).
@@ -66,7 +67,7 @@ clause with secret shapes masked. Never the command text, never a matched value.
 `push_gate.no_intent`, `push_gate.range`, `push_gate.head`, `push_gate.no_ci`, `push_gate.public_branch`, `push_gate.public_main`, `push_gate.public_leak` (hard), `push_gate.shape`,
 `hyperv_lock`, `golive_block`, `heredoc_guard`, `heredoc_guard.stdin`, `heredoc_guard.follow`, `call_cap`, `launch_throttle.ceiling`,
 `launch_throttle.stop`, `outbound_text_guard` (hard), `work_guard.stash`, `work_guard.sed_inplace`,
-`work_guard.no_verify`, `work_guard.branch_moved`, `work_guard.merge_chain` (all hard). A hook entry covers its soft rules; a rule entry wins over it.
+`work_guard.no_verify`, `work_guard.branch_moved`, `work_guard.merge_chain` (all hard), `compact_gate`. A hook entry covers its soft rules; a rule entry wins over it.
 
 **Precedence:** hard (guard, always) › rule entry › hook entry › a live snooze (watch) ›
 `GATEWARDEN_MODE` › the file's `default` › watch. An entry is a mode string, or
@@ -896,6 +897,38 @@ word, so `git commit -m "never git stash"`, `grep -n "sed -i" notes.md` and a br
 string are not read. Fail mode: open on an unreadable event or a crash; the permission layer and
 push_gate stay the other layers.
 
+## compact_gate
+
+A dispatched unit's re-read after a context compaction, as a barrier (observation 0730). The
+autoCompactWindow replay proof (2026-11-21) saw an opus-high unit compact twice and each time write its
+findings file straight after, a full `Write` and then an `Edit`, with no read in between, though its
+brief and its launch prompt both said to re-read after any reset. The compaction summary named the
+file and the unit took the summary as the re-read. A `Write` from a summary can drop what the summary
+left out.
+
+For each `Write`, `Edit`, `MultiEdit` or `NotebookEdit` call inside a subagent (`agent_id` in the
+event; the main session is never gated), the hook reads the subagent's own transcript
+(`agent_transcript_path`, else `<session transcript>/subagents/agent-<id>.jsonl`) and finds its last
+`compact_boundary` record. The call runs when:
+
+- the transcript has no boundary, or the file does not exist yet;
+- after the boundary the unit called `Read` on the same file (a partial read counts; a failed read
+  does not; a read in the same batch whose result is not written yet counts);
+- after the boundary the unit wrote the whole file with a `Write` that succeeded.
+
+Anything else is refused under `compact_gate`: "read it again before you write it (and re-read your
+brief): the compaction summary is not a re-read." Paths compare with `/` separators and case folded,
+a relative path resolved from the event's `cwd`.
+
+**Mode:** a soft rule, so it follows the modes file: watch logs the would-be refusal, nudge tells
+the unit once, guard refuses. It only changes a unit's behaviour in guard:
+`python warden_review.py set compact_gate guard`. The log line carries the reason's first clause,
+never the path. Fail mode: open on an unreadable event or transcript. The suite is
+`test_hooks_compact_gate.py`, in-process through `compact_gate.check()` with four process runs.
+
+**Limits:** a write through a shell (`Bash`, `PowerShell`) is not read; a unit that reads the file
+and still writes from the summary passes. The gate makes the read happen, not its use.
+
 ## Mods that stand in for these hooks
 
 None, since 2026-10-08. The two mods (`vigil` and `shroud`) never block, so no mod stands in for a
@@ -922,7 +955,8 @@ gets its own `Edit(<folder>/**)` rule (a Windows path in POSIX form, `//d/rig/ho
   {"matcher": "Agent|Task|Workflow", "hooks": [{"type": "command", "command": "python \"<dir>/launch_throttle.py\"", "timeout": 30}]},
   {"matcher": "Bash|PowerShell|Read|Write|Edit|MultiEdit|mcp__.*", "hooks": [{"type": "command", "command": "python \"<dir>/golive_block.py\"", "timeout": 30}]},
   {"matcher": "Bash|PowerShell|mcp__.*", "hooks": [{"type": "command", "command": "python \"<dir>/outbound_text_guard.py\"", "timeout": 30}]},
-  {"matcher": "Bash|PowerShell", "hooks": [{"type": "command", "command": "python \"<dir>/work_guard.py\"", "timeout": 30}]}
+  {"matcher": "Bash|PowerShell", "hooks": [{"type": "command", "command": "python \"<dir>/work_guard.py\"", "timeout": 30}]},
+  {"matcher": "Write|Edit|MultiEdit|NotebookEdit", "hooks": [{"type": "command", "command": "python \"<dir>/compact_gate.py\"", "timeout": 30}]}
  ],
  "PostToolUse": [
   {"matcher": "Bash|PowerShell", "hooks": [{"type": "command", "command": "python \"<dir>/push_gate.py\"", "timeout": 30}]}
