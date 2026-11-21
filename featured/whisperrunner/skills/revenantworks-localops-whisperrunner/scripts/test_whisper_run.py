@@ -10,6 +10,7 @@ set through LOCALAPPDATA and XDG_STATE_HOME, so the user's real lease is never t
 import hashlib
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -337,6 +338,7 @@ class RunnerEndToEnd(unittest.TestCase):
 class Configure(unittest.TestCase):  # observation 0443
     def setUp(self):
         self.tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.tmp, True)
         self.root = self.tmp / "whisper.cpp"
         exe = "whisper-cli.exe" if os.name == "nt" else "whisper-cli"
         (self.root / "build" / "bin" / "Release").mkdir(parents=True)

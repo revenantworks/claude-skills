@@ -4,6 +4,7 @@ from __future__ import annotations
 import io
 import json
 import os
+import shutil
 import socket
 import tempfile
 import threading
@@ -55,6 +56,7 @@ class Base(unittest.TestCase):
 
     def setUp(self):
         self.tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.tmp, True)
         (self.tmp / "project.godot").write_text("config_version=5\n", encoding="utf-8")
         self.server = srv.Server([self.tmp], self.read_only)
 
@@ -223,6 +225,7 @@ class TestEditorLink(Base):
 
     def test_first_open_project_wins(self):
         other = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, other, True)
         fake = self.editor()
         self.server = srv.Server([other, self.tmp], False)
         r = self.call("godot_status")
@@ -473,6 +476,7 @@ class TestRunAudio(Base):
 class TestFindProject(unittest.TestCase):
     def test_searches_upward(self):
         tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, tmp, True)
         (tmp / "project.godot").write_text("", encoding="utf-8")
         (tmp / "a" / "b").mkdir(parents=True)
         self.assertEqual(srv.find_project(tmp / "a" / "b"), tmp)

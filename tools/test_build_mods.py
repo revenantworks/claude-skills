@@ -6,7 +6,9 @@ never sits inside a skill or a featured plugin, so it cannot reach a claude.ai z
 Run: python3 -m unittest discover -s tools -p "test_*.py"
 Stdlib only; every fixture lives in a temp directory.
 """
+import atexit
 import json
+import shutil
 import tempfile
 import unittest
 from pathlib import Path
@@ -14,8 +16,22 @@ from pathlib import Path
 import build
 
 
+# Every fixture folder this module makes is removed when the run ends (2026-11-21: a run left
+# its folders in the temp root, and on the rig that is Claude's scratch root).
+_MADE: list = []
+
+
+def _tmp() -> Path:
+    d = Path(tempfile.mkdtemp())
+    _MADE.append(d)
+    return d
+
+
+atexit.register(lambda: [shutil.rmtree(d, ignore_errors=True) for d in _MADE])
+
+
 def mod_root(entry_version="1.0.0", hooks=None, extra=None, with_module_missing=False):
-    tmp = Path(tempfile.mkdtemp())
+    tmp = _tmp()
     (tmp / ".claude-plugin").mkdir()
     plugins = [{"name": "demo-mods", "source": "./mods/demo-mods", "version": entry_version}]
     (tmp / ".claude-plugin" / "marketplace.json").write_text(json.dumps({"name": "x", "plugins": plugins}), encoding="utf-8")
@@ -181,7 +197,7 @@ class Launcher(unittest.TestCase):
         build.problems.clear()
 
     def tree(self):
-        tmp = Path(tempfile.mkdtemp())
+        tmp = _tmp()
         d = tmp / "mods" / build.LAUNCHER_MOD
         (d / ".claude-plugin").mkdir(parents=True)
         (d / "hooks").mkdir()
@@ -217,7 +233,7 @@ class Launcher(unittest.TestCase):
         self.assertTrue(any("drifts from the pack registry" in p for p in build.problems))
 
     def test_absent_mod_is_skipped(self):
-        self.assertEqual(build.sync_launcher(self.ROSTERS, self.DESCS, Path(tempfile.mkdtemp()), write=False), 0)
+        self.assertEqual(build.sync_launcher(self.ROSTERS, self.DESCS, _tmp(), write=False), 0)
 
 
 class DisplayName(unittest.TestCase):
