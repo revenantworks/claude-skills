@@ -7,10 +7,11 @@ on:
   # No pull_request trigger (removed 2026-10-11; CI-1 added it 2026-10-06): main has no branch
   # protection, so a red PR could merge anyway, and the merged push to main runs the same jobs.
 
-# Three jobs from one script:
+# Four jobs:
 #   check  — every push to main and every tag: registry↔manifest drift + per-skill validation, no writes
 #   release — on tag v*: sync + build dist zips, attach every member zip to the release
 #   mods   — every push to main and every tag: the mod-only plugins validate and pass their tests
+#   member-suites — every push to main and every tag: the Linux-safe non-warden member suites
 #
 # check runs on tags too and release needs it. It used to skip itself on tags —
 # the one event that publishes — so every release since attached 11 member zips
@@ -44,6 +45,37 @@ jobs:
       # The name-leak check is local only: its list stays on the maintainer's
       # machine and is never uploaded, so CI has nothing to run it with.
       # It runs before every push instead (RUNBOOK.md, "Name-leak check").
+
+  # Member script suites outside warden (obs 0643): before this job they ran only in
+  # tools/ci_local.py on the rig, so a merge from a cloud session reached main unrun. Only the
+  # Linux-safe suites are listed: their platform calls are guarded (os.name / getattr). The
+  # dispatchwright and localops suites stay rig-only (winreg, ctypes.windll, Hyper-V, Docker,
+  # duckdb). A suite that runs 0 tests fails, as in ci_local.
+  member-suites:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: { persist-credentials: false }
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with: { python-version: "3.12" }
+      - run: pip install pyyaml
+      - name: Run the Linux-safe member suites
+        run: |
+          set -e
+          for s in \
+            gamedev/skills/revenantworks-gamedev-godotsmith \
+            gamedev/skills/revenantworks-gamedev-pixelsmith \
+            gamedev/skills/revenantworks-gamedev-soundsmith \
+            gamedev/skills/revenantworks-gamedev-uismith \
+            scribe/skills/revenantworks-scribe-brandscribe \
+            scribe/skills/revenantworks-scribe-lorescribe \
+            scribe/skills/revenantworks-scribe-researchscribe \
+            scribe/skills/revenantworks-scribe-vaultscribe; do
+            echo "::group::$s"
+            (cd "packs/$s/scripts" && python3 -m unittest discover -s . -p "test_*.py" -v)
+            echo "::endgroup::"
+          done
 
   # The mod-only plugins under mods/: the shared library in step, every plugin valid under
   # --strict, and every plugin's tests green, on a pinned Claude Code (CI-1, 2026-10-06).
