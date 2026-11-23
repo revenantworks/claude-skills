@@ -41,10 +41,16 @@ in one small data file any fan-out can read.
 - **`spend` mode reads local session transcripts, and only when you ask for it.** It reads the
   session logs Claude Code already keeps on your disk and reports token counts per skill, per
   subagent and per prompt. The report holds counts, ids, skill names and the first 60 characters
-  of each expensive prompt, and nothing else; it never leaves your machine. On a surface with no
-  local transcripts it says so and uses the meters only. Every other mode works without it.
-- **Sends** nothing anywhere. It collects no personal data and keeps no logs beyond the three
-  files above.
+  of each expensive prompt, and nothing else. The skill does not upload it, but Claude reads the
+  report into your conversation, so those excerpts reach Anthropic's model service like any other
+  text in the chat. On a surface with no local transcripts it says so and uses the meters only.
+  Every other mode works without it.
+- **Fetches** hosted CI minutes from the GitHub billing API, and the rate limit through
+  `gh api rate_limit`, using your own GitHub login on your machine. Both are read-only requests to
+  GitHub. It stores no credential of its own.
+- **Sends** nothing of its own to any other service. The one export is the opt-in `share` bundle:
+  it is built only when you ask, and you decide whether to pass it on. Beyond the three files
+  above it keeps no logs.
 
 ## Support and security
 
