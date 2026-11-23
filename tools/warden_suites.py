@@ -151,6 +151,9 @@ def ran_count(log: str) -> int:
     return int(found[-1]) if found else 0
 
 
+FAILED_LINE = re.compile(r"^(?:(?:FAIL|ERROR): .+|\w+(?:Error|Exception)\b.*)$", re.M)
+
+
 def tally(log: str) -> tuple[int, int]:
     """(tests ran, failures + errors) from unittest's closing lines; (0, 0) when absent."""
     bad = 0
@@ -238,6 +241,7 @@ def main(argv: list[str] | None = None, skills: Path = SKILLS) -> int:
         jobs = [j for p in plans for j in p]
         results = list(pool.map(lambda j: _run(j.cmd, j.cwd, j.stdin), jobs))
     per: dict[str, list[int]] = {}           # member -> [ran, bad, worst rc, short jobs]
+    named: list[str] = []                     # FAIL/ERROR headers and their exception lines
     for j, (rc, log) in zip(jobs, results):
         print(f"── {j.label}", flush=True)
         print(log.rstrip(), flush=True)
@@ -248,6 +252,8 @@ def main(argv: list[str] | None = None, skills: Path = SKILLS) -> int:
         if short:                             # e.g. a test that os._exit(0)s mid-run
             print(f"✗ {j.label}: ran {ran} tests of {j.expected} listed")
             bad = max(bad, 1)
+        if bad:
+            named += [f"{j.label}: {ln[:200]}" for ln in FAILED_LINE.findall(log)]
         m = per.setdefault(j.member, [0, 0, 0, 0])
         m[0] += ran
         m[1] += bad
@@ -269,6 +275,9 @@ def main(argv: list[str] | None = None, skills: Path = SKILLS) -> int:
             per[member][1] = bad
         summary.append(f"{member}: {ran} tests, {bad} failures, exit {rc}")
     print("\n".join(summary))
+    if named:  # ci_local keeps only a step's tail, so the names sit beside the summary
+        print("failing tests:")
+        print("\n".join(f"  {n}" for n in named[:12]))
     total = sum(v[0] for v in per.values())
     total_bad = sum(v[1] for v in per.values())
     print(f"\nRan {total} tests across {len(folders)} suites, {len(jobs)} processes\n")
