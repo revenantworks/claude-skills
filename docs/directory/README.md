@@ -25,7 +25,7 @@ Re-read these pages before each submission; they change.
 
 | # | Plugin folder | Verdict | Why |
 |---|---|---|---|
-| 1 | `featured/brandscribe` | **Submit first** | Distinctive name, 220 files (limit 512), no hooks, servers or network code, text files only, discloses everything it reads and writes. Strongest fit with the policy. |
+| 1 | `featured/brandscribe` | **Submit first** | Distinctive name, 220 files (limit 512), no hooks, servers or network code, text files only (scripts are plain text), discloses everything it reads and writes. Strongest fit with the policy. |
 | 2 | `featured/pacewright` | **Submit after one decision** | Strong niche and no code at all, but `spend` mode reads local session transcripts. The policy says software must not access Claude's chat history. The README discloses it; expect a reviewer hold or a refusal. Safer: gate or drop `spend` in the next foundation pack bump, then submit. |
 | 3 | `featured/trustwarden` | Hold for the maintainer's call | Users may rely on it for install safety (liability), and it runs scanners. Ready on the file rules. |
 | 4 | `featured/pixelsmith` | Hold | Writes briefs for image generators; the policy generally bars generative image tools. Needs a clear "it directs, it does not generate" line first. |
@@ -50,12 +50,14 @@ portal.
 - **Example prompts (policy: at least three):** "Turn this style guide into a Claude Design
   System." · "The brand colours changed, re-sync the design system." · "Check this built page
   before it ships."
-- **Screenshots and icon:** TODO for the maintainer. A square PNG icon, 512 to 2048 px, at
-  `featured/brandscribe/.claude-plugin/icon.png` before the first save in the portal (the portal
-  takes the icon only once). Screenshots: a design system built from a short brand file; the
+- **Screenshots and icon:** TODO for the maintainer. A square PNG icon at
+  `featured/brandscribe/.claude-plugin/icon.png`; the size, path and when the portal takes it are
+  not stated on the policy, submit or checklist pages read for this pack, so check the portal.
+  Screenshots: a design system built from a short brand file; the
   re-sync's four lists; a `ui_check.py` report.
-- **Data handling answers:** reads or stores personal data: no. Sends data to other services: no.
-  Keeps data: only the files the user asks it to write, in the user's own folders. Intended for
+- **Data handling answers:** reads or stores personal data: no. Sends data to other services: only to
+  the user's own claude.ai account (a Design System, on request) and to web pages the user names,
+  which it fetches. Keeps data: only the files the user asks it to write, in the user's own folders. Intended for
   people under 18: no.
 
 ### 2. pacewright
@@ -71,14 +73,17 @@ portal.
   `featured/pacewright/.claude-plugin/icon.png`. Screenshots: a `check` reading with its mode; a
   `fit` table; a `spend` table with counts only.
 - **Data handling answers:** reads personal data: yes, only in `spend` mode, on request, from
-  local session transcripts, keeping counts and 60-character prompt heads. Sends data to other
-  services: no. Keeps data: three small local files the user owns. Intended for people under 18:
-  no.
+  local session transcripts, keeping counts and 60-character prompt heads; those excerpts enter
+  Claude's conversation, so they reach Anthropic's model service like any chat text. Sends data to
+  other services: the skill sends nothing of its own, but it calls the GitHub billing API and
+  `gh api rate_limit` with the user's own GitHub login, and the opt-in `share` bundle is built
+  only on request and passed on only by the user. Keeps data: three small local files the user
+  owns. Intended for people under 18: no.
 
 ## Policy self-check
 
 Result for each row: pass, hold (a reviewer reads it), or warn. Checked with the file scan behind
-this pack and `claude plugin validate` (both plugins: "Validation passed", one warning: no icon).
+this pack and `claude plugin validate` (both plugins: "Validation passed", one warning: no icon). Rows marked hold or needs decision stay open for pacewright until the maintainer decides.
 
 | Rule (source) | brandscribe | pacewright |
 |---|---|---|
@@ -96,14 +101,14 @@ this pack and `claude plugin validate` (both plugins: "Validation passed", one w
 | No access to Claude's memory or chat history (policy 1) | pass | **hold**: `spend` reads local transcripts |
 | Collect only what is needed (policy 1) | pass | pass: counts and prompt heads only |
 | No hidden or encoded instructions; no runtime instructions from outside (policy 2) | pass | pass |
-| Descriptions match what the plugin does (policy 2) | pass | pass |
+| Descriptions match what the plugin does (policy 2) | pass | **hold**: the README now lists the transcript reads, the GitHub reads with the user's login and the opt-in share bundle; confirm the portal description says the same |
 | Three working example prompts (policy 3) | pass | pass |
 | Contact, support and troubleshooting documented (policy 3) | pass: `SUPPORT.md` | pass: `SUPPORT.md` |
-| Privacy policy if it collects data or calls a remote service (policy 3; terms) | not needed | not needed: nothing leaves the machine |
+| Privacy policy if it collects data or calls a remote service (policy 3; terms) | needs decision: it fetches web pages and writes to the user's claude.ai account on request | **needs decision**: it calls GitHub with the user's login and `spend` excerpts enter the conversation; expect a privacy policy to be asked for |
 | Vulnerability-report channel (terms) | pass: `SECURITY.md`, private advisory form | pass |
 | Not in a prohibited use: money, generative media, ads, adult (policy 4) | pass | pass |
 | No implied partnership or endorsement (terms) | pass ("Made for Claude's Design System type") | pass |
-| Listing icon (portal) | **warn**: none yet | **warn**: none yet |
+| Listing icon (portal) | **warn**: none yet; check the portal for size and format | **warn**: none yet; check the portal for size and format |
 
 ## Release standard
 
@@ -126,7 +131,7 @@ this pack and `claude plugin validate` (both plugins: "Validation passed", one w
 
 Only the maintainer does these steps. Each one is an account or publish action.
 
-1. Add a square PNG icon, 512 to 2048 px, at `featured/brandscribe/.claude-plugin/icon.png`, and merge it to `main`.
+1. Add a square PNG icon at `featured/brandscribe/.claude-plugin/icon.png`, and merge it to `main`. Check the portal for the accepted size and format; no page read for this pack states them.
 2. Sign in to claude.ai on a paid plan and connect GitHub there, with an account that can push to `revenantworks/claude-skills`.
 3. Open the developer portal at <https://claude.ai/directory/manage> and select **Submit new**, then **Plugin bundle**.
 4. Enter repository `revenantworks/claude-skills`, plugin path `featured/brandscribe`, and leave the branch empty so it follows `main`.
@@ -135,5 +140,5 @@ Only the maintainer does these steps. Each one is an account or publish action.
 7. On **Compliance**, set a contact address that is not a personal one and select the four acknowledgements.
 8. Keep **GitHub push webhook**, leave auto-publish off, and select **Submit for review**.
 9. When the version passes, select **Publish** on the plugin's page.
-10. Decide pacewright: submit it as it is (expect a hold), or wait for a foundation release that gates `spend`.
+10. Decide pacewright: make `spend` opt-in or remove it in a foundation release before submitting; submitting as it is invites a reviewer hold or refusal.
 11. For pacewright, add its icon at `featured/pacewright/.claude-plugin/icon.png`, then repeat steps 3 to 9 with plugin path `featured/pacewright` and its own data handling answers.
