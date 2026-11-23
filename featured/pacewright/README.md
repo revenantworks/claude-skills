@@ -1,7 +1,7 @@
 # pacewright
 
 **Spend a Claude subscription on purpose.** A one-skill plugin: `revenantworks-foundation-pacewright`
-from the foundation pack, version 1.0.0.
+from the foundation pack, version 1.0.1.
 
 ```
 /plugin marketplace add revenantworks/claude-skills
@@ -30,6 +30,33 @@ in one small data file any fan-out can read.
 - *"pacewright fit"* with a list of planned work.
 
 **Needs:** nothing. It ships no code.
+
+## What it runs, reads and sends
+
+- **Runs** nothing: the plugin ships no code, hooks or servers.
+- **Reads** a usage reading you type in, or the statusline meter file `~/.claude/usage-windows.json`
+  when your own statusline writes one, and its own calibration and mode files.
+- **Writes** three small local files: the budget decision file `~/.dispatch/budget-decision.json`,
+  a calibration file and a mode overlay. Nothing else, and never on a schedule of its own.
+- **`spend` mode reads local session transcripts, and only when you ask for it.** It reads the
+  session logs Claude Code already keeps on your disk and reports token counts per skill, per
+  subagent and per prompt. The report holds counts, ids, skill names and the first 60 characters
+  of each expensive prompt, and nothing else; it never leaves your machine. On a surface with no
+  local transcripts it says so and uses the meters only. Every other mode works without it.
+- **Sends** nothing anywhere. It collects no personal data and keeps no logs beyond the three
+  files above.
+
+## Support and security
+
+Questions and bugs: [Discussions](https://github.com/revenantworks/claude-skills/discussions) and
+[issues](https://github.com/revenantworks/claude-skills/issues/new/choose). Security problems: the
+[private form](https://github.com/revenantworks/claude-skills/security/advisories/new), never a
+public issue. Version 1.x gets security fixes until 2027-11-23; see [`SUPPORT.md`](SUPPORT.md) and
+[`SECURITY.md`](SECURITY.md).
+
+> **No warranty.** This software is free and provided "AS IS", without warranty of any kind, under the Apache
+> License 2.0 (sections 7 and 8). You use it at your own risk. Nothing here promises support, updates or
+> fitness for any purpose.
 
 > [!IMPORTANT]
 > **Install this plugin or the foundation pack, not both.** Both carry the same skill name; the
