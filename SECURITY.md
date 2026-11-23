@@ -2,7 +2,13 @@
 
 ## Supported versions
 
-Only the latest release gets security fixes.
+Only the latest release in a supported line gets security fixes. The dates match
+[`SUPPORT.md`](SUPPORT.md).
+
+| Line | Covers | Security fixes until |
+|---|---|---|
+| 1.x | every pack and every featured plugin in `featured/` | 2027-11-23 |
+| older | anything not in a row above | none (end-of-life) |
 
 ## What to report
 
@@ -20,10 +26,23 @@ Report problems such as:
 Do not open a public issue. Use the private form:
 <https://github.com/revenantworks/claude-skills/security/advisories/new>.
 
+This form is also the vulnerability-report channel for every plugin from this repository that is
+listed in Anthropic's plugin directory. Reports from Anthropic and from anyone else go to the same
+place and get the same handling.
+
 Include what you found, where it is (file and line), and steps to reproduce it. Use
 placeholders instead of real secrets or other people's data.
 
 ## What to expect
 
 We aim to reply within 7 days and to share a fix or a plan within 30 days. These are goals,
-not guarantees. We credit reporters in the release notes unless they ask us not to.
+not guarantees. Every report is investigated with a reasonable standard of care. We credit
+reporters in the release notes unless they ask us not to.
+
+## Disclosure
+
+Disclosure is coordinated: a fix or a plan comes first, then a public advisory. The reporter is
+credited if they want it.
+
+The software is provided "AS IS", without warranty, under the Apache License 2.0 (sections 7
+and 8).
