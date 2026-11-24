@@ -2,7 +2,7 @@
 
 Counts: 33 queries (17 should, 16 should-not, 7 pairs)
 
-Provenance: written for 0.1.0 (2026-10-01). Status: authored, not run. Read each query cold against the name and description only, and compare with the Expected column. The native suite (`evals/<case>/`) runs twelve of these rows under `claude plugin eval`, beside behaviour cases. **Re-anchored to v1.0.1, 2026-11-24:** 1.0.0 launch version; suite content unchanged from the build the A6 evals ran against.
+Provenance: written for 0.1.0 (2026-10-01). Status: authored, not run. Read each query cold against the name and description only, and compare with the Expected column. The native suite (`evals/<case>/`) runs twelve of these rows under `claude plugin eval`, beside behaviour cases. **Re-anchored to v1.0.1, 2026-11-24:** the description dropped "layout" from its brandscribe boundary (it now reads "brand voice brandscribe's"), so the routing surface moved; the suite's content is unchanged. A blind re-check of the brandscribe-boundary rows is owed: judge them cold against the new description.
 
 Cold run 2026-10-01 (run J1): blind list from `tools/blind_queries.py`, judged on the worker tier against all 30 pack descriptions: 24/24 agreed. Tiers checked: worker only; the fast and top tiers are unchecked, and the native `claude plugin eval` run is A6's.
 
