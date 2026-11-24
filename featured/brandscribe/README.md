@@ -1,7 +1,7 @@
 # brandscribe
 
 **One brand definition, everywhere Claude builds.** A one-skill plugin:
-`revenantworks-scribe-brandscribe` from the scribe pack, version 1.0.0.
+`revenantworks-scribe-brandscribe` from the scribe pack, version 1.0.1.
 
 ```
 /plugin marketplace add revenantworks/claude-skills
@@ -18,7 +18,7 @@ guide. It ships with no brand: nothing exists until you build one or hand one in
 
 ## Why it is different
 
-- **Built for Claude Design.** It reads the live Design System type's own instructions first, then
+- **Made for Claude's Design System type.** It reads the live Design System type's own instructions first, then
   builds the system from your written definition: tokens, brand book, fonts and marks. A deck or
   design made on claude.ai picks the brand up from there.
 - **Re-sync without losing edits.** When the brand changes, it compares the live system with the
@@ -38,6 +38,31 @@ guide. It ships with no brand: nothing exists until you build one or hand one in
 **Needs:** nothing to work. The Artifact tool's Design System type makes the live system; without
 it every deliverable comes back as files. Two optional Python checkers use only Python's built-in
 library, so there is nothing to install.
+
+## What it runs, reads and sends
+
+- **Reads** only what you point it at: brand files, a style guide, a repo's `DESIGN.md` or
+  `VOICE.md`, a built page or `dist/` folder, and a web page you name (through Claude's own web
+  fetch or browser tools, when the surface has them).
+- **Writes** brand definition files, `DESIGN.md`, `VOICE.md` and guides in the folder you name,
+  and, when you ask and the surface has it, a Design System artifact in your own claude.ai account
+  through the Artifact tool.
+- **Runs** two optional checkers, `scripts/tokens_check.py` and `scripts/ui_check.py`, with
+  Python's built-in library only. They read local files and open no network connection.
+- **Sends** nothing anywhere else. It collects no personal data, keeps no logs, and does not read
+  Claude's memory or chat history.
+
+## Support and security
+
+Questions and bugs: [Discussions](https://github.com/revenantworks/claude-skills/discussions) and
+[issues](https://github.com/revenantworks/claude-skills/issues/new/choose). Security problems: the
+[private form](https://github.com/revenantworks/claude-skills/security/advisories/new), never a
+public issue. Version 1.x gets security fixes until 2027-11-23; see [`SUPPORT.md`](SUPPORT.md) and
+[`SECURITY.md`](SECURITY.md).
+
+> **No warranty.** This software is free and provided "AS IS", without warranty of any kind, under the Apache
+> License 2.0 (sections 7 and 8). You use it at your own risk. Nothing here promises support, updates or
+> fitness for any purpose.
 
 > [!IMPORTANT]
 > **Install this plugin or the scribe pack, not both.** Both carry the same skill name; the listing

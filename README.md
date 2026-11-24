@@ -392,6 +392,13 @@ The repository opens with the first free release. Watch this one for the link.
 
 ## Licence
 
+> **No warranty.** This software is free and provided "AS IS", without warranty of any kind, under the Apache
+> License 2.0 (sections 7 and 8). You use it at your own risk. Nothing here promises support, updates or
+> fitness for any purpose.
+
+Support channels and the dated support period are in [`SUPPORT.md`](SUPPORT.md); how to report a
+security problem is in [`SECURITY.md`](SECURITY.md).
+
 Apache License 2.0. The root [`LICENSE`](LICENSE) is the verbatim Apache-2.0 text and the root
 [`NOTICE`](NOTICE) carries the attribution notice. Every skill folder carries its own `LICENSE` and a
 `NOTICE` generated from its pack's, so a skill copied on its own keeps both. Every release is listed in
