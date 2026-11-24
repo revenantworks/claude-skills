@@ -25,7 +25,7 @@ standalone profile. The current version is in `.claude-plugin/plugin.json`.
 
 **Featured:** pacewright also ships on its own as a one-skill plugin (`/plugin install pacewright@revenantworks`).
 
-**Capstones** in `capstone/` drive the wrights end to end (landwright, the tenth, joins their rosters at the next rework): Hallmark Run (build one skill) and
+**Capstones** in `capstone/` drive the wrights end to end (all ten wrights, landwright as the land step): Hallmark Run (build one skill) and
 Upkeep Run (maintenance: pace the sweep, find what is stale, audit, fix behind one gate, verify,
 release or hand off).
 

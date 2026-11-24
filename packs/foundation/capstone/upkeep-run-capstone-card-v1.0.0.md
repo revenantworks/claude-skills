@@ -11,12 +11,13 @@ Inputs: {{pack}} — pack + profile (default foundation / standalone) ·
 {{scope}} — optional cap (a member list, or a class of finding) ·
 {{budget}} — optional; state it up front so LEG 4 can scope to it.
 
-ROSTER (nine wrights, all on this card since 2026-10-08)
+ROSTER (ten wrights, all on this card since 2026-11-24)
 pacewright (PACE, and the fit at LEG 4) · skillwright (LEG 0's upkeep sweep,
 LEG 2's evals and slim audits, LEG 5's doctrine, suite and slim fixes) ·
 scoutwright (LEG 1) · promptwright, rigwright, agentwright (LEG 2's audits, and
 LEG 5's fixes of their own kind) · dispatchwright (LEG 5 when the fixes fan out, LEG 6's reconcile) ·
-grillwright (LEG 4's owner-decision items) · handoffwright (CLOSE).
+grillwright (LEG 4's owner-decision items) · landwright (LEG 7's push, PR and
+merge) · handoffwright (CLOSE).
 
 Precondition: the pack is on `main`, working tree clean, and `build.py --check`
 passes BEFORE anything is touched. If it does not, stop and report — an upkeep
@@ -224,7 +225,9 @@ Member versions moved; the PACK version has not. Decide and act:
   it is correctly declining to update something claiming not to have changed.
 · Root CHANGELOG entry · `spec.md` status line and deferral register · tag
   `<pack>-vX.Y.Z` · push · then the install-side update commands for the human
-  to run (an agent cannot run the interactive plugin flow).
+  to run (an agent cannot run the interactive plugin flow). landwright lands the
+  fix branch and, with the owner's go, the tag and release; without it, the same
+  steps by hand.
 ON NO RELEASE: state it — "in-place at current member versions, no tag" — and
 say what that leaves stale for anyone running the installed plugin rather than
 the repo. A version freeze in the repo's own rules always lands here.
