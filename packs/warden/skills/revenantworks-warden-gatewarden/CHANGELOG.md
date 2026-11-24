@@ -1,5 +1,9 @@
 # Changelog — revenantworks-warden-gatewarden
 
+## [1.1.1] — 2026-11-24
+
+- description: restore the 'a request to find and delete the biggest files or folders' cue the 1.1.0 trim dropped (the shell case map-behaviour-delete-biggest stopped loading the skill and deleted the folder itself); reach.md map step 4 and the SKILL.md map row give the treemap reply's local-file sentence word for word (map-behaviour-treemap-local said 'single HTML file on your machine', which never says local file)
+
 ## [1.1.0] — 2026-11-24
 
 - description: trimmed to 772 chars (from 868); no split into a permissions skill and a disk-map skill (owner pick 2026-11-24). Reopen the split when the description passes 1,000 chars or the observer log holds 5 disk-use observations against gatewarden; recorded in the pack registry row and SOURCES.md
