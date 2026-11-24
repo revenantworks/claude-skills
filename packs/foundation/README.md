@@ -19,12 +19,13 @@ standalone profile. The current version is in `.claude-plugin/plugin.json`.
 | `revenantworks-foundation-rigwright` | Where a standing rule lives, and the config Claude reads before work | *"My CLAUDE.md rules get ignored"* |
 | `revenantworks-foundation-dispatchwright` | A session's fan-out: plan, tier, dispatch, reconcile | *"Plan this change across six repos"* |
 | `revenantworks-foundation-handoffwright` | Committed session handoffs and forward task briefs | *"Write the handoff"* |
+| `revenantworks-foundation-landwright` | Lands committed work on main; checks a Godot addon before it ships | *"Land the parser branch"* |
 | `revenantworks-foundation-pacewright` | Subscription usage pacing across the meters | *"I'm at 70% weekly, what can still run?"* |
 | `revenantworks-foundation-scoutwright` | Searches the web for what is new in Claude and brings back an adopt list to improve your skills, projects and setup; blocked sites via researchscribe | *"What changed in Claude Code since last month, and what should I adopt?"* |
 
 **Featured:** pacewright also ships on its own as a one-skill plugin (`/plugin install pacewright@revenantworks`).
 
-**Capstones** in `capstone/` drive all nine wrights end to end: Hallmark Run (build one skill) and
+**Capstones** in `capstone/` drive the wrights end to end (landwright, the tenth, joins their rosters at the next rework): Hallmark Run (build one skill) and
 Upkeep Run (maintenance: pace the sweep, find what is stale, audit, fix behind one gate, verify,
 release or hand off).
 
@@ -68,6 +69,9 @@ blocker.
 | Bench your skill roster against public skill and plugin repos: one build, adopt or skip verdict per find (build rows go to skillwright, adopt rows to trustwarden first) | scoutwright | "bench my skills against what's out there", `scoutwright bench` |
 | A committed session handoff or a forward task brief, on demand or before a pause | handoffwright | "write the handoff", "pause here", `handoffwright` |
 | Hand the work to a fresh background agent now, its state verified against git | handoffwright | "hand this to a fresh agent", `handoffwright now` |
+| Land committed work on main: local CI, the branch to `origin`, the PR, hosted CI, a merge commit, the run on main read back | landwright | "land it", "get this merged", `landwright` |
+| Check whether a branch is ready to land, or read a hosted CI run | landwright | "is this ready to merge", `landwright check`, `landwright read` |
+| Check a Godot addon before it ships (a tag or release waits for the owner's go) | landwright | "is this addon ready to release", `landwright ship` |
 
 Rows owned by other packs are optional pointers across packs: a runtime security scan of what an
 agent may do, MCP scope included, is gatewarden's, and vetting someone else's skill, plugin or MCP
@@ -127,6 +131,10 @@ and docs prose and messages for a channel are commscribe's (scribe pack).
   else.** handoffwright covers the session-level handoff before a fan-out, between fan-outs, or in a
   session that never dispatches, and commits what it writes in the same call. Where the session has
   no filesystem to commit into, that is task-observer's handoff-doc mode instead.
+- **landwright lands; handoffwright pauses; dispatchwright fans out.** Getting committed work onto
+  main (local CI, the push to `origin`, the PR, hosted CI, the merge and the run on main) is
+  landwright's, whoever wrote the work. A committed pause for a later session is handoffwright's,
+  and a fan-out's own landing rules stay dispatchwright's, which names landwright as the land leg.
 
 ### Conventions
 

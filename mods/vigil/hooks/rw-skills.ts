@@ -10,6 +10,7 @@ export const RW_SKILLS: readonly RwSkill[] = [
   { short: "rigwright", pack: "foundation", member: "revenantworks-foundation-rigwright", about: "Decides where a standing rule lives and builds the config Claude reads before work…" },
   { short: "dispatchwright", pack: "foundation", member: "revenantworks-foundation-dispatchwright", about: "Runs a session's fan-out — splits a large request into tiered, recoverable units…" },
   { short: "handoffwright", pack: "foundation", member: "revenantworks-foundation-handoffwright", about: "Writes handoffs — a committed session state verified against git, or a forward task brief…" },
+  { short: "landwright", pack: "foundation", member: "revenantworks-foundation-landwright", about: "Lands finished work on main — from committed local work to a merged pull request with a…" },
   { short: "pacewright", pack: "foundation", member: "revenantworks-foundation-pacewright", about: "Paces a Claude subscription's usage — how fast to spend this week, what can still run at…" },
   { short: "scoutwright", pack: "foundation", member: "revenantworks-foundation-scoutwright", about: "Finds what changed in Claude — docs, release notes, changelogs, GitHub and community…" },
   { short: "pixelsmith", pack: "gamedev", member: "revenantworks-gamedev-pixelsmith", about: "Directs pixel art that must read at several zoom scales at once — per-scale palette and…" },
