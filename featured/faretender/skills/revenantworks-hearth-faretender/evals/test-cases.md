@@ -1,6 +1,6 @@
 # Test Cases — revenantworks-hearth-faretender
 
-- Provenance: revenantworks-hearth-faretender · v1.0.0 · derived 2026-10-31. Authored, not run.
+- Provenance: revenantworks-hearth-faretender · v1.0.0 · derived 2026-10-31. Authored, not run. **Re-anchored to v1.0.1, 2026-11-23:** Description trimmed from 911 to 670 chars (SK1a/SK1r P1 listing trim); triggers and seams kept.
 - Counts: 12 cases, assertion-only. One per entry, one per margin and beaten line, plus restraint and injection.
 
 ## C1 — Bare invocation

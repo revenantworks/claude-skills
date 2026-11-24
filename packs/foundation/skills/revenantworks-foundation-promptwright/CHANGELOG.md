@@ -1,5 +1,9 @@
 # Changelog — revenantworks-foundation-promptwright
 
+## [1.0.1] — 2026-11-23
+
+- Description seam sentence cut to the nearest owners (dispatchwright, skillwright, researchscribe, grillwright), 656 to 584 chars
+
 ## [1.0.0] — 2026-10-01
 
 2026-10-16 (owner eval run, U38): case `trigger-slim-cost-cue` now carries the system prompt it asks to cut; with none pasted the run asked for it and never loaded the skill.

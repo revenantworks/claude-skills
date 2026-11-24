@@ -1,10 +1,10 @@
 ---
 name: revenantworks-hearth-faretender
-description: Finds the real cost of a trip and catches price drops after booking. Gives one all-in total per hotel, flight or rental car across sites, every tax, resort fee, city tax and parking added; pulls money-only complaints from recent reviews; checks a booked refundable stay or fare for a drop (rebook first, cancel second); puts flights, check-ins and cancel deadlines on the calendar from confirmations; checks a delayed or cancelled flight against EU261, UK261 and US DOT rules and drafts the claim. Trigger on compare these hotels, real total, hidden fees, fees reviewers mention, resort fee, watch my booking, did my hotel get cheaper, add my trip to my calendar, my flight was delayed, can I get a refund, or say faretender (compare, fees, watch, calendar, claim). Never books, cancels or pays. Points and miles are travel-hacking-toolkit's; the daily schedule agentwright's; vetting a connector trustwarden's.
+description: Finds the real cost of a trip and catches price drops after booking. One all-in total per hotel, flight or rental car with every tax, resort fee and parking added; money-only complaints from recent reviews; a drop check on a booked refundable stay or fare (rebook first, cancel second); trip dates on the calendar; EU261, UK261 and US DOT claims for a delayed flight. Trigger on compare these hotels, real total, hidden fees, did my hotel get cheaper, my flight was delayed, or say faretender (compare, fees, watch, calendar, claim). Never books, cancels or pays. Points and miles are travel-hacking-toolkit's; schedules agentwright's; vetting a connector trustwarden's.
 license: Apache-2.0
 compatibility: Standard profile. Reads travel connectors when connected (Brek, Tripadvisor, Booking.com, Expedia) and web search; Gmail to read confirmations; Google Calendar to add events after a yes. Each absent connector is skipped and named in the output; with none, asks for a pasted quote or confirmation. Ships no scripts. Writes only calendar events the user approves and claim drafts as text. Stores nothing between runs.
 metadata:
-  version: "1.0.0"
+  version: "1.0.1"
   profile: standard
   pack: hearth
   brand: revenantworks
