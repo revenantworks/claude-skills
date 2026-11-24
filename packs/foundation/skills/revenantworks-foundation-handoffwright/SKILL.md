@@ -105,13 +105,9 @@ should happen next and has no landed shas yet, but Gather still runs to capture 
    location, the path and the word *uncommitted* in place of a sha), the instruction to
    read that file first, and anything the file itself cannot carry: a decision made out loud and
    not yet written down, an access or environment note, the single thing to do first, and what
-   not to do. Every locator in it is read from git at write time, in the repo the file lives in,
-   in the same call as the commit: the sha from `git rev-parse HEAD`, the branch from `git
-   rev-parse --abbrev-ref HEAD` (or `git branch --contains <sha>`), and, when the commit came from
-   a worktree, that worktree's path. Never a branch name copied from the work the brief describes
-   (#0684). The committed file is the record; this prompt is the pointer to it. A Write that
-   ends at the sha has done half the job, and the half it skipped is the half the user retypes
-   wrong.
+   not to do. Every locator in it (sha, branch, worktree path) is read from git in the same call
+   as the commit, never copied from the work the brief describes: the template's Starter prompt
+   rules (#0684). The committed file is the record; this prompt is the pointer to it.
 
 **Now** ("handoffwright now", "hand this to a fresh agent and keep going"): Write steps 1-3
 unchanged, then the starter prompt launches a fresh background agent instead of waiting for a

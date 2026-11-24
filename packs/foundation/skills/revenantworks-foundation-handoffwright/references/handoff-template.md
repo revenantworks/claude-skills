@@ -142,6 +142,12 @@ Rules for it:
 - **Name the sha.** It is what lets the next session notice the repo moved after the handoff was
   written — the difference between a starting point and a wrong answer. A gitignored
   location has no sha: say *uncommitted* and name the path instead, never an invented one.
+- **Read every locator from git at write time** (#0684), in the repo the file lives in and in the
+  same call as the commit: the sha from `git rev-parse HEAD`, the branch from
+  `git rev-parse --abbrev-ref HEAD` (or `git branch --contains <sha>`), and, when the commit came
+  from a worktree, that worktree's path. Never a branch name copied from the work the brief
+  describes. A Write that ends at the sha has done half the job, and the half it skipped is the
+  half the user retypes wrong.
 - **Never hand over a handle this session was issued** (the brief rule above applies here too).
 - **Name the clone the machine already uses.** For a local session, resolve the repo's existing
   checkout first (the machine's layout rule, or a clone whose `git remote get-url origin` matches)

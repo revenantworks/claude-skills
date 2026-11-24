@@ -3,6 +3,10 @@
 ## [1.1.0] — 2026-11-24
 
 - Description neighbour list cut to the nearest siblings for the listing budget (SK1a trim list, run 2026-11-23-weekly-loop); no behaviour change.
+- Body back under its 3200-token budget (3263 to 3187 by `build.py --footprint`): the starter
+  prompt's locator detail (sha, branch and worktree read from git in the commit call, #0684)
+  moved from Write step 4 to `handoff-template.md` → Starter prompt, which step 4 already reads.
+  No behaviour change.
 - Review RV-SK2c: the no-filesystem cue (task-observer's handoff-doc mode) is kept; trigger row #14 routes on it.
 
 - Never pushes (owner pick 2026-11-24): the Write step commits locally and names the push as the
