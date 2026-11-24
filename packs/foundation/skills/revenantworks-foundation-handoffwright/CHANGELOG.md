@@ -1,6 +1,6 @@
 # Changelog — revenantworks-foundation-handoffwright
 
-## [1.1.0] — 2026-11-23
+## [1.1.0] — 2026-11-24
 
 - Never pushes (owner pick 2026-11-24): the Write step commits locally and names the push as the
   landing step's job, at a compaction or usage-limit warning too; compatibility, the report line,

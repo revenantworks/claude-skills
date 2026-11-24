@@ -1,6 +1,6 @@
 # Changelog — revenantworks-warden-gatewarden
 
-## [1.0.5] — 2026-11-23
+## [1.1.0] — 2026-11-24
 
 - description: trimmed to 772 chars (from 868); no split into a permissions skill and a disk-map skill (owner pick 2026-11-24). Reopen the split when the description passes 1,000 chars or the observer log holds 5 disk-use observations against gatewarden; recorded in the pack registry row and SOURCES.md
 - compact_gate (new PreToolUse hook, `Write|Edit|MultiEdit|NotebookEdit`, soft rule `compact_gate`): refuses a subagent's write to an existing file when its transcript shows a `compact_boundary` after its last read of that file, so a unit re-reads instead of writing from the compaction summary (0730: the autoCompactWindow replay proof saw a Write and an Edit straight after two auto-compactions). Fail open. Tests: `test_hooks_compact_gate.py`, 28 (14 red with the gate off)

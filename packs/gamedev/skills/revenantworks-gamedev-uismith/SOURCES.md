@@ -57,7 +57,7 @@ fetched by this build. Their licences were not re-read here; nothing of theirs i
 | Game menus and HUD (resolution set, gamepad focus path) | beaten† | beaten† | beaten† | met | beaten (web only) | `surfaces.md`: anchors and containers, first focus, focus neighbours. Case: `trigger-godot-pause-menu` |
 | Plugin panes in the host theme | beaten | beaten | beaten | beaten | met | VS Code body classes in the theme set. Case: `trigger-pane-dark-theme` |
 | Palettes and fonts | out of scope | out of scope | met | beaten by U4 | out of scope | Law 1: tokens come from brandscribe or the project. Near-miss: a palette request routes to brandscribe |
-| Generic-look checklist | met | out of scope | met | met | met | Ours is a set of questions answered in the brief; brandscribe asks similar questions of a built page |
+| Generic-look checklist | met | out of scope | met | met | met | Ours is a set of questions answered in the brief; `critique` (moved from brandscribe `ui`, 2026-11-24) asks the same questions of a built page |
 
 † **Unverified.** U1-U4 were read by name and description only, not fetched. The probe's browser path
 first ran on 2026-11-03, on real clean and overflowing pages. Restore a plain "beaten" after one fetch

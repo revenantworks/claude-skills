@@ -1,6 +1,6 @@
 # Changelog — revenantworks-foundation-dispatchwright
 
-## [1.1.0] — 2026-11-23
+## [1.1.0] — 2026-11-24
 
 - Body under 5,000 tokens (20,954 → 19,585 chars, ≈5,238 → ≈4,896 tokens at chars/4), so the whole
   body comes back after a compaction; §5 and §6 end near token 3,979 (0730). No rule dropped: the

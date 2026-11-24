@@ -2,7 +2,7 @@
 
 Counts: 27 queries (17 should, 10 should-not, 3 pairs)
 
-Provenance: derived from SKILL.md v1.0.0 (2026-10-13); re-anchored to v1.2.0, 2026-11-23 (2026-11-11), which adds a reference only. Status: **authored, not run** — a cold judge
+Provenance: derived from SKILL.md v1.0.0 (2026-10-13); re-anchored to v1.2.0, 2026-11-24, which adds the Critique mode moved from brandscribe `ui`. Status: **authored, not run** — a cold judge
 reading only name + description has not scored this table yet. Read each query against the name and
 description alone and compare with the Expected column. 17 should fire, 10 should not.
 

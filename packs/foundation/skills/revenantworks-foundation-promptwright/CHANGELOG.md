@@ -1,6 +1,6 @@
 # Changelog — revenantworks-foundation-promptwright
 
-## [1.0.1] — 2026-11-23
+## [1.0.1] — 2026-11-24
 
 - Description seam sentence cut to the nearest owners (dispatchwright, skillwright, researchscribe, grillwright), 656 to 584 chars
 

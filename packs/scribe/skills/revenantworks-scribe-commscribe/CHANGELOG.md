@@ -1,5 +1,9 @@
 # Changelog — revenantworks-scribe-commscribe
 
+## [1.0.1] — 2026-11-24
+
+- Description: layout no longer routes to brandscribe (the UI floor moved to uismith on 2026-11-24); brand voice stays brandscribe's
+
 ## [1.0.0] — 2026-10-01
 
 2026-10-16 (owner eval run, U38): humanize's closing line names a removed emoji or dash and never reprints it (case `humanize-facts-frozen`); the description's skillwright seam names a skill's own files (near-miss `nearmiss-skill-file` loaded commscribe); trigger row Y1 carries its text instead of `[paste]`.

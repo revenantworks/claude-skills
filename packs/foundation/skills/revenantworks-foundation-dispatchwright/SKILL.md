@@ -78,7 +78,8 @@ unfinished or unproven rows; never restart a row whose commit is on origin. A co
 resume: the session re-reads the ledger and its handover block and never re-launches a unit still
 running, because background units and session crons survive it. Compact on purpose between
 waves, with nothing running and the checkpoint written (pacewright `modes.md`). `resume` is for a
-crash, a restart or an owner request.
+crash, a restart or an owner request. A workflow wave relaunches from its archived script pasted
+inline (`ledger-schema.md` — Resuming a workflow wave, #0081).
 
 **`dispatchwright audit`**: run Reconcile (§8) and report. Read-only; it never re-dispatches.
 

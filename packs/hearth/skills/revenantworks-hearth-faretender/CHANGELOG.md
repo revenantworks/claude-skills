@@ -2,7 +2,7 @@
 
 All notable changes to this skill are recorded here. Format: Keep a Changelog. Versions: SemVer.
 
-## [1.0.1] — 2026-11-23
+## [1.0.1] — 2026-11-24
 
 - Description trimmed from 911 to 670 chars (SK1a/SK1r P1 listing trim); triggers and seams kept
 

@@ -6,4 +6,4 @@ min: 0
 max: 0
 arm: both
 ---
-brandscribe must stay quiet: a chart is dataviz's, not a UI floor review.
+brandscribe must stay quiet: a chart is dataviz's, and no brand is named.

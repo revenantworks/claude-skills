@@ -1,6 +1,6 @@
 # Test cases: commscribe
 
-Provenance: written for 0.1.0 (2026-10-01). Status: authored, not run. Assertion-only. Every fixture is invented and generic. Native cases run with `claude plugin eval` in two arms (with and without the skill); the `Without:` line says what the no-skill arm is expected to miss. **Re-anchored to v1.0.0, 2026-10-01:** 1.0.0 launch version; suite content unchanged from the build the A6 evals ran against.
+Provenance: written for 0.1.0 (2026-10-01). Status: authored, not run. Assertion-only. Every fixture is invented and generic. Native cases run with `claude plugin eval` in two arms (with and without the skill); the `Without:` line says what the no-skill arm is expected to miss. **Re-anchored to v1.0.1, 2026-11-24:** 1.0.0 launch version; suite content unchanged from the build the A6 evals ran against.
 
 ## T1: Slack draft under defaults
 
