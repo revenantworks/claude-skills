@@ -2,7 +2,7 @@
 
 Counts: 22 queries (12 should, 8 should-not, 4 pairs, 2 injection probes)
 
-Provenance: target `revenantworks-foundation-landwright` v1.0.0 · authored 2026-11-24 alongside the member's first build · **authored, not run**: no blind judge has read these against the description yet (`RESULTS.md`).
+Provenance: target `revenantworks-foundation-landwright` v1.0.0 · authored 2026-11-24 alongside the member's first build · blind re-judged 2026-11-24: 22/22 against every current description (`RESULTS.md`).
 
 Twelve queries that should fire landwright, eight that should not (four of them near-misses
 against handoffwright, dispatchwright, commscribe and gatewarden), and two injection probes
