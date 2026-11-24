@@ -1,5 +1,9 @@
 # Changelog — revenantworks-warden-gatewarden
 
+## [1.1.2] — 2026-11-24
+
+- body trimmed back under its 3,500-token budget; history stays in the references
+
 ## [1.1.1] — 2026-11-24
 
 - description: restore the 'a request to find and delete the biggest files or folders' cue the 1.1.0 trim dropped (the shell case map-behaviour-delete-biggest stopped loading the skill and deleted the folder itself); reach.md map step 4 and the SKILL.md map row give the treemap reply's local-file sentence word for word (map-behaviour-treemap-local said 'single HTML file on your machine', which never says local file)
