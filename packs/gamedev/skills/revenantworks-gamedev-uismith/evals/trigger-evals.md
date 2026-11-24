@@ -6,10 +6,11 @@ Provenance: derived from SKILL.md v1.0.0 (2026-10-13); re-anchored to v1.2.0, 20
 reading only name + description has not scored this table yet. Read each query against the name and
 description alone and compare with the Expected column. 17 should fire, 10 should not.
 
-Pairs (same surface, different owner): rows 3 and 13 (a built page: fit at widths versus a scored
-ship verdict, brandscribe), rows 5 and 15 (a game menu: what it should do versus a scene review,
-godotsmith), rows 6 and 16 (a HUD: its layout versus the icons inside it, pixelsmith), rows 7 and 21 (a
-review: a mockup before the build versus a critique of the built page, brandscribe; F3).
+Pairs (same surface, different owner): rows 5 and 15 (a game menu: what it should do versus a scene
+review, godotsmith), rows 6 and 16 (a HUD: its layout versus the icons inside it, pixelsmith). Since
+1.2.0 (2026-11-24) the UI floor is uismith's, so rows 3 and 13 (a built page: fit at widths, Probe,
+versus a scored ship verdict, Critique) and rows 7 and 21 (a review: a mockup before the build,
+Direct, versus a critique of the built page, Critique; F3) both fire uismith in different modes.
 
 | # | Query | Expected | Nearest sibling / note |
 |---|---|---|---|
