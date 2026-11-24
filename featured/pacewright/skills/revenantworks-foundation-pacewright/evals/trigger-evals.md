@@ -48,7 +48,7 @@ would invoke pacewright, and compare against the expected column.
 | 21 | "Which model tier should this summarisation prompt run on?" | promptwright | A tier pick for one task; no meter or rate of spend is named. Added FX1 (A1 PW-4). |
 | 22 | "Trim this prompt so each call costs fewer tokens." | promptwright (slim) | One artifact's cost, behaviour held; "costs" is not a usage meter. Added FX1. |
 | 23 | "Wire a hook that writes my 5-hour reading to a file every turn." | rigwright | Placing what writes the meter file; pacewright only reads it. Added FX1. |
-| 24 | "Run a pace check every two hours on a schedule while I'm away." | agentwright | A scheduled pace check is agentwright's, by this description's own last clause. Added FX1. |
+| 24 | "Run a pace check every two hours on a schedule while I'm away." | agentwright | A scheduled pace check is agentwright's: agentwright's description claims the scheduled task, and pacewright's no longer names it (neighbour trim, 2026-11-24). Added FX1. |
 | 11 | "A new Haiku shipped — should it take any of our job types?" | scoutwright (fit) | Whether a new model should take a job type is scoutwright's `fit` card; pacewright measures the baseline only once a trial is set (#29). Moved from should-fire 2026-10-08 (audit K7-2-10). |
 | 28 | "Which of my skills keeps firing on the wrong requests?" | skillwright (diagnose) | A misfire is a description problem in one skill package, not a question of spend. The boundary pair's other half against #27. |
 | 34 | "Write the handoff before I compact this session." | handoffwright | Writing the handoff is handoffwright's ("a compaction warning" is in its triggers); pacewright only says one is owed. The pair with #32. Added 2026-10-13. |

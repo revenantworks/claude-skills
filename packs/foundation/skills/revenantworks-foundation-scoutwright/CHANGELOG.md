@@ -3,6 +3,7 @@
 ## [1.0.2] — 2026-11-24
 
 - Description neighbour list cut to the nearest siblings (SK1a trim list); no behaviour change.
+- Review RV-SK2c: "popular or little-known" is back in the bench clause; trigger rows #32 and #33 use those words.
 
 ## [1.0.1] — 2026-11-13
 
