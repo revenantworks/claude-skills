@@ -810,3 +810,17 @@ Close your report with:
 Your report should be reconcilable, not just credible: name the exact commit sha(s), so the
 dispatcher (or `dispatchwright audit`) can verify them against the repo rather than take your word
 for it.
+
+### Pushing self-tests
+
+Moved from SKILL.md §5 on 2026-11-24 (body budget); the rule is unchanged. A self-test of a script
+that also pushes is shaped in the plan (#0705): the guards go in a push-free module the self-test
+imports and the push stays a literal line in its own file, or the self-test goes to the owner up
+front. A split made after the push gate refuses reads as evasion.
+
+### Process and git isolation — controller side
+
+Moved from SKILL.md §6 on 2026-11-24 (body budget); the rules are unchanged. Kill by pid, never by
+image name; if unsure, leave it. Never combine `git -C` with `--work-tree`; never discard stderr on
+a writing git command. A brief that assumes an idle machine carries a load probe in the same call;
+if the user reports other work, ask before any heavy local launch (#0193).

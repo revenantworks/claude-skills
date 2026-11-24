@@ -1,6 +1,15 @@
 # Changelog — revenantworks-foundation-dispatchwright
 
-## [Unreleased]
+## [1.1.0] — 2026-11-23
+
+- Body under 5,000 tokens (20,954 → 19,585 chars, ≈5,238 → ≈4,896 tokens at chars/4), so the whole
+  body comes back after a compaction; §5 and §6 end near token 3,979 (0730). No rule dropped: the
+  `refresh` procedure moved to `tier-routing.md` — Refresh; §3 lanes and probes to
+  `doctrine-cases.md`; the §5 hosted-checks and land-branch detail to `meters.md` — Landing; the
+  pushing self-test shape and the §6 process-tree detail to `unit-brief-template.md`; the workflow
+  relaunch rule to `ledger-schema.md`. SKILL.md keeps a one-line pointer for each.
+- `ledger-schema.md` effort row: `inherited (session low)` passes the ledger guard,
+  `inherited (session)` fails it (observation 0727).
 
 - 2026-11-20 observer review (observations 0613, 0627, 0630, 0637, 0640, 0642, 0671, 0672, 0675,
   0692, 0702, 0703, 0704, 0706, 0707, 0708, 0709, 0715, 0723): `meters.md` Wave conduct: no

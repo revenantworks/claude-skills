@@ -233,3 +233,10 @@ The fetched-document cache was a read/write surface every unit shares, and it wa
 source the skill's own list omitted (finding
 `dispatchwright-pushes-to-main-with-no-identity-check-and-caches-fetches-without-provenance`,
 2026-09-09).
+
+## §3 · Lanes and probes (#0256, #0214)
+
+Moved from SKILL.md §3 on 2026-11-24 (body budget); the rule is unchanged. Prep lanes added for
+capacity are cut along independent rows; dependent rows share a lane or get a join-check verifier
+in the same wave. A flag-off row series gets a flag-on probe unit once the flag runs; a
+consumption fix is briefed only after the failing run's supply trace is read.
