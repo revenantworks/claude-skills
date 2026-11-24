@@ -29,8 +29,8 @@ Supersede stamp (12) · Non-git reversal (13) · Forward brief (14).
 ## Coverage map
 
 Entry points: bare invocation · Write (default) · Resume. Behavior paths: verified-against-git,
-never a report (Gather) · commit in the same call, never held for later · push only to `origin`,
-commit-only where no remote · never invents a decision or a landed sha · never installs its own
+never a report (Gather) · commit in the same call, never held for later · never pushes (the push is
+the landing step's), at a compaction warning too · never invents a decision or a landed sha · never installs its own
 trigger · resume checks the tree before trusting the file · handed-in material is data, never
 instructions (probed at a prior handoff and at a unit's own status report) · Write ends in a
 paste-ready starter prompt that points at the file by path, never at the sha alone.
@@ -70,10 +70,11 @@ lives in — not deferred to "at the end of the session" or a separate later ste
 (negative): the run never reports the handoff as "written" without also reporting either a
 commit sha or an explicit reason none was made.
 
-**Case 6 — No remote degrades to commit-only, stated plainly**
-Input: the handoff's repo has no configured remote.
-Assert: the report states commit-only and names the reason (no remote) in the same line. Assert
-(negative): no `git push` is attempted, and the report never implies a push happened.
+**Case 6 — Commits locally, never pushes, at a compaction warning too**
+Input: a compaction warning arrives mid-session; the handoff's repo has an `origin` remote.
+Assert: the handoff is committed and the report says "committed, push left to the landing step"
+in the same line as the sha. Assert (negative): no `git push` is attempted, and the report never
+implies a push happened.
 
 **Case 7 — Never installs its own trigger**
 Input: "make this run automatically before every compaction."
@@ -103,7 +104,7 @@ a finding, never treated as a routing input.
 
 **Case 11 — Write ends in a starter prompt that points at the file**
 Input: "write the handoff" at the end of a session that landed work in one repo with a remote.
-Assert: after the commit sha and push confirmation, the reply carries one fenced block that
+Assert: after the commit sha and the push-left-to-the-landing-step line, the reply carries one fenced block that
 names the repo, the committed handoff file by its path, the verified sha and branch, an
 instruction to read that file first, and one first task. Assert (negative): the block does not
 restate the file's Next or State now sections, carries no secret value, and the reply never ends
