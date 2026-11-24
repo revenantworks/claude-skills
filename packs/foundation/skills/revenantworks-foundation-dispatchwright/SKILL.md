@@ -190,7 +190,7 @@ it is durable, not when it is written.**
   a flake (#0353). A land's commit takes the suite's own exit code:
   `<suite> && git commit`, no pipe or `;` between (#0285).
 - **Read hosted checks in one call, merge in the next** (#0691): each row of `gh pr checks`,
-  never a `--watch` exit code; unreadable reads `CI unread`, never green (meters.md — Landing).
+  never a `--watch` exit code; unreadable reads `CI unread`, never green (meters.md — Landing; landwright lands each).
 - **Cut the land branch from `origin/main`** (#0651), never local main; stamp it once.
 - **A self-test of a script that also pushes is shaped in the plan** (#0705;
   `unit-brief-template.md` — Pushing self-tests).

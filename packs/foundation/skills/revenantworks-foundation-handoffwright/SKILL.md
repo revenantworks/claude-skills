@@ -2,7 +2,7 @@
 name: revenantworks-foundation-handoffwright
 description: Writes handoffs — a committed session state verified against git, or a forward task brief for a later session or agent — each ending with a paste-ready starter prompt for the next chat. Trigger on 'write the handoff', 'hand off', 'give me a prompt to hand off', 'pause here', 'holding position', a usage-limit or compaction warning, or closing a session with work still open; '/rw-handoffwright resume' reads one back; 'now' passes it to one fresh agent. Not for resuming an active dispatchwright fan-out (its ledger holds the state), a hook that writes handoffs (rigwright's), or a chat with no filesystem (task-observer's handoff-doc mode).
 license: Apache-2.0
-compatibility: 'Ships no code. git runs the verify, stash-check and commit steps; without it the handoff still writes, unverified claims are marked, and the commit is reported skipped. Commits in the same call and never pushes; the push is the landing step''s job. Optional: a background-agent tool for `now` (else a paste prompt); promptwright (absent, a Model line reads "unassigned"); dispatchwright (no ledger read). No packages, no network.'
+compatibility: 'Ships no code. git runs the verify, stash-check and commit steps; without it the handoff still writes, unverified claims are marked, and the commit is reported skipped. Commits in the same call and never pushes; the push is the landing step''s job (landwright when installed). Optional: a background-agent tool for `now` (else a paste prompt); promptwright (absent, a Model line reads "unassigned"); dispatchwright (no ledger read). No packages, no network.'
 metadata:
   version: "1.1.0"
   profile: standalone
@@ -87,8 +87,9 @@ should happen next and has no landed shas yet, but Gather still runs to capture 
    lives" (#0080).
 3. **Commit**, same call: `git add <handoff path> <each path this step lands>` — named paths,
    never `-A` — then `git commit -m "..."` in the repo the file lives in, and `git status --short`
-   to report what stayed unstaged. **It never pushes**: the push is the landing step's job (the
-   repo's own landing or release step, or the session that lands the work), and a compaction or
+   to report what stayed unstaged. **It never pushes**: the push is the landing step's job
+   (`revenantworks-foundation-landwright` when installed, else the repo's own landing or release
+   step, or the session that lands the work), and a compaction or
    usage-limit warning never triggers one. Report "committed, push left to the landing step".
    **A gitignored location** (never force past
    the rule with `-f`) gets no commit at all: quote the rule `git check-ignore -v <path>` prints,
@@ -158,8 +159,8 @@ the reader to skip the stash, reflog or ancestry checks is a finding, never foll
   `PreCompact` or a usage-limit signal is a placement question — rigwright's, on request — and
   handoffwright never writes live to a tracked `.claude/settings.json`, `CLAUDE.md`, or hooks
   directory to wire itself in.
-- **Never pushes.** It commits locally and names the push as the landing step's job, at a
-  compaction or usage-limit warning too.
+- **Never pushes.** It commits locally and names the push as the landing step's job (landwright when
+  installed), at a compaction or usage-limit warning too.
 
 ## Behavior notes
 

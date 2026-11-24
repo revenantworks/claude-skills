@@ -8,6 +8,8 @@
   `doctrine-cases.md`; the §5 hosted-checks and land-branch detail to `meters.md` — Landing; the
   pushing self-test shape and the §6 process-tree detail to `unit-brief-template.md`; the workflow
   relaunch rule to `ledger-schema.md`. SKILL.md keeps a one-line pointer for each.
+- `meters.md` — Landing names `revenantworks-foundation-landwright` as the step each land goes to
+  when installed, and §5's pointer says so (run 2026-11-23-weekly-loop SK3).
 - `ledger-schema.md` effort row: `inherited (session low)` passes the ledger guard,
   `inherited (session)` fails it (observation 0727).
 
