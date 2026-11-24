@@ -7,9 +7,9 @@ does and for whom · {{pack}} — destination pack + profile (default
 foundation / standalone) · {{constraints}} — optional. Fill at run time;
 the VALIDATION RUN LADDER below defines the intent class for proof runs.
 
-ROSTER (nine wrights, since 2026-10-08)
+ROSTER (ten wrights, since 2026-11-24)
 promptwright, grillwright, skillwright, agentwright, rigwright,
-dispatchwright, handoffwright, pacewright, scoutwright.
+dispatchwright, handoffwright, pacewright, scoutwright, landwright.
 
 Precondition: the four active-leg wrights are installed (promptwright,
 skillwright, agentwright, scoutwright); grillwright runs Leg 0.5 when the
@@ -94,7 +94,9 @@ inline. HANDOFF →
 <release>package files · eval results · probe list</release>.
 Close the leg with the canonical-repo reminder: commit locally, push in a
 batch when logical; zips are artifacts, the repo is the source of truth; CI
-runs on the push.
+runs on the push. landwright lands the build branch (local CI, push, PR,
+hosted checks, merge, run on main); without it, state "landed by hand" and
+follow the repo's own landing steps.
 
 LEG 5 — skillwright · slim (budget + score-only audit)
 `skillwright slim budget` over the pack's always-on surface using <release>

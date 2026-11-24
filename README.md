@@ -1,9 +1,9 @@
 # claude-skills
 
-**31 Agent Skills for Claude in six packs, plus optional mods. Each skill does one job, shows its
+**32 Agent Skills for Claude in six packs, plus optional mods. Each skill does one job, shows its
 evidence, and works alone.**
 
-[![skills: 31](https://img.shields.io/badge/skills-31-2a78d6)](#the-packs)
+[![skills: 32](https://img.shields.io/badge/skills-32-2a78d6)](#the-packs)
 [![packs: 6](https://img.shields.io/badge/packs-6-2a78d6)](#the-packs)
 [![pack-ci](https://github.com/revenantworks/claude-skills/actions/workflows/pack-ci.yml/badge.svg?branch=main)](https://github.com/revenantworks/claude-skills/actions/workflows/pack-ci.yml)
 [![licence: Apache-2.0](https://img.shields.io/badge/licence-Apache--2.0-green)](LICENSE)
@@ -150,6 +150,7 @@ Capstones: Hallmark Run (build) and Upkeep Run (maintenance). Featured: **pacewr
 | [rigwright](packs/foundation/skills/revenantworks-foundation-rigwright/) | Decides where a standing rule lives and builds the config Claude reads: CLAUDE.md, AGENTS.md, rules, Projects | *"My CLAUDE.md rules get ignored"* |
 | [dispatchwright](packs/foundation/skills/revenantworks-foundation-dispatchwright/) | Turns one large request into tiered, recoverable units, dispatches them and reconciles the result | *"Plan this change across six repos and show me the plan table"* |
 | [handoffwright](packs/foundation/skills/revenantworks-foundation-handoffwright/) | Writes a committed session handoff or a forward task brief, ending in a paste-ready starter prompt | *"Write the handoff"* |
+| [landwright](packs/foundation/skills/revenantworks-foundation-landwright/) | Lands committed work on main: local CI, the branch to `origin`, the PR, hosted CI, a merge commit and the run on main read back; checks a Godot addon before it ships | *"Land the parser branch"* |
 | [pacewright](packs/foundation/skills/revenantworks-foundation-pacewright/) | Paces subscription usage across the meters, with spend modes and a leak check | *"Something ate my usage overnight"* |
 | [scoutwright](packs/foundation/skills/revenantworks-foundation-scoutwright/) | Searches the web for what is new in Claude (docs, changelogs, release notes, community) and brings back an adopt list: how each change can improve your skills, projects and setup. Sites that block automated readers are reached through researchscribe when it is installed | *"What changed in Claude Code since last month, and what should I adopt?"* |
 
@@ -322,8 +323,8 @@ server."*
   optional or named up front, and each skill's install walkthrough gives the steps you run yourself.
   Without it, the skill reports NOT-RUN instead of guessing.
 - **Destructive steps come to you.** Deletes, admin steps and history rewrites are proposed as one
-  command for you to run. Only handoffwright and dispatchwright push, and only to `origin` behind
-  their own checks; every other skill never pushes.
+  command for you to run. Only landwright, handoffwright and dispatchwright push, and only to
+  `origin` behind their own checks; every other skill never pushes.
 - **Neutral by default.** No skill ships brand, personal or project data, and no skill applies a
   brand you did not hand it.
 - **Read before you install.** Anthropic recommends running skills only from sources you trust and

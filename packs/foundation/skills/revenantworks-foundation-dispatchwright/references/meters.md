@@ -254,6 +254,9 @@ Used only when no budget decision file is fresh (SKILL.md §6).
 
 Moved from SKILL.md §5 on 2026-11-24 (body budget); the rules are unchanged.
 
+- **Each land goes to `revenantworks-foundation-landwright`** when it is installed: local CI,
+  push, PR, hosted checks read row by row, merge in the next call, the run on main. Without it,
+  the controller runs the same steps by the rules below.
 - **Read hosted checks in one call, merge in the next** (#0691). Read each row of `gh pr checks
   <n>` (no `fail`, `pending` or `cancelled`), never a `--watch` exit code: a CodeQL summary check
   failed while every job passed. A merge chained after the read runs before anyone sees it; the

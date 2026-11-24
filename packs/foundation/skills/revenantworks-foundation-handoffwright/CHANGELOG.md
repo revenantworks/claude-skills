@@ -8,6 +8,9 @@
 - Never pushes (owner pick 2026-11-24): the Write step commits locally and names the push as the
   landing step's job, at a compaction or usage-limit warning too; compatibility, the report line,
   the rules list and `handoff-template.md` say so. Test Case 6 now asserts commit only, no push.
+  The landing step is named: `revenantworks-foundation-landwright` when installed (compatibility,
+  Write step 3 and the rules list), else the repo's own landing step (run 2026-11-23-weekly-loop
+  SK3).
 
 - 2026-11-20 observer review (observation 0620): `handoff-template.md` Next: a step is listed as
   owed only after its log or output was read.
