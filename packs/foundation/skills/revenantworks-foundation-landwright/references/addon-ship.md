@@ -53,8 +53,10 @@ Each of these waits for the owner's word naming it ("tag it", "draft the release
 1. Land the release commit through the normal land (CHANGELOG, `plugin.cfg` version).
 2. Read the repo's tag pattern first: `git tag -l`. A repo holding several addons prefixes the
    addon folder name (`<addon>-v<x.y.z>`); a one-addon repo uses `v<x.y.z>`.
-3. Tag the merge commit on main: `git tag -a <tag> -m "<Addon> <x.y.z>" <merge-sha>`, then send
-   that one tag: `git push origin <tag>`. Never `--tags`.
+3. The merge commit is made on GitHub, so `git fetch --prune` first and check that
+   `git cat-file -t <merge-sha>` reads `commit`. Then tag it:
+   `git tag -a <tag> -m "<Addon> <x.y.z>" <merge-sha>`, and send that one tag:
+   `git push origin <tag>`. Never `--tags`.
 4. Draft the release with the zip: `gh release create <tag> <zip> --repo <o>/<r> --draft --title
    "..." --notes-file <file>`. Publishing the draft, an Asset Library submission and any store
    listing are the owner's own steps; hand each over as one command or one link.

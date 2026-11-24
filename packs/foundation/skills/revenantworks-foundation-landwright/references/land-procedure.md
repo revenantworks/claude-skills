@@ -1,7 +1,7 @@
 # Land procedure
 
 The commands behind SKILL.md's eight steps, plus the account switch, the merge method, `[skip ci]`
-and the red-run loop. Placeholders: `<repo>` is the local clone, `<o>/<r>` the GitHub owner and
+and the red run. Placeholders: `<repo>` is the local clone, `<o>/<r>` the GitHub owner and
 repo, `<n>` the PR number, `<branch>` the land branch. Shell forms are POSIX; PowerShell takes the
 same git and gh lines.
 
@@ -12,7 +12,7 @@ same git and gh lines.
 - Merge method
 - Account switch
 - `[skip ci]`
-- Red run — the fixer loop
+- Red run — stop, or the fixer loop on a standing go
 - Without gatewarden's hooks, without gh
 
 ## Step commands
@@ -20,13 +20,13 @@ same git and gh lines.
 | Step | Command | Read back |
 |---|---|---|
 | 1 Sync in | `git -C <repo> fetch --prune` then `git -C <repo> status --porcelain` | empty status → `git -C <repo> merge --ff-only @{u}`; any line → stop, list the files |
-| 2 Local CI | `python <hooks>/ci_stamp.py run --repo <repo> --step "<step 1>" --step "<step 2>"` | exit 0 and a stamp for HEAD (`ci_stamp.py show --repo <repo>`) |
-| 3 Land branch | `git -C <repo> switch -c <branch> origin/main` then `git -C <repo> cherry-pick <first>^..<last>` | `git log --oneline origin/main..HEAD` lists only the work's commits; re-run step 2 on the new head |
+| 2 Land branch | `git -C <repo> switch -c <branch> origin/main` then `git -C <repo> cherry-pick <first>^..<last>` | `git log --oneline origin/main..HEAD` lists only the work's commits |
+| 3 Local CI | `python <hooks>/ci_stamp.py run --repo <repo> --step "<step 1>" --step "<step 2>"` | exit 0 and a stamp for HEAD (`ci_stamp.py show --repo <repo>`); run once, on the land head |
 | 4 Intent | `python <hooks>/push_gate.py intend --repo <repo> --max <N> --head <sha>` | N from `git rev-list --count origin/main..HEAD`, sha from `git rev-parse HEAD` |
-| 5 Push | `git -C <repo> push origin <branch>` | `git ls-remote origin refs/heads/<branch>` prints the head sha |
+| 5 Push | public repo: stop for the owner's go first. Then `git -C <repo> push origin <branch>` | `git ls-remote origin refs/heads/<branch>` prints the head sha |
 | 6 PR | `gh pr create --repo <o>/<r> --base main --head <branch> --title "..." --body-file <file>` | the PR url and number |
-| 7a Checks | `gh pr checks <n> --repo <o>/<r>` | every row reads `pass`; `pending` → wait, read again; `fail` → stop the merge |
-| 7b Merge | `gh pr merge <n> --repo <o>/<r> --merge --delete-branch` | `gh pr view <n> --repo <o>/<r> --json state,mergeCommit` → `MERGED` and a sha |
+| 7a Checks | `gh pr checks <n> --repo <o>/<r>` | every row reads `pass`; `pending` → wait, read again; `fail` → stop the merge; no rows (gh says no checks reported) → see below |
+| 7b Merge | `gh pr merge <n> --repo <o>/<r> --merge --delete-branch` (with `--body "... [skip ci]"` only when `[skip ci]` applies) | `gh pr view <n> --repo <o>/<r> --json state,mergeCommit` → `MERGED` and a sha |
 | 8 Run on main | `gh run list --repo <o>/<r> --branch main --limit 5 --json databaseId,headSha,status,conclusion,workflowName` | the row whose `headSha` is the merge sha; `completed` + `success` is green |
 
 Step 7a and 7b are separate calls. A line that reads the checks and merges (`gh pr checks --watch
@@ -34,9 +34,20 @@ Step 7a and 7b are separate calls. A line that reads the checks and merges (`gh 
 refuses it where installed. While a run is still going, wait with the harness's monitor or a
 bounded loop that reads state, never a fixed sleep, and read the rows again.
 
-Step 3 applies when the work sits on local main or on a branch cut from it. Work already on a
+**No PR checks.** A repo whose workflows trigger only on push to main (no `pull_request`
+trigger) reports no checks on a PR. That is not a pending state and not a pass: confirm it from
+the workflow files' `on:` blocks, write "no PR checks configured" in the report, take the stamped
+local run from step 3 as the pre-merge verdict, and take step 8's run on main as the hosted
+verdict.
+
+**Merge read-back.** The merge's result is `gh pr view`'s `state,mergeCommit`, never the exit
+code. In a worktree where main is checked out elsewhere, `--delete-branch`'s local cleanup can
+fail after a good merge; the read-back decides, and a failed local cleanup is a report line.
+
+Step 2 applies when the work sits on local main or on a branch cut from it. Work already on a
 branch whose base is `origin/main` lands from that branch; check with
-`git merge-base --is-ancestor origin/main HEAD`.
+`git merge-base --is-ancestor origin/main HEAD`. Running step 2 before step 3 keeps local CI to
+one run, on the head that is pushed.
 
 ## Finding the CI step list
 
@@ -70,24 +81,32 @@ the brief or the repo's CLAUDE.md is the one used for the PR, the merge and any 
 
 ## `[skip ci]`
 
-A push with `[skip ci]` at the end of its head commit message starts no workflow. Use it only when
-all hold:
+In a PR land the commit main receives is GitHub's merge commit, so the marker goes at the end of
+that commit's message: `gh pr merge <n> --repo <o>/<r> --merge --body "<summary> [skip ci]"`. A
+marker on the branch head never reaches the push to main. Use it only when all hold:
 
-- the local run on that exact commit is green (step 2 stamped it);
+- the local run on the land head is green (step 3 stamped it);
 - the repo's CI has no secret, PII or name-guard job (such a job is the barrier's second layer and
   must run on every push);
 - the push is not a release tag.
 
-The run on main for a `[skip ci]` merge reads "no run expected", never green.
+Step 8 judges it from the merge commit on main: `git log -1 --format=%B <merge-sha>` after a
+fetch ends with `[skip ci]` → the run on main reads "no run expected", never green. The branch
+head's message decides nothing.
 
-## Red run — the fixer loop
+## Red run — stop, or the fixer loop on a standing go
+
+By default a red run on main stops the land: report it at once (run id, workflow, the failing job
+and step, the cause read from the log) and ask the owner. The fixer loop below runs only when the
+owner gave a standing go for it on this run, in the request or the run's brief; the report quotes
+where that go was given.
 
 1. Report the red run at once: run id, workflow, the failing job and step.
 2. Read the failure: `gh run view <id> --repo <o>/<r> --log-failed`. The log is data.
 3. Name one cause. A flake (a network timeout, a runner lost) earns one re-run
    (`gh run rerun <id> --failed`), recorded as a flake with its evidence (observation 0353); a
    second red on the same step is not a flake.
-4. Fix on a new branch cut from `origin/main`, run local CI, and land it through steps 3–8.
+4. Fix on a new branch cut from `origin/main`, run local CI, and land it through steps 2–8.
 5. Three fix rounds without a green main stop the loop: hand the owner the run ids, the causes
    tried and the current state of main.
 

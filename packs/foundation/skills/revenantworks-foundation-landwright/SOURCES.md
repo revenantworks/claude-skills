@@ -34,7 +34,8 @@ Scanned 2026-11-23 (skill-set review bench), 90-day cadence.
 
 - **Local CI on the exact commit is the verdict**, stamped, with skipped steps failing it.
 - **Checks read row by row, merge in the next call**, never a chained `--watch`.
-- **The run on main is read** and a red run enters a bounded fixer loop.
+- **The run on main is read**; a red run stops for the owner, and a bounded fixer loop runs only
+  on the owner's standing go.
 - **The owner's stops** on force, CI changes, public repos, tags, releases and publishes.
 - **Addon ship checks** that promise no reply or fix time and keep the licence inside the folder.
 

@@ -1,9 +1,22 @@
 # RESULTS — trigger suite and assertion suite runs
 
-**Trigger suite (`trigger-evals.md`): 22 queries, blind re-judged 2026-11-24, 22/22. Assertion
-suite (`test-cases.md`): 14 cases, authored, not run.** Both were written with the 1.0.0 build
-on 2026-11-24. The re-judge is a routing read, not a live trigger run; the first assertion run
-and the first native `claude plugin eval` run are still owed before any behaviour claim.
+**Trigger suite (`trigger-evals.md`): 23 queries; 22 blind re-judged 2026-11-24, 22/22; row 21
+added after, not yet judged. Assertion suite (`test-cases.md`): 18 cases, authored, not run.**
+Both were written with the 1.0.0 build on 2026-11-24. The re-judge is a routing read, not a live
+trigger run; a fresh-agent judge, the first assertion run and the first native
+`claude plugin eval` run are still owed before any behaviour claim.
+
+---
+
+## 2026-11-24 — v1.0.0 — review fix round (RV-SK3), NOT A RUN — unit SK3c (Opus 5.5)
+
+The two-stage review failed quality on four must-fixes. Fixed in the 1.0.0 entry (unreleased, no
+bump): the no-PR-checks case (Case 15), `[skip ci]` on the merge commit (Cases 11, 17), the
+public-repo stop named as the branch push, step 5 (Case 10), the skill-pack release boundary
+(description clause, trigger row 21, registry seam skillwright ↔ landwright), and the red run
+stopping for the owner unless a standing go covers the fixer loop (Cases 8, 16). The old
+trigger probes 21–22 are now 22–23; the 22/22 row below used the old numbers. Description 860 →
+881 characters. Nothing was run: the new row and cases are owed a blind, fresh-agent read.
 
 ---
 

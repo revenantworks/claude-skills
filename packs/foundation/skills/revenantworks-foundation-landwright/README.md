@@ -15,10 +15,12 @@ What separates it from a commit-push-PR command:
   never on the same line as a commit.
 - **Checks are read row by row, then merged in the next call.** Never chained, never a `--watch`
   exit code.
-- **The run on main is read.** A red run is reported at once and enters a fixer loop with a
-  three-round limit.
-- **The owner decides what is irreversible or public.** Force pushes, CI changes, public repos,
-  tags, releases and listings stop and ask.
+- **The run on main is read.** A red run is reported at once and stops for the owner; a fixer
+  loop with a three-round limit runs only on the owner's standing go for that run.
+- **No PR checks is not a pass.** A repo whose CI runs only on push to main has none: the
+  stamped local run is the pre-merge verdict and the run on main the hosted one.
+- **The owner decides what is irreversible or public.** Force pushes, CI changes, public repos
+  (before the branch push), tags, releases and listings stop and ask.
 - **Addon ship checks.** Licence and NOTICE inside the addon folder, a SUPPORT and SECURITY policy
   that promises no reply or fix time, `plugin.cfg` metadata and a zip that carries the folder alone.
 
