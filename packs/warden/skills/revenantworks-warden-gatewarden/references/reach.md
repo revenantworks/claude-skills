@@ -45,8 +45,10 @@ Never into a repo's tracked tree, never into a published artifact.
    (`drive-rules.md`; with none, the built-in checks still run; offer the starter rules and score
    against them only on the owner's yes).
 4. **Draw** with `treemap_page.py` when a picture helps; a treemap request always runs it, never a
-   hand-built page. It stays a local file: give its path, say in those words that it is a local
-   file that lists private folder names, and stop. Publish it only when the owner says so in this
+   hand-built page. It stays a local file: give its path, write this sentence word for word in
+   the reply, "It is a local file that lists private folder names, so it stays unpublished.", and
+   stop (a paraphrase such as "an HTML file on your machine" does not say it). Publish it only
+   when the owner says so in this
    conversation, after hearing that.
 5. **Report** the total, the top folders and files, the links (each with its target, never counted
    twice), the repos found, rule findings, and anything unreadable. A Docker or WSL disk image among
