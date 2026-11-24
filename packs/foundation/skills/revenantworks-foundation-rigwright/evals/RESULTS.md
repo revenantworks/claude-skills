@@ -118,3 +118,23 @@ pass is claimed.
 - **Cases 19–30** authored at 1.2.0; not executed.
 - **Trigger rows 21–24** added at 1.2.0; the cold re-judge is owed. The description did not
   change, so rows 1–20 keep their 20/20 cold result.
+
+## Cold re-judge after the neighbour trim (2026-11-24, run 2026-11-23-weekly-loop SK2d)
+
+Method: one fresh judge with no repo access read `tools/blind_queries.py` output (answers withheld,
+order decorrelated) against the current name + description of every member in the repo, plus
+task-observer's description. Scored by the source row. Scope: the rows whose expected owner is a
+sibling the 2026-11-24 trim dropped from this description, or whose cue review RV-SK2c restored.
+
+Dropped: agentwright, promptwright. **5 / 6**, one AMBIGUOUS.
+
+- #13 setup for an unattended task: SHOULD NOT, agentwright. Pass.
+- #14 set up a routine: SHOULD NOT, agentwright. Pass.
+- #15 SKILL.md-named scheduled task (the sharpest pair): **AMBIGUOUS** (skillwright / agentwright). Open: the trim cut "unattended work, agentwright's"; restoring it is the candidate fix.
+- #16 runtime authority: SHOULD NOT, agentwright. Pass.
+- #17 instruction text, no layer question: SHOULD NOT, promptwright. Pass.
+- #35 a prompt's slim: SHOULD NOT, promptwright. Pass.
+
+Rows outside that scope were judged too; disagreements there are listed as seen, not re-scored.
+
+Seen outside scope: #37 routed to pacewright (expected none, runtime).

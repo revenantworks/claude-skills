@@ -58,3 +58,23 @@ a live session. This entry says so in its own words rather than by omission.
 
 **Owed:** the cold trigger re-judge (22 rows); one live run of Cases 2, 4, 5 and 6 on a surface
 with the meter file; Cases 7–12 against a session with known spend.
+
+## Cold re-judge after the neighbour trim (2026-11-24, run 2026-11-23-weekly-loop SK2d)
+
+Method: one fresh judge with no repo access read `tools/blind_queries.py` output (answers withheld,
+order decorrelated) against the current name + description of every member in the repo, plus
+task-observer's description. Scored by the source row. Scope: the rows whose expected owner is a
+sibling the 2026-11-24 trim dropped from this description, or whose cue review RV-SK2c restored.
+
+Dropped: skillwright, agentwright; statusline cue restored. **6 / 6**.
+
+- #18 one artifact's load cost: SHOULD NOT, skillwright (gatewarden contender). Pass.
+- #28 skill did not fire: SHOULD NOT, skillwright. Pass.
+- #24 scheduled pace check: SHOULD NOT, agentwright (its own description). Pass.
+- #19 usage meter in the statusline: SHOULD NOT, rigwright, keyed on the restored clause. Pass.
+- #23 meter-writing hook: SHOULD NOT, rigwright. Pass.
+- #35 settings key: SHOULD NOT, rigwright. Pass.
+
+Rows outside that scope were judged too; disagreements there are listed as seen, not re-scored.
+
+Seen outside scope: #13 AMBIGUOUS (dispatchwright expected), #17 AMBIGUOUS (none expected), #31 and #33 AMBIGUOUS (should rows).
