@@ -1,7 +1,7 @@
 {
   "name": "foundation",
   "displayName": "Revenantworks Foundation",
-  "version": "1.1.2",
+  "version": "1.2.0",
   "description": "revenantworks-foundation — ten standalone wrights for building, auditing, and maintaining skills (with their eval suites, slims and trigger diagnosis), prompts and model tiers, pre-build interviews, agent systems, standing Claude configuration, multi-agent fan-out dispatch, committed session handoffs, landing work on main and addon release checks, subscription usage pacing, and the Claude platform change watch.",
   "author": {
     "name": "Revenantworks"

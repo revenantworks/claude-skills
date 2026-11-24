@@ -5,6 +5,30 @@ Every pack, every member and every featured plugin launches at 1.0.0. Each membe
 `<pack>-vX.Y.Z`, member versions move on their own semver, and a featured plugin carries its
 member's version.
 
+## [hearth-v1.0.3] - 2026-11-24
+
+### Improved
+
+- **faretender**: A shorter trigger description, so it costs less to keep loaded and still fires on the same requests.
+
+## [foundation-v1.2.0] - 2026-11-24
+
+### New
+
+- **landwright**: Lands finished work on main: from committed local work to a merged pull request with a green run on main. It also checks a Godot addon before release. It never force-pushes, and never tags or publishes without the owner's go. Its trigger cases were judged blind, 22 of 22.
+
+### Improved
+
+- **pacewright**: The description now says when to use it, as Anthropic's skill authoring guidance asks.
+- **handoffwright**, **dispatchwright**: Both name landwright as the landing step. handoffwright commits locally and leaves the push to landing.
+- **dispatchwright**, **handoffwright**: Bodies trimmed back under their size budgets, so they load cheaper.
+- **promptwright** and other foundation members: Shorter descriptions that list only the nearest sibling skills, keeping the routing cues the trigger evals depend on.
+- Fixes from the 2026-11-20 observation review applied across the pack.
+
+### Fixed
+
+- **rigwright**: The description points to agentwright again for unattended work.
+
 ## [plugins: godot-mcp 1.0.1] - 2026-11-16
 
 ### Fixed

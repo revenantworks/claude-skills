@@ -11,7 +11,7 @@
       "displayName": "Revenantworks Foundation",
       "source": "./packs/foundation",
       "description": "Ten standalone wrights:skillwright (skills & packs, their eval suites, slims and trigger diagnosis), promptwright (prompts & model tiers), grillwright (the interview before any build), agentwright (agent systems), rigwright (standing Claude config), dispatchwright (fan-out dispatch), handoffwright (committed session handoffs), landwright (landing on main), pacewright (usage pacing), scoutwright (Claude platform change watch). Each routes on its own description and works alone.",
-      "version": "1.1.2",
+      "version": "1.2.0",
       "license": "Apache-2.0",
       "category": "productivity",
       "keywords": [
@@ -219,7 +219,7 @@
       "displayName": "Revenantworks Hearth",
       "source": "./packs/hearth",
       "description": "Personal and household life skills. First member: faretender, the real cost of a trip and price drops after booking.",
-      "version": "1.0.2",
+      "version": "1.0.3",
       "license": "Apache-2.0",
       "category": "productivity",
       "keywords": [
