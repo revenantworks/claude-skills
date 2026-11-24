@@ -1,5 +1,5 @@
 ---
-description: "Should not fire: scoring layout is brandscribe's ui mode."
+description: "Should not fire: scoring layout is uismith's critique."
 max_turns: 4
 allowed_tools: [Read, Glob, Grep, Skill]
 ---

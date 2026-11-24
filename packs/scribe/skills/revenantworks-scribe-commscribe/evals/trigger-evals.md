@@ -44,8 +44,8 @@ Cold run 2026-10-01 (run J1): blind list from `tools/blind_queries.py`, judged o
 | N10 | "Write a system prompt for a customer support bot." | promptwright | none |
 | N11 | "Trim my CLAUDE.md, it costs too many tokens." | rigwright (slim) | none |
 | N12 | "Make a ten-slide deck for the quarterly review." | none (a slides artifact or deck tool) | none |
-| N13 | "Score this settings page's layout, spacing and visual hierarchy before release." | brandscribe (ui) | `nearmiss-score-layout` |
-| N14 | "Check dist/ for missing fonts and low-contrast text." | brandscribe (ui) | none |
+| N13 | "Score this settings page's layout, spacing and visual hierarchy before release." | uismith (critique) | `nearmiss-score-layout` |
+| N14 | "Check dist/ for missing fonts and low-contrast text." | uismith (critique) | none |
 | N15 | "The model keeps misreading my system prompt; rewrite the prompt so it lands." | promptwright | none |
 | N16 | "Research what similar tilesets on itch.io charge and which tags the best sellers use, with sources, and give me a pricing verdict." | researchscribe | `nearmiss-store-pricing` |
 
@@ -54,7 +54,7 @@ Cold run 2026-10-01 (run J1): blind list from `tools/blind_queries.py`, judged o
 - **Sharpest pair: voice.** "Write this email in our voice" is commscribe (a named voice applied to one message). "Update our brand voice" is brandscribe (the guide itself). "Learn my voice from my edits" is commscribe (a writer's voice file, approval-gated).
 - **Docs pair.** A README or memo for people is commscribe's docs mode; a skill package's own files are skillwright's. The object decides, not the word "README".
 - **Fiction pair.** Line-editing a chapter's prose is commscribe; drafting new fiction is no skill; canon checks are lorescribe.
-- **UI pair.** The words on a screen (labels, errors, empty states, confirms) are commscribe's `ui` profile; scoring the screen's layout, contrast or states is brandscribe `ui`, whose catalog hands copy rows here. Re-read by hand 2026-10-01 against the 997-char description (UIX): Y1-Y15 fire; N1-N14 route out; no earlier row changed verdict.
+- **UI pair.** The words on a screen (labels, errors, empty states, confirms) are commscribe's `ui` profile; scoring the screen's layout, contrast or states is uismith `critique` (brandscribe `ui` until 2026-11-24), whose catalog hands copy rows here. Re-read by hand 2026-10-01 against the 997-char description (UIX): Y1-Y15 fire; N1-N14 route out; no earlier row changed verdict.
 - **Retell pair (Y16 vs N15, added 2026-10-08, K4 C2, authored, not run cold).** A message a person did not understand is commscribe's retell; a prompt a model misreads is promptwright's.
 - **Store pair (Y17 vs N16, added 2026-10-13, authored, not run cold).** The words on a store page, launch post or listing are commscribe's; what similar products charge, which tags sell and the pricing verdict are researchscribe's. The brand voice the page is written in stays brandscribe's.
 - **Tuning.** Misses on the should-fire set: make the trigger list pushier. Fires on the should-not set: tighten the boundary sentence.

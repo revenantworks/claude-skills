@@ -22,7 +22,7 @@ Name one class before writing anything; it sets the density and the primary acti
 | read | read and come back | text first, measured line length | docs, a report, a codex screen |
 | showcase | look | the look is the point | a title screen, a portfolio |
 
-These are the classes brandscribe's `ui` review uses, so a brief and a later scored review speak
+These are the classes Critique entry's review (`ui-review.md`) uses, so a brief and a later scored review speak
 one language.
 
 ## 2. The brief template

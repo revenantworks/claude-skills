@@ -1,10 +1,10 @@
-# Trigger evals — revenantworks-gamedev-uismith — 21 queries (10 should / 11 shouldn't)
+# Trigger evals — revenantworks-gamedev-uismith — 27 queries (17 should / 10 shouldn't)
 
-Counts: 21 queries (10 should, 11 should-not, 4 pairs)
+Counts: 27 queries (17 should, 10 should-not, 3 pairs)
 
-Provenance: derived from SKILL.md v1.0.0 (2026-10-13); re-anchored to v1.1.1, 2026-11-13 (2026-11-11), which adds a reference only. Status: **authored, not run** — a cold judge
+Provenance: derived from SKILL.md v1.0.0 (2026-10-13); re-anchored to v1.2.0, 2026-11-23 (2026-11-11), which adds a reference only. Status: **authored, not run** — a cold judge
 reading only name + description has not scored this table yet. Read each query against the name and
-description alone and compare with the Expected column. 10 should fire, 11 should not.
+description alone and compare with the Expected column. 17 should fire, 10 should not.
 
 Pairs (same surface, different owner): rows 3 and 13 (a built page: fit at widths versus a scored
 ship verdict, brandscribe), rows 5 and 15 (a game menu: what it should do versus a scene review,
@@ -25,7 +25,7 @@ review: a mockup before the build versus a critique of the built page, brandscri
 | 10 | uismith audit the inventory screen in my game; here are screenshots at 1280x720 and 1920x1080. | fire | Audit, game UI from screenshots |
 | 11 | Pick a colour palette and a font pairing for our brand. | not fire | brandscribe (tokens are an input to uismith) |
 | 12 | Rewrite the error messages and button labels on our signup form. | not fire | commscribe (words on the screen) |
-| 13 | Critique this built landing page against the UI floor and tell me if it ships. | not fire | brandscribe `ui` (scored verdict) |
+| 13 | Critique this built landing page against the UI floor and tell me if it ships. | fire | Critique (scored verdict; native `trigger-critique-verdict`) |
 | 14 | Turn our style guide into design tokens and a design system. | not fire | brandscribe |
 | 15 | Review my HUD scene's signals and node ownership against our Godot conventions. | not fire | godotsmith `review` |
 | 16 | The minimap icons vanish against the terrain when the camera zooms out. | not fire | pixelsmith |
@@ -33,4 +33,10 @@ review: a mockup before the build versus a critique of the built page, brandscri
 | 18 | Implement the options menu test-first, one slice at a time. | not fire | slicesmith (the build loop) |
 | 19 | Is my GUT run really green? The test count dropped after the merge. | not fire | godotsmith |
 | 20 | Recommend a good 27-inch monitor for design work. | not fire | off-topic |
-| 21 | Critique the settings page I just built: hierarchy, spacing, empty and error states, does it look generic? | not fire | brandscribe `ui` (a critique of a built page; native `nearmiss-brandscribe-critique`) |
+| 21 | Critique the settings page I just built: hierarchy, spacing, empty and error states, does it look generic? | fire | Critique (a critique of a built page; native `trigger-ui-critique-built`) |
+| 22 | Critique this dashboard before we ship it: hierarchy, spacing, empty and error states. | fire | Critique (native `trigger-ui-critique`) |
+| 23 | Check dist/index.html for UI problems. | fire | Critique, checker first (native `ui-check-dist`) |
+| 24 | Does this landing page look generic? | fire | Critique, specificity area (native `trigger-ui-generic`) |
+| 25 | Score the settings page's hierarchy and spacing. | fire | Critique |
+| 26 | uismith critique on the built site | fire | Critique, named (native `ui-taste-p3`) |
+| 27 | Pass or fail this page against our brand. | not fire | brandscribe `gate` (a brand pass, not a critique) |

@@ -13,7 +13,7 @@ the `-scribe` motif, standard profile. The current version is in `.claude-plugin
 | Skill | What it does | Try it with |
 |---|---|---|
 | `revenantworks-scribe-researchscribe` | Researched verdicts, playbooks and graded reports, every claim tagged | *"Compare A and B and give me a go/no-go"* |
-| `revenantworks-scribe-brandscribe` | Brand definitions built into a live Claude Design System (and re-synced when the brand changes), DESIGN.md and VOICE.md, drift audits, and a neutral UI floor | *"Turn this style guide into a Claude Design System"* |
+| `revenantworks-scribe-brandscribe` | Brand definitions built into a live Claude Design System (and re-synced when the brand changes), DESIGN.md and VOICE.md and drift audits | *"Turn this style guide into a Claude Design System"* |
 | `revenantworks-scribe-commscribe` | Messages and docs shaped to their channel and reader, with a claim-level fact check | *"Make this release note sound less like AI"* |
 | `revenantworks-scribe-lorescribe` | A fiction project's story bible and canon checks | *"Check this chapter against the story bible"* |
 | `revenantworks-scribe-vaultscribe` | An LLM-maintained knowledge vault (a second brain or LLM wiki, works with Obsidian, not affiliated): setup, ingest, cited answers, a lint with privacy and secret checks, living-source drift, and deny rules for web clips | *"Set up a second brain in Obsidian that Claude keeps up to date"* |
@@ -28,7 +28,7 @@ Paste this table into a project's CLAUDE.md to route requests without loading ev
 | Research a broad question, or keep the findings as a cited file in the repo | researchscribe `research` | lorescribe (fiction canon only) |
 | Check a doc or answer against the vendor's official docs | researchscribe `verify official` | skillwright (a skill package's own files) |
 | Define a brand, palette, type scale or brand voice; build or re-sync a design system | brandscribe | commscribe (one message in a voice) |
-| Score a built page's layout, contrast and states | brandscribe `ui` | commscribe (only the words on the screen) |
+| Pass or fail a built page against the stored brand | brandscribe `gate` | uismith `critique` (a UI critique with no brand question) |
 | Write, shorten or reshape a message or doc for its channel and reader | commscribe | researchscribe (graded sources, not wording) |
 | Make text sound less like AI, or line-edit a chapter with facts frozen | commscribe `humanize` | lorescribe (canon, not prose) |
 | Say it again because the reader did not follow | commscribe `retell` | promptwright (a prompt a model misreads) |

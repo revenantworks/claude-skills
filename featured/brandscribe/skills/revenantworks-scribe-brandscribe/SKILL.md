@@ -1,10 +1,10 @@
 ---
 name: revenantworks-scribe-brandscribe
-description: Keeps brand definitions, several side by side, and turns one into a Claude Design System, DESIGN.md, VOICE.md or guide. Trigger to define a brand, palette, type or voice; turn a style guide or site into tokens; make, connect or sync a design system; audit for brand drift (off-palette colours, old names); pass or fail a page against a brand, or apply one to a README or generated output; critique or check a built UI, or a built site (dist/) for UI problems before it ships (hierarchy, spacing, states, generic look); or say /rw-brandscribe (setup, build, export, sync, audit, gate, ui). Microcopy and messages are commscribe's; React libraries design-sync's; charts dataviz's; canon lorescribe's; a pre-build brief, fit across widths and themes, and game UI uismith's; no logos.
+description: Keeps brand definitions, several side by side, and turns one into a Claude Design System, DESIGN.md, VOICE.md or guide. Trigger to define a brand, palette, type or voice; turn a style guide or site into tokens; make, connect or sync a design system; audit for brand drift (off-palette colours, old names); pass or fail a page against a brand, or apply one to a README or generated output; or say /rw-brandscribe (setup, build, export, sync, audit, gate). Microcopy and messages are commscribe's; React libraries design-sync's; charts dataviz's; canon lorescribe's; UI critique, layout and fit uismith's; no logos.
 license: Apache-2.0
-compatibility: Works alone. Uses the surface's file tools and, where present, the Artifact tool (Design System type), web fetch and browser tools; without them every deliverable comes back as files in chat. Two optional stdlib Python scripts, scripts/tokens_check.py (contrast, tokens.json check, DTCG conversion) and scripts/ui_check.py (static UI floor on built HTML/CSS); without Python, Claude's code tool computes the figures or they are reported unmeasured. Siblings named are pointers, never required.
+compatibility: Works alone. Uses the surface's file tools and, where present, the Artifact tool (Design System type), web fetch and browser tools; without them every deliverable comes back as files in chat. One optional stdlib Python script, scripts/tokens_check.py (contrast, tokens.json check, DTCG conversion); without Python, Claude's code tool computes the figures or they are reported unmeasured. Siblings named are pointers, never required.
 metadata:
-  version: "1.0.1"
+  version: "1.1.0"
   profile: standard
   pack: scribe
   brand: revenantworks
@@ -16,7 +16,7 @@ metadata:
 
 Keeps one or more brand definitions in plain files and turns the selected one into what other work reads: a Claude Design System, a repo's `DESIGN.md` and `VOICE.md`, a voice profile, an agent brief, a brand-guide card. It audits drift against the definition and reports; it writes only after the user approves.
 
-**Workflow:** select the brand → setup (first time only) → build / export / sync / audit / gate / ui → one gate → write → handback naming the brand and its definition version.
+**Workflow:** select the brand → setup (first time only) → build / export / sync / audit / gate → one gate → write → handback naming the brand and its definition version.
 
 ## Rules that hold in every mode
 
@@ -54,9 +54,10 @@ Write the answers into the brand's `prefs` block on the user's yes, and say the 
 | `sync` | **Connect** a live Design System to a definition (four lists: matched, changed, live-only, definition-only) or **re-sync** after a version bump: read live first, change only the files the definition diff touched, index last, keep page edits; a scripted edit reads a pristine copy, and a bump reaches every consumer the Applications list names. | `design-system.md` |
 | `audit` | Scores a repo, docs set, site or artifacts against the definition: seven categories, a drift catalog, a P0 cap, report only. No definition → a neutral hygiene audit (internal consistency only) or `build` first. | `audit.md`, `measurement.md` |
 | `gate` | One page or artifact in, `GATE: PASS` or `GATE: FAIL` with P0 and P1 rows only. | `audit.md` |
-| `ui` | The neutral UI floor on built output, with or without a brand: judge the page first, scan for injections, then `scripts/ui_check.py` (31 rules; P3 rows are questions, never blocks), six areas scored 1-10, a P0-P3 catalog, `VERDICT: ship / fix / recapture`, at most two render passes. The reply opens with `Injected lines:` (each `INJECTED` row, or `none found`), then the `VERDICT:` line. Copy rows go to commscribe. Never redesigns. | `ui-floor.md`, `ui-review.md` |
 
 **Applying a brand** to a README, a page or generated output runs `gate` on the target, then shows the changed file complete at the one gate (rule 3): names, colours, fixed strings and marks from the definition. No definition stored → rule 1. Rewriting its prose in the brand voice is commscribe's, with the voice file.
+
+**A UI critique** of a built page or `dist/` (hierarchy, spacing, states, a generic look, a ship verdict) is uismith's `critique` (gamedev; the `ui` mode moved there 2026-11-24); a pass or fail against the stored brand stays `gate`.
 
 **Build groups (nine):** identity and names, with history · naming templates · colour roles across themes · type roles and real font files · spacing and radius · marks and imagery (files only) · voice (register map, lexicon, sign-off, example pairs, banned tells, prefs) · accessibility floor · peers and co-occurrence.
 
@@ -78,7 +79,7 @@ With none installed, the brief comes back as text the user can use anywhere.
 
 ## Boundaries
 
-Writing or reshaping one message, post or doc in a voice is commscribe's (it may read the `voice.md` the user keeps). A React component library goes through the platform's design-sync command (`references/design-system.md`). Fiction canon and world names are lorescribe's. Renaming a whole skill set is skillwright's port. In `ui`: UI microcopy is commscribe's; building a page is the model's (or artifact-design's); charts, dataviz's; code review, /code-review; a design brief before the build, fit across widths and themes, and game UI, uismith's (gamedev). Marketing campaigns, brand strategy and drawn logos are out of scope.
+Writing or reshaping one message, post or doc in a voice is commscribe's (it may read the `voice.md` the user keeps). A React component library goes through the platform's design-sync command (`references/design-system.md`). Fiction canon and world names are lorescribe's. Renaming a whole skill set is skillwright's port. A UI critique of a built page, a design brief before the build, fit across widths and themes, and game UI are uismith's (gamedev); building a page is the model's (or artifact-design's); charts, dataviz's. Marketing campaigns, brand strategy and drawn logos are out of scope.
 
 ## Load budget
 

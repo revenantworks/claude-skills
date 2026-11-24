@@ -47,9 +47,9 @@ fetched by this build. Their licences were not re-read here; nothing of theirs i
 | **U2** anthropics/skills `webapp-testing` | Playwright scripts to drive a local web app: start a server, wait, click, screenshot, read logs | 2026-10-13 (gap report) |
 | **U3** Leonxlnx/taste-skill | A design-taste skill against generic AI-made interfaces | 2026-10-13 (gap report) |
 | **U4** nextlevelbuilder/ui-ux-pro-max-skill | A UI/UX knowledge base: styles, palettes, fonts and patterns by product type | 2026-10-13 (gap report) |
-| **in-house** brandscribe `ui` (scribe pack) | The scored floor review of a built page: a 31-rule static checker, six areas, a verdict, a bounded render pass at desktop and mobile | 2026-10-13 (read) |
+| **in-house** uismith `critique` (brandscribe `ui` until 2026-11-24) | The scored floor review of a built page: a 31-rule static checker, six areas, a verdict, a bounded render pass at desktop and mobile | 2026-10-13 (read) |
 
-| Line | vs U1 | vs U2 | vs U3 | vs U4 | vs brandscribe `ui` | Reason |
+| Line | vs U1 | vs U2 | vs U3 | vs U4 | vs critique | Reason |
 |---|---|---|---|---|---|---|
 | A design brief with every state and both scales | beaten | out of scope | met | met | out of scope (it reviews what is built) | The brief makes empty, loading, error and long content fields, not afterthoughts. Case: `behaviour-direct-states` |
 | Measured fit at five widths in every theme | beaten† | beaten† | beaten† | beaten† | beaten† | U2 screenshots what a script asks for; brandscribe's render pass captures two sizes and judges by eye. The probe measures overflow, edges and clipped text per width and theme. Case: `behaviour-probe-overflow` |
@@ -71,8 +71,10 @@ of each incumbent.
 
 Each beaten line names its native case under `evals/<case>/`; margin 1 is also `behaviour-probe-not-run`
 and test cases 4-6, margin 2 test case 1, margin 3 test cases 8 and 10 (`evals/test-cases.md`). Near-miss
-cases: `nearmiss-brandscribe-palette`, `nearmiss-brandscribe-verdict`, `nearmiss-pixelsmith-icons`,
-`nearmiss-godotsmith-scene`, `nearmiss-brandscribe-critique` (F3). All authored 2026-10-13, not run.
+cases: `nearmiss-brandscribe-palette`, `nearmiss-pixelsmith-icons`,
+`nearmiss-godotsmith-scene`. All authored 2026-10-13, not run. 2026-11-24: `nearmiss-brandscribe-verdict` became
+`trigger-critique-verdict`, `nearmiss-brandscribe-critique` moved to brandscribe as `nearmiss-uismith-critique`,
+and five critique cases came in from brandscribe.
 
 **Retire condition.** Retire the probe half if a maintained public skill measures overflow and
 clipped text at a width set in every theme with a no-dependency fallback; retire the direction half
@@ -80,3 +82,13 @@ if one covers game UI and plugin panes with a states-first brief. Keep a pointer
 
 **Verdict: PARITY + MARGIN.** Direction is crowded (U1, U3, U4); the margin is the measured probe,
 the states-first brief and game and pane surfaces, none of which an incumbent combines.
+
+## Critique sources (moved from brandscribe `ui`, 2026-11-24)
+
+| Claim | Source | Checked |
+|---|---|---|
+| Critique floor: target size "at least 24 by 24 CSS pixels" with five exceptions (spacing, equivalent, inline, user agent control, essential) | W3C WCAG 2.2 Understanding 2.5.8 | 2026-10-01 |
+| Critique floor: visible keyboard focus; text resizable to 200%; non-text contrast 3:1 | W3C WCAG 2.2, success criteria 2.4.7, 1.4.4, 1.4.11 | 2026-10-01 |
+| Critique review areas grounded in general usability heuristics (visibility of status, error prevention and recovery, consistency, recognition over recall) | Nielsen Norman Group, "10 Usability Heuristics for User Interface Design" | as published |
+
+- The Critique entry (brandscribe's `ui` mode until 2026-11-24), `references/ui-floor.md`, `references/ui-review.md` and `scripts/ui_check.py`: ideas harvested from the third-party impeccable skill (Apache-2.0, v4.3.1, read 2026-10-01). Ideas only, restated in our own words and shape; no text or code copied. Taken: check built output once at the end, not per edit; unmeasured instead of failed when the ground is unresolvable; the verify floor; theming browser-default surfaces; generic-UI patterns as questions; the brief wins over taste; scored areas with n/a and a severity tiebreak; judge before reading checker output; a bounded render pass with an evidence check; motion bands; truth in demo data. Dropped: per-edit hooks, a bundled binary, a live page-injection mode, persona and playbook commands. The checker's 31 rules are our own design (the source's detector rules are compiled and unreadable), plus two rig lessons: a missing webfont caught only on built output, and contrast false positives against an unpainted ground.

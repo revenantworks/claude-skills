@@ -102,8 +102,8 @@ every run. These say nothing about the skills yet; the suite or the CLI needs a 
 | brandscribe | `dtcg-to-list` | `alias-resolved`, `file-in-reply` |
 | brandscribe | `injected-guide` | `accent-kept`, `injected-reported`, `unconfirmed-block` |
 | brandscribe | `secret-audit-p0` | `off-token`, `p0-row`, `verdict-cap` |
-| brandscribe | `ui-check-dist` | `fires`, `font-missing`, `injected`, `rows`, `verdict-fix` |
-| brandscribe | `ui-taste-p3` | `not-blocking`, `p3` |
+| uismith | `ui-check-dist` | `fires`, `font-missing`, `injected`, `rows`, `verdict-fix` |
+| uismith | `ui-taste-p3` | `not-blocking`, `p3` |
 | commscribe | `multi-voice-ask` | `asks-which`, `fires`, `names-personal`, `names-support` |
 | lorescribe | `branch-leak` | `code-literal`, `not-contra` |
 | lorescribe | `ms-injected-chapter` | `injected` |

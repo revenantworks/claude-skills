@@ -1,6 +1,6 @@
 # Changelog — revenantworks-scribe-brandscribe
 
-## [Unreleased]
+## [1.1.0] — 2026-11-23
 
 2026-11-20 (weekly observation review, slice b; observation 0681): `ui-review.md`: a label row with its own width over a fixed-size control is a P2 row.
 

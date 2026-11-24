@@ -48,13 +48,13 @@ portal.
   brand definitions in plain files and turns one into a Claude Design System, `DESIGN.md`,
   `VOICE.md` or a guide, with a re-sync that keeps page edits and a 31-rule UI check.
 - **Example prompts (policy: at least three):** "Turn this style guide into a Claude Design
-  System." · "The brand colours changed, re-sync the design system." · "Check this built page
-  before it ships."
+  System." · "The brand colours changed, re-sync the design system." · "Audit our docs for
+  off-palette colours and old names."
 - **Screenshots and icon:** TODO for the maintainer. A square PNG icon at
   `featured/brandscribe/.claude-plugin/icon.png`; the size, path and when the portal takes it are
   not stated on the policy, submit or checklist pages read for this pack, so check the portal.
   Screenshots: a design system built from a short brand file; the
-  re-sync's four lists; a `ui_check.py` report.
+  re-sync's four lists; a drift audit report.
 - **Data handling answers:** reads or stores personal data: no. Sends data to other services: only to
   the user's own claude.ai account (a Design System, on request) and to web pages the user names,
   which it fetches. Keeps data: only the files the user asks it to write, in the user's own folders. Intended for
