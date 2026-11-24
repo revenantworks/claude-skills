@@ -106,6 +106,24 @@ describe('the gitleaks rule set', () => {
     expect(findLeaks(`GITLAB ${GL.replace('glpat', 'GLPAT')}`).length).toBe(0)
     expect(findLeaks(`x ${NPM.replace('npm_', 'NPM_')}`).map(h => h.cls)).toEqual(['npm-access-token'])
   })
+  test('the generated file holds no example key: allowlist regexes are defanged, not dropped', () => {
+    // gitleaks allowlists its own example keys; written verbatim they tripped GitHub secret scanning.
+    const unwrap = (s: string) => s.replace(/(?<!\\)\[([A-Za-z])\]/g, '$1')
+    for (const r of GITLEAKS_RULES) {
+      const re = new RegExp(r.re, 'g')
+      for (const a of r.allow ?? []) for (const src of a.regexes) {
+        re.lastIndex = 0
+        expect(re.test(src)).toBe(false)
+      }
+    }
+    const gcp = GITLEAKS_RULES.find(r => r.id === 'gcp-api-key')!
+    const samples = gcp.allow!.flatMap(a => a.regexes).filter(s => /^[\w[\]-]+$/.test(s)).map(unwrap)
+    expect(samples.length).toBeGreaterThan(10)
+    for (const s of samples) {
+      expect(new RegExp(gcp.re).test(`${s} `)).toBe(true) // the sample is a key shape the rule finds
+      expect(findLeaks(`key ${s} `)).toEqual([]) // and the defanged allowlist still lets it pass
+    }
+  })
   test('placeholders and low-entropy values are left alone', () => {
     expect(findLeaks('api_key = "your-api-key-goes-here-please"')).toEqual([])
     expect(findLeaks('password = xxxxxxxxxxxxxxxxxxxx')).toEqual([])
