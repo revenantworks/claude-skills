@@ -1,6 +1,8 @@
 # Changelog — revenantworks-foundation-pacewright
 
-## [Unreleased]
+## [1.0.2] — 2026-11-24
+
+- Description neighbour list cut to the nearest siblings for the listing budget (SK1a trim list, run 2026-11-23-weekly-loop); no behaviour change.
 
 - 2026-11-20 observer review (observations 0473, 0488, 0500): `modes.md` shared base 9-11: a
   pace check reports spend by class, the controller's own checks are priced into every mode, one

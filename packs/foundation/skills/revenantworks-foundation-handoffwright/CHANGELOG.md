@@ -2,6 +2,8 @@
 
 ## [1.1.0] — 2026-11-24
 
+- Description neighbour list cut to the nearest siblings for the listing budget (SK1a trim list, run 2026-11-23-weekly-loop); no behaviour change.
+
 - Never pushes (owner pick 2026-11-24): the Write step commits locally and names the push as the
   landing step's job, at a compaction or usage-limit warning too; compatibility, the report line,
   the rules list and `handoff-template.md` say so. Test Case 6 now asserts commit only, no push.

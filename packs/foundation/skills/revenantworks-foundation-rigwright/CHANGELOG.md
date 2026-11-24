@@ -1,6 +1,8 @@
 # Changelog — revenantworks-foundation-rigwright
 
-## Unreleased
+## [1.0.2] — 2026-11-24
+
+- Description neighbour list cut to the nearest siblings for the listing budget (SK1a trim list, run 2026-11-23-weekly-loop); no behaviour change.
 
 - hook template: a moved session keeps the old `CLAUDE_PROJECT_DIR`; fall back to the input's `cwd` (observation 0656)
 

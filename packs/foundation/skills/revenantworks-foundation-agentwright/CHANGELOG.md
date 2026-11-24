@@ -1,6 +1,8 @@
 # Changelog — revenantworks-foundation-agentwright
 
-## [Unreleased]
+## [1.0.2] — 2026-11-24
+
+- Description neighbour list cut to the nearest siblings for the listing budget (SK1a trim list, run 2026-11-23-weekly-loop); no behaviour change.
 
 - 2026-11-20 observer review (observation 0466): `design-checklist.md`: a scheduled-task
   definition ships with an import line proven in the owner's shell (the UTF-8/UTF-16 swap).

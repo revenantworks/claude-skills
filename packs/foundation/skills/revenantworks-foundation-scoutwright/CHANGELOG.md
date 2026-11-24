@@ -1,5 +1,9 @@
 # Changelog — revenantworks-foundation-scoutwright
 
+## [1.0.2] — 2026-11-24
+
+- Description neighbour list cut to the nearest siblings (SK1a trim list); no behaviour change.
+
 ## [1.0.1] — 2026-11-13
 
 - bench reference update

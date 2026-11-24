@@ -3,7 +3,9 @@
 All notable changes to this skill are recorded here. The format follows Keep a Changelog and the
 version follows Semantic Versioning.
 
-## [Unreleased]
+## [1.0.1] — 2026-11-24
+
+- Description neighbour list cut to the nearest siblings for the listing budget (SK1a trim list, run 2026-11-23-weekly-loop); no behaviour change.
 
 - 2026-11-20 observer review (observation 0528): `record.md` Rules: a decision that promises an
   outcome carries its bar as a figure.

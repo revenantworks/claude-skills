@@ -1,6 +1,6 @@
 # Trigger Evals — revenantworks-foundation-grillwright
 
-- Provenance: derived from revenantworks-foundation-grillwright v1.0.0, 2026-10-08.
+- Provenance: derived from revenantworks-foundation-grillwright v1.0.0, 2026-10-08. **Re-anchored to v1.0.1, 2026-11-24:** Description neighbour list cut to the nearest siblings (SK1a trim list); no behaviour change.
 - Counts: 24 queries (12 should, 12 should-not, 5 pairs), judged cold against name + description only.
 - Owed: every row authored, not run. Rows 1-3 were carried from promptwright's trigger rows 35-37, now routed here.
 
