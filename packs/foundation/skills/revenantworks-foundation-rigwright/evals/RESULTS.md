@@ -138,3 +138,20 @@ Dropped: agentwright, promptwright. **5 / 6**, one AMBIGUOUS.
 Rows outside that scope were judged too; disagreements there are listed as seen, not re-scored.
 
 Seen outside scope: #37 routed to pacewright (expected none, runtime).
+
+## Cold re-judge after the cue restore (2026-11-24, run 2026-11-23-weekly-loop SK2e)
+
+Change judged: "unattended work, agentwright's" back at the end of this description (627 chars).
+Method: one fresh judge read `tools/blind_queries.py rigwright` (answers withheld) and the current
+name + description of every repo member, plus task-observer's; no eval files. Rows matched to the
+blind list by query text, not by the list's ordinal.
+
+- #15 SKILL.md-named scheduled task: **still AMBIGUOUS** (skillwright / agentwright). rigwright no
+  longer competes for it and did not before; the tie is between skillwright's "audit or build a
+  SKILL.md" and agentwright's "scheduled task". The restored cue keeps rigwright's own boundary
+  honest but does not settle the pair. Open: the deciding fix sits on skillwright's or
+  agentwright's description (the object test: a scheduled task stored as a SKILL.md), not here.
+- #37 live context compacting: routed to **pacewright** (expected none, runtime). pacewright's
+  description claims "context runs high (compact or clear?)", so the row's expected answer is
+  stale against the roster, or pacewright's cue is wider than intended. Open for the controller;
+  not changed here.
