@@ -148,3 +148,6 @@ at them; carry `warden_review.py` labels (real or noise) into the interrupt colu
 condition:** retire `layout` if `claude doctor` or `/permissions` ships one view of every level's rules
 and hooks with overlaps; keep the event-log ranking as a `warden_review.py` report.
 
+## Split decision (2026-11-24)
+
+Owner pick: gatewarden stays one skill (permissions and the disk map). Reopen the split when the description passes 1,000 chars or 5 disk-use observations exist in the observer log against gatewarden.

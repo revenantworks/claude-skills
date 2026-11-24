@@ -1,7 +1,8 @@
 # Changelog — revenantworks-warden-gatewarden
 
-## Unreleased
+## [1.0.5] — 2026-11-23
 
+- description: trimmed to 772 chars (from 868); no split into a permissions skill and a disk-map skill (owner pick 2026-11-24). Reopen the split when the description passes 1,000 chars or the observer log holds 5 disk-use observations against gatewarden; recorded in the pack registry row and SOURCES.md
 - compact_gate (new PreToolUse hook, `Write|Edit|MultiEdit|NotebookEdit`, soft rule `compact_gate`): refuses a subagent's write to an existing file when its transcript shows a `compact_boundary` after its last read of that file, so a unit re-reads instead of writing from the compaction summary (0730: the autoCompactWindow replay proof saw a Write and an Edit straight after two auto-compactions). Fail open. Tests: `test_hooks_compact_gate.py`, 28 (14 red with the gate off)
 - work_guard (new PreToolUse hook, `Bash|PowerShell`, every rule hard): `git stash` in a checkout with more than one worktree (0563), `sed -i` naming the Edit tool (0632), a git hook skip without a recorded owner word (`--no-verify`, commit `-n`, `-c core.hooksPath=`; `work_guard.py owner-ok`, 0711), a commit after another session switched the branch (0671), and `gh pr merge` chained after a checks read (0691, carried by 0725). Program-position words only; message and heredoc text is data (0392 controls). Wired into perm_audit's HOOK_SET, settings_layout, hooks.md and the walkthrough. Tests: `test_hooks_work_guard`, 15, most in-process (0725); red on the base (no hook), `test_perm_audit` red on the base for the settings block
 - tests: the F5 long-prose force-push test asserts the hook refused for the force push, not on its time budget, instead of a 10 s wall bar that went red under ci_local's parallel shards (0726). Under 8 parallel copies: base 8/8 red (15.5-15.7 s), fixed 8/8 green
