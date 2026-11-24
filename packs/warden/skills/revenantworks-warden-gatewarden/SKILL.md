@@ -4,7 +4,7 @@ description: Audits what Claude may do (permission rules, hooks, MCP scope, an a
 license: Apache-2.0
 compatibility: Python 3.9+ (stdlib) runs the scripts, never read - perm_audit, perm_explain, cap_review, settings_layout, scan_tree, footprint, drive_rules, treemap_page, drift, loads and the hooks in scripts/hooks/; git for the push gate. Optional, never installed - jsonschema, duckdb, a WizTree CSV or dust JSON (references/scanner-install.md). The owner installs every hook. On claude.ai it works from pasted files and marks script steps NOT-RUN. Local only, no network. Siblings are named, never required.
 metadata:
-  version: "1.1.1"
+  version: "1.1.2"
   profile: standard
   pack: warden
   brand: revenantworks
@@ -15,18 +15,16 @@ metadata:
 *history in CHANGELOG.md · sources and parity register in SOURCES.md · Apache-2.0 (LICENSE)*
 
 Decides **what Claude may do at runtime** and shows **what it actually reaches**. The first half:
-the permission rules in every settings level, the hooks that fire on tool calls, the MCP servers
-that load, and the grants an autonomous agent holds. Claude Code's permission rules match command
-**text**, so a rule can look right and stop nothing; gatewarden finds those rules, explains them,
-writes the fixed file, and ships hooks that enforce what rules cannot. The second half, from
-evidence: one map of every settings level, rule and hook; what fills a drive; every path Claude
-reached against what settings grant; live config drifting from its tracked copy; skills that load
-twice.
+permission rules at every settings level, hooks, loaded MCP servers and an agent's grants. Rules
+match command **text**, so a rule can look right and stop nothing; gatewarden finds those rules,
+explains them, writes the fixed file, and ships hooks that enforce what rules cannot. The second
+half, from evidence: one map of every settings level, rule and hook; what fills a drive; paths
+reached against paths granted; live config drifting from its tracked copy; skills that load twice.
 
 **Workflow:** Read → Find → Explain → Harden (a finished file) or Propose (one owner-run command) → Hand over
 
-**Model invocation stays on:** a permission or hook question arrives mid-task, unnamed. Its writes
-(a `.hardened.json` beside the original, a push intent, a CI stamp) never touch live config (rule 2).
+**Model invocation stays on:** permission questions arrive mid-task, unnamed. Its writes (a
+`.hardened.json`, a push intent, a CI stamp) never touch live config (rule 2).
 
 ## Safety rules — hold these before reading anything
 
@@ -90,8 +88,7 @@ deny looks like it should match and does not, it names the shape (`absolute-path
 `git-global-option`, `shell-wrapper`). It models the documented rules; the harness is the
 authority, and the answer says so. For a call that was denied, read the transcript's
 `permissionDecision` record (source, reason code, rule source) before modelling anything, and
-prove the deciding rule with a headless A/B probe (`bypass-shapes.md`, "Explain shapes"): a model
-said allow for 18 days while one PowerShell deny refused every gh call (observation 0660).
+prove the deciding rule with a headless A/B probe (`bypass-shapes.md`, "Explain shapes").
 
 **`gatewarden scan <agent>`** — what an autonomous agent is permitted to do when it runs: tool-grant
 scope, untrusted-content flow, guardrails and kill switches, credentials, failure and retry as
@@ -108,15 +105,15 @@ force, delete, mirror, `--all` or `--tags` push), `call_cap.py`, `launch_throttl
 `python -` and `python /dev/stdin`, which hang on an empty heredoc), `golive_block.py` and
 `outbound_text_guard.py` (a names-list entry in PR, issue or comment text, #0561) and
 `work_guard.py` (stash in a shared checkout, `sed -i`, a git hook skip, a branch switched under
-the session, a merge chained after a checks read; all hard, #0563 #0632 #0711 #0671 #0691) and
-`compact_gate.py` (a subagent's write to a file it has not read since its context was compacted, #0730).
+the session, a merge chained after a checks read; all hard) and
+`compact_gate.py` (a subagent's write to a file it has not read since its context was compacted).
 **They install in watch:** a rule logs what it would stop and the work runs; only hard rules (a
 force or delete push, a push the gate cannot read, a Hyper-V destroy, an OBS go-live, Python
 reading stdin) refuse in every mode, and no modes entry relaxes them. A weekly session-start line
 counts the suggestions; only the owner's `warden_review.py set` moves a soft rule (`hooks.md`,
 "Modes"). The command hooks unwrap wrappers and fail closed on what they cannot read. Both scripts
 live in `scripts/hooks/` here and run from the installed copy, `~/.claude/hooks/gatewarden/`; a
-bare `ci_stamp.py` path fails (observation 0629). Before Claude
+bare `ci_stamp.py` path fails. Before Claude
 pushes with the gate installed: `python push_gate.py intend --repo . --max <N>`, then
 `python ci_stamp.py run --repo . -- <the repo's CI command>`, or one `--step "<command>"` per CI
 step (never `bash -c`); a log that says a check was skipped writes no stamp unless `--excluded`
@@ -132,8 +129,7 @@ observation per finding when task-observer is installed, and names the loop a ru
 (`hooks.md`, "Reviewing a block"). Ids and hashes only; exit 3 means no event log yet.
 
 **`gatewarden layout [project]`** — one read-only map of every settings level, permission rule,
-added directory and hook (gatewarden's, dispatchwright's, the repo's own, plus installed plugin
-hooks with Revenantworks mods marked):
+added directory and hook from every source, plugin hooks included (Revenantworks mods marked):
 `python scripts/settings_layout.py [--project DIR] [--since 28] [--json OUT]`. It shows overlaps
 (a rule in two files, an allow a deny shadows, a hook wired twice), the rules the event log
 (`~/.claude/gatewarden/events.jsonl`, `hooks.md` "Modes") shows interrupting most beside their mode,
@@ -173,8 +169,8 @@ or a whole drive, `loads.md` for loads, `scanner-install.md` when WizTree or dus
 ## Without a shell or file tools
 
 On claude.ai or with no Python: ask for the settings files pasted, walk the rule table in
-`bypass-shapes.md` by hand, and say every finding is unverified by script. Mask any `env` value
-before quoting a line back. Write the hardened file as a code block with its target path. For
+`bypass-shapes.md` by hand, and say every finding is unverified by script (rule 4 still holds).
+Write the hardened file as a code block with its target path. For
 `layout` and the reach entries, give the exact commands, read back the JSON the owner pastes, mark
 every figure not seen in it NOT-RUN, and estimate nothing.
 
