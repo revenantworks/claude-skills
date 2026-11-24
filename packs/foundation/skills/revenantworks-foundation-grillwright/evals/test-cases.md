@@ -1,6 +1,6 @@
 # Test Cases — revenantworks-foundation-grillwright
 
-- Provenance: derived from revenantworks-foundation-grillwright v1.0.0, 2026-10-08.
+- Provenance: derived from revenantworks-foundation-grillwright v1.0.0, 2026-10-08. **Re-anchored to v1.0.1, 2026-11-24:** Description neighbour list cut to the nearest siblings (SK1a trim list); no behaviour change.
 - Counts: 12 cases, assertion-only. Every case authored, not run.
 - Coverage: Grill (C1-C6, C8), Record (C9), Resume (C7), Questionnaire (C12), Restraint (C10, C11), Data rule (C6).
 

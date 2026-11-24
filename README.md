@@ -161,7 +161,7 @@ voice or canon: nothing exists until you build one or hand one in. Capstone: Her
 | Skill | What it does | Try it with |
 |---|---|---|
 | [researchscribe](packs/scribe/skills/revenantworks-scribe-researchscribe/) | Researches a question into a verdict with a flip condition, a playbook or a graded report; every claim tagged | *"Compare A and B and give me a go/no-go"* |
-| [brandscribe](packs/scribe/skills/revenantworks-scribe-brandscribe/) | Keeps brand definitions and builds a live Claude Design System from one, plus DESIGN.md and VOICE.md; re-syncs it when the brand changes; scores pages against a neutral UI floor | *"Turn this style guide into a Claude Design System"* |
+| [brandscribe](packs/scribe/skills/revenantworks-scribe-brandscribe/) | Keeps brand definitions and builds a live Claude Design System from one, plus DESIGN.md and VOICE.md; re-syncs it when the brand changes | *"Turn this style guide into a Claude Design System"* |
 | [commscribe](packs/scribe/skills/revenantworks-scribe-commscribe/) | Writes and reshapes messages and docs for their channel and reader, and never moves a fact | *"Make this release note sound less like AI"* |
 | [lorescribe](packs/scribe/skills/revenantworks-scribe-lorescribe/) | Keeps a fiction project's story bible and checks text, briefs and drafts against canon | *"Check this chapter against the story bible"* |
 | [vaultscribe](packs/scribe/skills/revenantworks-scribe-vaultscribe/) | Sets up and keeps an LLM-maintained knowledge vault (works with Obsidian, not affiliated): cited pages, a lint that catches personal data and keys, drift checks on living sources, deny rules for web clips | *"Set up a second brain in Obsidian that Claude keeps up to date"* |
@@ -205,7 +205,7 @@ exception: uismith's probe uses Playwright for Python if you install it, loads t
 | [godotsmith](packs/gamedev/skills/revenantworks-gamedev-godotsmith/) | Godot 4.x conventions and the proof that a build is really green | *"GUT is green, but did every test file parse?"* |
 | [soundsmith](packs/gamedev/skills/revenantworks-gamedev-soundsmith/) | Directs game audio and judges it by numbers: loudness, true peak, loop seams | *"What LUFS should my game's SFX hit?"* |
 | [slicesmith](packs/gamedev/skills/revenantworks-gamedev-slicesmith/) | Writes game code test-first in thin slices a player can reach, with a Godot verify ladder and an honest commit per slice | *"Implement autosave, one slice at a time"* |
-| [uismith](packs/gamedev/skills/revenantworks-gamedev-uismith/) | Directs game menus, HUD, dashboards and panes, and measures their fit at every width and theme | *"This page scrolls sideways on my phone in dark mode"* |
+| [uismith](packs/gamedev/skills/revenantworks-gamedev-uismith/) | Directs game menus, HUD, dashboards and panes, critiques built pages, and measures their fit at every width and theme | *"This page scrolls sideways on my phone in dark mode"* |
 
 ### hearth · life at home and away
 

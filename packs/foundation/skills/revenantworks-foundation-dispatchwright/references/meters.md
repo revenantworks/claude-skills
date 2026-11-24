@@ -249,3 +249,16 @@ Used only when no budget decision file is fresh (SKILL.md §6).
   never relax it). At the slow band (default 80%) launch one unit at a time. Where gatewarden's
   launch-throttle hook is installed it refuses a launch in the stop band at the harness, and its
   call-cap hook enforces each row's `call_cap`; this gate still applies without either hook.
+
+## Landing
+
+Moved from SKILL.md §5 on 2026-11-24 (body budget); the rules are unchanged.
+
+- **Read hosted checks in one call, merge in the next** (#0691). Read each row of `gh pr checks
+  <n>` (no `fail`, `pending` or `cancelled`), never a `--watch` exit code: a CodeQL summary check
+  failed while every job passed. A merge chained after the read runs before anyone sees it; the
+  push gate does not see merges.
+- **Cut the land branch from `origin/main`** (#0651), never from local main, which may carry other
+  sessions' unpushed commits; stamp that commit once. When gh's active account cannot see the repo,
+  open the PR through the GitHub MCP. When no tool can read the hosted run, the row reads
+  `CI unread` and the land stays open, never green.

@@ -36,7 +36,8 @@ Paste this table into a project's CLAUDE.md to route requests without loading ev
 | Brief a pixel artist or an image generator | pixelsmith `brief` | comfyrunner (executes the brief) |
 | Loudness targets, a clicking loop, game audio direction | soundsmith | godotsmith `intake` (writes the import keys) |
 | Design a menu, HUD, dashboard or pane: layout, states, focus path | uismith `direct` | brandscribe (palettes and type), pixelsmith (the icons) |
-| A page or pane scrolls sideways, clips text or breaks in dark mode | uismith `probe`, `audit` | brandscribe `ui` (the scored ship verdict) |
+| A page or pane scrolls sideways, clips text or breaks in dark mode | uismith `probe`, `audit` | brandscribe `gate` (a pass or fail against a brand) |
+| Critique a built page before it ships (hierarchy, spacing, states, a generic look) | uismith `critique` | brandscribe `gate` (a pass or fail against the stored brand) |
 | Review a Godot UI scene against the conventions | godotsmith `review` | uismith (what the screen should do) |
 
 **Featured:** pixelsmith also ships on its own as a one-skill plugin (`/plugin install pixelsmith@revenantworks`).

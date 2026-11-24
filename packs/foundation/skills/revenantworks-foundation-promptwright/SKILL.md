@@ -1,10 +1,10 @@
 ---
 name: revenantworks-foundation-promptwright
-description: Writes, fixes and red-teams prompts — system prompts, templates, meta-prompts, agent or bot instructions — as copy-paste-ready artifacts, and picks the model tier for a prompt, task or plan's subtasks. Trigger to write, improve, debug or rewrite a prompt; which model should run this; a prompt that costs too many tokens, to cut with behavior held; or say /rw-promptwright (model, optimize — tune against test cases, slim, refresh). Not for a fan-out's units (dispatchwright), installed local models (lmstudiorunner), skills or their slim (skillwright), sourced comparisons (researchscribe), handoffs (handoffwright) or a pre-build interview (grillwright).
+description: Writes, fixes and red-teams prompts — system prompts, templates, meta-prompts, agent or bot instructions — as copy-paste-ready artifacts, and picks the model tier for a prompt, task or plan's subtasks. Trigger to write, improve, debug or rewrite a prompt; which model should run this; a prompt that costs too many tokens, to cut with behavior held; or say /rw-promptwright (model, optimize — tune against test cases, slim, refresh). A fan-out's units are dispatchwright's; skills and their slim skillwright's; sourced comparisons researchscribe's; a pre-build interview grillwright's.
 license: Apache-2.0
 compatibility: Ships no code; no bash or installs in a build. Web search only for an external fact a prompt needs and for refresh, the one entry that writes a file (references/model-snapshot.md). A savable prompt card is an opt-in HTML artifact. No packages.
 metadata:
-  version: "1.0.0"
+  version: "1.0.1"
   profile: standalone
   pack: foundation
   brand: revenantworks

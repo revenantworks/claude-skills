@@ -110,8 +110,8 @@
     {
       "name": "pacewright",
       "source": "./featured/pacewright",
-      "description": "Paces a Claude subscription's usage — how fast to spend this week, what can still run at N% weekly, whether planned work fits before a reset. Reads the 5-hour, weekly, per-model and CI-minutes meters, sets a spend mode (normal, pace, turbo, overnight, work-day, owner-away, reset-eve) and re-cuts waves that don't fit. Also when something ate usage overnight, CI minutes run low, context runs high (compact or clear?), a new model needs a measured baseline, or which skill or subagent used tokens; or say /rw-pacewright (check, mode, fit, context, uba, baseline, spend, refresh). The plan table is dispatchwright's; the handoff, handoffwright's; one artifact's cost, skillwright's slim; the meter statusline, rigwright's; a scheduled check, agentwright's.",
-      "version": "1.0.1",
+      "description": "Paces a Claude subscription's usage — how fast to spend this week, what can still run at N% weekly, whether planned work fits before a reset. Reads the 5-hour, weekly, per-model and CI-minutes meters, sets a spend mode (normal, pace, turbo, overnight, work-day, owner-away, reset-eve) and re-cuts waves that don't fit. Also when something ate usage overnight, CI minutes run low, context runs high (compact or clear?), a new model needs a measured baseline, or which skill or subagent used tokens; or say /rw-pacewright (check, mode, fit, context, uba, baseline, spend, refresh). The plan table is dispatchwright's; the handoff, handoffwright's; the meter statusline, rigwright's.",
+      "version": "1.0.2",
       "license": "Apache-2.0",
       "category": "productivity",
       "keywords": [
@@ -155,8 +155,8 @@
     {
       "name": "brandscribe",
       "source": "./featured/brandscribe",
-      "description": "Keeps brand definitions, several side by side, and turns one into a Claude Design System, DESIGN.md, VOICE.md or guide. Trigger to define a brand, palette, type or voice; turn a style guide or site into tokens; make, connect or sync a design system; audit for brand drift (off-palette colours, old names); pass or fail a page against a brand, or apply one to a README or generated output; critique or check a built UI, or a built site (dist/) for UI problems before it ships (hierarchy, spacing, states, generic look); or say /rw-brandscribe (setup, build, export, sync, audit, gate, ui). Microcopy and messages are commscribe's; React libraries design-sync's; charts dataviz's; canon lorescribe's; a pre-build brief, fit across widths and themes, and game UI uismith's; no logos.",
-      "version": "1.0.1",
+      "description": "Keeps brand definitions, several side by side, and turns one into a Claude Design System, DESIGN.md, VOICE.md or guide. Trigger to define a brand, palette, type or voice; turn a style guide or site into tokens; make, connect or sync a design system; audit for brand drift (off-palette colours, old names); pass or fail a page against a brand, or apply one to a README or generated output; or say /rw-brandscribe (setup, build, export, sync, audit, gate). Microcopy and messages are commscribe's; React libraries design-sync's; charts dataviz's; canon lorescribe's; UI critique, layout and fit uismith's; no logos.",
+      "version": "1.1.0",
       "license": "Apache-2.0",
       "category": "productivity",
       "keywords": [
@@ -233,8 +233,8 @@
       "name": "faretender",
       "displayName": "Revenantworks Faretender",
       "source": "./featured/faretender",
-      "description": "Finds the real cost of a trip and catches price drops after booking. Gives one all-in total per hotel, flight or rental car across sites, every tax, resort fee, city tax and parking added; pulls money-only complaints from recent reviews; checks a booked refundable stay or fare for a drop (rebook first, cancel second); puts flights, check-ins and cancel deadlines on the calendar from confirmations; checks a delayed or cancelled flight against EU261, UK261 and US DOT rules and drafts the claim. Trigger on compare these hotels, real total, hidden fees, fees reviewers mention, resort fee, watch my booking, did my hotel get cheaper, add my trip to my calendar, my flight was delayed, can I get a refund, or say faretender (compare, fees, watch, calendar, claim). Never books, cancels or pays. Points and miles are travel-hacking-toolkit's; the daily schedule agentwright's; vetting a connector trustwarden's.",
-      "version": "1.0.0",
+      "description": "Finds the real cost of a trip and catches price drops after booking. One all-in total per hotel, flight or rental car with every tax, resort fee and parking added; money-only complaints from recent reviews; a drop check on a booked refundable stay or fare (rebook first, cancel second); trip dates on the calendar; EU261, UK261 and US DOT claims for a delayed flight. Trigger on compare these hotels, real total, hidden fees, did my hotel get cheaper, my flight was delayed, or say faretender (compare, fees, watch, calendar, claim). Never books, cancels or pays. Points and miles are travel-hacking-toolkit's; schedules agentwright's; vetting a connector trustwarden's.",
+      "version": "1.0.1",
       "license": "Apache-2.0",
       "category": "productivity",
       "keywords": [

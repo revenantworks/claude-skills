@@ -1,6 +1,12 @@
 # Changelog — revenantworks-scribe-brandscribe
 
-## [Unreleased]
+## [1.1.0] — 2026-11-24
+
+2026-11-24 (owner pick, SK1r item 1): the `ui` mode moves to uismith `critique`, with
+`scripts/ui_check.py` and its tests, `references/ui-floor.md`, `references/ui-review.md`, their
+fixtures and five eval cases. brandscribe keeps `gate` (pass or fail a page against a brand) and
+routes a UI critique of a built page to uismith; new near-miss case `nearmiss-uismith-critique`.
+The description drops `ui` and names uismith for the UI floor.
 
 2026-11-20 (weekly observation review, slice b; observation 0681): `ui-review.md`: a label row with its own width over a fixed-size control is a P2 row.
 

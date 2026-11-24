@@ -1,2 +1,0 @@
-:root { --fg-base: #202020; --bg: #ffffff; }
-.page { color: var(--fg, var(--fg-base)); background-color: var(--bg); }

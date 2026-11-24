@@ -1,6 +1,9 @@
 # Changelog — revenantworks-foundation-rigwright
 
-## Unreleased
+## [1.0.2] — 2026-11-24
+
+- Description neighbour list cut to the nearest siblings for the listing budget (SK1a trim list, run 2026-11-23-weekly-loop); no behaviour change.
+- Description: "unattended work, agentwright's" restored after the trim made trigger row #15 (a SKILL.md-named scheduled task) ambiguous; the rigwright and agentwright seam's cold-listing cell now reads both descriptions (run 2026-11-23-weekly-loop SK2e).
 
 - hook template: a moved session keeps the old `CLAUDE_PROJECT_DIR`; fall back to the input's `cwd` (observation 0656)
 

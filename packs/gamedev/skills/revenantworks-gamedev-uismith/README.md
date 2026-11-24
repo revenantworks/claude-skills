@@ -1,6 +1,6 @@
 # revenantworks-gamedev-uismith
 
-Design direction for screens, and the measured proof that they fit. It writes the brief a builder
+Design direction for screens, a scored critique of built pages, and the measured proof that they fit. It writes the brief a builder
 works from (layout, hierarchy, spacing and type scales, every state, interaction feedback and the
 accessibility bars) for game menus and HUD, web dashboards, single-page artifacts, store-page
 layouts and plugin panes, and then probes the rendered page at phone-to-desktop widths in every
@@ -16,16 +16,20 @@ voice come from a brand definition or the project, never from uismith. The fifth
 
 ```
 revenantworks-gamedev-uismith/
-├── SKILL.md            # five laws, three entries, restraint, seams
+├── SKILL.md            # five laws, four entries, restraint, seams
 ├── README.md · LICENSE · NOTICE · CHANGELOG.md · SOURCES.md · volatile.json
 ├── references/
 │   ├── direction.md    # surface class, brief template, WCAG 2.2 bars, taste checklist, finding rows
 │   ├── probe.md        # widths, themes, what is measured, evidence check, exit codes (90-day stamp)
 │   ├── surfaces.md     # plugin panes, game menus and HUD, store pages
+│   ├── ui-floor.md     # critique: the UI floor rules (moved from brandscribe 2026-11-24)
+│   ├── ui-review.md    # critique: the six-area review and verdict
 │   └── pack.md         # gamedev advisory manifest (generated from the registry)
 ├── scripts/
 │   ├── probe.py        # run, not read: the rendered fit check (Playwright for Python, optional)
-│   └── test_probe.py   # stdlib unit tests, plus real-page tests that skip without Playwright
+│   ├── test_probe.py   # stdlib unit tests, plus real-page tests that skip without Playwright
+│   ├── ui_check.py     # critique: the 31-rule static floor check (stdlib)
+│   └── test_ui_check.py # its rule tests against evals/fixtures/ui/
 └── evals/              # hand-run suites + native `claude plugin eval` cases
 ```
 
@@ -48,35 +52,38 @@ and direct and audit still work from the page source, your screenshots or a desc
 | Direct | "design the pause menu", "lay out the settings pane", "review this dashboard mockup" | A design brief, or ranked findings on a design |
 | Probe | `uismith probe`, "does this fit on a phone", "check it at every width in light and dark" | A table per theme with screenshot paths: fit, page errors and empty sections, as loaded and with every fold open; exit 0, 1 or 2 |
 | Audit | `uismith audit`, "audit the side pane", "why does this page scroll sideways on my phone" | Probe plus the checklist, findings ranked from measured breaks to taste |
+| Critique | `uismith critique`, "critique this dashboard before we ship it", "check dist/ for UI problems" | The 31-rule floor check, six areas scored, a P0-P3 catalog and a ship, fix or recapture verdict |
 
 ## Commands and switches
 
 | Invocation | Effect |
 |---|---|
-| `uismith` | Bare invocation: the three entries in one line and a question |
+| `uismith` | Bare invocation: the four entries in one line and a question |
+| `python scripts/ui_check.py <built folder>` | The critique's static floor check: exit 0 clean, 1 findings, 2 error (`--json`, `--list-rules`) |
 | `python scripts/probe.py <file-or-url>` | The probe at the default widths 320, 375, 768, 1024 and 1440 in every theme the page offers |
 | "apply all" / "just write it" | Skips the one gate |
 
 ## Evals
 
-- `evals/trigger-evals.md`: 20 trigger queries (10 should, 10 should-not, 3 boundary pairs with
+- `evals/trigger-evals.md`: 27 trigger queries (17 should, 10 should-not, 3 boundary pairs with
   brandscribe, godotsmith and pixelsmith).
-- `evals/test-cases.md`: 10 assertion cases covering direct, probe and audit, each with a `Without:`
+- `evals/test-cases.md`: 13 assertion cases covering direct, probe, audit and critique, each with a `Without:`
   line.
-- `evals/<case>/`: 10 native `claude plugin eval` cases. Four behaviour cases grade the behaviour
+- `evals/<case>/`: 15 native `claude plugin eval` cases. Four behaviour cases grade the behaviour
   itself (every state drawn, a probe report read, NOT-RUN without Playwright, a stale copy caught),
-  two should-fire cases, and four near-misses that must stay quiet.
+  two critique behaviour cases (checker rows, taste stays P3), six should-fire cases, and three near-misses that must stay quiet.
 - `scripts/test_probe.py`: 32 stdlib tests (argument parsing, theme detection, the overflow
   judgement from fixture numbers, the evidence check, exit codes, the missing-dependency path, and
   the run loop through a fake browser). Run `python -m unittest discover -s scripts -p "test_*.py"`.
+- `scripts/test_ui_check.py`: the critique checker's rule tests against `evals/fixtures/ui/`.
 
 All suites are authored, not run against a model yet. The probe's real browser path needs
 Playwright and has not been run by these tests.
 
 ## Boundaries
 
-`revenantworks-scribe-brandscribe` owns brand definitions, palettes, type and voice, and the scored
-floor review of a built page (its `ui` entry). `revenantworks-gamedev-pixelsmith` owns pixel art,
+`revenantworks-scribe-brandscribe` owns brand definitions, palettes, type and voice, and the brand
+pass of a built page (its `gate` entry). `revenantworks-gamedev-pixelsmith` owns pixel art,
 sprites and icons. `revenantworks-gamedev-godotsmith` owns Godot conventions and run proof, a UI
 scene's review included. `revenantworks-scribe-commscribe` owns every word on the screen.
 `revenantworks-gamedev-slicesmith` builds a game screen test-first from the brief. Each is named and

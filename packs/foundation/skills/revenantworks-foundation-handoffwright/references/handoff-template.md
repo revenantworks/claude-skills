@@ -219,7 +219,7 @@ above; none of them holds.
 | Excuse | Why it fails | Do instead |
 |---|---|---|
 | "I remember what landed; no need to run `git`" | Memory reports intent, not origin. A sha nobody re-read is a guess | Read State now from `git rev-parse` and `git log origin/<branch>` |
-| "I'll commit the handoff at the start of the next session" | An uncommitted file dies with the container, which is the gap this skill closes | Commit and push in this call |
+| "I'll commit the handoff at the start of the next session" | An uncommitted file dies with the container, which is the gap this skill closes | Commit in this call; the push is the landing step's |
 | "The old `HANDOFF.md` is obviously stale" | A reader who opens the old name cannot see the new file (observation #0080) | Stamp it superseded in the same commit |
 | "The setting change is trivial; it needs no reversal" | Non-git changes are the ones nobody can find later (observation #0045) | Write the undo command beside it |
 | "The commit sha is the deliverable" | A sha with no starter prompt leaves the next session to rebuild context | End with the paste-ready starter prompt |

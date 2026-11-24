@@ -1,14 +1,14 @@
 # Trigger evals — brandscribe
 
-Provenance: written for 0.1.0 (2026-10-01). Status: authored, not run. Read each query cold against the name and description only, and compare with the Expected column. The native suite (`evals/<case>/`) runs fourteen of these rows under `claude plugin eval`, beside behaviour cases. **Re-anchored to v1.0.1, 2026-11-13:** 1.0.0 launch version; suite content unchanged from the build the A6 evals ran against.
+Provenance: written for 0.1.0 (2026-10-01). Status: authored, not run. Read each query cold against the name and description only, and compare with the Expected column. The native suite (`evals/<case>/`) runs fifteen of these rows under `claude plugin eval`, beside behaviour cases. **Re-anchored to v1.1.0, 2026-11-24:** the suite changed. The five UI-critique cases moved to uismith with the `ui` mode (now uismith `critique`), and one near-miss, `nearmiss-uismith-critique`, was added; the other cases are unchanged from the build the A6 evals ran against.
 
 Cold run 2026-10-01 (run J1): blind list from `tools/blind_queries.py`, judged on the worker tier against all 30 pack descriptions: Y1-Y12 and N1-N12, 24/24 agreed. Tiers checked: worker only; the fast and top tiers are unchecked, and the native `claude plugin eval` run is A6's. Y13-Y14 came from J1 misroutes M4 and M5 (rigwright and skillwright suites) and arrived with the description clause "to apply a brand to a README, a page or generated output"; re-read by hand against the new description, not blind.
 
 2026-10-08 (warden 6 → 4): N10's expected answer drops the retired identitywarden; shieldwarden owns it now.
 
-Counts: 38 queries (20 should, 18 should-not, 9 pairs)
+Counts: 38 queries (14 should, 24 should-not, 5 pairs)
 
-## Should fire (20)
+## Should fire (14)
 
 | # | Query | Expected | Native case |
 |---|---|---|---|
@@ -26,14 +26,8 @@ Counts: 38 queries (20 should, 18 should-not, 9 pairs)
 | Y12 | "brandscribe audit the docs folder" | brandscribe (audit, named) | — |
 | Y13 | "Apply our brand palette to the project README." | brandscribe (apply: gate, then the changed file at the gate) | `no-definition-apply` (behaviour, no brand stored) |
 | Y14 | "Apply my company's branding to the skills we generate." | brandscribe (apply to generated output) | — |
-| Y15 | "Critique this dashboard before we ship it: hierarchy, spacing, empty and error states." | brandscribe (ui) | `trigger-ui-critique` |
-| Y16 | "Check dist/index.html for UI problems." | brandscribe (ui, checker first) | `ui-check-dist` (behaviour) |
-| Y17 | "Does this landing page look generic?" | brandscribe (ui, specificity area) | `trigger-ui-generic` |
-| Y18 | "Score the settings page's hierarchy and spacing." | brandscribe (ui) | — |
-| Y19 | "brandscribe ui on the built site" | brandscribe (ui, named) | `ui-taste-p3` (behaviour) |
-| Y20 | "Critique the settings page I just built: hierarchy, spacing, empty and error states, does it look generic?" | brandscribe (ui: a critique of a built page; uismith hands it here) | `trigger-ui-critique-built` |
 
-## Should not fire (18)
+## Should not fire (24)
 
 | # | Query | Expected owner | Native case |
 |---|---|---|---|
@@ -55,6 +49,12 @@ Counts: 38 queries (20 should, 18 should-not, 9 pairs)
 | N16 | "Rewrite the empty-state and error copy on this signup form." | commscribe (ui profile) | — |
 | N17 | "The hut sprite vanishes against the grass when zoomed out; fix its palette." | pixelsmith | — |
 | N18 | "The settings page I just built scrolls sideways at 375 px in dark mode; check it at every width." | uismith (probe: fit across widths and themes) | `nearmiss-uismith-fit` |
+| N19 | "Critique this dashboard before we ship it: hierarchy, spacing, empty and error states." | uismith (critique; was Y15) | — |
+| N20 | "Check dist/index.html for UI problems." | uismith (critique; was Y16) | — |
+| N21 | "Does this landing page look generic?" | uismith (critique; was Y17) | — |
+| N22 | "Score the settings page's hierarchy and spacing." | uismith (critique; was Y18) | — |
+| N23 | "brandscribe ui on the built site" | uismith (critique; was Y19) | — |
+| N24 | "Critique the settings page I just built: hierarchy, spacing, empty and error states, does it look generic?" | uismith (critique; was Y20) | `nearmiss-uismith-critique` |
 
 ## Edge notes
 
@@ -63,7 +63,7 @@ Counts: 38 queries (20 should, 18 should-not, 9 pairs)
 - **N4**: house colours in fiction are canon, not a brand palette.
 - Third pair: **Y13/Y14 vs N8 and N12**. Putting a brand's names, colours and strings onto a README or generated output is brandscribe; renaming a skill pack's files is skillwright's port; standing CLAUDE.md rules are rigwright. Re-read 2026-10-01 against the 959-char description (E3): Y1-Y14 fire; N1-N12 route out on their boundary clauses; no earlier row changed verdict.
 - **N11**: decks pick up the default design system with no skill involved; brandscribe only builds the system.
-- Fourth pair: **Y15-Y19 vs N13, N14, N16, N17**. Reviewing a built page is brandscribe `ui`; building one is the model's, a chart is dataviz's, the words on it are commscribe's, sprite readability is pixelsmith's. Re-read by hand 2026-10-01 against the 995-char description (UIX): Y1-Y19 fire; N1-N17 route out. N6 (campaigns) lost its explicit clause in the rewrite and still routes out: nothing in the description names campaigns or strategy. Y3 lost "off-voice copy" and still fires on "old names" and off-palette colours.
-- Pairs are counted one row per pair, from the notes above: Y9-N5, Y1-N2, Y13-N8, Y14-N12, Y15-N13, Y16-N14, Y17-N16, Y18-N17 (8). The N4 and N11 notes name one side only and count none.
+- Fourth pair (2026-11-24): **Y5 vs N19-N24**. Passing a page against the stored brand (`gate`) is brandscribe; critiquing the built page's hierarchy, spacing, states or generic look is uismith `critique` (brandscribe's `ui` until the 2026-11-24 move; N19-N24 were Y15-Y20).
+- Pairs are counted one row per pair, from the notes above: Y9-N5, Y1-N2, Y13-N8, Y14-N12, Y5-N24 (5). The N4 and N11 notes name one side only and count none.
 - Tuning rule: misses on the yes-set → make the description's trigger list pushier; fires on the no-set → tighten the boundary sentence.
-- Ninth pair (F3, 2026-10-13): **Y20 vs N18**. Same built page: a critique of hierarchy, spacing, states or a generic look is brandscribe `ui`; a fit question (widths, themes, sideways scroll, clipped text) is uismith's probe. Both descriptions now say so.
+- N18 and N24 (F3, 2026-10-13; updated 2026-11-24): the same built page routes to uismith either way, a fit question to its probe and a critique to `critique`.

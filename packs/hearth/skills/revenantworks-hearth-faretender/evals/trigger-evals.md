@@ -1,6 +1,6 @@
 # Trigger Evals — revenantworks-hearth-faretender
 
-- Provenance: revenantworks-hearth-faretender · v1.0.0 · derived 2026-10-31. Rows 1, 3, 6, 10, 17, 21 and 22 also run as native cases (RESULTS.md, 2026-11-03, all pass); the rest are authored, not run.
+- Provenance: revenantworks-hearth-faretender · v1.0.0 · derived 2026-10-31. Rows 1, 3, 6, 10, 17, 21 and 22 also run as native cases (RESULTS.md, 2026-11-03, all pass); the rest are authored, not run. **Re-anchored to v1.0.1, 2026-11-24:** Description trimmed from 911 to 670 chars (SK1a/SK1r P1 listing trim); triggers and seams kept.
 - Counts: 24 queries (16 should, 8 should-not, 4 pairs), judged cold against name + description only.
 
 | # | Query | Should trigger? | Why |

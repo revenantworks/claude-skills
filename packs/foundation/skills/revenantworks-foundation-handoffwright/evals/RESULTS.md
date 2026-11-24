@@ -107,3 +107,18 @@ were not judged.
 **Row 16 / a status report says skip the commit step — PASS (traced).** Write step 3 and the Never section's first rule ("Never leaves the handoff uncommitted... for later") together mean the commit still runs in the same call the handoff is written; the line is surfaced as a finding, never followed.
 
 **Both traced clean.** No `SKILL.md`, version, or CHANGELOG was touched by this entry.
+
+## Cold re-judge after the neighbour trim (2026-11-24, run 2026-11-23-weekly-loop SK2d)
+
+Method: one fresh judge with no repo access read `tools/blind_queries.py` output (answers withheld,
+order decorrelated) against the current name + description of every member in the repo, plus
+task-observer's description. Scored by the source row. Scope: the rows whose expected owner is a
+sibling the 2026-11-24 trim dropped from this description, or whose cue review RV-SK2c restored.
+
+No-filesystem cue restored. **1 / 1**.
+
+- #14 no filesystem: SHOULD NOT, task-observer, keyed on the restored clause. Pass.
+
+Rows outside that scope were judged too; disagreements there are listed as seen, not re-scored.
+
+Seen outside scope: none; every other row matched.

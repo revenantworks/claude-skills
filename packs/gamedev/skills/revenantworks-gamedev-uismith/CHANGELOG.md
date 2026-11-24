@@ -1,6 +1,14 @@
 # Changelog — revenantworks-gamedev-uismith
 
-## [Unreleased]
+## [1.2.0] — 2026-11-24
+
+2026-11-24 (owner pick, SK1r item 1): brandscribe's `ui` mode moves here as `critique`, a scored
+critique of a built page or `dist/` (hierarchy, spacing, states, generic look) with a ship verdict.
+New: `scripts/ui_check.py` (the static UI floor) and `scripts/test_ui_check.py`,
+`references/ui-floor.md`, `references/ui-review.md`, their fixtures, the five moved eval cases
+(`trigger-ui-critique`, `trigger-ui-critique-built`, `trigger-ui-generic`, `ui-check-dist`,
+`ui-taste-p3`) and the new `trigger-critique-verdict`. The description, the mode table and the load
+lines name Critique; brandscribe keeps `gate` (a page against a brand).
 
 2026-11-20 (weekly observation review, slice b; observations 0657, 0658, 0681): `probe.py` probes a local file with no doctype through a host-skeleton copy (`--bare` opts out; two tests). `artifact-pages.md`: resolve each page's link before a republish; measure label-to-mark alignment on scales and sliders. `probe.md` section 1 names the skeleton. SKILL.md unchanged.
 

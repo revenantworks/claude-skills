@@ -2,6 +2,10 @@
 
 All notable changes to this skill are recorded here. Format: Keep a Changelog. Versions: SemVer.
 
+## [1.0.1] — 2026-11-24
+
+- Description trimmed from 911 to 670 chars (SK1a/SK1r P1 listing trim); triggers and seams kept
+
 ## [1.0.0] — 2026-10-31
 
 2026-11-03 (first eval run): nine native cases pass 3/3 with the skill (RESULTS.md). The description gains "fees reviewers mention" (911 characters); the fees trigger case now names its hotels; one regex grader uses `flags: i`. `behaviour-all-in-total` is non-discriminating and a harder input is owed.
