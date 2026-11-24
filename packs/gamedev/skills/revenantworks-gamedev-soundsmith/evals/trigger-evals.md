@@ -4,7 +4,7 @@ Counts: 22 queries (11 should, 11 should-not, 3 pairs)
 
 Provenance: derived from SKILL.md v0.1.0 (2026-10-01). Status: **authored, not run** — a cold judge
 reading only name + description has not scored this table yet. Read each query against the name and
-description alone and compare with the Expected column. 11 should fire, 11 should not. **Re-anchored to v1.0.0, 2026-10-01:** 1.0.0 launch version; suite content unchanged from the build the A6 evals ran against.
+description alone and compare with the Expected column. 11 should fire, 11 should not. **Re-anchored to v1.0.1, 2026-11-24:** 1.0.0 launch version; suite content unchanged from the build the A6 evals ran against.
 
 **2026-10-01, pack-split unit FX5, version unchanged at v0.1.0:** the description gained "a request to
 generate a game sound starts here with the brief" (J1 edit E5, misroute M7 on row 10), and every row was

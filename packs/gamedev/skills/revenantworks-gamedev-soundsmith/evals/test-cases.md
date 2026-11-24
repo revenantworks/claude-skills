@@ -4,7 +4,7 @@ Provenance: derived from SKILL.md v0.1.0 (2026-10-01). Status: **authored, not r
 each case is an Input and mechanical checks on the run's output. 13 cases (TC13 added 2026-10-01). Every fixture is invented;
 audio fixtures are generated at run time with the helpers in `scripts/test_audio_post.py` (`tone`,
 `write_wav`, `add_chunk`), never shipped or downloaded. Each case has a `Without:` line: what bare
-Claude would likely do. **Re-anchored to v1.0.0, 2026-10-01:** 1.0.0 launch version; suite content unchanged from the build the A6 evals ran against.
+Claude would likely do. **Re-anchored to v1.0.1, 2026-11-24:** 1.0.0 launch version; suite content unchanged from the build the A6 evals ran against.
 
 ## TC1 — SFX list per system (entry: Direct; beaten line: direction)
 

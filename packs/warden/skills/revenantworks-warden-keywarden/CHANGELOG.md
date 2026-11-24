@@ -1,6 +1,6 @@
 # Changelog — revenantworks-warden-keywarden
 
-## Unreleased
+## [1.0.1] — 2026-11-24
 
 - scope-recipes: a permission named in an owner step is checked against GitHub's fine-grained
   list first; check runs are out of a fine-grained token's reach (#0662). gh's active account is

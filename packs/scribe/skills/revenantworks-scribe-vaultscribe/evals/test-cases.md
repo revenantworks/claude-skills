@@ -1,6 +1,6 @@
 # Test Cases — revenantworks-scribe-vaultscribe
 
-- Provenance: revenantworks-scribe-vaultscribe · v1.0.0 · derived 2026-11-09. Authored, not run; the script halves of C4, C5 and C6 run as `scripts/test_vault_lint.py` and `scripts/test_vault_snapshot.py` (27 tests, green 2026-11-09).
+- Provenance: revenantworks-scribe-vaultscribe · v1.0.0 · derived 2026-11-09. Authored, not run; the script halves of C4, C5 and C6 run as `scripts/test_vault_lint.py` and `scripts/test_vault_snapshot.py` (27 tests, green 2026-11-09). **Re-anchored to v1.0.1, 2026-11-24:** observer review fixes to ingest and query.
 - Counts: 12 cases, assertion-only. One per entry, one per margin, plus restraint (no push, no raw edit), conflict, no-shell and bare invocation. Every fixture is an invented vault; no real person, project or address appears. A case cannot grant the gated Write or Edit tools, so behaviour cases are graded on the reply and on Bash calls.
 
 ## C1 — Setup on Windows, git-safe (margin M4; native `windows-git-safe`)

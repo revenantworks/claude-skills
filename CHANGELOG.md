@@ -5,6 +5,48 @@ Every pack, every member and every featured plugin launches at 1.0.0. Each membe
 `<pack>-vX.Y.Z`, member versions move on their own semver, and a featured plugin carries its
 member's version.
 
+## [localops-v1.0.4] - 2026-11-24
+
+### Improved
+
+- **dockerrunner**: Fixes from the 2026-11-20 observation review to the pre-flight check and its commands.
+- **whisperrunner**: Its tests now remove the temp folders they make.
+
+## [warden-v1.2.0] - 2026-11-24
+
+### New
+
+- **gatewarden**: New guards and hook fixes. A dispatched unit's first write after a compaction is now gated, so it re-reads its brief before changing anything.
+
+### Improved
+
+- **gatewarden**: A shorter description that still routes "find and delete the biggest files" requests here.
+- **shieldwarden**, **keywarden**: Fixes from the 2026-11-20 observation review to the go-public, rewrite and scope references.
+- **shieldwarden**, **trustwarden**, **gatewarden**: Every test suite now removes the scratch folders and test repos it makes, on Windows too.
+
+## [scribe-v1.2.0] - 2026-11-24
+
+### Breaking
+
+- **brandscribe**: The `ui` mode moved to uismith in the gamedev pack, as `critique`. brandscribe keeps `gate`, the pass or fail against a stored brand. Migrate: ask uismith to critique a built page, or install the gamedev pack for it.
+
+### Improved
+
+- **brandscribe**: The UI floor now checks open select lists and glare on light cards.
+- **researchscribe**, **vaultscribe**: Fixes from the 2026-11-20 observation review to research mode and to ingest and query.
+- **brandscribe**, **commscribe**: Each eval anchor now says what changed.
+
+## [gamedev-v1.3.0] - 2026-11-24
+
+### New
+
+- **uismith**: A `critique` mode for built pages (hierarchy, spacing, states, a generic look), moved here from brandscribe.
+
+### Improved
+
+- **uismith**: The theme pass covers the mode highlight, lists and theme drift, and the page check reads a leading doctype faster.
+- **godotsmith**, **slicesmith**, **soundsmith**: Fixes from the 2026-11-20 observation review to the CI guard, GUT, determinism, wiring and slice references.
+
 ## [hearth-v1.0.3] - 2026-11-24
 
 ### Improved

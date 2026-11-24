@@ -4,7 +4,7 @@ description: Directs pixel art that must read at several zoom scales at once —
 license: Apache-2.0
 compatibility: 'Optional image viewing: with an image tool (Claude Code Read on a PNG, a claude.ai upload) the look test scores the picture; without one it runs the text path. Optional, declared - Python 3 to run scripts/pixel_post.py (stdlib; run, not read). No packages, no network. Siblings revenantworks-scribe-brandscribe (brand palette), revenantworks-gamedev-godotsmith (engine proof, 3D setup, texture import) and revenantworks-localops-comfyrunner (runs a diffusion brief) are named, never required.'
 metadata:
-  version: "1.0.0"
+  version: "1.0.1"
   profile: standard
   pack: gamedev
   brand: revenantworks

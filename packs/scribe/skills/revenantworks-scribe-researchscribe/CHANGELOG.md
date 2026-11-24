@@ -1,6 +1,6 @@
 # Changelog — revenantworks-scribe-researchscribe
 
-## [Unreleased]
+## [1.0.1] — 2026-11-24
 
 2026-11-20 (weekly observation review, slice b; observation 0698): `research-mode.md` section 5 (kept out of the every-run `verification.md`, which sits at its budget): workers grade by the act, told in the first brief; one topic per search query; an API read prints the name it resolved to.
 

@@ -4,7 +4,7 @@ Provenance: authored against SKILL.md v0.1.0 (2026-10-01) by the build unit. Aut
 no case below has been executed against a model yet. Cases 1–4 are also covered by the script
 tests in `scripts/test_keywarden.py` (36 cases, run and passing 2026-10-01); those prove the
 scripts, not the skill's behaviour around them. Native `claude plugin eval` cases sit beside
-this file (seven folders). **Re-anchored to v1.0.0, 2026-10-01:** 1.0.0 launch version; suite content unchanged from the build the A6 evals ran against.
+this file (seven folders). **Re-anchored to v1.0.1, 2026-11-24:** 1.0.0 launch version; suite content unchanged from the build the A6 evals ran against.
 
 Format: each case is an **Input** and **Assert** lines, checked by inspecting the run's output
 and tool calls. **Without:** says what a run with no skill loaded is expected to do;

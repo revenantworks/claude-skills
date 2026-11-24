@@ -1,6 +1,6 @@
 # Changelog — revenantworks-localops-dockerrunner
 
-## [Unreleased]
+## [1.0.1] — 2026-11-24
 
 2026-11-20 (weekly observation review, slice b; observations 0667, 0669): the audit names what keeps the engine busy (a container up a day or more with its restart policy, AutoStart, Resource Saver off; three tests); `commands.md`: an entrypoint that backgrounds its worker restores SIGINT and SIGQUIT.
 

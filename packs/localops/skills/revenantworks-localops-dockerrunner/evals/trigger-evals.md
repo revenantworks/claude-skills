@@ -4,7 +4,7 @@ Counts: 25 queries (13 should, 12 should-not, 1 pairs)
 
 Provenance: authored against SKILL.md v0.1.0 (2026-10-01), by the unit that wrote the
 description. Judged from **name + description only**, as a cold router would. Not a cold judge —
-the reader wrote the clauses — so a cold re-judge was owed. **Cold re-judge done 2026-10-01 (unit J1):** 24 rows, 0 misroutes; one collision with keywarden (J1 M9, C2: keywarden's suite routes "log in to Docker Hub" here while this description ceded "registry logins and secrets"). **FX4, 2026-10-01:** J1 edit E7 ("registry token storage is keywarden's") plus the trigger "to log in to a registry"; row #25 added. Re-judged by hand from name + description: rows 1-24 do not move (#18 "rotate my Docker Hub token" still routes to keywarden through "token storage"). **Re-anchored to v1.0.0, 2026-10-01:** 1.0.0 launch version; suite content unchanged from the build the A6 evals ran against.
+the reader wrote the clauses — so a cold re-judge was owed. **Cold re-judge done 2026-10-01 (unit J1):** 24 rows, 0 misroutes; one collision with keywarden (J1 M9, C2: keywarden's suite routes "log in to Docker Hub" here while this description ceded "registry logins and secrets"). **FX4, 2026-10-01:** J1 edit E7 ("registry token storage is keywarden's") plus the trigger "to log in to a registry"; row #25 added. Re-judged by hand from name + description: rows 1-24 do not move (#18 "rotate my Docker Hub token" still routes to keywarden through "token storage"). **Re-anchored to v1.0.1, 2026-11-24:** 1.0.0 launch version; suite content unchanged from the build the A6 evals ran against.
 
 Balance: 13 should-fire · 12 should-not (8 near-misses, 4 off-topic) — 25 in all. Unit: one query = one numbered row.
 

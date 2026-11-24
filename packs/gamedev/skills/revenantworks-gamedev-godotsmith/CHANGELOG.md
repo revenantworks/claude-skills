@@ -1,6 +1,6 @@
 # Changelog — revenantworks-gamedev-godotsmith
 
-## [Unreleased]
+## [1.0.2] — 2026-11-24
 
 - 2026-11-20 observer review (observations 0465, 0467, 0479, 0485, 0509, 0527, 0707, 0723):
   `gut-traps.md` §4: the per-worktree user folder, keyed uniquely, and `--headless` does not

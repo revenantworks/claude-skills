@@ -1,5 +1,9 @@
 # Changelog — revenantworks-warden-trustwarden
 
+## [1.0.2] — 2026-11-24
+
+- tests remove their scratch folders
+
 ## [1.0.1] — 2026-11-13
 
 - trust_vet compares the licence file at both SHAs

@@ -125,7 +125,7 @@ each one loads only when a request needs it.
 
 | Pack | Skills | What it covers | Featured | Install |
 |---|---|---|---|---|
-| [**foundation**](packs/foundation/) | 9 | Building and running the work around Claude: skills and their evals, prompts, interviews, agents, config, fan-out, handoffs, pacing, platform change | pacewright | `/plugin install foundation@revenantworks` |
+| [**foundation**](packs/foundation/) | 10 | Building and running the work around Claude: skills and their evals, prompts, interviews, agents, config, fan-out, handoffs, landing on main, pacing, platform change | pacewright | `/plugin install foundation@revenantworks` |
 | [**scribe**](packs/scribe/) | 5 | Words and knowledge: research verdicts, brands and design systems, messages and docs, story canon, knowledge vaults | brandscribe | `/plugin install scribe@revenantworks` |
 | [**warden**](packs/warden/) | 4 | Guarding what Claude writes or manages: leaks, identity, third-party code, disk and reach, credentials, permissions | trustwarden | `/plugin install warden@revenantworks` |
 | [**localops**](packs/localops/) | 7 | Local programs, one per runner: LM Studio, ComfyUI, Docker, DuckDB, whisper.cpp, Hyper-V, OBS | whisperrunner | `/plugin install localops@revenantworks` |

@@ -1,5 +1,9 @@
 # Changelog — revenantworks-gamedev-pixelsmith
 
+## [1.0.1] — 2026-11-24
+
+- pack routing table updated
+
 ## [1.0.0] — 2026-10-01
 
 2026-10-17 (eval rerun, U41): `contrast.md`: a table cell holds the gap and a verdict only, never a remedy, so an outline never reads as the first fix ahead of a value shift (case `behaviour-hut-contrast`).

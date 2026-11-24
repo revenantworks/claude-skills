@@ -2,7 +2,7 @@
 
 Counts: 31 queries (15 should, 16 should-not, 6 pairs)
 
-- Provenance: written for revenantworks-scribe-researchscribe 0.1.0, 2026-10-01 (pack-split build B14). **Re-anchored to v1.0.0, 2026-10-01:** 1.0.0 launch version; suite content unchanged from the build the A6 evals ran against.
+- Provenance: written for revenantworks-scribe-researchscribe 0.1.0, 2026-10-01 (pack-split build B14). **Re-anchored to v1.0.1, 2026-11-24:** 1.0.0 launch version; suite content unchanged from the build the A6 evals ran against.
 - Method: read each query cold against name + description only; compare with the Expected column.
 - State: cold run 2026-10-01 (run J1): blind list from `tools/blind_queries.py`, judged on the
   worker tier against all 30 pack descriptions: 24/24 agreed. Tiers checked: worker only; the fast

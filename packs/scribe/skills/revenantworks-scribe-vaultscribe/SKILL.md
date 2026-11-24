@@ -4,7 +4,7 @@ description: Sets up, runs and keeps honest an LLM-maintained knowledge vault â€
 license: Apache-2.0
 compatibility: Works alone. Two declared scripts, scripts/vault_lint.py (read-only) and scripts/vault_snapshot.py (writes only new dated folders under raw/snapshots/), Python 3 standard library, no network; setup copies them into the vault's tools/. Without Python or a shell, lint and refresh run by hand from the checklists and report the script as NOT-RUN. Reads and writes Markdown with the surface's file tools; git optional. Siblings named are routing pointers, never required.
 metadata:
-  version: "1.0.0"
+  version: "1.0.1"
   profile: standard
   pack: scribe
   brand: revenantworks

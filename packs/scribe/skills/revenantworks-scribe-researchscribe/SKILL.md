@@ -4,7 +4,7 @@ description: Researches a question to something usable — a verdict with a flip
 license: Apache-2.0
 compatibility: Works alone. Needs web search and fetch; without them products ship provisional, except `map` (local checkout only). Claude Code adds an optional saved workflow (workflows/research.js, owner opt-in), optional stdlib scripts (workflow_lint.py, block_log.py, source_eval.py) and subagents when workflows are off. claude.ai adds the Research hand-off. lorescribe, commscribe, brandscribe voice files, whisperrunner, duckrunner and lmstudiorunner are optional pointers, never required.
 metadata:
-  version: "1.0.0"
+  version: "1.0.1"
   profile: standard
   pack: scribe
   brand: revenantworks

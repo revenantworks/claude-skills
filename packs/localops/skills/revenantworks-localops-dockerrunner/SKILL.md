@@ -4,7 +4,7 @@ description: Runs Docker Desktop and its WSL2 layer, checking RAM and disk befor
 license: Apache-2.0
 compatibility: Requires Docker Desktop on the WSL2 backend (Windows 10/11) and the docker CLI on PATH. Optional, declared - Python 3 for scripts/docker_preflight.py and wslconfig_plan.py (stdlib only), plus the wsl and tasklist commands. Without a shell it hands over the read commands and marks each check NOT-RUN. No packages, no cloud network. Reads the localops lease and gpu-config.json, never writes them. Siblings are named, never required.
 metadata:
-  version: "1.0.0"
+  version: "1.0.1"
   profile: standard
   pack: localops
   brand: revenantworks

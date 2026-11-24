@@ -4,7 +4,7 @@ description: Keeps a fiction story bible and checks text against it. Trigger to 
 license: Apache-2.0
 compatibility: Works alone. One declared script, scripts/manuscript.py (Python 3 standard library, no network, read-only on chapters, writes only its ledger folder); without Python the manuscript loop runs by hand. Reads and writes Markdown and YAML frontmatter and a self-contained HTML timeline with the surface's file tools; without them it hands proposals and briefs back in chat. Every sibling named is a routing pointer, never required.
 metadata:
-  version: "1.0.0"
+  version: "1.0.1"
   profile: standard
   pack: scribe
   brand: revenantworks

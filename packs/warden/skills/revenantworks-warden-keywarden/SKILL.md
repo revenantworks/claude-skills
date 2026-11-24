@@ -4,7 +4,7 @@ description: Finds where every credential on the machine lives, without showing 
 license: Apache-2.0
 compatibility: Python 3 (stdlib) for scripts/cred_inventory.py, preflight.py and scope_check.py (run, never read). Optional, never installed by the skill - git, gh, 1Password op, Bitwarden bw or bws; Windows cmdkey; a Docker helper's list (opt-in). No admin rights, no network except gh api for scope_check. Without a shell it walks the store list by hand and marks each store NOT-RUN. Siblings shieldwarden, gatewarden, agentwright and rigwright are named, never required.
 metadata:
-  version: "1.0.0"
+  version: "1.0.1"
   profile: standard
   pack: warden
   brand: revenantworks

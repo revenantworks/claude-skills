@@ -1,7 +1,7 @@
 # Test cases — assertion suite
 
 - Provenance: written for revenantworks-scribe-researchscribe 0.1.0, 2026-10-01 (B14). State: authored,
-  not yet run. Native mirrors live in the case folders (`claude plugin eval`). **Re-anchored to v1.0.0, 2026-10-01:** 1.0.0 launch version; suite content unchanged from the build the A6 evals ran against.
+  not yet run. Native mirrors live in the case folders (`claude plugin eval`). **Re-anchored to v1.0.1, 2026-11-24:** 1.0.0 launch version; suite content unchanged from the build the A6 evals ran against.
 - Format: Input, then mechanical Assert lines (literal, pattern, count or a named absence). `Without:`
   says what bare Claude is expected to do, so a case that passes both ways is flagged non-discriminating.
 - Margin and *beaten* claims in SOURCES.md name the case that tests them.

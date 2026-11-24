@@ -1,5 +1,9 @@
 # Changelog — revenantworks-localops-whisperrunner
 
+## [1.0.2] — 2026-11-24
+
+- tests remove their temp folders
+
 ## [1.0.1] — 2026-11-13
 
 - Locate (observations 0531, 0607): a configured `bin` or model path that no longer exists stops

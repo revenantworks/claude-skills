@@ -1,6 +1,6 @@
 # Changelog — revenantworks-warden-shieldwarden
 
-## Unreleased
+## [1.0.2] — 2026-11-24
 
 - rewrite-recipes: published mode ranges the rewrite from the leak's first commit and gates on
   the commit map's changed count, since filter-repo strips commit signatures (#0687); the force

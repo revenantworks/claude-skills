@@ -6,7 +6,7 @@ batch was installed (doctrine and references only), and no case moved.
 **Re-anchored to v1.1.0, 2026-09-28** (parity run U14): A4's pass now requires a signature-asserting tolerated
 red, and group F adds three claims an incumbent approach fails, for 34 cases. The
 `description` is byte-identical. Traced on one model on 2026-09-28; Haiku and Sonnet runs are
-owed — see `RESULTS.md`. **Re-anchored to v1.0.0, 2026-10-01:** provenance only; one line added to `references/gdscript-invariants.md` section 3, and no case moved.
+owed — see `RESULTS.md`. **Re-anchored to v1.0.2, 2026-11-24:** provenance only; one line added to `references/gdscript-invariants.md` section 3, and no case moved.
 **Re-judged 2026-10-01 (pack split P1d):** group G adds eight cases for the design-and-balance
 reference, asset intake and the new perf rules, for 42 cases; D6 stands (design authoring still declines).
 **Group G extended 2026-10-15** (observations 0432, 0422, 0373, 0379, 0409, 0423): G9-G14 add the

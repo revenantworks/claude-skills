@@ -1,6 +1,6 @@
 # Trigger Evals — revenantworks-scribe-vaultscribe
 
-- Provenance: revenantworks-scribe-vaultscribe · v1.0.0 · derived 2026-11-09. Authored, not run; rows 1, 4, 7, 9, 15, 16, 17 and 18 also run as native cases (`evals/<case>/`).
+- Provenance: revenantworks-scribe-vaultscribe · v1.0.0 · derived 2026-11-09. Authored, not run; rows 1, 4, 7, 9, 15, 16, 17 and 18 also run as native cases (`evals/<case>/`). **Re-anchored to v1.0.1, 2026-11-24:** observer review fixes to ingest and query.
 - Counts: 24 queries (14 should, 10 should-not, 5 pairs), judged cold against name + description only.
 
 ## Should fire (14)

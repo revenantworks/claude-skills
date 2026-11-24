@@ -4,7 +4,7 @@ description: Directs game audio and judges it by numbers — sound palettes, SFX
 license: Apache-2.0
 compatibility: Python 3 (stdlib only) runs scripts/audio_post.py (run, not read). Optional, declared - ffmpeg on PATH decodes non-WAV files for it; without ffmpeg those files report NOT-RUN. No network, no installs. Without a shell it hands back the exact command and scores from numbers the user reads off, marked NOT-RUN. Siblings comfyrunner, godotsmith, whisperrunner, pixelsmith and lorescribe are named, never required.
 metadata:
-  version: "1.0.0"
+  version: "1.0.1"
   profile: standard
   pack: gamedev
   brand: revenantworks

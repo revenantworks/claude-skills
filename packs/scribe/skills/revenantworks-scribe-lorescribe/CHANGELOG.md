@@ -1,5 +1,9 @@
 # Changelog — revenantworks-scribe-lorescribe
 
+## [1.0.1] — 2026-11-24
+
+- pack routing table updated
+
 ## [1.0.0] — 2026-10-01
 
 2026-10-17 (eval rerun, U41): case `branch-leak`'s judge no longer reads "flags only" as forbidding the ORPHAN the fixture really holds; the bible-contradiction FAIL stays.

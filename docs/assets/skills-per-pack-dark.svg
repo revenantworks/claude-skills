@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 340" width="100%" role="img" aria-labelledby="t d" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">
   <title id="t">Skills per pack: 32 skills in 6 packs. Each pack installs as one plugin.</title>
-  <desc id="d">foundation 1.2.0: 10 skills; localops 1.0.3: 7 skills; gamedev 1.2.1: 5 skills; scribe 1.1.1: 5 skills; warden 1.1.5: 4 skills; hearth 1.0.3: 1 skill.</desc>
+  <desc id="d">foundation 1.2.0: 10 skills; localops 1.0.4: 7 skills; gamedev 1.3.0: 5 skills; scribe 1.2.0: 5 skills; warden 1.2.0: 4 skills; hearth 1.0.3: 1 skill.</desc>
   <rect x="0.5" y="0.5" width="719" height="339" rx="8" fill="#1a1a19" stroke="#2c2c2a"/>
   <text x="24" y="40" font-size="17" font-weight="600" fill="#f0efec">Skills per pack</text>
   <text x="24" y="62" font-size="13" fill="#c3c2b7">32 skills in 6 packs. Each pack installs as one plugin.</text>
@@ -10,19 +10,19 @@
   <path d="M208 88 h444 a4 4 0 0 1 4 4 v12 a4 4 0 0 1 -4 4 h-444 z" fill="#3987e5"/>
   <text x="664" y="98" dy="0.35em" font-size="14" font-weight="600" fill="#f0efec">10</text>
   <text x="24" y="134" dy="0.35em" font-size="14" font-weight="600" fill="#f0efec">localops</text>
-  <text x="124" y="134" dy="0.35em" font-size="12" fill="#c3c2b7">v1.0.3</text>
+  <text x="124" y="134" dy="0.35em" font-size="12" fill="#c3c2b7">v1.0.4</text>
   <path d="M208 124 h309.6 a4 4 0 0 1 4 4 v12 a4 4 0 0 1 -4 4 h-309.6 z" fill="#3987e5"/>
   <text x="529.6" y="134" dy="0.35em" font-size="14" font-weight="600" fill="#f0efec">7</text>
   <text x="24" y="170" dy="0.35em" font-size="14" font-weight="600" fill="#f0efec">gamedev</text>
-  <text x="124" y="170" dy="0.35em" font-size="12" fill="#c3c2b7">v1.2.1</text>
+  <text x="124" y="170" dy="0.35em" font-size="12" fill="#c3c2b7">v1.3.0</text>
   <path d="M208 160 h220 a4 4 0 0 1 4 4 v12 a4 4 0 0 1 -4 4 h-220 z" fill="#3987e5"/>
   <text x="440" y="170" dy="0.35em" font-size="14" font-weight="600" fill="#f0efec">5</text>
   <text x="24" y="206" dy="0.35em" font-size="14" font-weight="600" fill="#f0efec">scribe</text>
-  <text x="124" y="206" dy="0.35em" font-size="12" fill="#c3c2b7">v1.1.1</text>
+  <text x="124" y="206" dy="0.35em" font-size="12" fill="#c3c2b7">v1.2.0</text>
   <path d="M208 196 h220 a4 4 0 0 1 4 4 v12 a4 4 0 0 1 -4 4 h-220 z" fill="#3987e5"/>
   <text x="440" y="206" dy="0.35em" font-size="14" font-weight="600" fill="#f0efec">5</text>
   <text x="24" y="242" dy="0.35em" font-size="14" font-weight="600" fill="#f0efec">warden</text>
-  <text x="124" y="242" dy="0.35em" font-size="12" fill="#c3c2b7">v1.1.5</text>
+  <text x="124" y="242" dy="0.35em" font-size="12" fill="#c3c2b7">v1.2.0</text>
   <path d="M208 232 h175.2 a4 4 0 0 1 4 4 v12 a4 4 0 0 1 -4 4 h-175.2 z" fill="#3987e5"/>
   <text x="395.2" y="242" dy="0.35em" font-size="14" font-weight="600" fill="#f0efec">4</text>
   <text x="24" y="278" dy="0.35em" font-size="14" font-weight="600" fill="#f0efec">hearth</text>
