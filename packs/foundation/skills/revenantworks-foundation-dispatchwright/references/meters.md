@@ -27,6 +27,7 @@ and has spent. Neither skill loads the other's files.
 - Liveness in an unattended stretch — the allow list, a watcher a prompt cannot block, detached
   waits, hold markers
 - The fallback fit — when no budget decision file is fresh
+- Landing
 
 ## The meter list
 

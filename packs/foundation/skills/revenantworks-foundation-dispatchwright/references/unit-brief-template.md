@@ -20,13 +20,8 @@ each new brief against the rules file before launch, so no unit has to pick whic
 
 ## Contents
 
-- Launch line and run rules by reference
-- The brief head — owner words, pre-digested facts, owner approvals, owner bars on changed initial conditions,
-  port map, first pushable state, build ladder, scope,
-  files, tier, tools, fetch path, base, account, artifacts, tests, CI list, budget and call cap
-  with its verification reserve, return shape (and its retriever variant), stop condition
-- Durability contract — local commit per piece, staging by path, ledger row, reversal, staged-tree
-  gate, asserted edits, fix units fail first, fetch cache, escalation
+- DURABILITY CONTRACT — follow this exactly
+- Results, commits, worktrees and counts
 - Waiting on a job
 - Process and git isolation — one process tree, shared refs, guard-safe command shapes,
   `.unit-out/`, per-unit scratch, destructive ref moves
@@ -34,12 +29,11 @@ each new brief against the rules file before launch, so no unit has to pick whic
   before measurements, perf method, adoption arms, status lines replaced not appended, stateful
   controls, live-state expiry, install halves, generated collections, pasted commands, helper
   skills
-- Brief variants — design, prep ahead of a ruling, sim build, amendment, review (with design
-  close), fix round, measurement, blind comparison, verifier, adversarial verifier, eval run,
-  research, join-check, wave join, env switch, run-tool, retirement, split or rename, pin-arc join, briefs
-  written ahead
+- Brief variants — design, review, fix, verifier, research, join-check
 - Observations — return them, do not log them
-- On resume
+- On resume (if you are picking this unit back up)
+- Pushing self-tests
+- Process and git isolation — controller side
 
 ---
 

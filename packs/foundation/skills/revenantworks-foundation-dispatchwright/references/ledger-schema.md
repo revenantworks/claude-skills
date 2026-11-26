@@ -17,6 +17,7 @@ reconstructed from memory after the fact.
 - Worked example row
 - Writing the ledger — the row write before the launch; how a brief names its unit
 - Resuming a run
+- Resuming a workflow wave
 
 ## Where it lives
 

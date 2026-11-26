@@ -7,14 +7,14 @@ Read only the section for the structure you picked in Phase 3. Each is a proven 
 ## Contents
 
 - Where the choice is made
-- CO-STAR — content / writing
-- RISEN — multi-step process
-- TIDD-EC — high-precision / compliance
-- BAB — rewrite / refactor / convert
-- Chain of Thought — reasoning / debugging / math
-- RTF / APE — simple, well-defined tasks
+- CO-STAR — Context, Objective, Style, Tone, Audience, Response
+- RISEN — Role, Instructions, Steps, End goal, Narrowing
+- TIDD-EC — Task, Instructions, Do, Don't, Examples, Context
+- BAB — Before, After, Bridge
+- Chain of Thought (CoT)
+- RTF — Role, Task, Format (and APE for the ultra-minimal case)
 - Agent / System structure — tool-using agents and system prompts
-- Advanced / critique set — Self-Refine, Red-team, RCoT, Chain of Density
+- Advanced / critique set — stress-testing and verifying
 - Prompt chaining — when to split a task across multiple prompts
 - Long-context structuring — where to place data and instructions
 - Note on research backing

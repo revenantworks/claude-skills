@@ -10,8 +10,13 @@ report form; it reads the committed handoff itself, not this template.
 
 ## Contents
 
-File shape (resume) · Task-brief shape · Size · Starter prompt · Resume-time checks · Where the
-file lives
+- File shape
+- Task-brief shape
+- Size
+- Starter prompt (emitted in chat at step 4 — never written into the handoff file)
+- Resume-time checks (before trusting the file above)
+- Where the file lives
+- Excuses and red flags
 
 ## File shape
 

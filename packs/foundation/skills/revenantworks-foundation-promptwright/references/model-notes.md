@@ -8,11 +8,11 @@ This skill targets Claude, plus local open-weights models the user runs on their
 
 ## Contents
 
-1. The reasoning-model split *(read first)*
-2. Tier routing *(moved to `model-routing.md`)*
-3. Claude
-4. Open-weight / local models
-5. Cross-model rule
+- 1. The reasoning-model split *(read first)*
+- 2. Tier routing *(moved)*
+- 3. Claude
+- 4. Open-weight / local models
+- 5. Cross-model rule
 
 ---
 
