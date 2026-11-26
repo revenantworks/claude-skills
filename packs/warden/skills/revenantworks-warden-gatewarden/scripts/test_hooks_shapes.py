@@ -1049,5 +1049,150 @@ class UnreadScript(unittest.TestCase):
         self.assertIn("not sent", err)
 
 
+class CasePattern0392(PushShapeBase):
+    """Observation 0392, 2026-11-26: push_gate followed `bash <script.sh>` into the observer's Session
+    Start scan and refused it for "a glob in the command word (`/*`) on a line that names push". The only
+    `/*` was a `case` pattern (an absolute-path test) and the script never says push. A case pattern is a
+    match test, not a command; a glob that really is a command word stays refused, and the refusal says
+    why without claiming a push word the line does not hold."""
+
+    SCRIPT = ('#!/usr/bin/env bash\nws="$1"\ncase "$ws" in\n  (/*|[A-Za-z]:[/\\\\]*) ;;\n'
+              '  *) ws="$PWD/$ws" ;;\nesac\necho "$ws"\n')
+
+    def test_a_script_with_a_case_pattern_glob_passes(self):
+        path = Path(self.tmp, "scan.sh")
+        path.write_text(self.SCRIPT, encoding="utf-8")
+        p = str(path).replace("\\", "/")
+        for tool in ("Bash", "PowerShell"):
+            self.expect(0, [f'bash "{p}" "ws"', f"bash {p} ws"], tool=tool)
+
+    def test_case_patterns_on_the_line_pass(self):
+        self.expect(0, ['case "$x" in (/*|[A-Za-z]:[/\\\\]*) ;; *) echo rel ;; esac',
+                        'case $x in\n  *.md|*.txt) echo doc ;;\n  [0-9]*) echo num ;&\n  *) ;;\nesac',
+                        f'case $x in a) {G} status ;; esac && {G} {U} origin main'])
+
+    def test_a_glob_command_word_in_a_case_body_is_still_refused(self):
+        self.expect(2, [f"case $x in a) {G[:2]}? {U} origin main ;; esac",
+                        f"case $x in (a|b) ;; *) /usr/bin/{G[:2]}[t] {U} origin main ;; esac"], reason=GLOB)
+
+    def test_a_bare_glob_command_word_names_git_push_not_a_push_word(self):
+        got, _, err = run_hook("push_gate.py", bash("/* status", self.work), env=self.env)
+        self.assertEqual(got, 2, err)
+        self.assertIn(f"{G}-{U}", err)
+        self.assertNotIn("on a line that names", err)
+
+    def test_a_glob_refusal_quotes_the_segment_that_names_push(self):
+        got, _, err = run_hook("push_gate.py", bash(f"{G[:2]}? {U} origin main", self.work), env=self.env)
+        self.assertEqual(got, 2, err)
+        self.assertIn(f"The word {U} is in: `{G[:2]}? {U} origin main`", " ".join(err.split()))
+
+    def test_the_built_string_deny_control_holds(self):
+        self.expect(2, [f'$a = "{U} -f"; & ${G[0]} $a'], tool="PowerShell")
+
+
+REQ = "Start" + "Stream"
+
+
+class SedDerive0392(DirectShapeBase):
+    """Observation 0392, 2026-11-13/17/19: golive_block, hyperv_lock and push_gate refused
+    `sed -e 's#a#b#' prior/x.py > x.py && python x.py` as "a script this line writes from content the hook
+    cannot see". The hook can read the source, and the replacement is on the line: that is what it checks.
+    Any sed that runs or writes (e, w), any other option or source shape keeps the refusal."""
+
+    LINE = "sed -e 's#2026-11-18#2026-11-19#' prior/build.{ext} > build.{ext} && {run} build.{ext}"
+
+    def setUp(self):
+        super().setUp()
+        os.makedirs(os.path.join(self.tmp, "prior"))
+        Path(self.tmp, "prior", "build.py").write_text('print("2026-11-18")\n', encoding="utf-8")
+        Path(self.tmp, "prior", "build.sh").write_text("echo 2026-11-18\n", encoding="utf-8")
+        Path(self.tmp, "prior", "live.py").write_text(f'req = "{REQ}"\n', encoding="utf-8")
+        Path(self.tmp, "prior", "send.sh").write_text(f"{G} {U} --force origin main\n", encoding="utf-8")
+
+    def test_a_sed_derived_script_from_a_readable_file_passes(self):
+        for hook in ("golive_block.py", "hyperv_lock.py", "push_gate.py"):
+            self.expect(hook, 0, [self.LINE.format(ext="py", run="python"),
+                                  self.LINE.format(ext="sh", run="bash"),
+                                  "sed 's/18/19/g' prior/build.py > build.py && python build.py"])
+
+    def test_the_source_and_the_replacement_are_still_read(self):
+        self.expect("golive_block.py", 2, ["sed -e 's#x#y#' prior/live.py > live.py && python live.py",
+                                           f"sed -e 's#18#{REQ}#' prior/build.py > b.py && python b.py"])
+        self.expect("push_gate.py", 2, ["sed -e 's#x#y#' prior/send.sh > send.sh && bash send.sh"])
+
+    def test_sed_that_runs_writes_or_cannot_be_read_stays_hidden(self):
+        for line in ("sed -e 's#18#19#e' prior/build.py > b.py && python b.py",
+                     "sed -e 's#18#19#w out.txt' prior/build.py > b.py && python b.py",
+                     "sed -e '1e date' prior/build.py > b.py && python b.py",
+                     "sed -f edits.sed prior/build.py > b.py && python b.py",
+                     "sed -e 's#18#19#' prior/missing.py > b.py && python b.py",
+                     "sed -e 's#18#19#' prior/*.py > b.py && python b.py",
+                     "cat prior/build.py | sed -e 's#18#19#' > b.py && python b.py"):
+            self.expect("hyperv_lock.py", 2, [line])
+
+
+class BlockComments0392(PushShapeBase):
+    """Observation 0392, 2026-11-12: a `<# … #>` block in a .ps1 script is a comment whichever tool runs
+    the script, and only in PowerShell text. A `<#` inside a quoted string opens no block."""
+
+    def script(self, name, body):
+        path = Path(self.tmp, name)
+        path.write_text(body, encoding="utf-8")
+        return str(path).replace("\\", "/")
+
+    def test_a_block_comment_in_a_ps1_run_from_bash_is_a_comment(self):
+        p = self.script("t.ps1", f"<#\n.EXAMPLE\n  {G} {U} --force origin main\n#>\nWrite-Host hi\n")
+        for tool in ("Bash", "PowerShell"):
+            self.expect(0, [f"pwsh -NoProfile -File {p}"], tool=tool)
+
+    def test_a_quoted_block_opener_hides_nothing(self):
+        self.expect(2, [f'Write-Host "<#"; {G} {U} --force origin main; Write-Host "#>"',
+                        f"Write-Host '<#'; {G} {U} --force origin main; Write-Host '#>'"], tool="PowerShell")
+
+    def test_a_sh_script_run_from_powershell_has_no_block_comments(self):
+        p = self.script("t.sh", f"cat <#x\n{G} {U} --force origin main\necho y#>z\n")
+        self.expect(2, [f"bash {p}"], tool="PowerShell")
+
+    def test_a_real_block_comment_still_hides_its_text(self):
+        self.expect(0, [f"<# {G} {U} --force origin main #> Get-Date"], tool="PowerShell")
+        self.expect(2, [f"<# note #> {G} {U} --force origin main"], tool="PowerShell")
+
+
+class BlankCasePatterns(unittest.TestCase):
+    """hooklib.blank_case_patterns in process: what it blanks and what it leaves."""
+
+    @classmethod
+    def setUpClass(cls):
+        sys.path.insert(0, str(HOOKS))
+        import hooklib
+        cls.hl = hooklib
+
+    def test_plain_patterns_are_blanked_and_length_kept(self):
+        text = 'case "$ws" in\n  (/*|[A-Za-z]:[/\\\\]*) ;;\n  *) x=1 ;;\nesac\n'
+        out = self.hl.blank_case_patterns(text)
+        self.assertEqual(len(out), len(text))
+        self.assertEqual(out.count("\n"), text.count("\n"))
+        self.assertNotIn("/*", out)
+        self.assertIn("x=1", out)
+        self.assertIn("esac", out)
+
+    def test_a_pattern_or_head_with_a_substitution_is_left(self):
+        text = "case $x in $(echo a)) ;; esac"
+        self.assertIn("$(echo a))", self.hl.blank_case_patterns(text))
+        text = "case $(id -u) in 0) echo root ;; esac"
+        self.assertIn("case $(id -u) in", self.hl.blank_case_patterns(text))
+
+    def test_quoted_and_commented_case_words_are_left(self):
+        for text in ("echo 'case x in a) b ;; esac'", "# case x in /*) ;; esac\n/* y", "showcase x in /*)"):
+            self.assertEqual(self.hl.blank_case_patterns(text), text)
+
+    def test_nested_case(self):
+        text = "case $a in x) case $b in y|z) echo n ;; esac ;; w) ;; esac"
+        out = self.hl.blank_case_patterns(text)
+        for gone in ("x)", "y|z)", "w)"):
+            self.assertNotIn(gone, out)
+        self.assertIn("echo n", out)
+
+
 if __name__ == "__main__":
     unittest.main()

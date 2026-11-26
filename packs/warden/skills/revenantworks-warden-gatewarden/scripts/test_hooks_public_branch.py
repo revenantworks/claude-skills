@@ -263,6 +263,25 @@ class PublicBranchGuardTests(PublicBranchBase):
         self.assertIn("feature", err)
 
 
+    def test_refusal_and_pass_use_the_global_rule_words(self):
+        # Observation 0734: the owner's rule and the hook name one stop point, before the branch push.
+        self.seed(private=False)
+        self.stale_feature(2)
+        self.ready(2)
+        code, _, err = self.run_hook("git push -u origin feature")
+        self.assertEqual(code, 2, err)
+        self.assertIn("a public repo: stop before the branch push; a pushed branch is already public",
+                      " ".join(err.split()))
+
+    def test_fast_forward_pass_says_a_pushed_branch_is_already_public(self):
+        self.seed(private=False)
+        self.feature(2)
+        self.ready(2)
+        code, out, err = self.run_hook("git push -u origin feature")
+        self.assertEqual(code, 0, err)
+        note = " ".join(json.loads(out)["hookSpecificOutput"]["additionalContext"].split())
+        self.assertIn("a pushed branch is already public", note)
+
     def test_fast_forward_branch_passes_and_says_it_goes_public(self):
         # P-2026-11-04-01: a branch built on today's main with linear new work passes; the PR lands it.
         self.seed(private=False)

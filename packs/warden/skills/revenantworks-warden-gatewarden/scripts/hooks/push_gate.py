@@ -944,10 +944,12 @@ def shape_checks(toks: list[str], carries_push: bool = True, names: str = "") ->
         later = progs[i + 1:]
         if p in START and any(q in ("git", "git-push") for q in later):
             raise PushBlock("push gate: Start-Process hands git its arguments as data the gate cannot read "
-                            "on a line that names push. Blocked; run the push as a plain `git push` line.")
+                            "on a line that names push. Blocked; run the push as a plain `git push` line."
+                            + (f" The word push is in: `{names[:80]}`." if names else ""))
         if p in FEEDERS and any(q in ("git", "git-push") for q in later):
             raise PushBlock(f"push gate: {p} adds git's arguments at run time on a line that names push. "
-                            "Blocked; run the push as a plain `git push` line.")
+                            "Blocked; run the push as a plain `git push` line."
+                            + (f" The word push is in: `{names[:80]}`." if names else ""))
 
 
 def _plain_git(seg: str) -> bool:
@@ -1033,10 +1035,13 @@ def glob_git(toks: list[str], seg: str) -> None:
     name = re.split(r"[\\/]", hl.unquote(tok))[-1].lower()
     if not re.search(r"[*?\[]", name):
         return
-    if any(fnmatch.fnmatchcase(g, name) for g in GIT_NAMES[2:]) or \
-            (PUSH_HINT.search(seg) and any(fnmatch.fnmatchcase(g, name) for g in GIT_NAMES[:2])):
+    if any(fnmatch.fnmatchcase(g, name) for g in GIT_NAMES[2:]):
+        raise PushBlock(f"push gate: a glob in the command word (`{tok[:40]}`) can match the program "
+                        "git-push, so the shell, not the line, picks what runs. Blocked; write the program "
+                        "name out.")
+    if PUSH_HINT.search(seg) and any(fnmatch.fnmatchcase(g, name) for g in GIT_NAMES[:2]):
         raise PushBlock(f"push gate: a glob in the command word (`{tok[:40]}`) lets the shell pick the "
-                        "program on a line that names push. Blocked; write `git` out.")
+                        "program on a line that names push. Blocked; write `git` out." + push_quote(seg))
 
 
 def config_write(rest: list[str]) -> bool:
@@ -1045,7 +1050,8 @@ def config_write(rest: list[str]) -> bool:
     return any(PUSH_CONFIG_KEY.match(a) for a in rest if not a.startswith("-"))
 
 
-def find_pushes(command: str, cwd: str, resolve: bool = True, head_moves: bool = True) -> list[dict]:
+def find_pushes(command: str, cwd: str, resolve: bool = True, head_moves: bool = True,
+                ps: bool | None = None) -> list[dict]:
     pushes = []
     flat_cmd = hl.despliced(command)
     named = bool(PUSH_HINT.search(flat_cmd))
@@ -1053,7 +1059,7 @@ def find_pushes(command: str, cwd: str, resolve: bool = True, head_moves: bool =
     include_line = bool(INCLUDE_ENV.search(command))
     home_line = bool(CONFIG_HOME_ENV.search(command))
     env_table, env_unread = env_aliases(command)
-    ops = hl.split_ops(command)
+    ops = hl.split_ops(command, ps=ps)
     # Which pipeline each segment sits in, and which pipelines name push themselves (FP-D).
     line_of, n = [], 0
     for idx, (_, sep) in enumerate(ops):
@@ -1312,6 +1318,18 @@ def detect_count(cmd: str) -> int:
     return n
 
 
+def push_quote(*texts: str) -> str:
+    """` The word push is in: `<segment>`.` for the first segment of these texts (comments aside) that
+    names push, or of a file the hook read. Every "names push" refusal carries it (observation 0392), so a
+    refusal never blames a line without showing where the word sits."""
+    for text in [*texts, *hl.FILES_READ]:
+        for seg in hl.segments(text or ""):
+            flat = hl.despliced(seg)
+            if PUSH_HINT.search(flat):
+                return f" The word push is in: `{' '.join(flat.split())[:80]}`."
+    return ""
+
+
 def names_push(text: str) -> bool:
     return bool(PUSH_HINT.search(hl.despliced(text or ""))) or any(PUSH_HINT.search(t) for t in hl.FILES_READ)
 
@@ -1336,26 +1354,29 @@ def all_pushes(cmd: str, cwd: str, head_moves: bool = True) -> list[dict]:
                             "checked for a push. Blocked; run the script's steps one by one.")
         if exc.hard or PUSH_HINT.search(hl.despliced(cmd)):
             raise PushBlock(f"push gate: {exc} cannot be checked for a push. Blocked; run the "
-                            "command in plain text.")
+                            "command in plain text." + push_quote(cmd))
         # 0597: reading stopped inside a script, so the rest of it went unread. Its own text decides,
         # not the wrapper line, which only names the file.
         for script in exc.scripts:
             if script_names_push(script):
                 raise PushBlock(f"push gate: the script `{os.path.basename(script)}` holds {exc}, so the gate "
                                 "cannot read all of it, and its code names push. Blocked; fix the script's "
-                                "quoting, or run the push as a plain `git push` line.")
+                                "quoting, or run the push as a plain `git push` line."
+                                + push_quote(hl.strip_comments(hl.read_small(script) or "",
+                                                               bool(re.search(r"(?i)\.ps[md]?1$", script)))))
         return []
     if ex.unread:  # a shell script on disk the gate could not read may hold a force push (K7-4-03)
         raise PushBlock(f"push gate: {ex.unread[0]} cannot be checked for a push. Blocked; run the "
                         "steps it holds as plain lines, or split the script.")
     if any(PUSH_HINT.search(hl.despliced(t)) for t in ex.big):
         raise PushBlock(f"push gate: a shell script over {hl.BIG // 1000} KB that names push is not parsed "
-                        "word by word. Blocked; run the push as a plain `git push` line.")
+                        "word by word. Blocked; run the push as a plain `git push` line."
+                        + push_quote(*[t for t in ex.big if PUSH_HINT.search(hl.despliced(t))][:1]))
     named = bool(PUSH_HINT.search(hl.despliced(cmd)))
     if ex.pending and named:
         raise PushBlock(f"push gate: a script this line writes and runs ({os.path.basename(ex.pending[0])}) "
                         "cannot be read before it runs, on a line that names push. Blocked; write the "
-                        "script in one call and run it in the next.")
+                        "script in one call and run it in the next." + push_quote(cmd))
     found = []
     # FIX-GW2: every folder the whole line names, nested shells and inline code included.
     texts = [cmd] + [t for t, _ in ex.shells] + [b for b, p in ex.code if not p]
@@ -1366,14 +1387,15 @@ def all_pushes(cmd: str, cwd: str, head_moves: bool = True) -> list[dict]:
     cause = cause or class_write_cause(shells, codes, dirs)
     _LINE.update(dirs=dirs, cause=cause)
     try:
-        for text, where in ex.shells:
+        for (text, where), sps in zip(ex.shells, ex.shell_ps):
             head, bodies = split_heredocs(inert_writer_bodies(text))
             for run in [head] + [body for reader, body in bodies if reader not in WRITERS]:
-                for seg in hl.segments(run):
+                for seg in hl.segments(run, ps=sps):
                     gh_ref_check(hl.tokens(seg))
-            found += find_pushes(head, where or cwd, head_moves=head_moves)
+            found += find_pushes(head, where or cwd, head_moves=head_moves, ps=sps)
             for reader, body in bodies:
-                found += find_pushes(body, where or cwd, resolve=reader not in WRITERS, head_moves=head_moves)
+                found += find_pushes(body, where or cwd, resolve=reader not in WRITERS, head_moves=head_moves,
+                                     ps=sps)
     finally:
         _LINE.clear()
     for body, path in ex.code:
@@ -1413,10 +1435,10 @@ def all_pushes(cmd: str, cwd: str, head_moves: bool = True) -> list[dict]:
     if CONFIG_CHANGES and named:  # `git config alias.gp 'push -f' && git gp`: the alias is not set yet
         raise PushBlock(f"push gate: a git config change that can turn a push into a force, mirror or "
                         f"delete push (`{CONFIG_CHANGES[0]}`) shares a line that names push. Blocked; change "
-                        "the setting in its own call (the gate reads it before the next push).")
+                        "the setting in its own call (the gate reads it before the next push)." + push_quote(cmd))
     if ex.opaque and named:
         raise PushBlock(f"push gate: {ex.opaque[0]} on a line that names push. Blocked; run the push as "
-                        "a plain `git push` line.")
+                        "a plain `git push` line." + push_quote(cmd))
     unique, seen = [], set()
     for p in found:
         key = (os.path.normcase(os.path.normpath(p["repo"])), tuple(p["args"]))
@@ -1622,6 +1644,8 @@ def gw_dir(repo: str) -> str:
 # a cache in the state folder (VISIBILITY_TTL), refreshed by one read-only `gh api` call; when it cannot
 # be known the push is checked as before and the cleared note says "visibility unknown".
 PUBLIC_RULE = "push_gate.public_branch"
+# Observation 0734: the owner's global rule's own words, so the rule and the hook name one stop point.
+PUBLIC_STOP = "a public repo: stop before the branch push; a pushed branch is already public"
 VISIBILITY_TTL = 86400.0
 VISIBILITY_FILE = "repo-visibility.json"
 GITHUB_URL = re.compile(r"(?i)^(?:https?://(?:[^@/\s]+@)?github\.com(?::\d+)?/|ssh://(?:[^@/\s]+@)?github\.com"
@@ -1907,6 +1931,7 @@ def public_branch(push: dict, rows: list[dict]) -> list[tuple[str, str]]:
                          f"{branch}: fast-forward of {where}, {n} {noun} made public", False)
             out.append(("public", f"`{branch}` is a fast-forward of {where}: its {n} new {noun} become public "
                                   f"on {slug} with this push; land them through a PR"))
+            out.append(("rule", f"a pushed branch is already public on {slug}"))
             out.append(("leaks", checked))
             continue
         why = (f"`{branch}` carries {n} {noun} not on {where}, and {slug} is a public repository: the push "
@@ -1916,7 +1941,7 @@ def public_branch(push: dict, rows: list[dict]) -> list[tuple[str, str]]:
             hl.block(hl.note("push gate", "refused", why=why,
                              rows=[("read", push.get("segment", "?")), ("branch", f"{branch} → {r['remote']}"),
                                    ("off main", f"{n} {noun}" + (f" ({note})" if note else "")),
-                                   ("visibility", f"public ({source})")],
+                                   ("visibility", f"{PUBLIC_STOP} ({source})")],
                              fix=f"rebase {branch} onto a fresh {where} with no merge commits so it is a "
                                  f"fast-forward, then push it and land it through a PR; or push {branch} to "
                                  "a private remote"),
@@ -2167,7 +2192,7 @@ def hook_main() -> None:
         if len(cmd) > hl.BIG:  # V-K8w F8: never parse a huge command word by word
             if names_push(cmd):
                 hl.block(f"push gate: a command over {hl.BIG // 1000} KB that names push is not parsed word "
-                         "by word. Blocked; run the push as a plain `git push` line.",
+                         "by word. Blocked; run the push as a plain `git push` line." + push_quote(cmd),
                          rule="push_gate.shape", hard=True)
             hl.allow()
         head_move = None
