@@ -67,6 +67,11 @@ first of:
    to the repo root — so a session started in a subfolder still finds the run.
 4. Pinned roots named in `CLAUDE_DISPATCH_ROOTS` — for a session whose working directory sits
    outside the run's repo.
+5. The launch-root pointer `~/.dispatch/ledger-path` (same one-line format;
+   `CLAUDE_DISPATCH_HOME_POINTER` names another file), read when steps 2-4 find no current
+   ledger (observation 0735). A unit in a worktree (`.git` is a file) or in a clone that is not
+   the launch root then reaches the live run; a stale ledger nearer the cwd no longer hides it.
+   Write the pointer at plan time when units run outside the launch root.
 
 A launch prompt that names its run folder by path (`<repo>/.dispatch/runs/<run-id>/brief.md`)
 is checked against that run's ledger before this order (observation 0675); only

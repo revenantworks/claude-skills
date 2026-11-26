@@ -319,48 +319,91 @@ def search_dirs(cwd: str) -> list[Path]:
     return walk + pinned
 
 
-def ledger_candidates(cwd: str) -> list[Path]:
-    """Every ledger the conventions allow, newest first. The lookup order:
-    CLAUDE_DISPATCH_LEDGER (names one file and wins outright), then a pointer
-    file (`.dispatch/ledger-path`, one line naming the ledger) in a searched
-    dir, then `.dispatch/runs/*/ledger.{md,csv}` in each searched dir."""
-    env = _argv_path("--ledger") or os.environ.get("CLAUDE_DISPATCH_LEDGER")
-    if env:
-        p = Path(env)
-        return [p] if p.is_file() else []
-    found = []
-    for root in search_dirs(cwd):
-        ptr = root / POINTER_FILE
-        try:
-            if ptr.is_file():
-                target = Path(ptr.read_text(encoding="utf-8").strip().splitlines()[0].strip())
-                if not target.is_absolute():
-                    target = root / target
-                if target.is_file():
-                    return [target]
-        except Exception:
-            pass
-        found += list(root.glob(".dispatch/runs/*/ledger.md")) + list(root.glob(".dispatch/runs/*/ledger.csv"))
-        if found:
-            break
-    candidates = [p for p in found if p.is_file()]
+def home_pointer_path() -> Path:
+    """The launch-root pointer (observation 0735): `~/.dispatch/ledger-path`, the
+    same one-line format as the per-directory POINTER_FILE, read only after the
+    cwd walk and pinned roots find no CURRENT ledger. It lets a unit in a
+    worktree (a `.git` file, a stale or absent `.dispatch`) or in a clone that is
+    not the launch root reach the live run. CLAUDE_DISPATCH_HOME_POINTER names
+    another file (tests, or a rig that keeps the pointer elsewhere)."""
+    override = os.environ.get("CLAUDE_DISPATCH_HOME_POINTER")
+    if override:
+        return Path(override)
+    return Path.home() / POINTER_FILE
 
+
+def _read_pointer(ptr: Path, base: Path) -> Path | None:
+    """The ledger a pointer file names, resolved against `base`, or None."""
+    try:
+        if ptr.is_file():
+            target = Path(ptr.read_text(encoding="utf-8").strip().splitlines()[0].strip())
+            if not target.is_absolute():
+                target = base / target
+            if target.is_file():
+                return target
+    except Exception:
+        pass
+    return None
+
+
+def _by_mtime(paths: list) -> list:
     def _mtime(p: Path) -> float:
         try:
             return p.stat().st_mtime
         except Exception:
             return 0.0
 
-    candidates.sort(key=_mtime, reverse=True)
-    return candidates
+    return sorted((p for p in paths if p.is_file()), key=_mtime, reverse=True)
+
+
+def ledger_groups(cwd: str) -> list[list[Path]]:
+    """The lookup order as groups, nearest first. CLAUDE_DISPATCH_LEDGER (or
+    --ledger) is the only group when set. Otherwise one group per searched dir
+    that holds a pointer or a run ledger, then the launch-root pointer
+    (home_pointer_path) last. find_ledger takes the first CURRENT ledger across
+    the groups, so a stale ledger near the cwd no longer hides the live one."""
+    env = _argv_path("--ledger") or os.environ.get("CLAUDE_DISPATCH_LEDGER")
+    if env:
+        p = Path(env)
+        return [[p] if p.is_file() else []]
+    groups = []
+    for root in search_dirs(cwd):
+        target = _read_pointer(root / POINTER_FILE, root)
+        if target is not None:
+            groups.append([target])
+            continue
+        found = _by_mtime(list(root.glob(".dispatch/runs/*/ledger.md")) + list(root.glob(".dispatch/runs/*/ledger.csv")))
+        if found:
+            groups.append(found)
+    home = home_pointer_path()
+    target = _read_pointer(home, home.parent.parent)
+    if target is not None:
+        groups.append([target])
+    return groups
+
+
+def ledger_candidates(cwd: str) -> list[Path]:
+    """Every ledger the conventions allow, newest first: the first non-empty
+    group of ledger_groups. The lookup order: CLAUDE_DISPATCH_LEDGER (names one
+    file and wins outright), then a pointer file (`.dispatch/ledger-path`, one
+    line naming the ledger) in a searched dir, then
+    `.dispatch/runs/*/ledger.{md,csv}` in each searched dir, then the
+    launch-root pointer `~/.dispatch/ledger-path`."""
+    for group in ledger_groups(cwd):
+        if group:
+            return group
+    return []
 
 
 def find_ledger(cwd: str, session_id: str = "") -> Path | None:
-    """The newest ledger that is still current for this run. A stale one is not
-    a ledger for this purpose -- returning it and passing would be the D3 bug."""
-    for p in ledger_candidates(cwd):
-        if ledger_is_current(p, session_id):
-            return p
+    """The newest ledger that is still current for this run, nearest group
+    first. A stale one is not a ledger for this purpose -- returning it and
+    passing would be the D3 bug -- so the lookup moves on to the next group and
+    ends at the launch-root pointer (observation 0735)."""
+    for group in ledger_groups(cwd):
+        for p in group:
+            if ledger_is_current(p, session_id):
+                return p
     return None
 
 
@@ -1426,6 +1469,8 @@ def selftest() -> int:
     reopens one fails here by name."""
     problems = []
     now = time.time()
+    # The rig's own launch-root pointer must not leak into the fixtures (observation 0735).
+    os.environ["CLAUDE_DISPATCH_HOME_POINTER"] = str(Path(tempfile.gettempdir()) / "no-such-dispatch-pointer" / "ledger-path")
 
     # --- flag logic, including D1 ---------------------------------------
     live = {"session_id": "abc", "ts": now}
@@ -3312,7 +3357,8 @@ def _guard(data: dict) -> int:
         print(
             "dispatch_ledger_guard: dispatch mode is active for this session but no current run "
             "ledger was found (checked CLAUDE_DISPATCH_LEDGER, then a .dispatch/ledger-path pointer "
-            f"and .dispatch/runs/*/ledger.{{md,csv}} in: {searched})." + extra + " Write the ledger row -- model, effort, surface, from "
+            f"and .dispatch/runs/*/ledger.{{md,csv}} in: {searched}; then the launch-root pointer "
+            f"{home_pointer_path()})." + extra + " Write the ledger row -- model, effort, surface, from "
             "dispatchwright's own tier table (references/tier-routing.md) -- before this dispatch. "
             "See references/ledger-schema.md.",
             file=sys.stderr,
