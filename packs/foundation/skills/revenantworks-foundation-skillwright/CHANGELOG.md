@@ -1,5 +1,9 @@
 # Changelog — revenantworks-foundation-skillwright
 
+## [Unreleased]
+
+- `slim-doctrine.md` gains "Eval cases that share words with a cut": list the trigger, shell and graded cases sharing words with the text being cut, then keep the cue, run them, or mark the land "hosted eval read before merge"; a reply-wording grader's sentence is fixed word for word in the body (observation 0733). Reference only; body unchanged.
+
 ## [1.0.1] — 2026-11-13
 
 - eval-audit and mcp-tools reference updates from the 2026-11-09 review
