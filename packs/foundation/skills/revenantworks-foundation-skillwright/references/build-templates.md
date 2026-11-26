@@ -9,6 +9,7 @@ Read on every build. Skeletons are starting points, not quotas — include only 
 - Package layout skeleton
 - Packaging — native paths, the archive command, validation, staged-tree leak guards
 - Plugin target — optional, packs
+- CI template — repo scaffolds
 - File stubs (README · CHANGELOG · SOURCES)
 - Feedback loops — for a quality-critical step
 - Pack manifest — generating a member's `references/pack.md`

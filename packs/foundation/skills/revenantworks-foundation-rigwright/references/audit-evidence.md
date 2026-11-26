@@ -4,18 +4,8 @@ Read on an audit only, and only when the target holds a hook, a controls file or
 
 ## Contents
 
-- Usage evidence: name the instrument, then use three buckets (#0024, #0039)
-- A pattern list that gates a hook (#0016)
-- An `InstructionsLoaded` hook does not see an `AGENTS.md` loaded by setting
-- A stateful hook's controls are side-effect-free (#0047)
-- A fixture is literal in its shape, never in its paths (#0063)
-- A fixture that depends on live state declares it (#0062)
-- State the extent you parsed (#0041)
-- A check you just wrote is an untested claim (#0042)
-- A step that makes a file is verified by the file (#0162)
-- A rule beside the value it guards needs a check (0601)
-- A new or tighter guard is rehearsed against the scheduled scripts (0598)
-- An intermittent failure: classify every window, good and bad (0487, 0489)
+- Usage evidence
+- Controls, fixtures and checks
 - Rule backtest against session history
 
 ---

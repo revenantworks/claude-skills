@@ -7,8 +7,15 @@
 
 ## Contents
 
-Order and precedence · Rule shapes · Bash and PowerShell · Read and Edit · Other tools · Hooks ·
-Trust and MCP · Windows notes · Sources
+- Order and precedence
+- Rule shapes
+- Bash and PowerShell
+- Read and Edit
+- Other tools
+- Hooks
+- Trust and MCP
+- Windows notes
+- Sources
 
 ## Order and precedence
 

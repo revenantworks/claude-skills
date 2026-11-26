@@ -16,8 +16,15 @@ contract), not scored here. Cite the ids beside a finding's own class, never in 
 
 ## Contents
 
-Severity · S1 Tool-grant scope · S2 Untrusted-content flow · S3 Guardrails & kill switches · S4
-Credentials & secrets · S5 Failure & retry · Data-flow diagram · Probe plan · Worked example
+- Severity
+- S1 — Tool-grant scope
+- S2 — Untrusted-content flow
+- S3 — Guardrails and kill switches
+- S4 — Credentials and secrets
+- S5 — Failure and retry as a security surface
+- Data-flow diagram (optional, added 2026-10-01)
+- Probe plan (not executed, added 2026-10-01)
+- Worked example
 
 ## Severity
 

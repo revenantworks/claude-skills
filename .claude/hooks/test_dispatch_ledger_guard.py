@@ -169,5 +169,71 @@ class LaunchMessages(unittest.TestCase):
         self.assertIsNotNone(self.gate.first_match(self.gate.strip_harness_blocks(owner + "\n" + handback), patterns))
 
 
+class LaunchRootFallback(unittest.TestCase):
+    """Observation 0735: a unit in a worktree (a `.git` FILE, no live `.dispatch`) or in a clone
+    that is not the launch root found a stale ledger or none. After the cwd walk finds nothing
+    current, the guard reads the launch-root pointer (`~/.dispatch/ledger-path`, overridable by
+    CLAUDE_DISPATCH_HOME_POINTER), in the same one-line format as the per-dir pointer."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.g = load_hook()
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.dir = Path(self.tmp.name)
+        keys = ("CLAUDE_DISPATCH_HOME_POINTER", "CLAUDE_DISPATCH_LEDGER", "CLAUDE_DISPATCH_ROOTS")
+        saved = {k: os.environ.get(k) for k in keys}
+        for k in keys:
+            os.environ.pop(k, None)
+
+        def restore():
+            for k, v in saved.items():
+                if v is None:
+                    os.environ.pop(k, None)
+                else:
+                    os.environ[k] = v
+        self.addCleanup(restore)
+        # The launch root holds the live run.
+        run = self.dir / "launch-root" / ".dispatch" / "runs" / "2026-11-26-live"
+        run.mkdir(parents=True)
+        self.live = run / "ledger.md"
+        self.live.write_text("| unit_id | model | effort | surface | status |\n|---|---|---|---|---|\n"
+                             "| U1 | Claude Opus 5.5 | high | subagent (background) | dispatched |\n", encoding="utf-8")
+        self.pointer = self.dir / "home" / ".dispatch" / "ledger-path"
+        self.pointer.parent.mkdir(parents=True)
+        self.pointer.write_text(str(self.live) + "\n", encoding="utf-8")
+        # A worktree: `.git` is a file, and no `.dispatch` of its own.
+        self.worktree = self.dir / "wt"
+        (self.worktree / "sub").mkdir(parents=True)
+        (self.worktree / ".git").write_text("gitdir: elsewhere\n", encoding="utf-8")
+
+    def test_worktree_with_no_dispatch_finds_the_launch_root_ledger(self):
+        os.environ["CLAUDE_DISPATCH_HOME_POINTER"] = str(self.pointer)
+        self.assertEqual(self.g.find_ledger(str(self.worktree / "sub"), "abc"), self.live)
+
+    def test_stale_worktree_ledger_falls_through_to_the_launch_root(self):
+        old = self.worktree / ".dispatch" / "runs" / "2026-11-01-old" / "ledger.md"
+        old.parent.mkdir(parents=True)
+        old.write_text(self.live.read_text(encoding="utf-8"), encoding="utf-8")
+        ancient = time.time() - self.g.STALE_SECONDS - 3600
+        os.utime(old, (ancient, ancient))
+        os.environ["CLAUDE_DISPATCH_HOME_POINTER"] = str(self.pointer)
+        self.assertEqual(self.g.find_ledger(str(self.worktree), "abc"), self.live)
+
+    def test_a_current_cwd_ledger_still_wins_over_the_pointer(self):
+        near = self.worktree / ".dispatch" / "runs" / "2026-11-26-near" / "ledger.md"
+        near.parent.mkdir(parents=True)
+        near.write_text(self.live.read_text(encoding="utf-8"), encoding="utf-8")
+        os.environ["CLAUDE_DISPATCH_HOME_POINTER"] = str(self.pointer)
+        self.assertEqual(self.g.find_ledger(str(self.worktree), "abc"), near)
+
+    def test_no_pointer_still_finds_nothing(self):
+        os.environ["CLAUDE_DISPATCH_HOME_POINTER"] = str(self.dir / "missing" / "ledger-path")
+        self.assertIsNone(self.g.find_ledger(str(self.worktree), "abc"))
+        self.assertEqual(self.g.home_pointer_path(), self.dir / "missing" / "ledger-path")
+
+
 if __name__ == "__main__":
     unittest.main()

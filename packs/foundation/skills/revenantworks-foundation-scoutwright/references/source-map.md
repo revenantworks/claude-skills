@@ -13,7 +13,7 @@ watch for those sites. "Cloud" means safe inside a cloud routine (no owner scree
 
 - 1. Official sources
 - 2. Community sources
-- 2a. Benchmark sources (monthly; `bench` only)
+- 2a. Benchmark sources (monthly; read by `bench` only)
 - 3. Area tags
 - 4. Probe rules
 

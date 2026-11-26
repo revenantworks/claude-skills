@@ -8,15 +8,17 @@ Rubric A is universal: every skill, any profile, is scored against it. Profiles 
 - Research reading — raw pages, exact-match absences
 - Scoring anchors
 - The universal rule
-- Parity verdict — best of breed: parity, margin, iterate, the parity register, a test per claim, retire
+- Parity verdict — best of breed
 - Parity verdict — partition by reach
-- Split or keep — the growth test: size targets, the shrink ladder, split and merge tests
+- Split or keep — the growth test
 - Security classes — S-1 to S-5, the audit's security pass: scanner as stage 1, then the classes (S-5: personal data, history and commit metadata included)
 - Generator classes — G-1 to G-3, for a subject that generates from a structured source
 - Naming-class coverage
-- Profiles: standalone · standard · custom
+- Profiles
 - Pack conformance checks
 - Audit application notes — third-party adoption, usage evidence
+- Current platform — the currency check
+- Audit catalog rows — evidence rules
 - Prose pass — a register pass on a skill's or pack's own files
 - Named passes — security, third-party adoption, usage evidence, prose, double-load, currency (moved from the body 2026-10-08)
 

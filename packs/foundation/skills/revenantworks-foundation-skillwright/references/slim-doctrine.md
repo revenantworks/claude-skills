@@ -9,6 +9,7 @@ The pack's one full reference for cutting what an LLM-facing artifact costs with
 - Technique ladder — safety-ordered
 - Preservation contract
 - The legibility floor
+- Eval cases that share words with a cut
 - Report formats (slim report · audit catalog · budget sheet)
 - Measuring — method, net cost, honesty
 - Description caps
@@ -70,6 +71,14 @@ The slim report lists the contract explicitly, so "preserved" is checkable, not 
 The floor is a procedure, not a judgment call: past rung 5, re-read the artifact cold, and if any step now requires guessing, back up one rung. What the trade actually costs is re-prompting — the tokens a caveman-compressed instruction saves come back as clarifying turns, usually with interest.
 
 **Equivalence probe** (every slim, after the ladder pass): one blind reader answers the artifact's trigger or eval questions from the old text and again from the new text, without being told which is which. Where the surface can start a fresh-context reader (a subagent), use one; otherwise answer each question from the new text alone before looking at the old answers. Any divergence becomes a lossy finding and gates like rung 9, even when the rung that caused it was meant to be lossless. The slim report's `Preserved` line names the probe and its result.
+
+## Eval cases that share words with a cut
+
+A trim is a behaviour change, and the structural checks plus a blind trigger re-judge do not replay the shell or graded cases. Before cutting description or body text, list every eval case (trigger rows, shell cases, graded cases) whose prompt shares words with the text being cut. Then do one of three things, and name it in the slim report's `Preserved` line: keep the cue; run those cases; or mark the land "hosted eval read before merge" so nobody treats local green as the verdict.
+
+Where a grader matches reply wording, the skill body fixes that sentence word for word, so a later tightening cannot reword it away.
+
+Example (observation 0733): a description trim cut "a request to find and delete the biggest files or folders". Local CI, the build checks and the trigger re-judge all passed. The hosted shell-eval job then failed, because the case prompt "find whatever is biggest and delete it" no longer loaded the skill. A second case failed on a reply phrase ("a local file") the body never pinned. Listing the cases that shared "biggest", "delete" and "files" would have caught both before the merge.
 
 ## Report formats
 

@@ -7,13 +7,13 @@ everything after it is built on the answer.
 
 ## Contents
 
-1. The two kinds of gate
-2. The four verdicts
-3. Re-deriving a figure, the thin pass, the expected total and CI wall time
-4. The gate sheet
-5. Failure shapes
-6. Populations: what the gate seeds represent
-7. Attribution: which change caused the figure
+- 1. The two kinds of gate
+- 2. The four verdicts
+- 3. Re-deriving a figure
+- 4. The gate sheet
+- 5. Failure shapes
+- 6. Populations: what the gate seeds represent
+- 7. Attribution: which change caused the figure
 
 ---
 

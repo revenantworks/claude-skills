@@ -5,8 +5,12 @@ nothing before the one gate (rule 3).
 
 ## Contents
 
-1. Order of work · 2. Six areas, scored 1-10 · 3. Severity and the catalog · 4. Verdict, derived
-from the rows · 5. Render pass: bounded · 6. Handback
+- 1. Order of work
+- 2. Six areas, scored 1-10
+- 3. Severity and the catalog
+- 4. Verdict, derived from the rows
+- 5. Render pass: bounded
+- 6. Handback
 
 ## 1. Order of work
 

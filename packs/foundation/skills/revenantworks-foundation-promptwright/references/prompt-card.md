@@ -9,6 +9,14 @@ Emit it as a claude.ai artifact on surfaces that render HTML, or as a single sel
 ## Contents
 
 - Fill rules — header · structure chip · TL;DR · prompt block · score gauge · Run on · Variables / Assumed / Test · additional rules (Evals section included)
+- Header
+- Structure chip and footer recap
+- TL;DR section *(always include, at the top)*
+- Prompt block
+- Score gauge
+- Run on section *(always include)*
+- Sections — Variables / Assumed / Test
+- Additional rules
 - Template — the full self-contained HTML
 
 ---

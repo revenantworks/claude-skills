@@ -7,21 +7,37 @@ standing load.
 
 ## Contents
 
-- §1 Seams — a moved seam is found by grep (#0078)
-- §2 Shape check — count surfaces (#0016); name the user's fork (#0049)
-- §3 Decompose — one heavy task (#0091); shared content (#0082); tools and credentials (#0033,
-  #0088); cross-repo findings (#0020); packet halves (#0028)
-- §5 Durability — identity check; small returns (#0089); green base (#0077); asserted edits
-  (#0058); committed ledger, private or public (#0032, #0203); fetch cache provenance
+- §1 · A seam that moves is found by searching for the old words (#0078)
+- §2 · Count the surfaces, not the verbs (#0016)
+- §2 · Name a fork only the requester can settle (#0049)
+- §3 · No unit larger than one heavy task (#0091)
+- §3 · Enumerate the shared content before splitting (#0082)
+- §3 · A unit's surface is its tool list and its credentials (#0033, #0088)
+- §3 · Split a cross-repo finding before dispatch (#0020)
+- §3 · Join the packet's two halves (#0028)
+- §5 · Identity check before any push
+- §5 · A stage's return must be the smallest thing (#0089)
+- §5 · Merge only onto a green base (#0077)
+- §5 · Assert each scripted edit (#0058)
+- §5 · The ledger is committed at every write — in a private repo (#0032, #0203)
 - Entry · dispatch — the replan gate and the controller's reading rule
-- §6 Meters beyond the Claude windows
-- §6 Wave execution — agents not rows (#0022); base window (#0083); last reviewer (#0091); visible
-  commit (#0089); helpers (#0043, #0044); silence; cancelling (#0051)
-- §3 Pin arcs — one round per arc, a complete control, view lanes free (#0432)
-- §7 Review tier and brief age — cheaper reviews, briefs written ahead (#0432, observations on
-  a long game build)
-- §8 Reconcile — gate figures; test totals (#0057); CI green (#0087, #0090); reversal (#0045)
-- Load budget — handed-in data
+- §6 · Meters beyond the Claude windows (decision 2026-10-01)
+- §5 · Fetch cache with provenance
+- §6 · Count agents, not ledger rows (#0022)
+- §6 · No controller commit between brief and launch (#0083)
+- §6 · A run's status comes from its last reviewer (#0091)
+- §6 · A visible commit means the stage is not dead (#0089)
+- §6 · Helpers inherit nothing (#0043, #0044)
+- §6 · Silence is not liveness
+- §6 · Cancel the agent first (#0051)
+- §8 · Gate figures are re-derived
+- §8 · Test totals against a derived expectation (#0057)
+- §8 · Verified means CI green on the commit (#0087, #0090)
+- §3 · Pin arcs: one round per arc, a complete control, view lanes free (#0432)
+- §7 · Review tier and brief age (#0432)
+- §8 · A non-git landing carries its own reversal (#0045)
+- Load budget · Handed-in data
+- §3 · Lanes and probes (#0256, #0214)
 
 ## §1 · A seam that moves is found by searching for the old words (#0078)
 

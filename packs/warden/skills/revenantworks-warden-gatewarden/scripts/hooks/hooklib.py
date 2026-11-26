@@ -330,7 +330,7 @@ def hook_test_file(path: str) -> bool:
     return bool(path) and bool(HOOK_TESTS.search(path.strip()))
 
 
-def segments(command: str) -> list[str]:
+def segments(command: str, ps: bool | None = None) -> list[str]:
     """Split a shell line on ; && || | and newlines. Quotes are respected
     roughly (a separator inside quotes does not split).
 
@@ -342,17 +342,20 @@ def segments(command: str) -> list[str]:
     ("this machine's") opened a quote that swallowed the lines after it, so a
     plain `git push origin HEAD:main` was read inside a merged segment and
     refused as a delete push (observation 0327)."""
-    return [s for s, _ in split_ops(command)]
+    return [s for s, _ in split_ops(command, ps=ps)]
 
 
-def split_ops(command: str, escapes: bool = False) -> list[tuple[str, str]]:
+def split_ops(command: str, escapes: bool = False, ps: bool | None = None) -> list[tuple[str, str]]:
     """segments() with the separator after each one (`;`, `|`, `||`, `&&`, a newline, or "").
 
     `escapes=True` applies bash's backslash rules (observation 0410): outside quotes a backslash keeps
     the next character literal (`a\\|b` is no pipe), and inside double quotes it does so for `"`, `\\`,
     `$` and a backtick (`"x \\" | y"` is one word). Only expand() passes it, for text it knows is not
-    PowerShell; the hooks' own segment checks keep the plain split, which never merges segments."""
-    command = strip_comments(command)
+    PowerShell; the hooks' own segment checks keep the plain split, which never merges segments.
+    `ps` says whether the text is PowerShell (None: the event's tool), which decides whether the `#`
+    characters of a `<# … #>` block are blanked (strip_comments): a .ps1 script run from the Bash tool gets
+    that, a .sh script run from the PowerShell tool does not."""
+    command = strip_comments(command, ps)
     out, cur, quote = [], [], None
     i = 0
     while i < len(command):
@@ -452,10 +455,17 @@ def _over_budget() -> None:
 
 def strip_comments(text: str, ps: bool | None = None) -> str:
     """Remove `#` line comments outside quotes; newlines are kept so a caller's
-    line numbers still hold. In PowerShell a `<# … #>` block goes first: its `#>` would otherwise
-    start a line comment that hides the command after the block (`<# x #> git push -f`, V-K8w)."""
+    line numbers still hold. In PowerShell a `<# … #>` block is never stripped as a comment: its `#`
+    characters are blanked and its text is read as code, so neither a `#>` that would start a line comment
+    (`<# x #> git push -f`, V-K8w) nor a misread block (`Write-Host "<#"; git push -f; Write-Host "#>"`) can
+    hide a command. A doc block that names a guarded command is therefore refused: a retry, never a pass.
+
+    Run 2026-11-26-observer-wave: two narrowings that stripped a block only when it looked like one (C2's
+    quote-aware strip, C5's quote-free strip) each let a push through (here-strings, backticks, `${ <#}`,
+    `--%`; R1 must-fix 3, R1b must-fix 2). Both were withdrawn. A block comment that hides its text again
+    needs a real PowerShell tokenizer (observation 0392)."""
     if is_powershell() if ps is None else ps:
-        text = re.sub(r"<#.*?#>", lambda m: " " + "\n" * m.group(0).count("\n"), text, flags=re.S)
+        text = re.sub(r"<#.*?(?:#>|\Z)", lambda m: m.group(0).replace("#", " "), text, flags=re.S)
     out, i, quote, n = [], 0, None, len(text)
     while i < n:
         ch = text[i]
@@ -717,6 +727,7 @@ def is_encoded_flag(tok: str) -> bool:
 class Expanded:
     def __init__(self):
         self.shells: list[tuple[str, str]] = []   # (shell text, cwd it runs in)
+        self.shell_ps: list[bool] = []            # per shells entry: the text is PowerShell
         self.code: list[tuple[str, str]] = []     # (code body, file path or "")
         self.opaque: list[str] = []               # shapes whose content could not be read
         self.unread: list[str] = []               # script files a shell runs that the hook could not
@@ -728,6 +739,8 @@ class Expanded:
                                                   # content is not plain on the line (copy, download)
         self.hidden_runs: list[tuple[str, str]] = []  # (file key, unread reason) for each script this
                                                   # line writes from hidden content and then runs
+        self.derived: dict[str, str] = {}         # file key -> the text a plain `sed 's/…/…/' src >`
+                                                  # gives it: the readable source plus the replacements
         self.files = True                         # False: never read a file (heredoc_guard)
         self.running: list[str] = []              # script files being expanded, outermost first (B2)
         self.read: set[str] = set()               # files already expanded: a script that names itself
@@ -1236,6 +1249,7 @@ def expand(command: str, cwd: str = "", depth: int = 0, out: Expanded | None = N
         _inline_code(code, out)
     # The content-word scans see data bodies (cat/tee) but not messages or code; the parse sees none.
     out.shells.append((data_view(command, ps, ("code", "message")), cwd))
+    out.shell_ps.append(bool(ps))
     command = data_view(command, ps)
     if OPAQUE.search(command):
         out.opaque.append("a command built or invoked at run time")
@@ -1247,7 +1261,7 @@ def expand(command: str, cwd: str = "", depth: int = 0, out: Expanded | None = N
     for inner in inners:
         _run_substitution(command, inner, ps, out)
         expand(inner, cwd, depth + 1, out, ps)
-    ops = split_ops(command, escapes=not ps)
+    ops = split_ops(command, escapes=not ps, ps=ps)
     segs = [s for s, _ in ops]
     toks_all = [tokens(s) for s in segs]
     if any(_executor_words(s, toks) for s, toks in zip(segs, toks_all)):
@@ -1287,8 +1301,13 @@ def expand(command: str, cwd: str = "", depth: int = 0, out: Expanded | None = N
         progs = [prog(t) for t in toks]
         vis = _visible(seg, toks, progs)
         if out.files:
+            derived = sed_derive(toks, progs, cur, out.written) if prev_sep != "|" else None
             for path, hidden in _writes(seg, toks, progs, prev_sep == "|" and prev_vis, vis):
                 key = os.path.normcase(os.path.abspath(resolve(path, cur)))
+                if derived is not None:
+                    out.derived[key], hidden = derived, False
+                else:
+                    out.derived.pop(key, None)  # a later write replaces what sed gave the file
                 out.written[key] = out.written.get(key, False) or hidden
         stdin_runner = False
         plain = plain_args(toks) if any(p in RUNS for p in progs) else None
@@ -1429,6 +1448,103 @@ def _writes(seg: str, toks: list[str], progs: list[str], fed_visibly: bool, vis:
     return found
 
 
+# Observation 0392: a script derived from a readable file by sed and run on the same line
+# (`sed -e 's#a#b#' prior/x.py > x.py && python x.py`). Only plain `s` commands count: one per -e or
+# script word, a literal delimiter, flags g and a number. sed's e, w, r, W and R commands and flags run or
+# touch other files, and -i, -f, -n, -z or any other option, a second input, a pipe into sed, or a `$`,
+# backtick or glob in the source keeps the file hidden.
+# R1 must-fix 2 (run 2026-11-26-observer-wave): the hook checks what sed writes, so the substitutions are
+# applied for real, and only where that is exact: a literal pattern (no regex character, no backslash) and a
+# literal replacement (no `&`, no backslash). Checking the source and the replacement apart let
+# `s/X/u/` on `git pXsh --force` pass. After the first redirection only plain output redirections may
+# follow (an input file there was never read), and an append (`>>`) is never derived.
+SED_SUB = re.compile(r"^s([^\\\n\w\s])((?:(?!\1)[^\n])*)\1((?:(?!\1)[^\n])*)\1([g0-9]*)$")
+SED_FLAGS = {"-e", "--expression", "-E", "-r", "--regexp-extended", "--posix", "-u", "--unbuffered"}
+SED_META = set("\\.[]*^$+?(){}|")
+SED_OUT = re.compile(r"^\d*>(?![>&])\|?(.*)$")
+
+
+def _sed_literal(s: str, bad: set[str]) -> bool:
+    return all(" " <= ch <= "~" and ch not in bad for ch in s)
+
+
+def sed_derive(toks: list[str], progs: list[str], cwd: str, written: dict | None = None) -> str | None:
+    """The exact text a literal sed substitution writes from one readable source file. None when the
+    segment is anything else, or when the hook cannot be sure what sed writes."""
+    if not toks or progs[0] != "sed":
+        return None
+    scripts, words, i, explicit = [], [], 1, False
+    while i < len(toks):
+        t = toks[i]
+        if re.match(r"^\d*[<>&]", t):
+            while i < len(toks):  # the redirections: plain output ones only, to the end of the segment
+                t = toks[i]
+                if re.match(r"^\d*>&\d+$", t):
+                    i += 1
+                    continue
+                m = SED_OUT.match(t)
+                if not m or (not m.group(1) and i + 1 >= len(toks)):
+                    return None
+                i += 1 if m.group(1) else 2
+            break
+        if t in ("-e", "--expression"):
+            if i + 1 >= len(toks):
+                return None
+            scripts.append(unquote(toks[i + 1]))
+            explicit, i = True, i + 2
+            continue
+        if t.startswith("--expression="):
+            scripts.append(unquote(t.split("=", 1)[1]))
+            explicit, i = True, i + 1
+            continue
+        if t.startswith("-"):
+            if t not in SED_FLAGS:
+                return None
+        else:
+            words.append(t)
+        i += 1
+    if not explicit:  # with no -e, the first word is the script; with one, every word is an input file
+        if not words:
+            return None
+        scripts.append(unquote(words.pop(0)))
+    if not scripts or len(words) != 1 or re.search(r"[$`*?\[{~]", words[0]):
+        return None
+    subs = []
+    for s in scripts:
+        m = SED_SUB.match(s.strip())
+        flags = re.fullmatch(r"(g?)([1-9][0-9]*)?(g?)", m.group(4)) if m else None
+        if not m or not flags or (flags.group(1) and flags.group(3)) or not m.group(2) or \
+                not _sed_literal(m.group(2), SED_META) or not _sed_literal(m.group(3), {"\\", "&"}):
+            return None
+        subs.append((m.group(2), m.group(3), int(flags.group(2) or 1), bool(flags.group(1) or flags.group(3))))
+    path = resolve(unquote(words[0]), cwd)
+    if written is not None and os.path.normcase(os.path.abspath(path)) in written:
+        return None  # this line writes the source first: its disk copy is stale
+    text, why = read_script(path)
+    if text is None or why:
+        return None
+    return "\n".join(_sed_line(line, subs) for line in text.split("\n"))
+
+
+def _sed_line(line: str, subs: list[tuple[str, str, int, bool]]) -> str:
+    """One line through literal `s` commands in order: the nth match, or the nth and every later one with g."""
+    for pat, rep, nth, every in subs:
+        out, pos, count = [], 0, 0
+        while True:
+            j = line.find(pat, pos)
+            if j < 0:
+                break
+            count += 1
+            hit = count == nth or (every and count > nth)
+            out.append(line[pos:j] + (rep if hit else pat))
+            pos = j + len(pat)
+            if count >= nth and not every:
+                break
+        out.append(line[pos:])
+        line = "".join(out)
+    return line
+
+
 def _run_file(path_tok: str, cwd: str, depth: int, out: Expanded, shell: bool) -> None:
     if not out.files:
         return
@@ -1438,6 +1554,12 @@ def _run_file(path_tok: str, cwd: str, depth: int, out: Expanded, shell: bool) -
         return  # already expanded in this command: its content was checked the first time
     out.read.add(key)
     hidden = out.written.get(key)
+    if hidden is False and key in out.derived:
+        # Observation 0392: `sed 's/a/b/' src.py > run.py && python run.py`: the new file is the source
+        # the hook can read plus the replacement text the line shows, so that is what is checked.
+        hidden, text, why = None, out.derived[key], ""
+    else:
+        text, why = None, ""
     if hidden is not None:  # this line writes the file before it runs it: the disk copy is stale
         if hidden:
             why = f"a script this line writes from content the hook cannot see ({os.path.basename(path)})"
@@ -1446,7 +1568,8 @@ def _run_file(path_tok: str, cwd: str, depth: int, out: Expanded, shell: bool) -
         elif shell:
             out.pending.append(path)  # its new content is plain on this line and read there
         return
-    text, why = read_script(path)
+    if text is None:
+        text, why = read_script(path)
     if why:
         # On disk but unread: fail closed for hard rules (K7-4-03), by who runs it (V-K8w FP2).
         (out.unread if shell else out.unread_code).append(why)

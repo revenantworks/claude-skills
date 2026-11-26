@@ -3,11 +3,9 @@
 ## Contents
 
 - Build defaults
-- The pack registry
-- Per pack: members, budgets, seams (foundation), capstone, canonical repo — foundation, then gamedev
+- Pack registry
 - Cross-pack seams and the planned line
 - Featured (one-skill plugins) and the featured line
-
 > The canonical roster and pack structure `tools/build.py` derives every
 > `references/pack.md` from. **Event-driven** — updated on roster or pack
 > changes only, not on a calendar (no staleness stamp). Holds only what a

@@ -9,8 +9,12 @@ then needs an intent and a CI stamp), so start with it in one repo.
 
 ## Contents
 
-1 Copy the files · 2 Check each hook offline · 3 Build the finished settings file · 4 Install it ·
-5 First use · 6 Roll back
+- 1 · Copy the files
+- 2 · Check each hook offline
+- 3 · Build the finished settings file
+- 4 · Install it
+- 5 · First use
+- 6 · Roll back everything
 
 ## 1 · Copy the files
 

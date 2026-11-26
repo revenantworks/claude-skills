@@ -6,7 +6,7 @@ Calendar surface, 60-day cadence, re-verified by `faretender refresh`. Each rule
 
 ## Contents
 
-- EU261
+- EU261 (EU Regulation 261/2004)
 - UK261
 - US DOT automatic refunds
 - Time limits

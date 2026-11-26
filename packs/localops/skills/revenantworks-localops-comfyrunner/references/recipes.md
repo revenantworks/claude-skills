@@ -6,11 +6,17 @@ for another card.
 
 ## Contents
 
-1. The recipe check
-2. Family table
-3. Measured times
-4. Thumbnail brief
-5. Refreshing this file
+- 1. The recipe check
+- 2. Family table
+- Picking the family from the job
+- Style reference plus layout (IP-Adapter and ControlNet together)
+- Batching by model
+- Reference edits (FLUX.2 Klein)
+- Prompt budget by family
+- Background removal
+- 3. Measured times
+- 4. Thumbnail brief
+- 5. Refreshing this file
 
 ---
 

@@ -10,18 +10,17 @@ Load the target channel's section on every draft. Four fields per profile: **reg
 
 ## Contents
 
-- Email: formal, family, work
+- Email
 - Text or SMS
 - Teams or Slack
 - GitHub release notes
-- YouTube: titles and descriptions
-- Video and stream words: stream title, chapters, schedule post, short-form caption, disclosure
+- YouTube
+- Video and stream words
 - Social posts
 - Discord announcements
-- Internal reports: status update (3P), newsletter item, FAQ answer
-- Docs: README or guide, memo, Claude Docs
-- UI microcopy: buttons, links, labels, errors, empty and loading states, confirms
-- Store pages, launch or update posts and listing copy: their own file, `store-launch.md`
+- Internal reports
+- Docs
+- UI microcopy
 
 ---
 

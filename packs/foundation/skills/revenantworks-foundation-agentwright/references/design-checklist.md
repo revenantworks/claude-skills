@@ -4,7 +4,17 @@ Loaded on every design and audit. The last section, *Audit-only questions*, is r
 
 ## Contents
 
-1. Cadence · 2. Guardrail tiers · 3. Kill-switch layers · 4. Protected resources · 5. Handoff schemas · 6. Output contracts · 7. Zero-signal rule · 8. Failure & retry · 9. Injection hygiene · 10. Trust tiers · Audit-only questions
+- 1. Cadence
+- 2. Guardrail tiers — soft vs hard
+- 3. Kill-switch layers
+- 4. Protected resources
+- 5. Handoff schemas
+- 6. Output contracts
+- 7. Zero-signal rule
+- 8. Failure & retry
+- 9. Injection hygiene
+- 10. Trust tiers
+- Audit-only questions
 
 ---
 
