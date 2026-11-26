@@ -40,6 +40,10 @@ that path by name; never run the stamped CI in the background while such a hook 
   is one `git stash` (a session handover, a teleport, a worktree switch) away from vanishing, and a
   session that finds a clean tree reads that as "nothing to recover" rather than "something got
   stashed" — see Resuming a run, below.
+- **On a run branch, never local `main`** (observation 0736): the controller commits its records
+  (ledger rows, observations, surface checks) on a run branch cut from `origin/main` and lands
+  that same branch, so there is one history; records committed to local `main` and landed as
+  copies left `main` hundreds of commits diverged, twice.
 - **Public repo:** run records stay untracked — the run directory is git-ignored, and the records
   live on disk or in a private companion repo that is committed at each write point instead. A run
   record carries owner decisions, account names and internal paths that a public history keeps
@@ -312,6 +316,14 @@ directory silently (observation #0032). One `git stash pop` on the right stash r
 `pushed` or `verified` whose sha is not on origin (or, for `landed locally`, not in the local
 branch) is rewritten to `unverified` before anything new launches. A row is only as true as the
 last check of it.
+
+**A controller or starter prompt is handed over as a file pointer** (observation 0731). When a
+run resumes or continues in a new terminal session, write the prompt to the run directory and
+hand over one command that passes a pointer as the first message:
+`claude "Read <absolute prompt path> and follow it exactly."`. Tell the owner to press Enter once
+the session opens if it does not submit on its own (on one Windows build the positional prompt
+waited for a keypress). A clipboard round trip put the launch command, not the prompt, into the
+new session; clipboard handover is only for a paste into a web surface.
 
 **Check every cited base by ancestry, never by existence** (observation 0338). On resume and at
 every join check, each base a brief cites passes `git merge-base --is-ancestor <id> origin/main`.

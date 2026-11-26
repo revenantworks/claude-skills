@@ -1,5 +1,20 @@
 # Changelog — revenantworks-foundation-dispatchwright
 
+## Unreleased
+
+- Ledger guard (`.claude/hooks/dispatch_ledger_guard.py`, rig install): the lookup takes the
+  first current ledger group by group and ends at the launch-root pointer `~/.dispatch/ledger-path`
+  (override `CLAUDE_DISPATCH_HOME_POINTER`), so a unit in a worktree or a non-launch-root clone
+  finds the live run; `ledger-schema.md` lookup order step 5 (observation 0735).
+- `unit-brief-template.md`: a cross-repo unit gets a controller-made worktree of the target repo;
+  `isolation: "worktree"` only for the controller's own repo (0735). Budget and call cap: a
+  compaction is a forced checkpoint that writes `calls so far` to the report; an inventory past
+  about 60 calls is two units at plan time (0732).
+- `ledger-schema.md`: controller records are committed on a run branch cut from `origin/main`,
+  never local `main`, and land from it (0736); a controller or starter prompt is handed over as
+  `claude "Read <path> and follow it exactly."`, Enter if it does not auto-submit, clipboard only
+  for web surfaces (0731, controller half).
+
 ## [1.1.0] — 2026-11-24
 
 - Body under 5,000 tokens (20,954 → 19,585 chars, ≈5,238 → ≈4,896 tokens at chars/4), so the whole

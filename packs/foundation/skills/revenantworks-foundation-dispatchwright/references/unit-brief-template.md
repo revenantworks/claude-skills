@@ -124,7 +124,14 @@ library → a dependency already installed → the minimum new code. Never cut v
 handling, security or accessibility to climb down a rung.]
 
 **You own this repo for this run.** [Name the repo and worktree/branch, or state "no other unit
-touches this repo in this window."] No other unit writes here while you run.
+touches this repo in this window."] No other unit writes here while you run. **A cross-repo
+unit gets a named surface** (observation 0735): before launch the controller makes a worktree of
+the TARGET repo (with that repo's own worktree tool where it has one, see Results, commits,
+worktrees and counts) and passes its path here. `isolation: "worktree"` is only for a unit that
+writes the controller's own repo: it isolates the repo the controller stands in, so a cross-repo
+unit launched with it is refused git on the target's shared clone and falls back to a scratch
+clone from a stale `origin/main`. A unit that runs outside the launch root (either kind) reaches
+the live ledger through the launch-root pointer (ledger-schema.md, Lookup order, step 5).
 
 **Files allowed:** [the exact paths or globs you may change — the ledger row's `files_allowed`.
 Reconcile diffs `<base>..<your sha>` by name; any other path makes the row unverified (observation
@@ -271,7 +278,12 @@ each edit landed (a read or a grep of the changed line) before a commit message 
 (observation 0352): units that ran past their cap left half-landed work and a message claiming an
 edit that failed. Where a hook enforces the cap, it is the barrier; this line is the reminder.
 **Budget by the hook's count** (observation 0510): every call in a parallel batch counts, and
-four units in one night tallied 30-60 calls below the hook. **Size the cap from the work list,
+four units in one night tallied 30-60 calls below the hook. **A compaction is a forced
+checkpoint** (observation 0732): the running count does not survive the summary, so before the
+next call after one the unit writes `calls so far: <N>` (re-derived from the harness, not
+remembered) into its report file, then continues; two units that skipped it ran 15-20% past
+their caps. **A brief whose inventory exceeds about 60 calls is two units at plan time**, split at
+a natural seam, so no unit's limit sits near a compaction. **Size the cap from the work list,
 not the tier default** (observations 0479, 0496, 0510, 0537): about 25 calls per red-first item
 plus the suite; a switch piece adds its duty edits (reset row, hook line, stack helper, control
 row) or batches them into one pass at the end; a merge about 2 calls per conflict block plus 5;
