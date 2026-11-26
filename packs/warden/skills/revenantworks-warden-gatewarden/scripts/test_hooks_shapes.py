@@ -1167,6 +1167,137 @@ class BlockComments0392(PushShapeBase):
         self.expect(2, [f"<# note #> {G} {U} --force origin main"], tool="PowerShell")
 
 
+FORCE = f"{G} {U} --force origin main"
+
+
+class CaseKeyword0392R1(PushShapeBase):
+    """R1 must-fix 1 (run 2026-11-26-observer-wave): `case` is the keyword only in command position. A
+    `case` that is an argument (`echo case x in`) must not blank the text after it as a "pattern", or
+    `echo $(echo case x in` + newline + `./run.sh)` runs a script the hook never reads."""
+
+    def setUp(self):
+        super().setUp()
+        Path(self.work, "run.sh").write_text(FORCE + "\n", encoding="utf-8")
+
+    def test_a_case_word_outside_command_position_hides_nothing(self):
+        self.expect(2, ["echo $(echo case x in\n./run.sh)", "x=$(echo case x in\n./run.sh)",
+                        "echo $(echo case x in\n/*)", "echo $(echo then case x in\n./run.sh)",
+                        "echo $(echo \\\ncase x in\n./run.sh)", "echo $(echo ! case x in\n./run.sh)",
+                        "echo $(echo x{ case x in\n./run.sh)", "echo $(echo x >& case x in\n./run.sh)",
+                        "echo $(echo x >| case x in\n./run.sh)", "echo $(echo \\|case x in\n./run.sh)",
+                        "echo $(echo \\;case x in\n./run.sh)"])
+
+    def test_the_same_trick_inside_a_script_is_refused(self):
+        Path(self.work, "s.sh").write_text("x=$(echo case x in\n./run.sh)\necho \"$x\"\n", encoding="utf-8")
+        self.expect(2, ["bash s.sh"])
+
+    def test_the_controls_stay_refused(self):
+        self.expect(2, ["echo $(echo hi\n./run.sh)", "echo $(./run.sh)"])
+
+    def test_case_in_command_position_still_blanks_its_patterns(self):
+        self.expect(0, ["if true; then case $x in /*) echo abs ;; esac; fi",
+                        "y=$(case $x in /*) echo a ;; esac)",
+                        "for f in a; do case $f in /*|[A-Za-z]:*) echo abs ;; esac; done",
+                        "true && case $x in /*) echo a ;; esac"])
+
+
+class SedResult0392R1(DirectShapeBase):
+    """R1 must-fix 2: the hook checks what sed writes, not the source and the replacement apart. Only
+    literal patterns and replacements are applied; anything after the first redirection but a redirection,
+    and an append, keep the file hidden."""
+
+    HOOKS = {"push_gate.py": FORCE, "golive_block.py": f'req = "{REQ}"', "hyperv_lock.py": "Remove-VM -Name lab"}
+    SPLIT = {"push_gate.py": (f"{G} pXsh --force origin main", "u"),
+             "golive_block.py": (f'req = "StartX{REQ[5:]}"', ""),
+             "hyperv_lock.py": ("Remove-VMX -Name lab", "")}
+    RUN = {"push_gate.py": "bash", "golive_block.py": "bash", "hyperv_lock.py": "bash"}
+
+    def setUp(self):
+        super().setUp()
+        os.makedirs(os.path.join(self.tmp, "prior"))
+        Path(self.tmp, "prior", "ok.sh").write_text("echo ok\n", encoding="utf-8")
+        Path(self.tmp, "prior", "build.py").write_text('print("2026-11-18")\n', encoding="utf-8")
+        Path(self.tmp, "prior", "meta.sh").write_text(f"{G} pQQsh --force origin main\n", encoding="utf-8")
+        Path(self.tmp, "prior", "amp.sh").write_text(f"{G} psh --force origin main\n", encoding="utf-8")
+
+    def files(self, hook):
+        Path(self.tmp, "prior", "split.sh").write_text(self.SPLIT[hook][0] + "\n", encoding="utf-8")
+        Path(self.tmp, "prior", "evil.sh").write_text(self.HOOKS[hook] + "\n", encoding="utf-8")
+        Path(self.tmp, "evil.sh").write_text(self.HOOKS[hook] + "\n", encoding="utf-8")
+
+    def test_a_substitution_that_assembles_a_word_is_refused(self):
+        for hook in self.HOOKS:
+            self.files(hook)
+            self.expect(hook, 2, [f"sed -e 's/X/{self.SPLIT[hook][1]}/' prior/split.sh > b.sh && bash b.sh"])
+
+    def test_an_input_file_after_the_redirection_is_refused(self):
+        for hook in self.HOOKS:
+            self.files(hook)
+            self.expect(hook, 2, ["sed -e 's/a/a/' prior/ok.sh > b.sh prior/evil.sh && bash b.sh",
+                                  "sed -e 's/a/a/' prior/ok.sh > b.sh -s prior/evil.sh && bash b.sh"])
+
+    def test_an_append_is_not_derived(self):
+        for hook in self.HOOKS:
+            self.files(hook)
+            self.expect(hook, 2, ["sed -e 's/a/a/' prior/ok.sh >> evil.sh && bash evil.sh"])
+
+    def test_a_source_this_line_overwrites_is_not_read_from_disk(self):
+        for hook in self.HOOKS:
+            self.files(hook)
+            Path(self.tmp, "prior", "ok2.sh").write_text("echo ok\n", encoding="utf-8")
+            self.expect(hook, 2, ["cp prior/evil.sh prior/ok2.sh && sed -e 's/a/a/' prior/ok2.sh > b.sh && bash b.sh"])
+
+    def test_with_an_e_option_the_first_word_is_an_input_not_a_script(self):
+        for hook, neuter in (("golive_block.py", "s/Start/Stop/"), ("hyperv_lock.py", "s/Remove/Get/")):
+            self.files(hook)
+            self.expect(hook, 2, [f"sed '{neuter}' -e 's/q/q/' prior/evil.sh > b.sh && bash b.sh"])
+
+    def test_a_regex_or_back_reference_stays_hidden(self):
+        self.expect("push_gate.py", 2, ["sed -e 's/p.*sh/push/' prior/meta.sh > b.sh && bash b.sh",
+                                        "sed -e 's/s/u&/' prior/amp.sh > b.sh && bash b.sh"])
+
+    def test_literal_substitutions_still_pass(self):
+        for hook in self.HOOKS:
+            self.expect(hook, 0, ["sed -e 's#2026-11-18#2026-11-19#' prior/build.py > b.py 2>/dev/null && python b.py",
+                                  "sed -e 's/18/19/g' -e 's/19/20/' prior/build.py > b.py && python b.py"])
+
+
+class PsQuoting0392R1(PushShapeBase):
+    """R1 must-fix 3: a `<# … #>` block is stripped only when the PowerShell text holds no quoting the
+    tracker cannot follow (here-strings, backticks, `$(`/`${`, curly quotes). Otherwise the block's text is
+    read as code, so a quote the tracker misreads cannot hide a push."""
+
+    HERE = f'$x = @"\na " <#\n"@\n{FORCE}\n#>\n'
+    TICK = f'Write-Host `"; Write-Host "<#"; {FORCE}; Write-Host "#>"\n'
+    SUB = f'Write-Host "$("<#")"; {FORCE}; Write-Host "#>"'
+    CURLY = f"Write-Host “<#”; {FORCE}; Write-Host “#>”"
+
+    def script(self, name, body):
+        path = Path(self.tmp, name)
+        path.write_text(body, encoding="utf-8")
+        return str(path).replace("\\", "/")
+
+    def test_a_ps1_with_a_here_string_or_backtick_is_refused_from_both_tools(self):
+        for name, body in (("h.ps1", self.HERE), ("t.ps1", self.TICK)):
+            p = self.script(name, body)
+            for tool in ("Bash", "PowerShell"):
+                self.expect(2, [f"pwsh -NoProfile -File {p}"], tool=tool)
+
+    def test_the_same_shapes_inline_are_refused(self):
+        self.expect(2, [self.HERE, self.TICK, self.SUB, self.CURLY], tool="PowerShell")
+
+    def test_a_comment_or_word_the_tracker_could_misread_is_refused(self):
+        self.expect(2, [f"Write-Host \"x\"#it's\nWrite-Host '<#'; {FORCE}; Write-Host '#>'",
+                        f"Write-Host a<#;{FORCE};#>c", f"Write-Host (1)#x <#\n{FORCE}\n#>",
+                        f"Write-Host x\r# <#\n{FORCE}\n#>"], tool="PowerShell")
+
+    def test_plain_block_comments_still_hide_their_text(self):
+        p = self.script("doc.ps1", f"<#\n.EXAMPLE\n  {FORCE}\n#>\nparam($Name)\nWrite-Host $Name # greet\n")
+        for tool in ("Bash", "PowerShell"):
+            self.expect(0, [f"pwsh -NoProfile -File {p}"], tool=tool)
+        self.expect(0, [f"<# {FORCE} #> Get-Date", f"Get-Date <#x#>; <# {FORCE} #>"], tool="PowerShell")
+
+
 class ProcessSmoke(DirectShapeBase):
     """Observation 0725: the cases above run in process; these prove each hook's real entry point as a
     new process, one refusal and one pass apiece, with the same verdict in process."""

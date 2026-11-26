@@ -459,8 +459,31 @@ def strip_comments(text: str, ps: bool | None = None) -> str:
     start a line comment that hides the command after the block (`<# x #> git push -f`, V-K8w).
     A `<#` inside a quoted string opens no block (`Write-Host "<#"; git push -f; Write-Host "#>"` runs the
     push; before 2026-11-26 the whole middle was stripped), and in a PowerShell double-quoted string a
-    backtick escapes the next character."""
+    backtick escapes the next character.
+
+    R1 must-fix 3 (run 2026-11-26-observer-wave): a quote tracker this simple misreads here-strings
+    (`@"…"@`), backticks, `$(…)` inside strings, curly quotes and `#` right after a string, and each misread
+    let a block hide a push. So a block is stripped only in PowerShell text with no quote character at all,
+    where every `<#` and every `#` sits at a plain token start (or `#` mid-word). Anything else fails
+    closed: the block text stays as code, with its `#` characters blanked so none of them starts a line
+    comment, and only `#` line comments are stripped as before."""
     ps = is_powershell() if ps is None else ps
+    if ps and "<#" in text:
+        if not PS_QUOTES.search(text):
+            out = _strip_comments(text, ps, True)
+            if out is not None:
+                return out
+        text = re.sub(r"<#.*?(?:#>|\Z)", lambda m: m.group(0).replace("#", " "), text, flags=re.S)
+    return _strip_comments(text, ps, False)
+
+
+PS_QUOTES = re.compile("['\"`‘-‟]")
+_PS_TOKEN_START = " \t\r\n;|&("
+
+
+def _strip_comments(text: str, ps: bool, blocks: bool) -> str | None:
+    """strip_comments' scan. With `blocks` (PowerShell text holding no quote) it strips `<# … #>` and returns
+    None when a `<#` or `#` sits where PowerShell's reading is not certain (after `)`, `}`, `,`, `=` …)."""
     out, i, quote, n = [], 0, None, len(text)
     while i < n:
         ch = text[i]
@@ -474,7 +497,9 @@ def strip_comments(text: str, ps: bool | None = None) -> str:
                 quote = None
             i += 1
             continue
-        if ps and text.startswith("<#", i):
+        if blocks and text.startswith("<#", i):
+            if i and text[i - 1] not in _PS_TOKEN_START:
+                return None  # `a<#…` is one word, `(1)<#…` may be a block: unsure
             end = text.find("#>", i + 2)
             end = n if end < 0 else end + 2
             out.append(" " + "\n" * text.count("\n", i, end))
@@ -484,6 +509,8 @@ def strip_comments(text: str, ps: bool | None = None) -> str:
             end = text.find("\n", i)
             i = n if end < 0 else end
             continue
+        if blocks and ch == "#" and not (text[i - 1].isascii() and (text[i - 1].isalnum() or text[i - 1] == "_")):
+            return None  # `"x"#a`, `(1)#a`, `$a=#c` are comments in PowerShell, `x=#a` in a word is not
         if ch in "'\"":
             quote = ch
         out.append(ch)
@@ -1166,6 +1193,52 @@ def _keyword_at(text: str, i: int, kw: str) -> bool:
         (end == len(text) or text[end] in " \t\n;)")
 
 
+# R1 must-fix 1 (run 2026-11-26-observer-wave): `case` is a keyword only where a command starts. As an
+# argument (`echo $(echo case x in` + newline + `./run.sh)`) it opens nothing, and blanking the text after
+# it hid a script run. A word before `case` counts only if it is itself a reserved word in command position.
+_CMD_WORDS = ("then", "do", "else", "elif", "if", "while", "until", "time", "!", "{")
+
+
+def _escaped(text: str, i: int) -> bool:
+    n = 0
+    while i - n - 1 >= 0 and text[i - n - 1] == "\\":
+        n += 1
+    return n % 2 == 1
+
+
+def _cmd_position(text: str, i: int, pat_ends: set[int]) -> bool:
+    """True when position i starts a command: the text start, after an unescaped newline, `;`, `&`, `|`
+    or `(` that is not part of a redirection or an extglob, right after a blanked case pattern, or after a
+    reserved word that is itself in command position. Anything else, or anything unsure, is False."""
+    k = i
+    while k > 0:
+        c = text[k - 1]
+        if c in " \t":
+            k -= 1
+        elif c == "\n" and _escaped(text, k - 1):
+            k -= 2  # a line continuation joins the words around it
+        else:
+            break
+    if k == 0 or k in pat_ends:
+        return True
+    c = text[k - 1]
+    if _escaped(text, k - 1):
+        return False
+    before = text[k - 2] if k >= 2 else ""
+    if c == "\n" or c == ";":
+        return True
+    if c == "&":
+        return before not in ("<", ">")
+    if c == "|":
+        return before != ">"
+    if c == "(":
+        return before not in ("@", "?", "*", "+", "!")
+    start = k
+    while start > 0 and text[start - 1] not in " \t\n;|&()<>'\"\\":
+        start -= 1
+    return text[start:k] in _CMD_WORDS and _cmd_position(text, start, pat_ends)
+
+
 def blank_case_patterns(text: str) -> str:
     """The sh text with each plain `case WORD in` head and `case` pattern (with its optional `(` and
     closing `)`) turned to spaces; length and newlines kept. Quotes and `#` comments are skipped while looking for `case`,
@@ -1174,6 +1247,7 @@ def blank_case_patterns(text: str) -> str:
         return text
     chars, n = list(text), len(text)
     stack: list[str] = []  # "pattern" or "body", one per open case
+    pat_ends: set[int] = set()  # where a blanked pattern ends: a command may start there
     i, quote = 0, None
     while i < n:
         ch = text[i]
@@ -1204,6 +1278,7 @@ def blank_case_patterns(text: str) -> str:
                 if chars[k] != "\n":
                     chars[k] = " "
             stack[-1] = "body"
+            pat_ends.add(m.end())
             i = m.end()
             continue
         if ch == "\\":
@@ -1223,7 +1298,7 @@ def blank_case_patterns(text: str) -> str:
             stack.pop()
             i += 4
             continue
-        elif _keyword_at(text, i, "case"):
+        elif _keyword_at(text, i, "case") and _cmd_position(text, i, pat_ends):
             m = CASE_HEAD.match(text, i)
             if m:
                 # `case WORD in` runs nothing, so it is not the command word of the first body either
@@ -1397,7 +1472,7 @@ def expand(command: str, cwd: str = "", depth: int = 0, out: Expanded | None = N
         progs = [prog(t) for t in toks]
         vis = _visible(seg, toks, progs)
         if out.files:
-            derived = sed_derive(toks, progs, cur) if prev_sep != "|" else None
+            derived = sed_derive(toks, progs, cur, out.written) if prev_sep != "|" else None
             for path, hidden in _writes(seg, toks, progs, prev_sep == "|" and prev_vis, vis):
                 key = os.path.normcase(os.path.abspath(resolve(path, cur)))
                 if derived is not None:
@@ -1546,24 +1621,43 @@ def _writes(seg: str, toks: list[str], progs: list[str], fed_visibly: bool, vis:
 
 # Observation 0392: a script derived from a readable file by sed and run on the same line
 # (`sed -e 's#a#b#' prior/x.py > x.py && python x.py`). Only plain `s` commands count: one per -e or
-# script word, a literal delimiter, flags from g, I, i, p and digits. sed's e, w, r, W and R commands and
-# flags run or touch other files, and -i, -f, -z or any other option, a second input, a pipe into sed, or
-# a `$`, backtick or glob in the source keeps the file hidden.
-SED_SUB = re.compile(r"^s([^\\\n\w\s])((?:\\.|(?!\1).)*)\1((?:\\.|(?!\1).)*)\1([gIip0-9]*)$", re.S)
-SED_FLAGS = {"-e", "--expression", "-E", "-r", "-n", "--regexp-extended", "--quiet", "--silent", "--posix",
-             "-u", "--unbuffered"}
+# script word, a literal delimiter, flags g and a number. sed's e, w, r, W and R commands and flags run or
+# touch other files, and -i, -f, -n, -z or any other option, a second input, a pipe into sed, or a `$`,
+# backtick or glob in the source keeps the file hidden.
+# R1 must-fix 2 (run 2026-11-26-observer-wave): the hook checks what sed writes, so the substitutions are
+# applied for real, and only where that is exact: a literal pattern (no regex character, no backslash) and a
+# literal replacement (no `&`, no backslash). Checking the source and the replacement apart let
+# `s/X/u/` on `git pXsh --force` pass. After the first redirection only plain output redirections may
+# follow (an input file there was never read), and an append (`>>`) is never derived.
+SED_SUB = re.compile(r"^s([^\\\n\w\s])((?:(?!\1)[^\n])*)\1((?:(?!\1)[^\n])*)\1([g0-9]*)$")
+SED_FLAGS = {"-e", "--expression", "-E", "-r", "--regexp-extended", "--posix", "-u", "--unbuffered"}
+SED_META = set("\\.[]*^$+?(){}|")
+SED_OUT = re.compile(r"^\d*>(?![>&])\|?(.*)$")
 
 
-def sed_derive(toks: list[str], progs: list[str], cwd: str) -> str | None:
-    """The text a plain sed substitution writes from one readable source file, as the hook can check it:
-    the source's text plus a line holding each replacement. None when the segment is anything else."""
+def _sed_literal(s: str, bad: set[str]) -> bool:
+    return all(" " <= ch <= "~" and ch not in bad for ch in s)
+
+
+def sed_derive(toks: list[str], progs: list[str], cwd: str, written: dict | None = None) -> str | None:
+    """The exact text a literal sed substitution writes from one readable source file. None when the
+    segment is anything else, or when the hook cannot be sure what sed writes."""
     if not toks or progs[0] != "sed":
         return None
-    scripts, files, i, explicit = [], [], 1, False
+    scripts, words, i, explicit = [], [], 1, False
     while i < len(toks):
         t = toks[i]
-        if re.match(r"^\d*[<>]", t):
-            break  # the redirections start
+        if re.match(r"^\d*[<>&]", t):
+            while i < len(toks):  # the redirections: plain output ones only, to the end of the segment
+                t = toks[i]
+                if re.match(r"^\d*>&\d+$", t):
+                    i += 1
+                    continue
+                m = SED_OUT.match(t)
+                if not m or (not m.group(1) and i + 1 >= len(toks)):
+                    return None
+                i += 1 if m.group(1) else 2
+            break
         if t in ("-e", "--expression"):
             if i + 1 >= len(toks):
                 return None
@@ -1577,23 +1671,49 @@ def sed_derive(toks: list[str], progs: list[str], cwd: str) -> str | None:
         if t.startswith("-"):
             if t not in SED_FLAGS:
                 return None
-        elif not explicit and not scripts:
-            scripts.append(unquote(t))
         else:
-            files.append(t)
+            words.append(t)
         i += 1
-    if not scripts or len(files) != 1 or re.search(r"[$`*?\[{]", files[0]):
+    if not explicit:  # with no -e, the first word is the script; with one, every word is an input file
+        if not words:
+            return None
+        scripts.append(unquote(words.pop(0)))
+    if not scripts or len(words) != 1 or re.search(r"[$`*?\[{~]", words[0]):
         return None
-    repl = []
+    subs = []
     for s in scripts:
         m = SED_SUB.match(s.strip())
-        if not m:
+        flags = re.fullmatch(r"(g?)([1-9][0-9]*)?(g?)", m.group(4)) if m else None
+        if not m or not flags or (flags.group(1) and flags.group(3)) or not m.group(2) or \
+                not _sed_literal(m.group(2), SED_META) or not _sed_literal(m.group(3), {"\\", "&"}):
             return None
-        repl.append(m.group(3))
-    text, why = read_script(resolve(unquote(files[0]), cwd))
+        subs.append((m.group(2), m.group(3), int(flags.group(2) or 1), bool(flags.group(1) or flags.group(3))))
+    path = resolve(unquote(words[0]), cwd)
+    if written is not None and os.path.normcase(os.path.abspath(path)) in written:
+        return None  # this line writes the source first: its disk copy is stale
+    text, why = read_script(path)
     if text is None or why:
         return None
-    return text + "\n" + "\n".join(repl) + "\n"
+    return "\n".join(_sed_line(line, subs) for line in text.split("\n"))
+
+
+def _sed_line(line: str, subs: list[tuple[str, str, int, bool]]) -> str:
+    """One line through literal `s` commands in order: the nth match, or the nth and every later one with g."""
+    for pat, rep, nth, every in subs:
+        out, pos, count = [], 0, 0
+        while True:
+            j = line.find(pat, pos)
+            if j < 0:
+                break
+            count += 1
+            hit = count == nth or (every and count > nth)
+            out.append(line[pos:j] + (rep if hit else pat))
+            pos = j + len(pat)
+            if count >= nth and not every:
+                break
+        out.append(line[pos:])
+        line = "".join(out)
+    return line
 
 
 def _run_file(path_tok: str, cwd: str, depth: int, out: Expanded, shell: bool) -> None:
