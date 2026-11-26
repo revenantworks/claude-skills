@@ -7,7 +7,8 @@
 - hooklib (0392, 2026-11-12): `<# … #>` is a comment only in PowerShell text, decided per script (a .ps1 run from the Bash tool, a .sh run from the PowerShell tool), and a `<#` inside a quoted string opens no block: `Write-Host "<#"; git push --force …; Write-Host "#>"` passed the PowerShell tool before (stripped as a block). Tests: `test_hooks_shapes.BlockComments0392`
 - hooklib (0392, 2026-11-13/17/19): `sed [-e] 's<d>a<d>b<d>[gIip0-9]' src > out && <run> out` is read as the readable source plus the replacement text, not as a hidden write, in golive_block, hyperv_lock and push_gate; sed's e/w commands and flags, -i/-f/other options, a piped or glob or missing source keep the refusal. Tests: `test_hooks_shapes.SedDerive0392`
 - push_gate public_branch (0734): the refusal's visibility row and the fast-forward pass use the global rule's words, "a public repo: stop before the branch push; a pushed branch is already public". Tests: 2 in `test_hooks_public_branch`
-- still open (0392): a script with a push behind a runtime branch is refused whole; needs a design. 0725: the subprocess-per-case hook suites are not moved in-process yet
+- tests (0725): `_inproc.py` runs a hook file as `__main__` in the test process with fresh module state; `test_hooks_shapes` uses it (153 cases, 661 s to 308 s on the rig), and `ProcessSmoke` keeps one refusal and one pass per hook as a real process. `test_hooks` and `test_hooks_public_branch` still spawn per case
+- still open (0392): a script with a push behind a runtime branch is refused whole; needs a design
 
 ## [1.1.2] — 2026-11-24
 

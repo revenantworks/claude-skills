@@ -21,6 +21,7 @@ import tempfile
 import unittest
 from pathlib import Path
 from _scratch import force_rmtree
+import _inproc
 
 HERE = Path(__file__).resolve().parent
 HOOKS = HERE / "hooks"
@@ -31,7 +32,15 @@ G, U = "g" + "it", "pu" + "sh"
 
 
 def run_hook(name: str, event: dict, env: dict | None = None):
-    """Run a hook as Claude Code does: a JSON event on stdin; exit 0 allows, exit 2 blocks."""
+    """Run a hook on a JSON event; exit 0 allows, exit 2 blocks. In this process (observation 0725):
+    the hook file runs as __main__ with fresh module state, no Python spawn per case."""
+    full_env = {k: v for k, v in os.environ.items() if not k.startswith("GATEWARDEN_")}
+    full_env.update(env or {})
+    return _inproc.run_event(name, event, full_env)
+
+
+def run_hook_process(name: str, event: dict, env: dict | None = None):
+    """Run a hook as Claude Code does: a new process, the JSON event on stdin (the smoke cases)."""
     full_env = {k: v for k, v in os.environ.items() if not k.startswith("GATEWARDEN_")}
     full_env.update(env or {})
     p = subprocess.run([PY, str(HOOKS / name)], input=json.dumps(event), capture_output=True, text=True,
@@ -1156,6 +1165,24 @@ class BlockComments0392(PushShapeBase):
     def test_a_real_block_comment_still_hides_its_text(self):
         self.expect(0, [f"<# {G} {U} --force origin main #> Get-Date"], tool="PowerShell")
         self.expect(2, [f"<# note #> {G} {U} --force origin main"], tool="PowerShell")
+
+
+class ProcessSmoke(DirectShapeBase):
+    """Observation 0725: the cases above run in process; these prove each hook's real entry point as a
+    new process, one refusal and one pass apiece, with the same verdict in process."""
+
+    CASES = {"push_gate.py": (f"{G}-p?sh origin main", f"{G} status"),
+             "golive_block.py": (f"obs-cmd stream" + "ing start", "echo hi"),
+             "hyperv_lock.py": ("cat x.sh | bash", "echo hi")}
+
+    def test_each_hook_as_a_process_matches_in_process(self):
+        for hook, (refused, passed) in self.CASES.items():
+            for cmd, want in ((refused, 2), (passed, 0)):
+                ev = bash(cmd, self.tmp)
+                got, _, err = run_hook_process(hook, ev, env=self.env)
+                self.assertEqual(got, want, f"{hook} process: {cmd!r}: {err.strip()}")
+                got, _, err = run_hook(hook, ev, env=self.env)
+                self.assertEqual(got, want, f"{hook} in process: {cmd!r}: {err.strip()}")
 
 
 class BlankCasePatterns(unittest.TestCase):
