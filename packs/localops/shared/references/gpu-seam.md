@@ -18,15 +18,16 @@ seam: one lease, one pre-flight, GPU and RAM together.
 
 ## Contents
 
-1. Why this exists
-2. The lease — who holds the GPU
-3. Live occupancy — what is really there
-4. Unload before load, and hand-back
-5. The pre-flight budget
-6. Headroom is the user's number
-7. When the device is lost
-8. Untrusted inputs
-9. What stays elsewhere
+- 1. Why this exists
+- 2. The lease — who holds the GPU
+- Release verbs, per program
+- 3. Live occupancy — what is really there
+- 4. Unload before load, and hand-back
+- 5. The pre-flight budget
+- 6. Headroom is the user's number
+- 7. When the device is lost
+- 8. Untrusted inputs
+- 9. What stays elsewhere
 
 ---
 
