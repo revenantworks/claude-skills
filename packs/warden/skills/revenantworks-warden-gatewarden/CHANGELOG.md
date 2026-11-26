@@ -1,5 +1,14 @@
 # Changelog — revenantworks-warden-gatewarden
 
+## Unreleased
+
+- hooklib (0392, 2026-11-26): a sh `case WORD in` head and each plain `case` pattern are blanked before the split, so `(/*|[A-Za-z]:[/\\]*) ;;` is no longer read as a command word and push_gate stops refusing the observer's Session Start scan; a pattern or head that substitutes stays as text. A glob command word inside a case body is now refused (it passed before, behind the `case` word). Tests: `test_hooks_shapes.CasePattern0392`, `BlankCasePatterns`
+- push_gate (0392): the glob refusal says when the glob can match `git-push` instead of claiming a push word; every "names push" refusal quotes the segment that holds the word (`push_quote`)
+- hooklib (0392, 2026-11-12): `<# … #>` is a comment only in PowerShell text, decided per script (a .ps1 run from the Bash tool, a .sh run from the PowerShell tool), and a `<#` inside a quoted string opens no block: `Write-Host "<#"; git push --force …; Write-Host "#>"` passed the PowerShell tool before (stripped as a block). Tests: `test_hooks_shapes.BlockComments0392`
+- hooklib (0392, 2026-11-13/17/19): `sed [-e] 's<d>a<d>b<d>[gIip0-9]' src > out && <run> out` is read as the readable source plus the replacement text, not as a hidden write, in golive_block, hyperv_lock and push_gate; sed's e/w commands and flags, -i/-f/other options, a piped or glob or missing source keep the refusal. Tests: `test_hooks_shapes.SedDerive0392`
+- push_gate public_branch (0734): the refusal's visibility row and the fast-forward pass use the global rule's words, "a public repo: stop before the branch push; a pushed branch is already public". Tests: 2 in `test_hooks_public_branch`
+- still open (0392): a script with a push behind a runtime branch is refused whole; needs a design. 0725: the subprocess-per-case hook suites are not moved in-process yet
+
 ## [1.1.2] — 2026-11-24
 
 - body trimmed back under its 3,500-token budget; history stays in the references
