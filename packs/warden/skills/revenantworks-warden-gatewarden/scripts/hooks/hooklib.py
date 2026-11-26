@@ -352,9 +352,9 @@ def split_ops(command: str, escapes: bool = False, ps: bool | None = None) -> li
     the next character literal (`a\\|b` is no pipe), and inside double quotes it does so for `"`, `\\`,
     `$` and a backtick (`"x \\" | y"` is one word). Only expand() passes it, for text it knows is not
     PowerShell; the hooks' own segment checks keep the plain split, which never merges segments.
-    `ps` says whether the text is PowerShell (None: the event's tool), which decides whether a `<# … #>`
-    block is a comment: a .ps1 script run from the Bash tool has them, a .sh script run from the
-    PowerShell tool does not."""
+    `ps` says whether the text is PowerShell (None: the event's tool), which decides whether the `#`
+    characters of a `<# … #>` block are blanked (strip_comments): a .ps1 script run from the Bash tool gets
+    that, a .sh script run from the PowerShell tool does not."""
     command = strip_comments(command, ps)
     out, cur, quote = [], [], None
     i = 0
@@ -455,62 +455,30 @@ def _over_budget() -> None:
 
 def strip_comments(text: str, ps: bool | None = None) -> str:
     """Remove `#` line comments outside quotes; newlines are kept so a caller's
-    line numbers still hold. In PowerShell a `<# … #>` block goes first: its `#>` would otherwise
-    start a line comment that hides the command after the block (`<# x #> git push -f`, V-K8w).
-    A `<#` inside a quoted string opens no block (`Write-Host "<#"; git push -f; Write-Host "#>"` runs the
-    push; before 2026-11-26 the whole middle was stripped), and in a PowerShell double-quoted string a
-    backtick escapes the next character.
+    line numbers still hold. In PowerShell a `<# … #>` block is never stripped as a comment: its `#`
+    characters are blanked and its text is read as code, so neither a `#>` that would start a line comment
+    (`<# x #> git push -f`, V-K8w) nor a misread block (`Write-Host "<#"; git push -f; Write-Host "#>"`) can
+    hide a command. A doc block that names a guarded command is therefore refused: a retry, never a pass.
 
-    R1 must-fix 3 (run 2026-11-26-observer-wave): a quote tracker this simple misreads here-strings
-    (`@"…"@`), backticks, `$(…)` inside strings, curly quotes and `#` right after a string, and each misread
-    let a block hide a push. So a block is stripped only in PowerShell text with no quote character at all,
-    where every `<#` and every `#` sits at a plain token start (or `#` mid-word). Anything else fails
-    closed: the block text stays as code, with its `#` characters blanked so none of them starts a line
-    comment, and only `#` line comments are stripped as before."""
-    ps = is_powershell() if ps is None else ps
-    if ps and "<#" in text:
-        if not PS_QUOTES.search(text):
-            out = _strip_comments(text, ps, True)
-            if out is not None:
-                return out
+    Run 2026-11-26-observer-wave: two narrowings that stripped a block only when it looked like one (C2's
+    quote-aware strip, C5's quote-free strip) each let a push through (here-strings, backticks, `${ <#}`,
+    `--%`; R1 must-fix 3, R1b must-fix 2). Both were withdrawn. A block comment that hides its text again
+    needs a real PowerShell tokenizer (observation 0392)."""
+    if is_powershell() if ps is None else ps:
         text = re.sub(r"<#.*?(?:#>|\Z)", lambda m: m.group(0).replace("#", " "), text, flags=re.S)
-    return _strip_comments(text, ps, False)
-
-
-PS_QUOTES = re.compile("['\"`‘-‟]")
-_PS_TOKEN_START = " \t\r\n;|&("
-
-
-def _strip_comments(text: str, ps: bool, blocks: bool) -> str | None:
-    """strip_comments' scan. With `blocks` (PowerShell text holding no quote) it strips `<# … #>` and returns
-    None when a `<#` or `#` sits where PowerShell's reading is not certain (after `)`, `}`, `,`, `=` …)."""
     out, i, quote, n = [], 0, None, len(text)
     while i < n:
         ch = text[i]
         if quote:
             out.append(ch)
-            if ps and quote == '"' and ch == "`" and i + 1 < n:
-                out.append(text[i + 1])
-                i += 2
-                continue
             if ch == quote:
                 quote = None
             i += 1
-            continue
-        if blocks and text.startswith("<#", i):
-            if i and text[i - 1] not in _PS_TOKEN_START:
-                return None  # `a<#…` is one word, `(1)<#…` may be a block: unsure
-            end = text.find("#>", i + 2)
-            end = n if end < 0 else end + 2
-            out.append(" " + "\n" * text.count("\n", i, end))
-            i = end
             continue
         if ch == "#" and (i == 0 or text[i - 1] in " \t\n;|&("):
             end = text.find("\n", i)
             i = n if end < 0 else end
             continue
-        if blocks and ch == "#" and not (text[i - 1].isascii() and (text[i - 1].isalnum() or text[i - 1] == "_")):
-            return None  # `"x"#a`, `(1)#a`, `$a=#c` are comments in PowerShell, `x=#a` in a word is not
         if ch in "'\"":
             quote = ch
         out.append(ch)
@@ -1177,143 +1145,6 @@ def _enclosing(prefix: str) -> tuple[str, str | None]:
     return prefix[top[0]:], owner
 
 
-# A sh/bash `case` pattern (observation 0392, 2026-11-26): `(/*|[A-Za-z]:[/\\]*) ;;` is a match test,
-# never a command word, yet a plain split read `/*` as a program. Only a pattern built of plain words
-# joined by `|` is blanked: no whitespace inside a word, no `$` or backtick (a substitution in a pattern
-# runs), no `;`, `&`, `<`, `>`. Anything else stays as text and keeps today's reading.
-_PAT_WORD = r"""(?:[^\s|()$`;&<>'"\\#]|'[^'$`\n]*'|"[^"$`\\\n]*"|\\[^\n])+"""
-CASE_PATTERN = re.compile(r"\(?[ \t]*" + _PAT_WORD + r"(?:[ \t]*\|[ \t]*" + _PAT_WORD + r")*[ \t]*\)")
-CASE_HEAD = re.compile(r"""case[ \t]+(?:"[^"\n]*"|'[^'\n]*'|[^\s;|&()]+)\s+in(?=\s)""")
-_KW_BEFORE = " \t\n;|&(){}"
-
-
-def _keyword_at(text: str, i: int, kw: str) -> bool:
-    end = i + len(kw)
-    return text.startswith(kw, i) and (i == 0 or text[i - 1] in _KW_BEFORE) and \
-        (end == len(text) or text[end] in " \t\n;)")
-
-
-# R1 must-fix 1 (run 2026-11-26-observer-wave): `case` is a keyword only where a command starts. As an
-# argument (`echo $(echo case x in` + newline + `./run.sh)`) it opens nothing, and blanking the text after
-# it hid a script run. A word before `case` counts only if it is itself a reserved word in command position.
-_CMD_WORDS = ("then", "do", "else", "elif", "if", "while", "until", "time", "!", "{")
-
-
-def _escaped(text: str, i: int) -> bool:
-    n = 0
-    while i - n - 1 >= 0 and text[i - n - 1] == "\\":
-        n += 1
-    return n % 2 == 1
-
-
-def _cmd_position(text: str, i: int, pat_ends: set[int]) -> bool:
-    """True when position i starts a command: the text start, after an unescaped newline, `;`, `&`, `|`
-    or `(` that is not part of a redirection or an extglob, right after a blanked case pattern, or after a
-    reserved word that is itself in command position. Anything else, or anything unsure, is False."""
-    k = i
-    while k > 0:
-        c = text[k - 1]
-        if c in " \t":
-            k -= 1
-        elif c == "\n" and _escaped(text, k - 1):
-            k -= 2  # a line continuation joins the words around it
-        else:
-            break
-    if k == 0 or k in pat_ends:
-        return True
-    c = text[k - 1]
-    if _escaped(text, k - 1):
-        return False
-    before = text[k - 2] if k >= 2 else ""
-    if c == "\n" or c == ";":
-        return True
-    if c == "&":
-        return before not in ("<", ">")
-    if c == "|":
-        return before != ">"
-    if c == "(":
-        return before not in ("@", "?", "*", "+", "!")
-    start = k
-    while start > 0 and text[start - 1] not in " \t\n;|&()<>'\"\\":
-        start -= 1
-    return text[start:k] in _CMD_WORDS and _cmd_position(text, start, pat_ends)
-
-
-def blank_case_patterns(text: str) -> str:
-    """The sh text with each plain `case WORD in` head and `case` pattern (with its optional `(` and
-    closing `)`) turned to spaces; length and newlines kept. Quotes and `#` comments are skipped while looking for `case`,
-    `;;` and `esac`. A pattern this cannot read leaves that `case` as it was."""
-    if "case" not in text:
-        return text
-    chars, n = list(text), len(text)
-    stack: list[str] = []  # "pattern" or "body", one per open case
-    pat_ends: set[int] = set()  # where a blanked pattern ends: a command may start there
-    i, quote = 0, None
-    while i < n:
-        ch = text[i]
-        if quote:
-            if ch == quote:
-                quote = None
-            elif ch == "\\" and quote == '"':
-                i += 1
-            i += 1
-            continue
-        if stack and stack[-1] == "pattern":
-            if ch in " \t\n":
-                i += 1
-                continue
-            if ch == "#":
-                end = text.find("\n", i)
-                i = n if end < 0 else end
-                continue
-            if _keyword_at(text, i, "esac"):
-                stack.pop()
-                i += 4
-                continue
-            m = CASE_PATTERN.match(text, i)
-            if not m:
-                stack.pop()  # unreadable: leave the rest of this case as plain text
-                continue
-            for k in range(m.start(), m.end()):
-                if chars[k] != "\n":
-                    chars[k] = " "
-            stack[-1] = "body"
-            pat_ends.add(m.end())
-            i = m.end()
-            continue
-        if ch == "\\":
-            i += 2
-            continue
-        if ch in "'\"":
-            quote = ch
-        elif ch == "#" and (i == 0 or text[i - 1] in " \t\n;|&("):
-            end = text.find("\n", i)
-            i = n if end < 0 else end
-            continue
-        elif stack and ch == ";" and text.startswith((";;", ";&"), i):
-            i += 3 if text.startswith(";;&", i) else 2
-            stack[-1] = "pattern"
-            continue
-        elif stack and _keyword_at(text, i, "esac"):
-            stack.pop()
-            i += 4
-            continue
-        elif _keyword_at(text, i, "case") and _cmd_position(text, i, pat_ends):
-            m = CASE_HEAD.match(text, i)
-            if m:
-                # `case WORD in` runs nothing, so it is not the command word of the first body either
-                # (`case $x in a) gi? push`). A WORD that substitutes keeps the whole head as text.
-                if not re.search(r"\$\(|`", m.group(0)):
-                    for k in range(m.start(), m.end()):
-                        if chars[k] != "\n":
-                            chars[k] = " "
-                stack.append("pattern")
-                i = m.end()
-                continue
-        i += 1
-    return "".join(chars)
-
-
 GIT_STDIN_FILE = {"-F-", "--file=-", "--file=/dev/stdin", "-F/dev/stdin"}
 
 
@@ -1416,8 +1247,6 @@ def expand(command: str, cwd: str = "", depth: int = 0, out: Expanded | None = N
     for code in code_args(command, ps):
         out.code.append((code, ""))
         _inline_code(code, out)
-    if not ps:  # observation 0392: a `case` pattern is a match test, never a command word
-        command = blank_case_patterns(command)
     # The content-word scans see data bodies (cat/tee) but not messages or code; the parse sees none.
     out.shells.append((data_view(command, ps, ("code", "message")), cwd))
     out.shell_ps.append(bool(ps))

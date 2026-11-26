@@ -1068,16 +1068,8 @@ class CasePattern0392(PushShapeBase):
     SCRIPT = ('#!/usr/bin/env bash\nws="$1"\ncase "$ws" in\n  (/*|[A-Za-z]:[/\\\\]*) ;;\n'
               '  *) ws="$PWD/$ws" ;;\nesac\necho "$ws"\n')
 
-    def test_a_script_with_a_case_pattern_glob_passes(self):
-        path = Path(self.tmp, "scan.sh")
-        path.write_text(self.SCRIPT, encoding="utf-8")
-        p = str(path).replace("\\", "/")
-        for tool in ("Bash", "PowerShell"):
-            self.expect(0, [f'bash "{p}" "ws"', f"bash {p} ws"], tool=tool)
-
     def test_case_patterns_on_the_line_pass(self):
         self.expect(0, ['case "$x" in (/*|[A-Za-z]:[/\\\\]*) ;; *) echo rel ;; esac',
-                        'case $x in\n  *.md|*.txt) echo doc ;;\n  [0-9]*) echo num ;&\n  *) ;;\nesac',
                         f'case $x in a) {G} status ;; esac && {G} {U} origin main'])
 
     def test_a_glob_command_word_in_a_case_body_is_still_refused(self):
@@ -1149,11 +1141,6 @@ class BlockComments0392(PushShapeBase):
         path.write_text(body, encoding="utf-8")
         return str(path).replace("\\", "/")
 
-    def test_a_block_comment_in_a_ps1_run_from_bash_is_a_comment(self):
-        p = self.script("t.ps1", f"<#\n.EXAMPLE\n  {G} {U} --force origin main\n#>\nWrite-Host hi\n")
-        for tool in ("Bash", "PowerShell"):
-            self.expect(0, [f"pwsh -NoProfile -File {p}"], tool=tool)
-
     def test_a_quoted_block_opener_hides_nothing(self):
         self.expect(2, [f'Write-Host "<#"; {G} {U} --force origin main; Write-Host "#>"',
                         f"Write-Host '<#'; {G} {U} --force origin main; Write-Host '#>'"], tool="PowerShell")
@@ -1163,7 +1150,6 @@ class BlockComments0392(PushShapeBase):
         self.expect(2, [f"bash {p}"], tool="PowerShell")
 
     def test_a_real_block_comment_still_hides_its_text(self):
-        self.expect(0, [f"<# {G} {U} --force origin main #> Get-Date"], tool="PowerShell")
         self.expect(2, [f"<# note #> {G} {U} --force origin main"], tool="PowerShell")
 
 
@@ -1291,11 +1277,86 @@ class PsQuoting0392R1(PushShapeBase):
                         f"Write-Host a<#;{FORCE};#>c", f"Write-Host (1)#x <#\n{FORCE}\n#>",
                         f"Write-Host x\r# <#\n{FORCE}\n#>"], tool="PowerShell")
 
-    def test_plain_block_comments_still_hide_their_text(self):
-        p = self.script("doc.ps1", f"<#\n.EXAMPLE\n  {FORCE}\n#>\nparam($Name)\nWrite-Host $Name # greet\n")
+
+class CaseCommentR1b(PushShapeBase):
+    """R1b must-fix 1 (run 2026-11-26-observer-wave): bash starts a comment after `)`, so a `case` inside
+    `(true)#;case x in` is no keyword, and a heredoc body is no code. Each shape hid `./run.sh` from a
+    `case` blanking pass; that pass is withdrawn and these guard any future one."""
+
+    def setUp(self):
+        super().setUp()
+        Path(self.work, "run.sh").write_text(FORCE + "\n", encoding="utf-8")
+
+    def test_a_case_in_a_comment_after_a_paren_hides_nothing(self):
+        self.expect(2, ["echo $( (true)#;case x in\n./run.sh)", "echo $(\t(true)#;case x in\n./run.sh)",
+                        "x=$( (:)#;case x in\n./run.sh)\necho $x"])
+
+    def test_the_same_inside_a_script_is_refused(self):
+        Path(self.work, "cs.sh").write_text("x=$( (:)#;case x in\n./run.sh)\necho $x\n", encoding="utf-8")
+        self.expect(2, ["bash cs.sh"])
+
+    def test_a_case_in_a_heredoc_body_hides_nothing(self):
+        self.expect(2, ["echo $(cat <<';;'\ncase x in\na)\n;;\n./run.sh|./run.sh)"])
+
+
+class CaseCommentHypervR1b(DirectShapeBase):
+    """R1b must-fix 1, hyperv_lock: the same `)#;case` comment shape hides a script that removes a VM."""
+
+    def test_a_case_in_a_comment_hides_no_vm_script(self):
+        Path(self.tmp, "hv.sh").write_text(SedResult0392R1.HOOKS["hyperv_lock.py"] + "\n", encoding="utf-8")
+        self.expect("hyperv_lock.py", 2, ["echo $( (true)#;case x in\n./hv.sh)"])
+
+
+class PsBlockR1b(PushShapeBase):
+    """R1b must-fix 2: `${ <#}` is a variable name and `--%` makes the rest of the line literal, so neither
+    `<#` opens a block in PowerShell and the push on the next line runs. Refused as a .ps1 from either tool
+    and inline."""
+
+    BRACED = f"${{ <#}}\n{FORCE}\n#>\n"
+    STOP = f"cmd --% /c rem <#\n{FORCE}\n#>\n"
+
+    def test_a_braced_name_or_stop_parsing_block_is_refused(self):
+        for name, body in (("v.ps1", self.BRACED), ("sp.ps1", self.STOP)):
+            path = Path(self.tmp, name)
+            path.write_text(body, encoding="utf-8")
+            p = str(path).replace("\\", "/")
+            for tool in ("Bash", "PowerShell"):
+                self.expect(2, [f"pwsh -NoProfile -File {p}"], tool=tool)
+        self.expect(2, [self.BRACED, self.STOP], tool="PowerShell")
+
+
+class UntilParser0392(PushShapeBase):
+    """Expected refuse until a parser-backed fix (observation 0392). These were allow cases of two
+    narrowings (C2's `case` pattern blanking, C2/C5's `<# … #>` block stripping) that review rounds R1 and
+    R1b broke with force-push bypasses; both were withdrawn on 2026-11-26. They are false positives the hook
+    accepts for now. When a real sh/PowerShell tokenizer lands, flip each to expect 0 and keep the deny
+    classes above (CaseKeyword0392R1, CaseCommentR1b, PsQuoting0392R1, PsBlockR1b) green."""
+
+    SCRIPT = CasePattern0392.SCRIPT
+
+    def script(self, name, body):
+        path = Path(self.tmp, name)
+        path.write_text(body, encoding="utf-8")
+        return str(path).replace("\\", "/")
+
+    def test_a_script_with_a_case_pattern_glob(self):
+        p = self.script("scan.sh", self.SCRIPT)
         for tool in ("Bash", "PowerShell"):
-            self.expect(0, [f"pwsh -NoProfile -File {p}"], tool=tool)
-        self.expect(0, [f"<# {FORCE} #> Get-Date", f"Get-Date <#x#>; <# {FORCE} #>"], tool="PowerShell")
+            self.expect(2, [f'bash "{p}" "ws"', f"bash {p} ws"], tool=tool)
+
+    def test_case_patterns_on_the_line(self):
+        self.expect(2, ['case $x in\n  *.md|*.txt) echo doc ;;\n  [0-9]*) echo num ;&\n  *) ;;\nesac'])
+
+    def test_a_block_comment_in_a_ps1_run_from_either_tool(self):
+        for name, body in (("t.ps1", f"<#\n.EXAMPLE\n  {G} {U} --force origin main\n#>\nWrite-Host hi\n"),
+                           ("doc.ps1", f"<#\n.EXAMPLE\n  {FORCE}\n#>\nparam($Name)\nWrite-Host $Name # greet\n")):
+            p = self.script(name, body)
+            for tool in ("Bash", "PowerShell"):
+                self.expect(2, [f"pwsh -NoProfile -File {p}"], tool=tool)
+
+    def test_a_block_comment_inline(self):
+        self.expect(2, [f"<# {G} {U} --force origin main #> Get-Date", f"<# {FORCE} #> Get-Date",
+                        f"Get-Date <#x#>; <# {FORCE} #>"], tool="PowerShell")
 
 
 class ProcessSmoke(DirectShapeBase):
@@ -1314,42 +1375,6 @@ class ProcessSmoke(DirectShapeBase):
                 self.assertEqual(got, want, f"{hook} process: {cmd!r}: {err.strip()}")
                 got, _, err = run_hook(hook, ev, env=self.env)
                 self.assertEqual(got, want, f"{hook} in process: {cmd!r}: {err.strip()}")
-
-
-class BlankCasePatterns(unittest.TestCase):
-    """hooklib.blank_case_patterns in process: what it blanks and what it leaves."""
-
-    @classmethod
-    def setUpClass(cls):
-        sys.path.insert(0, str(HOOKS))
-        import hooklib
-        cls.hl = hooklib
-
-    def test_plain_patterns_are_blanked_and_length_kept(self):
-        text = 'case "$ws" in\n  (/*|[A-Za-z]:[/\\\\]*) ;;\n  *) x=1 ;;\nesac\n'
-        out = self.hl.blank_case_patterns(text)
-        self.assertEqual(len(out), len(text))
-        self.assertEqual(out.count("\n"), text.count("\n"))
-        self.assertNotIn("/*", out)
-        self.assertIn("x=1", out)
-        self.assertIn("esac", out)
-
-    def test_a_pattern_or_head_with_a_substitution_is_left(self):
-        text = "case $x in $(echo a)) ;; esac"
-        self.assertIn("$(echo a))", self.hl.blank_case_patterns(text))
-        text = "case $(id -u) in 0) echo root ;; esac"
-        self.assertIn("case $(id -u) in", self.hl.blank_case_patterns(text))
-
-    def test_quoted_and_commented_case_words_are_left(self):
-        for text in ("echo 'case x in a) b ;; esac'", "# case x in /*) ;; esac\n/* y", "showcase x in /*)"):
-            self.assertEqual(self.hl.blank_case_patterns(text), text)
-
-    def test_nested_case(self):
-        text = "case $a in x) case $b in y|z) echo n ;; esac ;; w) ;; esac"
-        out = self.hl.blank_case_patterns(text)
-        for gone in ("x)", "y|z)", "w)"):
-            self.assertNotIn(gone, out)
-        self.assertIn("echo n", out)
 
 
 if __name__ == "__main__":

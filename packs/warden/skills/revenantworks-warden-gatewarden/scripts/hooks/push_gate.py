@@ -1031,6 +1031,12 @@ def glob_git(toks: list[str], seg: str) -> None:
     k = command_index(toks)
     if k is None:
         return
+    # Observation 0392: in a `case` body the word after a pattern's `)` is a command word too
+    # (`case $x in a) gi? push …`, `*) /usr/bin/gi[t] push …` after a `;;` split). Only adds checks.
+    if hl.unquote(toks[k]) == "case" or toks[k].endswith(")"):
+        for j in range(k, len(toks) - 1):
+            if toks[j].endswith(")"):
+                glob_git(toks[j + 1:], seg)
     tok = toks[k]
     name = re.split(r"[\\/]", hl.unquote(tok))[-1].lower()
     if not re.search(r"[*?\[]", name):
