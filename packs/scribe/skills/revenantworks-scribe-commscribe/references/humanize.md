@@ -12,6 +12,13 @@ H1 to H9 live in the SKILL body with their counting units. This file states no h
 - Check list with patterns
 - Applying the hard rules
 - Tell catalog by category
+- A. Staging instead of stating
+- B. Rhythm by rule
+- C. Inflation and borrowed authority
+- D. Formatting by rule
+- E. Leftovers from the chat and the draft
+- F. Writing for the wrong reader
+- What replaces a tell
 - Where humanize yields
 - Residual risks
 - Worked repair

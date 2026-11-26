@@ -7,6 +7,7 @@ Read in `brief` mode, and in `check` when the text or image came from a generato
 - The pipeline
 - What every brief carries
 - Story-draft brief (local LLM)
+- Beats and shape
 - Entity-visual brief (image workflow)
 - Timeline visual
 - No runner installed

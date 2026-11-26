@@ -8,7 +8,7 @@ Read in `bible`, `timeline` (state section) and `audit` modes. One Markdown file
 - Common fields
 - Per-kind fields
 - State progressions
-- Visual tags and motif line
+- Visual tags and motif line *(lorescribe)*
 - Index files
 - Worked example (invented world)
 
