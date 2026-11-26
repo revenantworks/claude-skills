@@ -2,6 +2,7 @@
 
 ## Contents
 
+
 *(also: "Report flags and the class ledger", the last section)*
 
 - The deciding rule
@@ -9,8 +10,8 @@
 - The scoring pass
 - Claim types — which of the model's statements survive
 - Capability classes — what kind of model a class needs
-- Failure shapes, and what each one means (read by Verify and by any
-  diagnosis of a bad run)
+- Failure shapes
+- Report flags and the class ledger
 
 ---
 

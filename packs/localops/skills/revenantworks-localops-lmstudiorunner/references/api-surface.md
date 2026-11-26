@@ -19,6 +19,7 @@
 - File input: a script builds the request
 - When the device is lost
 - Degrading without a shell (curl and PowerShell)
+- Sources
 
 ---
 
