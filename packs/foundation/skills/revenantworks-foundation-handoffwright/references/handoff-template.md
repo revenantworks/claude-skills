@@ -137,6 +137,13 @@ never written down · an access, credential or environment note · an explicit
 
 Rules for it:
 
+- **How it is handed over (#0731).** Into a web chat, the block is pasted. When the prompt sits in a
+  file and the owner starts a terminal session, hand over one command that passes a pointer as the
+  first message: `claude "Read <absolute prompt path> and follow it exactly."`, and say "press Enter
+  if the session opens without submitting it" (the positional form may open the session without
+  submitting). Never a clipboard round trip plus a paste for a terminal launch: the paste can land
+  the command in the session instead of the prompt. Clipboard handover is for pastes into a web surface only.
+
 - **Name the file by path, always.** "Read the handoff" without a path makes the next session
   search for one, and a search can surface a stale file from an older pause.
 - **Name the sha.** It is what lets the next session notice the repo moved after the handoff was

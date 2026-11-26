@@ -1,5 +1,9 @@
 # Changelog — revenantworks-foundation-handoffwright
 
+## [Unreleased]
+
+- `handoff-template.md` Starter prompt: a prompt that sits in a file, for a terminal session, is handed over as one command, `claude "Read <absolute prompt path> and follow it exactly."`, with "press Enter if the session opens without submitting it"; clipboard handover only for web pastes (observation 0731). Reference only; body unchanged.
+
 ## [1.1.0] — 2026-11-24
 
 - Description neighbour list cut to the nearest siblings for the listing budget (SK1a trim list, run 2026-11-23-weekly-loop); no behaviour change.
