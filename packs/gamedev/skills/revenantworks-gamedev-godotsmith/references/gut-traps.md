@@ -6,10 +6,10 @@ with GUT is the worked runner; where a rule is runner-specific it says so.
 
 ## Contents
 
-1. The summary block, the three-number reconciliation, and the runner marker table
-2. The eight disagreements
-3. The baseline-before-change rule
-4. What GUT does not tell you at all
+- 1. The summary block
+- 2. The eight disagreements
+- 3. Baseline before change
+- 4. What GUT does not tell you at all
 
 ---
 

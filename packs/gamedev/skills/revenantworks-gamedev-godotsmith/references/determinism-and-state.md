@@ -9,14 +9,14 @@ Sources for the borrowed practices are in `SOURCES.md`. Nothing here is copied t
 
 ## Contents
 
-1. Randomness
-2. Save formats and the canonical form, and unsaved fields
-   2a. Lazy caches
-3. State hashing, round trips and fingerprints
-   3a. Pin rounds, controls and deferred re-pins
-4. Fixed tick versus render tick, and per-entity work
-5. Typed state containers
-6. Perceived fairness
+- 1. Randomness
+- 2. Save formats and the canonical form
+- 2a. Lazy caches
+- 3. State hashing
+- 3a. Pin rounds, controls and deferred re-pins
+- 4. Fixed tick versus render tick, and per-entity work
+- 5. Typed state containers
+- 6. Perceived fairness
 
 ---
 
