@@ -7,7 +7,10 @@ escape exists; **low** means noise or a dead line.
 
 ## Contents
 
-Rule table · Explain shapes · What harden changes · What audit does not claim
+- Rule table
+- Explain shapes
+- What harden changes
+- What audit does not claim
 
 ## Rule table
 

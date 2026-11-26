@@ -6,20 +6,15 @@ outside every repo**, never on the working checkout. `<outside>` below is such a
 
 ## Contents
 
-Before anything: secrets · Plan: measure and pick the mode · Gate 1: the backup bundle · Emit the
-inputs · Gate 2: rewrite a fresh clone · Gate 3: verify · Gate 4: the user's go · Land · After
-
-**These steps bind any rewrite, not only this skill's.** A sweep once wrote its own rewrite script:
-filter-repo ran in a TEMP mirror, the commit map stayed there for cleanup to delete, and no record
-was re-pointed, so the next session found every run record citing ids that no longer existed
-(observation 0336). Whoever writes the script copies the map in the same command as the rewrite and
-ends with `after`. If someone else's script already ran, rescue `.git/filter-repo/commit-map` from
-its clone before anything cleans it up.
-
-**Commands for the user.** The auto-mode classifier refuses a history rewrite (`filter-branch`,
-`filter-repo`) as destructive, so the user runs it. Hand it over as a plain-shell line without a `!`
-prefix: a pasted `!` stops a PowerShell window with an error (observation 0360). Give the `!` form
-as well only when the user runs it inside the Claude prompt.
+- Before anything: secrets
+- Plan: measure and pick the mode
+- Gate 1: the backup bundle
+- Emit the inputs
+- Gate 2: rewrite a fresh clone
+- Gate 3: verify
+- Gate 4: the user's go
+- Land
+- After
 
 ## Before anything: secrets
 

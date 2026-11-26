@@ -7,7 +7,23 @@ inside subagents), never the owner's own terminal.
 
 ## Contents
 
-Summary · Modes: watch, nudge, guard · What the command hooks read · push_gate · ci_stamp · hyperv_lock · call_cap · launch_throttle · heredoc_guard · golive_block · outbound_text_guard · work_guard · compact_gate · Mods that stand in for these hooks · The settings block
+- Summary
+- Modes: watch, nudge, guard
+- What the command hooks read
+- push_gate
+- ci_stamp
+- hyperv_lock
+- call_cap
+- The event log
+- Reviewing a block (`gatewarden capreview`)
+- launch_throttle
+- heredoc_guard
+- golive_block
+- outbound_text_guard
+- work_guard
+- compact_gate
+- Mods that stand in for these hooks
+- The settings block
 
 ## Summary
 
