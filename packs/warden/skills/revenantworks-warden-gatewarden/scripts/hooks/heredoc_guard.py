@@ -403,7 +403,13 @@ def _inner_texts(text: str, depth: int = 0) -> list[str]:
         progs = [hl.prog(t) for t in toks]
         if not _runs_wrapper(toks):
             continue
+        # A quoted word in program position is the program itself (`"$X/pwsh.exe" -Command ...`), never a
+        # string a wrapper runs; unwrapping it read the bare path as a pwsh with no arguments. A quoted word
+        # after a flag (`bash -c "..."`) or a wrapper (`eval '...'`) is still code the wrapper runs.
+        pos = _program_positions(toks)
         for k, t in enumerate(toks):
+            if k in pos and (k == 0 or (not toks[k - 1].startswith("-") and hl.prog(toks[k - 1]) not in WRAPPERS)):
+                continue
             if len(t) > 2 and t[0] == t[-1] and t[0] in "'\"":
                 out += _inner_texts(t[1:-1], depth + 1)
             elif hl.is_encoded_flag(t) and k + 1 < len(toks) and any(p in hl.PS for p in progs):
