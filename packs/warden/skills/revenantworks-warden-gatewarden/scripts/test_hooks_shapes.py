@@ -915,6 +915,16 @@ class B10(DirectShapeBase):
                                             f"winpty {PYN} x.py", "which sh", "bash --version",
                                             "pwsh -Command Get-Date", "pwsh -File x.ps1", f"{PYN} -m json.tool x.json"])
 
+    def test_quoted_program_path_keeps_its_arguments(self):
+        """A quoted program path is the program, not a string a wrapper runs: unwrapping it read
+        `"$X/pwsh.exe" -Command ...` as a bare pwsh with no arguments and refused it."""
+        app = '"$LOCALAPPDATA/Microsoft/WindowsApps/pwsh.exe"'
+        self.expect("heredoc_guard.py", 0, [f"{app} -NoProfile -NonInteractive -Command '$PSVersionTable'",
+                                            f'{app} -NoProfile -File "$s"', f"{app} -Command Get-Date < /dev/null",
+                                            '"/usr/bin/bash" -c "echo hi"'])
+        self.expect("heredoc_guard.py", 2, [f"{app} -NoProfile", '"/usr/bin/bash"', 'bash -c "pwsh"',
+                                            f'"/usr/bin/bash" -c "{PYN} -"', "sh -c 'node'"], reason=NO_INPUT)
+
 
 class FlatPushBase(PushShapeBase):
     def expect(self, code, cmds, tool="Bash", reason=None):
