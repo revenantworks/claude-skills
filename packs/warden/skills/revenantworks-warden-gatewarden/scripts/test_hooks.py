@@ -1974,10 +1974,11 @@ class VerifierPushTests(InstallDefaultBase):
         # Observation 0726: a wall-clock bar of 10 s sat at 86% of the unloaded time (8.6 s) and went red
         # under ci_local's parallel shards (13.7 s) with no change. What F5 guards is that the hook reads
         # the line and refuses it for the force push, not that it runs out of its time budget and fails
-        # closed. So the reason is asserted, under the default budget (20 s), and the wall bar only
-        # catches a hang.
+        # closed. So the reason is asserted, and the wall bar only catches a hang. The default 20 s budget
+        # still went red under the shards (over 20 s loaded, 8.6 s unloaded), so the test sets 50 s, under
+        # run_hook's 60 s kill; test_time_budget_fails_closed_on_a_push_line covers the budget itself.
         body = PROSE * (100 * 1024 // len(PROSE))
-        self.env.pop("GATEWARDEN_BUDGET", None)
+        self.env["GATEWARDEN_BUDGET"] = "50"
         start = time.time()
         code, _, err = self.hook("push_gate.py", "cat > notes.md <<'EOF'\n" + body + f"EOF\n{G} {U} --force origin main",
                                  cwd=self.work)
