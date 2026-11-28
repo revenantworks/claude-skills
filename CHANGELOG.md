@@ -5,6 +5,21 @@ Every pack, every member and every featured plugin launches at 1.0.0. Each membe
 `<pack>-vX.Y.Z`, member versions move on their own semver, and a featured plugin carries its
 member's version.
 
+## [warden-v1.2.1] - 2026-11-27
+
+### Improved
+
+- **gatewarden**: The push gate now catches a push hidden in a `case` branch, inside a PowerShell block comment, or in a script written by a simple `sed` substitution and then run.
+- **gatewarden**: Push-gate refusals quote the part of the command that names the push, and the public-branch refusal uses the same words as the global rule.
+- **gatewarden**: The hook test suite runs about twice as fast.
+- **warden**: Every reference's table of contents now matches its headings.
+
+### Fixed
+
+- **gatewarden**: The heredoc guard no longer refuses a program started by its quoted full path, such as a full pwsh path with `-Command`.
+- **gatewarden**: A push-gate timing test no longer fails when the whole suite runs at once.
+- **shieldwarden**: Two binding paragraphs lost in a contents rebuild are back in its references.
+
 ## [localops-v1.0.4] - 2026-11-24
 
 ### Improved

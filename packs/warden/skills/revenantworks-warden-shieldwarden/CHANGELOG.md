@@ -1,5 +1,10 @@
 # Changelog — revenantworks-warden-shieldwarden
 
+## [1.0.3] — 2026-11-27
+
+- references: the two binding paragraphs the Contents-index rebuild dropped are restored (R1
+  must-fix 4; #0336, #0360), and every reference's Contents index matches its headings (#0636).
+
 ## [1.0.2] — 2026-11-24
 
 - rewrite-recipes: published mode ranges the rewrite from the leak's first commit and gates on
