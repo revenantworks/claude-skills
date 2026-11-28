@@ -1,5 +1,9 @@
 # Changelog — revenantworks-warden-gatewarden
 
+## [Unreleased]
+
+- push_gate, golive_block, hyperv_lock: a check that crashes mid-way now refuses what its time budget would. The crash path looked for the plain guarded word in the raw event, so on a loaded machine a git call past its timeout raised and `git pu`sh origin main` passed with exit 0. The crash path now also asks `hooklib.budget_hit()`, the budget's own despliced check. Test: `test_hooks.PushGateBypassTests.test_a_check_that_crashes_still_refuses_a_spliced_push` (git hidden from PATH forces the crash)
+
 ## [1.1.3] — 2026-11-27
 
 - heredoc_guard: a quoted program path is the program, not a string a wrapper runs. `"$X/pwsh.exe" -Command ...` was unwrapped, read as a bare pwsh with no arguments and refused as "nothing feeds its input". A quoted word after a flag (`bash -c "..."`) or a wrapper (`eval '...'`) is still unwrapped. Test: `test_hooks_shapes.B10.test_quoted_program_path_keeps_its_arguments`
