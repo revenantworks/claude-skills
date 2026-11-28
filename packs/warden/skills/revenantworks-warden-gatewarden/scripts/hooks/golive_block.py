@@ -224,7 +224,7 @@ def main() -> None:
     except SystemExit:
         raise
     except Exception:
-        if NAMES.search(raw or "") or SERVICE_JSON.search(raw or ""):
+        if NAMES.search(raw or "") or SERVICE_JSON.search(raw or "") or hl.budget_hit():
             hl.block(REASON + " (hook input could not be read; blocked to be safe)", rule="golive_block", hard=True)
         hl.allow()
 

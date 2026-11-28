@@ -2249,7 +2249,7 @@ def hook_main() -> None:
     except SystemExit:
         raise
     except Exception as exc:  # fail closed for a push
-        if re.search(r"\bpush\b", raw or ""):
+        if re.search(r"\bpush\b", raw or "") or hl.budget_hit():
             # git's stderr can echo a remote URL or a ref name: mask secret shapes (K7-4-12).
             hl.block(f"push gate: could not check this push ({type(exc).__name__}: {hl.scrub(str(exc))}). "
                      "Blocked.", rule="push_gate.unreadable", hard=True)

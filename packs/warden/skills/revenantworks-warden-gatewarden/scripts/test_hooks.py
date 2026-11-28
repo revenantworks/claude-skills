@@ -1448,6 +1448,19 @@ class PushGateBypassTests(unittest.TestCase):
         self.gated(self.SPLICED)
         self.gated(self.SPLICED, tool="PowerShell")
 
+    def test_a_check_that_crashes_still_refuses_a_spliced_push(self):
+        # Under load a git call ran past its timeout and raised mid-check; the crash path looked for the
+        # plain word push in the raw event, so `git pu`sh` passed with exit 0. Hiding git from PATH makes
+        # the same crash happen on every machine, and the crash path must refuse what the budget would.
+        env = {"PATH": os.path.dirname(PY)}
+        for cmd in ("git pu`sh origin main", 'git p"us"h origin main', "git pu^sh origin main"):
+            for tool in ("Bash", "PowerShell"):
+                code, _, err = run_hook("push_gate.py", bash(cmd, self.work, tool=tool), env)
+                self.assertEqual(code, 2, f"{tool}: {cmd} passed a crashed check ({err.strip()})")
+                self.assertIn("push gate", err)
+        code, _, _ = run_hook("push_gate.py", bash("git status", self.work), env)
+        self.assertEqual(code, 0)
+
     def test_shell_wrapper_push_is_gated(self):
         self.gated(self.WRAPPED)
 

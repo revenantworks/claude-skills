@@ -436,11 +436,21 @@ def check_budget() -> None:
         _over_budget()
 
 
-def _over_budget() -> None:
+def budget_hit() -> bool:
+    """Whether the started budget's hit() fires: the command, despliced, or a file read so far names what
+    the hook guards. A crash path asks this too, so a spliced word (`git pu`sh`) that raised mid-check
+    (a git call past its timeout on a loaded machine) is refused as the budget path would, never allowed
+    because the raw text lacks the plain word. No budget started, or a hit() that fails, counts as a hit."""
+    if not _CLOCK:
+        return True
     try:
-        hit = bool(_CLOCK["hit"]())
+        return bool(_CLOCK["hit"]())
     except Exception:
-        hit = True
+        return True
+
+
+def _over_budget() -> None:
+    hit = budget_hit()
     if hit:
         try:
             log_event(_CLOCK["rule"], "guard", "blocked", "time budget", True)

@@ -409,7 +409,7 @@ def main() -> None:
     except SystemExit:
         raise
     except Exception:
-        if dangerous(raw or ""):
+        if dangerous(raw or "") or hl.budget_hit():
             hl.block(REASON + " (hook input could not be read; blocked to be safe)", rule="hyperv_lock", hard=True)
         hl.allow()
 
